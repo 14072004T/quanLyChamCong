@@ -1,0 +1,564 @@
+﻿<?php
+if (!isset($_SESSION['user'])) { header('Location: index.php?page=login'); exit(); }
+if ($_SESSION['role'] !== 'manager') { header('Location: index.php?page=home'); exit(); }
+
+$success = $_SESSION['success'] ?? '';
+$error = $_SESSION['error'] ?? '';
+unset($_SESSION['success'], $_SESSION['error']);
+$activeApprovalId = (int)($_GET['approval_id'] ?? 0);
+?>
+<?php include 'app/views/layouts/header.php'; ?>
+<?php include 'app/views/layouts/nav.php'; ?>
+<style>
+.approval-row-highlight {
+    animation: approvalRowPulse 2.4s ease;
+    background: #fff7d6 !important;
+}
+@keyframes approvalRowPulse {
+    0% { background: #ffe58f; }
+    100% { background: #fff7d6; }
+}
+.approval-detail-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 1200;
+    padding: 24px;
+}
+.approval-detail-modal.open {
+    display: flex;
+}
+.approval-detail-card {
+    width: min(1100px, 100%);
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
+}
+.approval-detail-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 26px 18px;
+    border-bottom: 1px solid #dbe7f5;
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+.approval-detail-head h3 {
+    margin: 0 0 8px;
+    color: #0f172a;
+}
+.approval-detail-head p {
+    margin: 0;
+    color: #64748b;
+}
+.approval-detail-close {
+    border: none;
+    background: #e2e8f0;
+    color: #0f172a;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 18px;
+}
+.approval-detail-body {
+    padding: 22px 26px 26px;
+}
+.approval-detail-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+.approval-summary-item {
+    padding: 16px;
+    border: 1px solid #dbe7f5;
+    border-radius: 18px;
+    background: #f8fbff;
+}
+.approval-summary-item span {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+.approval-summary-item strong {
+    color: #0f172a;
+    font-size: 1.35rem;
+}
+.approval-detail-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+.approval-meta-box {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #dbe7f5;
+}
+.approval-meta-box strong {
+    display: block;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+.approval-detail-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
+}
+.approval-detail-actions .btn-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+@media (max-width: 900px) {
+    .approval-detail-summary,
+    .approval-detail-meta {
+        grid-template-columns: 1fr 1fr;
+    }
+    .approval-detail-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+@media (max-width: 640px) {
+    .approval-detail-summary,
+    .approval-detail-meta {
+        grid-template-columns: 1fr;
+    }
+    .approval-detail-modal {
+        padding: 12px;
+    }
+    .approval-detail-head,
+    .approval-detail-body {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+}
+</style>
+<div class="main-container">
+    <?php include 'app/views/layouts/sidebar.php'; ?>
+    <div class="dashboard-container">
+
+        <div class="panel">
+            <h2 style="border:none;padding:0;margin:0;font-size:1.2em;">TRUNG TÂM PHÊ DUYỆT ĐỢT</h2>
+        </div>
+
+        <?php if ($success): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
+
+        <div class="panel">
+            <h3>LỌC KỲ CÔNG</h3>
+            <form id="approval-filter-form" class="filter-row">
+                <div class="form-group">
+                    <label>Trạng thái</label>
+                    <div class="filter-radio-group">
+                        <label><input type="radio" name="status" value="submitted" checked> Chờ duyệt</label>
+                        <label><input type="radio" name="status" value="approved"> Đã duyệt</label>
+                        <label><input type="radio" name="status" value="rejected"> Đã trả về</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Năm</label>
+                    <select name="year">
+                        <option value="">Năm</option>
+                        <?php for ($y = (int)date('Y'); $y >= 2023; $y--): ?>
+                            <option value="<?= $y ?>" <?= $y === (int)date('Y') ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> Lọc</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="panel">
+            <h3>DANH SÁCH BẢNG CÔNG CHỜ PHÊ DUYỆT</h3>
+            <table class="table" id="approval-pending-table">
+                <thead>
+                    <tr>
+                        <th>Kỳ hiển thị</th>
+                        <th>Mã kỳ công</th>
+                        <th>Tổng nhân sự</th>
+                        <th>Tổng công chuẩn</th>
+                        <th>Tổng giờ OT</th>
+                        <th>Tỷ lệ vi phạm</th>
+                        <th>Ngày HR gửi</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="approval-pending-body">
+                    <tr><td colspan="8" class="empty-state">Đang tải dữ liệu...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3>LỊCH SỬ PHÊ DUYỆT GẦN ĐÂY</h3>
+            <table class="table" id="approval-history-table">
+                <thead>
+                    <tr>
+                        <th>Kỳ hiển thị</th>
+                        <th>Mã kỳ công</th>
+                        <th>Tổng nhân sự</th>
+                        <th>Tổng công chuẩn</th>
+                        <th>Tổng giờ OT</th>
+                        <th>Tỷ lệ vi phạm</th>
+                        <th>Ngày xử lý</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody id="approval-history-body">
+                    <tr><td colspan="8" class="empty-state">Đang tải dữ liệu...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<div class="approval-detail-modal" id="approvalDetailModal" aria-hidden="true">
+    <div class="approval-detail-card">
+        <div class="approval-detail-head">
+            <div>
+                <h3 id="approval-detail-title">Chi tiết kỳ công</h3>
+                <p id="approval-detail-subtitle">Đang tải dữ liệu...</p>
+            </div>
+            <button type="button" class="approval-detail-close" id="approval-detail-close" aria-label="Đóng">×</button>
+        </div>
+        <div class="approval-detail-body">
+            <div class="approval-detail-summary" id="approval-detail-summary"></div>
+            <div class="approval-detail-meta" id="approval-detail-meta"></div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nhân viên</th>
+                            <th>Phòng ban</th>
+                            <th>Ngày công</th>
+                            <th>Giờ làm</th>
+                            <th>Giờ OT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approval-detail-body">
+                        <tr><td colspan="6" class="empty-state">Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="approval-detail-actions">
+                <div id="approval-detail-status" style="color:#64748b;font-weight:600;">Xem kỹ bảng tính công trước khi ra quyết định.</div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary btn-sm" id="approval-detail-cancel">Đóng</button>
+                    <button type="button" class="btn btn-warning btn-sm" id="approval-detail-reject"><i class="fas fa-arrow-left"></i> Trả về HR</button>
+                    <button type="button" class="btn btn-success btn-sm" id="approval-detail-approve"><i class="fas fa-check"></i> Phê duyệt kỳ công</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var autoOpenApprovalId = <?= (int)$activeApprovalId ?>;
+    var filterForm = document.getElementById('approval-filter-form');
+    var pendingBody = document.getElementById('approval-pending-body');
+    var historyBody = document.getElementById('approval-history-body');
+    var detailModal = document.getElementById('approvalDetailModal');
+    var detailTitle = document.getElementById('approval-detail-title');
+    var detailSubtitle = document.getElementById('approval-detail-subtitle');
+    var detailSummary = document.getElementById('approval-detail-summary');
+    var detailMeta = document.getElementById('approval-detail-meta');
+    var detailBody = document.getElementById('approval-detail-body');
+    var detailStatus = document.getElementById('approval-detail-status');
+    var closeDetailBtn = document.getElementById('approval-detail-close');
+    var cancelDetailBtn = document.getElementById('approval-detail-cancel');
+    var approveDetailBtn = document.getElementById('approval-detail-approve');
+    var rejectDetailBtn = document.getElementById('approval-detail-reject');
+    var activeApprovalId = 0;
+    var activeApprovalStatus = '';
+
+    function escapeHtml(val) {
+        return String(val ?? '').replace(/[&<>"]/g, function (c) {
+            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];
+        });
+    }
+
+    function getFormValues() {
+        var data = new FormData(filterForm);
+        return {
+            status: data.get('status') || 'submitted',
+            year: data.get('year') || ''
+        };
+    }
+
+    function formatMonthLabel(monthKey) {
+        if (!monthKey) return '';
+        var parts = monthKey.split('-');
+        if (parts.length !== 2) return monthKey;
+        var m = parseInt(parts[1], 10);
+        var y = parts[0];
+        var prevM = m > 1 ? m - 1 : 12;
+        var prevY = m > 1 ? y : String(parseInt(y, 10) - 1);
+        return 'Tháng ' + String(prevM).padStart(2, '0') + '/' + prevY + ' - T' + String(m).padStart(2, '0') + '-' + y;
+    }
+
+    function formatDate(dateTime) {
+        if (!dateTime) return 'Chưa có';
+        var parts = String(dateTime).split(' ');
+        var dateParts = (parts[0] || '').split('-');
+        if (dateParts.length !== 3) return String(dateTime);
+        return dateParts.reverse().join('/') + (parts[1] ? (' ' + parts[1].slice(0, 5)) : '');
+    }
+
+    function openDetailModal() {
+        detailModal.classList.add('open');
+        detailModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeDetailModal() {
+        detailModal.classList.remove('open');
+        detailModal.setAttribute('aria-hidden', 'true');
+        activeApprovalId = 0;
+        activeApprovalStatus = '';
+    }
+
+    function updateDetailActionState(status) {
+        var isSubmitted = status === 'submitted';
+        approveDetailBtn.hidden = !isSubmitted;
+        rejectDetailBtn.hidden = !isSubmitted;
+        detailStatus.textContent = isSubmitted
+            ? 'Sau khi kiểm tra đầy đủ dữ liệu công, bạn có thể phê duyệt hoặc trả về HR.'
+            : 'Kỳ công này đã được xử lý. Bạn có thể xem lại dữ liệu chi tiết.';
+    }
+
+    function renderPendingRows(rows) {
+        if (!rows.length) {
+            pendingBody.innerHTML = '<tr><td colspan="8" class="empty-state">Không có bảng công chờ phê duyệt.</td></tr>';
+            return;
+        }
+
+        pendingBody.innerHTML = rows.map(function (row) {
+            var monthLabel = formatMonthLabel(row.month_key);
+            var otDisplay = '<span class="ot-warning"><i class="fas fa-triangle-exclamation"></i></span> ' + Number(row.total_ot_hours || 0).toLocaleString();
+            var dateDisplay = formatDate(row.submitted_at);
+
+            var approvalId = Number(row.id || 0);
+            var rowClass = approvalId === autoOpenApprovalId ? ' class="approval-row-highlight"' : '';
+            return '<tr id="approval-' + approvalId + '"' + rowClass + '>' +
+                '<td>' + escapeHtml(monthLabel) + '</td>' +
+                '<td>' + escapeHtml(row.month_key) + '</td>' +
+                '<td>' + Number(row.total_employees || 0) + '</td>' +
+                '<td>' + Number(row.total_work_days || 0).toLocaleString() + '</td>' +
+                '<td>' + otDisplay + '</td>' +
+                '<td>' + Number(row.violation_rate || 0) + '%</td>' +
+                '<td>' + escapeHtml(dateDisplay) + '</td>' +
+                '<td><button type="button" class="btn btn-primary btn-sm js-view-approval-detail" data-id="' + approvalId + '"><i class="fas fa-eye"></i> Xem chi tiết</button></td>' +
+                '</tr>';
+        }).join('');
+
+        if (autoOpenApprovalId) {
+            var targetRow = document.getElementById('approval-' + autoOpenApprovalId);
+            if (targetRow) {
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }
+
+    function renderHistoryRows(rows) {
+        if (!rows.length) {
+            historyBody.innerHTML = '<tr><td colspan="8" class="empty-state">Không có lịch sử phê duyệt.</td></tr>';
+            return;
+        }
+
+        historyBody.innerHTML = rows.map(function (row) {
+            var monthLabel = formatMonthLabel(row.month_key);
+            var otDisplay = '<span class="ot-warning"><i class="fas fa-triangle-exclamation"></i></span> ' + Number(row.total_ot_hours || 0).toLocaleString();
+            var dateDisplay = row.approved_at ? formatDate(row.approved_at) : formatDate(row.submitted_at);
+            var statusText = row.status === 'approved' ? 'Đã duyệt' : 'Đã trả về';
+            var statusClass = row.status === 'approved' ? 'status-approved' : 'status-rejected';
+
+            return '<tr>' +
+                '<td>' + escapeHtml(monthLabel) + '</td>' +
+                '<td>' + escapeHtml(row.month_key) + '</td>' +
+                '<td>' + Number(row.total_employees || 0) + '</td>' +
+                '<td>' + Number(row.total_work_days || 0).toLocaleString() + '</td>' +
+                '<td>' + otDisplay + '</td>' +
+                '<td>' + Number(row.violation_rate || 0) + '%</td>' +
+                '<td>' + escapeHtml(dateDisplay) + '</td>' +
+                '<td><span class="status-badge ' + statusClass + '">' + escapeHtml(statusText) + '</span></td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function loadApprovals() {
+        var params = getFormValues();
+
+        fetch('index.php?page=manager-api-approvals&status=submitted&year=' + encodeURIComponent(params.year), {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+            renderPendingRows(json.data || []);
+            if (autoOpenApprovalId) {
+                loadApprovalDetail(autoOpenApprovalId);
+                autoOpenApprovalId = 0;
+            }
+        })
+        .catch(function () {
+            pendingBody.innerHTML = '<tr><td colspan="8" class="empty-state">Lỗi tải dữ liệu.</td></tr>';
+        });
+
+        fetch('index.php?page=manager-api-approvals&status=history&year=' + encodeURIComponent(params.year), {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+            renderHistoryRows(json.data || []);
+        })
+        .catch(function () {
+            historyBody.innerHTML = '<tr><td colspan="8" class="empty-state">Lỗi tải dữ liệu.</td></tr>';
+        });
+    }
+
+    function loadApprovalDetail(approvalId) {
+        activeApprovalId = Number(approvalId || 0);
+        detailTitle.textContent = 'Chi tiết kỳ công';
+        detailSubtitle.textContent = 'Đang tải dữ liệu bảng tính công từ HR...';
+        detailSummary.innerHTML = '';
+        detailMeta.innerHTML = '';
+        detailBody.innerHTML = '<tr><td colspan="6" class="empty-state">Đang tải dữ liệu...</td></tr>';
+        updateDetailActionState('submitted');
+        openDetailModal();
+
+        fetch('index.php?page=manager-api-approval-detail&approval_id=' + encodeURIComponent(activeApprovalId), {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+            if (!json.success) {
+                detailBody.innerHTML = '<tr><td colspan="6" class="empty-state">' + escapeHtml(json.message || 'Không thể tải chi tiết kỳ công.') + '</td></tr>';
+                detailStatus.textContent = 'Không thể tải chi tiết để phê duyệt.';
+                approveDetailBtn.hidden = true;
+                rejectDetailBtn.hidden = true;
+                return;
+            }
+
+            var detail = json.data || {};
+            var approval = detail.approval || {};
+            var summary = detail.summary || {};
+            var rows = detail.rows || [];
+            activeApprovalStatus = approval.status || '';
+
+            detailTitle.textContent = 'Chi tiết bảng tính công kỳ ' + (approval.month_key || '');
+            detailSubtitle.textContent = 'HR gửi: ' + escapeHtml(approval.hr_name || 'Chưa xác định') + ' | Ngày gửi: ' + escapeHtml(formatDate(approval.submitted_at));
+            detailSummary.innerHTML = [
+                { label: 'Nhân sự', value: Number(summary.employees || 0) },
+                { label: 'Tổng ngày công', value: Number(summary.total_work_days || 0).toLocaleString() },
+                { label: 'Tổng giờ làm', value: Number(summary.total_work_hours || 0).toLocaleString() },
+                { label: 'Tổng OT', value: Number(summary.total_overtime_hours || 0).toLocaleString() + 'h' }
+            ].map(function (item) {
+                return '<div class="approval-summary-item"><span>' + escapeHtml(item.label) + '</span><strong>' + escapeHtml(item.value) + '</strong></div>';
+            }).join('');
+
+            detailMeta.innerHTML = [
+                { label: 'Kỳ công', value: formatMonthLabel(approval.month_key || '') },
+                { label: 'Người gửi HR', value: approval.hr_name || 'Chưa xác định' },
+                { label: 'Ghi chú', value: approval.note || 'Chưa có ghi chú' }
+            ].map(function (item) {
+                return '<div class="approval-meta-box"><strong>' + escapeHtml(item.label) + '</strong><div>' + escapeHtml(item.value) + '</div></div>';
+            }).join('');
+
+            if (!rows.length) {
+                detailBody.innerHTML = '<tr><td colspan="6" class="empty-state">Không có dữ liệu chi tiết cho kỳ công này.</td></tr>';
+            } else {
+                detailBody.innerHTML = rows.map(function (row, index) {
+                    return '<tr>' +
+                        '<td>' + (index + 1) + '</td>' +
+                        '<td>' + escapeHtml(row.hoTen || '') + '</td>' +
+                        '<td>' + escapeHtml(row.phongBan || '-') + '</td>' +
+                        '<td>' + Number(row.work_days || 0) + '</td>' +
+                        '<td>' + Number(row.work_hours || 0).toLocaleString() + '</td>' +
+                        '<td>' + Number(row.overtime_hours || 0).toLocaleString() + '</td>' +
+                        '</tr>';
+                }).join('');
+            }
+
+            updateDetailActionState(activeApprovalStatus);
+        })
+        .catch(function () {
+            detailBody.innerHTML = '<tr><td colspan="6" class="empty-state">Lỗi tải dữ liệu chi tiết.</td></tr>';
+            detailStatus.textContent = 'Không thể tải chi tiết để phê duyệt.';
+            approveDetailBtn.hidden = true;
+            rejectDetailBtn.hidden = true;
+        });
+    }
+
+    function processApproval(action) {
+        if (!activeApprovalId) return;
+        var promptText = action === 'approve' ? 'Ghi chú phê duyệt (nếu có):' : 'Lý do trả về:';
+        var note = window.prompt(promptText, '') ?? '';
+
+        var form = new FormData();
+        form.append('approval_id', activeApprovalId);
+        form.append('action', action);
+        form.append('note', note);
+
+        fetch('index.php?page=manager-api-approve', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: form
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+            alert(json.message || (json.success ? 'Đã xử lý' : 'Lỗi'));
+            if (json.success) {
+                closeDetailModal();
+                loadApprovals();
+            }
+        })
+        .catch(function () { alert('Lỗi xử lý phê duyệt.'); });
+    }
+
+    filterForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        loadApprovals();
+    });
+
+    document.addEventListener('click', function (e) {
+        var viewBtn = e.target.closest('.js-view-approval-detail');
+        if (viewBtn) {
+            loadApprovalDetail(viewBtn.getAttribute('data-id'));
+        }
+    });
+
+    closeDetailBtn.addEventListener('click', closeDetailModal);
+    cancelDetailBtn.addEventListener('click', closeDetailModal);
+    approveDetailBtn.addEventListener('click', function () { processApproval('approve'); });
+    rejectDetailBtn.addEventListener('click', function () { processApproval('reject'); });
+
+    detailModal.addEventListener('click', function (e) {
+        if (e.target === detailModal) {
+            closeDetailModal();
+        }
+    });
+
+    loadApprovals();
+});
+</script>
+<?php include 'app/views/layouts/footer.php'; ?>
