@@ -151,7 +151,7 @@ class ChamCongModel
 
     public function getYeuCauTheoNhanVien($maND)
     {
-        $sql = "SELECT id, attendance_date, old_time, new_time, reason, status, hr_note, created_at
+        $sql = "SELECT id, attendance_date, old_time, new_time, reason, status, hr_note, created_at, updated_at
                 FROM attendance_corrections
                 WHERE maND = ?
                 ORDER BY created_at DESC";

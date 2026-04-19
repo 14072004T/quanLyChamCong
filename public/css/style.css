@@ -37,9 +37,9 @@
 
     /* Layout */
     --header-h: 64px;
-    --nav-h:    44px;
+    --nav-h:    0px;
     --sidebar-w: 256px;
-    --content-top: calc(var(--header-h) + var(--nav-h));
+    --content-top: var(--header-h);
 
     /* Effects */
     --shadow-xs: 0 1px 2px rgba(0,0,0,.05);
@@ -117,47 +117,33 @@ body {
     align-items: center;
 }
 
-#logo-interlock {
-    display: flex;
-    align-items: center;
-    height: 38px;
+.brand-logo {
+    display: inline-flex;
+    gap: 2px;
     border-radius: 8px;
-    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    background: linear-gradient(135deg, #475569, #0ea5e9, #3b82f6);
+    padding: 3px;
+    transform: scale(0.85); /* Slightly smaller to fit header height nicely */
+    transform-origin: left center;
 }
 
-#logo-interlock span {
-    color: #e2e8f0;
-    padding: 0 8px;
-    line-height: 1;
-    height: 38px;
-    display: flex;
+.brand-logo span {
+    display: inline-flex;
     align-items: center;
-    transition: filter var(--t-base);
-}
-
-#logo-interlock .middle-letter {
-    position: relative;
-    z-index: 2;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
+    font-weight: 800;
+    font-family: inherit;
     color: white;
-    transform: skewX(-10deg);
-    padding: 0 13px;
-    margin: 0 -3px;
-    box-shadow: 0 0 16px rgba(59,130,246,.5);
+    border-radius: 6px;
 }
 
-#logo-interlock span:last-child {
-    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-    color: white;
-    font-weight: 900;
-    padding: 0 13px;
-    transform: skewX(-10deg);
-    margin-left: -3px;
-    border-radius: 0 6px 6px 0;
-    box-shadow: 0 0 16px rgba(6,182,212,.4);
-}
-
-#logo-interlock span:last-child::before { display: none; }
+.logo-r { background: #334155; }
+.logo-f { background: #0ea5e9; }
+.logo-t { background: #3b82f6; }
 
 .header h1 {
     font-size: 0.82em;

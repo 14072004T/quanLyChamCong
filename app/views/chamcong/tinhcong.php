@@ -25,6 +25,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
 .payroll-page {
     display: grid;
     gap: 20px;
+    padding-top: var(--header-h);
 }
 .payroll-toolbar {
     padding: 24px 28px;
@@ -286,7 +287,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
 </style>
 <div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
-    <div class="dashboard-container">
+    <div class="dashboard-container" style="padding-top:0;margin-top:0;">
         <?php if ($success): ?>
             <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
         <?php endif; ?>
@@ -295,7 +296,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
         <?php endif; ?>
 
         <div class="payroll-page">
-            <div class="panel payroll-toolbar">
+            <div class="panel payroll-toolbar" style="margin-top:0;padding-top:0;">
                 <div class="payroll-toolbar-head">
                     <div>
                         <p>Theo dõi dữ liệu công theo tháng, lọc nhanh theo nhân viên và rà soát tổng công trước khi gửi cho quản lý phê duyệt.</p>

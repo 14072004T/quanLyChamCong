@@ -17,9 +17,9 @@ body {
     display: flex;
     flex: 1;
     width: 100%;
-    margin-top: calc(var(--header-h) + var(--nav-h));
+    margin-top: 0;
     gap: 0;
-    min-height: calc(100vh - var(--header-h) - var(--nav-h) - 40px);
+    min-height: calc(100vh - var(--header-h));
 }
 
 /* ===== SIDEBAR (dashboard overrides) ===== */
@@ -27,7 +27,7 @@ body {
     width: 256px;
     min-width: 256px;
     background: linear-gradient(180deg, #0c1535 0%, #0f172a 35%, #1a3a6c 100%);
-    padding: 20px 12px;
+    padding: 0 12px 20px 12px;
     border-right: none;
     overflow-y: auto;
     flex-shrink: 0;
@@ -121,7 +121,7 @@ body {
 /* ===== DASHBOARD CONTAINER ===== */
 .dashboard-container {
     flex: 1;
-    padding: 28px 32px;
+    padding: calc(var(--header-h) + 16px) 32px 28px 32px;
     background: #f1f5f9;
     overflow-y: auto;
     min-width: 0;

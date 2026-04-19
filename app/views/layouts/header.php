@@ -31,18 +31,41 @@
         if ($role === 'nhanvien' && $maND > 0) {
             $requests = $notificationModel->getYeuCauTheoNhanVien($maND);
             foreach ($requests as $req) {
-                if (($req['status'] ?? '') !== 'pending') {
+                // Limit to 6 latest notifications max
+                if (count($notificationItems) >= 6) {
+                    break;
+                }
+
+                $status = $req['status'] ?? 'pending';
+                $updatedTimeStr = $req['updated_at'] ?? $req['created_at'] ?? date('Y-m-d H:i:s');
+                $updatedTime = strtotime($updatedTimeStr);
+                $daysAgo = (time() - $updatedTime) / 86400;
+
+                // Stop populating older handled requests (e.g., > 3 days old)
+                if ($status !== 'pending' && $daysAgo > 3) {
                     continue;
                 }
+
                 $notificationCount++;
-                if (count($notificationItems) < 6) {
-                    $notificationItems[] = [
-                        'title' => 'Yêu cầu chỉnh sửa đang chờ duyệt',
-                        'meta' => 'Ngày: ' . ($req['attendance_date'] ?? ''),
-                        'time' => $req['created_at'] ?? '',
-                        'link' => 'index.php?page=yeu-cau-chinh-sua-cham-cong&request_id=' . (int)($req['id'] ?? 0) . '#request-' . (int)($req['id'] ?? 0),
-                    ];
+                
+                $titleMsg = 'Yêu cầu đang chờ duyệt';
+                if ($status === 'approved') {
+                    $titleMsg = 'Yêu cầu đã ĐƯỢC DUYỆT';
+                } elseif ($status === 'rejected') {
+                    $titleMsg = 'Yêu cầu BỊ TỪ CHỐI';
                 }
+
+                $meta = 'Ngày: ' . ($req['attendance_date'] ?? '');
+                if ($status !== 'pending') {
+                    $meta .= ' - ' . htmlspecialchars($req['hr_note'] ?: 'Không có ghi chú');
+                }
+
+                $notificationItems[] = [
+                    'title' => $titleMsg,
+                    'meta' => $meta,
+                    'time' => $updatedTimeStr,
+                    'link' => 'index.php?page=yeu-cau-chinh-sua-cham-cong',
+                ];
             }
         } elseif ($role === 'hr') {
             $pendingCorrections = $notificationModel->getCorrectionRequests('pending');
@@ -99,8 +122,10 @@
     }
     ?>
     <header class="header">
-        <div class="logo" id="logo-interlock">
-            <span>R</span><span class="middle-letter">F</span><span>T</span>
+        <div class="brand-logo" title="RFT Hệ thống Chấm công">
+            <span class="logo-r">R</span>
+            <span class="logo-f">F</span>
+            <span class="logo-t">T</span>
         </div>
         <h1>HỆ THỐNG QUẢN LÝ CHẤM CÔNG</h1>
         <div class="user-controls">
@@ -155,5 +180,14 @@
                 }
                 ?>
             </a>
+            <?php if (isset($_SESSION['user'])): ?>
+                <a href="index.php?page=logout" class="icon-btn" title="Đăng xuất" style="margin-left: 6px; color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+                    <i class="fa-solid fa-right-from-bracket" style="color: #ef4444;"></i>
+                </a>
+            <?php else: ?>
+                <a href="index.php?page=login" class="icon-btn" title="Đăng nhập" style="margin-left: 6px; color: #10b981; border-color: rgba(16, 185, 129, 0.2);">
+                    <i class="fa-solid fa-right-to-bracket" style="color: #10b981;"></i>
+                </a>
+            <?php endif; ?>
         </div>
     </header>
