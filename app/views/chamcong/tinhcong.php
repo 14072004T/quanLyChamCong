@@ -22,16 +22,22 @@ foreach (($salaryRows ?? []) as $summaryRow) {
 <?php include 'app/views/layouts/header.php'; ?>
 <?php include 'app/views/layouts/nav.php'; ?>
 <style>
-.payroll-page {
-    display: grid;
-    gap: 20px;
-    padding-top: var(--header-h);
-}
 .payroll-toolbar {
     padding: 24px 28px;
     background:
         radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 28%),
         linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+.payroll-page {
+    margin-top: 0;
+}
+.payroll-page .sidebar-nav {
+    top: 0;
+    padding-top: calc(var(--header-h) - 10px);
+    max-height: 100vh;
+}
+.payroll-page .dashboard-container {
+    padding-top: var(--header-h);
 }
 .payroll-toolbar-head {
     display: flex;
@@ -285,9 +291,15 @@ foreach (($salaryRows ?? []) as $summaryRow) {
     }
 }
 </style>
-<div class="main-container">
+<div class="main-container payroll-page">
     <?php include 'app/views/layouts/sidebar.php'; ?>
-    <div class="dashboard-container" style="padding-top:0;margin-top:0;">
+    <div class="dashboard-container">
+
+        <div class="panel">
+            <h2 style="border:none;padding:0;margin:0 0 6px;">TÍNH CÔNG & BÁO CÁO</h2>
+            <p style="color:#64748b;margin:0;">Theo dõi dữ liệu công theo tháng, lọc nhanh theo nhân viên và rà soát tổng công trước khi gửi cho quản lý phê duyệt.</p>
+        </div>
+
         <?php if ($success): ?>
             <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
         <?php endif; ?>
@@ -295,9 +307,8 @@ foreach (($salaryRows ?? []) as $summaryRow) {
             <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
 
-        <div class="payroll-page">
-            <div class="panel payroll-toolbar" style="margin-top:0;padding-top:0;">
-                <div class="payroll-toolbar-head">
+        <div class="panel payroll-toolbar">
+            <div class="payroll-toolbar-head">
                     <div>
                         <p>Theo dõi dữ liệu công theo tháng, lọc nhanh theo nhân viên và rà soát tổng công trước khi gửi cho quản lý phê duyệt.</p>
                     </div>

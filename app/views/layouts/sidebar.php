@@ -42,9 +42,9 @@ $roleLabels = [
     $attendanceTabLabel = ($role === 'nhanvien') ? 'Chấm công' : 'Quản lý chấm công';
     $attendanceTabIcon = ($role === 'nhanvien') ? 'fa-fingerprint' : 'fa-users-gear';
     ?>
-    <div class="sidebar-top-section" style="margin: -20px -12px 10px -12px; padding: 18px 20px; background: rgba(59, 130, 246, 0.15); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px;">
-        <i class="fa-solid <?= htmlspecialchars($attendanceTabIcon) ?>" style="color: #60a5fa; font-size: 1.1em;"></i>
-        <a href="index.php?page=cham-cong-dashboard" style="color: #e2e8f0; font-weight: 600; font-size: 0.95em; text-decoration: none; text-transform: uppercase; letter-spacing: 0.2px;">
+    <div class="sidebar-top-section">
+        <i class="fa-solid <?= htmlspecialchars($attendanceTabIcon) ?>"></i>
+        <a href="index.php?page=cham-cong-dashboard">
             <?= htmlspecialchars($attendanceTabLabel) ?>
         </a>
     </div>
