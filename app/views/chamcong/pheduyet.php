@@ -249,7 +249,7 @@ $activeApprovalId = (int)($_GET['approval_id'] ?? 0);
         </div>
 
         <div class="panel">
-            <h3>DANH SÁCH BẢNG CÔNG CHỜ PHÊ DUYỆT</h3>
+            <h3 id="approval-pending-title">DANH SÁCH BẢNG CÔNG CHỜ PHÊ DUYỆT</h3>
             <table class="table" id="approval-pending-table">
                 <thead>
                     <tr>
@@ -281,7 +281,7 @@ $activeApprovalId = (int)($_GET['approval_id'] ?? 0);
                         <th>Tổng giờ OT</th>
                         <th>Tỷ lệ vi phạm</th>
                         <th>Ngày xử lý</th>
-                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
                     </tr>
                 </thead>
                 <tbody id="approval-history-body">
@@ -357,6 +357,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var autoOpenApprovalId = <?= (int)$activeApprovalId ?>;
     var filterForm = document.getElementById('approval-filter-form');
     var pendingBody = document.getElementById('approval-pending-body');
+    var pendingTitle = document.getElementById('approval-pending-title');
     var historyBody = document.getElementById('approval-history-body');
     var detailModal = document.getElementById('approvalDetailModal');
     var detailTitle = document.getElementById('approval-detail-title');
@@ -365,6 +366,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var detailMeta = document.getElementById('approval-detail-meta');
     var detailBody = document.getElementById('approval-detail-body');
     var detailStatus = document.getElementById('approval-detail-status');
+    var detailActions = document.querySelector('.approval-detail-actions');
+    var detailBtnGroup = document.querySelector('.approval-detail-actions .btn-group');
     var closeDetailBtn = document.getElementById('approval-detail-close');
     var cancelDetailBtn = document.getElementById('approval-detail-cancel');
     var approveDetailBtn = document.getElementById('approval-detail-approve');
@@ -379,6 +382,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var activeApprovalId = 0;
     var activeApprovalStatus = '';
+    var activeApprovalSource = 'pending'; // pending hoặc history
     var pendingApprovalAction = '';
 
     function escapeHtml(val) {
@@ -424,6 +428,11 @@ document.addEventListener('DOMContentLoaded', function () {
         detailModal.setAttribute('aria-hidden', 'true');
         activeApprovalId = 0;
         activeApprovalStatus = '';
+        activeApprovalSource = 'pending';
+        // Reset btn-group visibility
+        detailBtnGroup.style.display = 'flex';
+        approveDetailBtn.hidden = false;
+        rejectDetailBtn.hidden = false;
     }
 
     function openInputModal(title, label) {
@@ -496,6 +505,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var dateDisplay = row.approved_at ? formatDate(row.approved_at) : formatDate(row.submitted_at);
             var statusText = row.status === 'approved' ? 'Đã duyệt' : 'Đã trả về';
             var statusClass = row.status === 'approved' ? 'status-approved' : 'status-rejected';
+            var approvalId = Number(row.id || 0);
 
             return '<tr>' +
                 '<td>' + escapeHtml(monthLabel) + '</td>' +
@@ -505,7 +515,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td>' + otDisplay + '</td>' +
                 '<td>' + Number(row.violation_rate || 0) + '%</td>' +
                 '<td>' + escapeHtml(dateDisplay) + '</td>' +
-                '<td><span class="status-badge ' + statusClass + '">' + escapeHtml(statusText) + '</span></td>' +
+                '<td><button type="button" class="btn btn-primary btn-sm js-view-approval-detail" data-id="' + approvalId + '" data-source="history" style="margin-right:8px;"><i class="fas fa-eye"></i> Xem</button><span class="status-badge ' + statusClass + '">' + escapeHtml(statusText) + '</span></td>' +
                 '</tr>';
         }).join('');
     }
@@ -513,7 +523,14 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadApprovals() {
         var params = getFormValues();
 
-        fetch('index.php?page=manager-api-approvals&status=submitted&year=' + encodeURIComponent(params.year), {
+        var statusTitles = {
+            'submitted': 'DANH SÁCH BẢNG CÔNG CHỜ PHÊ DUYỆT',
+            'approved': 'DANH SÁCH BẢNG CÔNG ĐÃ DUYỆT',
+            'rejected': 'DANH SÁCH BẢNG CÔNG ĐÃ TRẢ VỀ'
+        };
+        pendingTitle.textContent = statusTitles[params.status] || 'DANH SÁCH BẢNG CÔNG';
+
+        fetch('index.php?page=manager-api-approvals&status=' + encodeURIComponent(params.status) + '&year=' + encodeURIComponent(params.year), {
             headers: { 'Accept': 'application/json' }
         })
         .then(function (r) { return r.json(); })
@@ -540,14 +557,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function loadApprovalDetail(approvalId) {
+    function loadApprovalDetail(approvalId, source) {
+        source = source || 'pending';
         activeApprovalId = Number(approvalId || 0);
+        activeApprovalSource = source;
         detailTitle.textContent = 'Chi tiết kỳ công';
         detailSubtitle.textContent = 'Đang tải dữ liệu bảng tính công từ HR...';
         detailSummary.innerHTML = '';
         detailMeta.innerHTML = '';
         detailBody.innerHTML = '<tr><td colspan="6" class="empty-state">Đang tải dữ liệu...</td></tr>';
-        updateDetailActionState('submitted');
+
+        // Nếu là history, ẩn ngay buttons
+        if (source === 'history') {
+            approveDetailBtn.hidden = true;
+            rejectDetailBtn.hidden = true;
+            detailBtnGroup.style.display = 'none';
+            detailStatus.textContent = 'Kỳ công này đã được xử lý. Bạn chỉ có thể xem lại dữ liệu chi tiết.';
+        } else {
+            detailBtnGroup.style.display = 'flex';
+            updateDetailActionState('submitted');
+        }
         openDetailModal();
 
         fetch('index.php?page=manager-api-approval-detail&approval_id=' + encodeURIComponent(activeApprovalId), {
@@ -603,7 +632,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 }).join('');
             }
 
-            updateDetailActionState(activeApprovalStatus);
+            // Chỉ update action state nếu là pending, không phải history
+            if (activeApprovalSource !== 'history') {
+                updateDetailActionState(activeApprovalStatus);
+            }
         })
         .catch(function () {
             detailBody.innerHTML = '<tr><td colspan="6" class="empty-state">Lỗi tải dữ liệu chi tiết.</td></tr>';
@@ -657,7 +689,9 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('click', function (e) {
         var viewBtn = e.target.closest('.js-view-approval-detail');
         if (viewBtn) {
-            loadApprovalDetail(viewBtn.getAttribute('data-id'));
+            var approvalId = viewBtn.getAttribute('data-id');
+            var source = viewBtn.getAttribute('data-source') || 'pending';
+            loadApprovalDetail(approvalId, source);
         }
     });
 

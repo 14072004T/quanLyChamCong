@@ -36,7 +36,10 @@ if (!empty($_GET['edit']) && !empty($employees)) {
 
         <div class="panel">
             <h3><?= $editing ? 'Cập nhật nhân viên' : 'Thêm nhân viên mới' ?></h3>
-            <form method="POST" action="index.php?page=quan-ly-nhanvien" class="filter-row" style="flex-wrap:wrap;">
+            <div id="validationMessage" style="display:none;padding:12px;margin-bottom:12px;border-radius:6px;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;">
+                <i class="fas fa-exclamation-circle"></i> Vui lòng nhập đầy đủ thông tin
+            </div>
+            <form id="employeeForm" method="POST" action="index.php?page=quan-ly-nhanvien" class="filter-row" style="flex-wrap:wrap;">
                 <input type="hidden" name="maND" value="<?= (int)($editing['maND'] ?? 0) ?>">
                 <div class="form-group" style="min-width:200px;">
                     <label>Họ tên *</label>
@@ -73,8 +76,8 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                         <option value="0" <?= (int)($editing['trangThai'] ?? 1) === 0 ? 'selected' : '' ?>>Ngừng</option>
                     </select>
                 </div>
-                <div class="form-group" style="display:flex;align-items:flex-end;gap:8px;min-width:200px;">
-                    <button type="submit" class="btn btn-success btn-sm">Lưu thông tin</button>
+                <div class="form-group" style="min-width:130px;">
+                     <button type="submit" class="btn btn-success btn-sm">Lưu thông tin</button>
                     <a class="btn btn-secondary btn-sm" href="index.php?page=quan-ly-nhanvien">Làm mới</a>
                 </div>
             </form>
@@ -128,4 +131,38 @@ if (!empty($_GET['edit']) && !empty($employees)) {
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.getElementById('employeeForm');
+    var validationMessage = document.getElementById('validationMessage');
+    var hoTenInput = form.querySelector('input[name="hoTen"]');
+    var chucVuSelect = form.querySelector('select[name="chucVu"]');
+
+    // Reset validation message when user types
+    hoTenInput.addEventListener('input', function() {
+        if (validationMessage.style.display !== 'none') {
+            validationMessage.style.display = 'none';
+        }
+    });
+
+    chucVuSelect.addEventListener('change', function() {
+        if (validationMessage.style.display !== 'none') {
+            validationMessage.style.display = 'none';
+        }
+    });
+
+    // Validate on form submit
+    form.addEventListener('submit', function(e) {
+        var hoTen = hoTenInput.value.trim();
+        var chucVu = chucVuSelect.value;
+
+        if (!hoTen || !chucVu) {
+            e.preventDefault();
+            validationMessage.style.display = 'block';
+            hoTenInput.focus();
+            return false;
+        }
+    });
+});
+</script>
 <?php include 'app/views/layouts/footer.php'; ?>

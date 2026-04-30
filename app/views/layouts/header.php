@@ -129,9 +129,6 @@
         </div>
         <h1>HỆ THỐNG QUẢN LÝ CHẤM CÔNG</h1>
         <div class="user-controls">
-            <span class="icon-btn" title="Tìm kiếm" style="cursor:pointer">
-                <i class="fa-solid fa-magnifying-glass"></i>
-            </span>
             <div class="notif-wrapper" id="notifWrapper">
                 <button type="button" id="notifBellBtn" class="icon-btn" title="Thông báo" style="cursor:pointer;position:relative">
                     <i class="fa-regular fa-bell"></i>
