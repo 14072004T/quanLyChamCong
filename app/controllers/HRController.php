@@ -189,27 +189,38 @@ class HRController
         $toDate = $_POST['to_date'] ?? $_GET['to_date'] ?? date('Y-m-d');
         $department = trim($_POST['department'] ?? $_GET['department'] ?? '');
         $format = strtolower($_POST['format'] ?? 'html');
+        $export = (int)($_POST['export'] ?? 0);
 
         $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $department);
         $departments = $this->model->getDistinctDepartments();
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($format, ['excel', 'csv'], true)) {
-            header('Content-Type: text/csv; charset=utf-8');
-            header('Content-Disposition: attachment; filename=bao_cao_cham_cong_' . $fromDate . '_' . $toDate . '.csv');
-            $out = fopen('php://output', 'w');
-            fputcsv($out, ['Ma NV', 'Ho ten', 'Phong ban', 'So ngay co cham cong', 'So lan vao', 'So lan ra']);
-            foreach ($reportRows as $row) {
-                fputcsv($out, [
-                    $row['maND'] ?? '',
-                    $row['hoTen'] ?? '',
-                    $row['phongBan'] ?? '',
-                    $row['work_days'] ?? 0,
-                    $row['checkin_count'] ?? 0,
-                    $row['checkout_count'] ?? 0,
-                ]);
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && $export && in_array($format, ['excel', 'csv'], true)) {
+            if ($format === 'excel') {
+                require_once __DIR__ . '/../helpers/ExcelExporter.php';
+                $exporter = new ExcelExporter();
+                $monthKey = substr($fromDate, 0, 7);
+                $userName = $_SESSION['user']['hoTen'] ?? 'Không xác định';
+                $exporter->exportAttendanceReport($reportRows, $monthKey, $department, $userName);
+                exit;
+            } else {
+                // CSV export
+                header('Content-Type: text/csv; charset=utf-8');
+                header('Content-Disposition: attachment; filename=bao_cao_cham_cong_' . $fromDate . '_' . $toDate . '.csv');
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ['Ma NV', 'Ho ten', 'Phong ban', 'So ngay co cham cong', 'So lan vao', 'So lan ra']);
+                foreach ($reportRows as $row) {
+                    fputcsv($out, [
+                        $row['maND'] ?? '',
+                        $row['hoTen'] ?? '',
+                        $row['phongBan'] ?? '',
+                        $row['work_days'] ?? 0,
+                        $row['checkin_count'] ?? 0,
+                        $row['checkout_count'] ?? 0,
+                    ]);
+                }
+                fclose($out);
+                exit;
             }
-            fclose($out);
-            exit;
         }
 
         require __DIR__ . '/../views/chamcong/baocao.php';

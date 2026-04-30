@@ -101,6 +101,7 @@ $allowedPages = [
     'chi-tiet-bang-cong',
     'manager-api-approvals',
     'manager-api-approval-detail',
+    'manager-api-approval-history',
     'manager-api-approve',
     // Tech
     'wifi',
@@ -312,6 +313,11 @@ switch ($page) {
     case 'manager-api-approval-detail':
         require_once 'app/controllers/ManagerController.php';
         (new ManagerController())->approvalDetailApi();
+        break;
+
+    case 'manager-api-approval-history':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->approvalHistoryApi();
         break;
 
     case 'manager-api-approve':

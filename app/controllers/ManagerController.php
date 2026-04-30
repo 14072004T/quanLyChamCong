@@ -80,8 +80,40 @@ class ManagerController
         $fromDate = $_POST['from_date'] ?? $_GET['from_date'] ?? date('Y-m-01');
         $toDate = $_POST['to_date'] ?? $_GET['to_date'] ?? date('Y-m-d');
         $department = trim($_POST['department'] ?? $_GET['department'] ?? '');
+        $format = strtolower($_POST['format'] ?? 'html');
+        $export = (int)($_POST['export'] ?? 0);
+
         $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $department);
         $departments = $this->model->getDistinctDepartments();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && $export && in_array($format, ['excel', 'csv'], true)) {
+            if ($format === 'excel') {
+                require_once __DIR__ . '/../helpers/ExcelExporter.php';
+                $exporter = new ExcelExporter();
+                $monthKey = substr($fromDate, 0, 7);
+                $userName = $_SESSION['user']['hoTen'] ?? 'Không xác định';
+                $exporter->exportAttendanceReport($reportRows, $monthKey, $department, $userName);
+                exit;
+            } else {
+                // CSV export
+                header('Content-Type: text/csv; charset=utf-8');
+                header('Content-Disposition: attachment; filename=bao_cao_cham_cong_' . $fromDate . '_' . $toDate . '.csv');
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ['Ma NV', 'Ho ten', 'Phong ban', 'So ngay co cham cong', 'So lan vao', 'So lan ra']);
+                foreach ($reportRows as $row) {
+                    fputcsv($out, [
+                        $row['maND'] ?? '',
+                        $row['hoTen'] ?? '',
+                        $row['phongBan'] ?? '',
+                        $row['work_days'] ?? 0,
+                        $row['checkin_count'] ?? 0,
+                        $row['checkout_count'] ?? 0,
+                    ]);
+                }
+                fclose($out);
+                exit;
+            }
+        }
 
         require __DIR__ . '/../views/chamcong/baocao.php';
     }
@@ -160,16 +192,11 @@ class ManagerController
         $rows = $this->model->getMonthlyApprovals($filterStatus);
 
         if ($status === 'history' || $status === 'processed') {
-            $rows = array_values(array_filter(
-                $this->model->getMonthlyApprovals(),
-                function ($row) {
-                    return in_array($row['status'] ?? '', ['approved', 'rejected'], true);
-                }
-            ));
+            $rows = $this->model->getMonthlyApprovalHistory($year, 100);
         }
 
         // filter by year if provided
-        if ($year !== '' && preg_match('/^\d{4}$/', $year)) {
+        if ($year !== '' && preg_match('/^\d{4}$/', $year) && $status !== 'history' && $status !== 'processed') {
             $rows = array_values(array_filter($rows, function ($r) use ($year) {
                 return strpos($r['month_key'] ?? '', $year) === 0;
             }));
@@ -255,6 +282,50 @@ class ManagerController
             'success' => $ok,
             'message' => $ok ? 'Đã cập nhật trạng thái bảng công' : 'Không thể cập nhật trạng thái',
         ], $ok ? 200 : 500);
+    }
+
+    /**
+     * API: Get approval history as JSON
+     */
+    public function approvalHistoryApi()
+    {
+        AuthMiddleware::requirePermission('manager-api-approvals');
+        $this->jsonOnly(['GET']);
+
+        $year = trim($_GET['year'] ?? '');
+        $limit = (int)($_GET['limit'] ?? 50);
+
+        if ($limit <= 0 || $limit > 500) {
+            $limit = 50;
+        }
+
+        $rows = $this->model->getMonthlyApprovalHistory($year, $limit);
+
+        // enrich each row with summary
+        foreach ($rows as &$row) {
+            $monthKey = $row['month_key'] ?? '';
+            $summary = $this->model->getMonthlyWorkSummary($monthKey);
+            $totalEmployees = count($summary);
+            $totalWorkDays = 0;
+            $totalOTHours = 0;
+            $violations = 0;
+            foreach ($summary as $s) {
+                $totalWorkDays += (float)($s['work_days'] ?? 0);
+                $totalOTHours += (float)($s['overtime_hours'] ?? 0);
+            }
+            $violationRate = $totalEmployees > 0 ? round(($violations / $totalEmployees) * 100, 1) : 0;
+            $row['total_employees'] = $totalEmployees;
+            $row['total_work_days'] = round($totalWorkDays, 1);
+            $row['total_ot_hours'] = round($totalOTHours, 1);
+            $row['violation_rate'] = $violationRate;
+        }
+        unset($row);
+
+        $this->respond([
+            'success' => true,
+            'data' => $rows,
+            'count' => count($rows),
+        ]);
     }
 
     /* ---- helpers ---- */

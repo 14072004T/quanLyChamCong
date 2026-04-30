@@ -121,6 +121,67 @@ $activeApprovalId = (int)($_GET['approval_id'] ?? 0);
     gap: 10px;
     flex-wrap: wrap;
 }
+.approval-input-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 1300;
+    padding: 24px;
+}
+.approval-input-modal.open {
+    display: flex;
+}
+.approval-input-card {
+    width: min(500px, 100%);
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
+    overflow: hidden;
+}
+.approval-input-head {
+    padding: 24px 26px 18px;
+    border-bottom: 1px solid #dbe7f5;
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+.approval-input-head h3 {
+    margin: 0;
+    color: #0f172a;
+}
+.approval-input-body {
+    padding: 22px 26px;
+}
+.approval-input-body label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #0f172a;
+}
+.approval-input-body textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    border: 1px solid #dbe7f5;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+}
+.approval-input-body textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+.approval-input-footer {
+    padding: 18px 26px;
+    border-top: 1px solid #dbe7f5;
+    background: #f8fbff;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
 @media (max-width: 900px) {
     .approval-detail-summary,
     .approval-detail-meta {
@@ -273,6 +334,24 @@ $activeApprovalId = (int)($_GET['approval_id'] ?? 0);
     </div>
 </div>
 
+<div class="approval-input-modal" id="approvalInputModal" aria-hidden="true">
+    <div class="approval-input-card">
+        <div class="approval-input-head">
+            <h3 id="approval-input-title">Nhập thông tin</h3>
+        </div>
+        <form id="approval-input-form">
+            <div class="approval-input-body">
+                <label for="approval-input-note" id="approval-input-label">Ghi chú:</label>
+                <textarea id="approval-input-note" name="note" placeholder="Nhập thông tin..." required title="Vui lòng nhập lý do không bỏ trống"></textarea>
+            </div>
+            <div class="approval-input-footer">
+                <button type="button" class="btn btn-secondary btn-sm" id="approval-input-cancel">Hủy</button>
+                <button type="submit" class="btn btn-primary btn-sm">Xác nhận</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var autoOpenApprovalId = <?= (int)$activeApprovalId ?>;
@@ -290,8 +369,17 @@ document.addEventListener('DOMContentLoaded', function () {
     var cancelDetailBtn = document.getElementById('approval-detail-cancel');
     var approveDetailBtn = document.getElementById('approval-detail-approve');
     var rejectDetailBtn = document.getElementById('approval-detail-reject');
+
+    var inputModal = document.getElementById('approvalInputModal');
+    var inputForm = document.getElementById('approval-input-form');
+    var inputTitle = document.getElementById('approval-input-title');
+    var inputLabel = document.getElementById('approval-input-label');
+    var inputNote = document.getElementById('approval-input-note');
+    var inputCancelBtn = document.getElementById('approval-input-cancel');
+
     var activeApprovalId = 0;
     var activeApprovalStatus = '';
+    var pendingApprovalAction = '';
 
     function escapeHtml(val) {
         return String(val ?? '').replace(/[&<>"]/g, function (c) {
@@ -336,6 +424,22 @@ document.addEventListener('DOMContentLoaded', function () {
         detailModal.setAttribute('aria-hidden', 'true');
         activeApprovalId = 0;
         activeApprovalStatus = '';
+    }
+
+    function openInputModal(title, label) {
+        inputTitle.textContent = title;
+        inputLabel.textContent = label;
+        inputNote.value = '';
+        inputModal.classList.add('open');
+        inputModal.setAttribute('aria-hidden', 'false');
+        inputNote.focus();
+    }
+
+    function closeInputModal() {
+        inputModal.classList.remove('open');
+        inputModal.setAttribute('aria-hidden', 'true');
+        pendingApprovalAction = '';
+        inputNote.value = '';
     }
 
     function updateDetailActionState(status) {
@@ -509,14 +613,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function processApproval(action) {
-        if (!activeApprovalId) return;
-        var promptText = action === 'approve' ? 'Ghi chú phê duyệt (nếu có):' : 'Lý do trả về:';
-        var note = window.prompt(promptText, '') ?? '';
+    function processApprovalWithNote(note) {
+        if (!activeApprovalId || !pendingApprovalAction) return;
 
         var form = new FormData();
         form.append('approval_id', activeApprovalId);
-        form.append('action', action);
+        form.append('action', pendingApprovalAction);
         form.append('note', note);
 
         fetch('index.php?page=manager-api-approve', {
@@ -529,10 +631,22 @@ document.addEventListener('DOMContentLoaded', function () {
             alert(json.message || (json.success ? 'Đã xử lý' : 'Lỗi'));
             if (json.success) {
                 closeDetailModal();
+                closeInputModal();
                 loadApprovals();
             }
         })
         .catch(function () { alert('Lỗi xử lý phê duyệt.'); });
+    }
+
+    function showApprovalInputModal(action) {
+        if (!activeApprovalId) return;
+        pendingApprovalAction = action;
+
+        if (action === 'approve') {
+            openInputModal('Phê duyệt kỳ công', 'Ghi chú phê duyệt (nếu có):');
+        } else if (action === 'reject') {
+            openInputModal('Trả về HR', 'Lý do trả về:');
+        }
     }
 
     filterForm.addEventListener('submit', function (e) {
@@ -549,8 +663,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
     closeDetailBtn.addEventListener('click', closeDetailModal);
     cancelDetailBtn.addEventListener('click', closeDetailModal);
-    approveDetailBtn.addEventListener('click', function () { processApproval('approve'); });
-    rejectDetailBtn.addEventListener('click', function () { processApproval('reject'); });
+    approveDetailBtn.addEventListener('click', function () { showApprovalInputModal('approve'); });
+    rejectDetailBtn.addEventListener('click', function () { showApprovalInputModal('reject'); });
+
+    inputCancelBtn.addEventListener('click', closeInputModal);
+    inputNote.addEventListener('invalid', function (e) {
+        if (this.validity.valueMissing) {
+            this.setCustomValidity('Vui lòng nhập lý do không bỏ trống');
+        }
+    });
+    inputNote.addEventListener('input', function () {
+        this.setCustomValidity('');
+    });
+    inputForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var note = inputNote.value.trim();
+        processApprovalWithNote(note);
+    });
+
+    inputModal.addEventListener('click', function (e) {
+        if (e.target === inputModal) {
+            closeInputModal();
+        }
+    });
 
     detailModal.addEventListener('click', function (e) {
         if (e.target === detailModal) {

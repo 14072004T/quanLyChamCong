@@ -541,11 +541,49 @@ class ChamCongModel
             $sql .= " WHERE a.status = ?";
         }
 
-        $sql .= " ORDER BY a.created_at DESC";
+        $sql .= " ORDER BY COALESCE(a.approved_at, a.submitted_at, a.created_at) DESC, a.id DESC";
 
         if ($status) {
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("s", $status);
+            $stmt->execute();
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        }
+
+        $result = $this->conn->query($sql);
+        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    }
+
+    public function getMonthlyApprovalHistory($year = null, $limit = 50)
+    {
+        $sql = "SELECT a.id, a.month_key, a.hr_sender_id, a.manager_approver_id, a.status, a.submitted_at, a.approved_at, a.note,
+                       u.hoTen AS hr_name,
+                       u2.hoTen AS approver_name
+                FROM attendance_monthly_approval a
+                LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
+                LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id
+                WHERE a.status IN ('approved', 'rejected')";
+
+        $params = [];
+        $types = '';
+
+        if ($year && preg_match('/^\d{4}$/', $year)) {
+            $sql .= " AND a.month_key LIKE ?";
+            $params[] = $year . '%';
+            $types = 's';
+        }
+
+        $sql .= " ORDER BY a.approved_at DESC, a.id DESC";
+
+        if ($limit > 0) {
+            $sql .= " LIMIT ?";
+            $params[] = $limit;
+            $types .= 'i';
+        }
+
+        if (!empty($params)) {
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param($types, ...$params);
             $stmt->execute();
             return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         }
