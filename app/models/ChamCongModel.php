@@ -1390,6 +1390,286 @@ class ChamCongModel
     }
 
     /**
+     * ========== NEW: ATTENDANCE CALCULATION WITH HOLIDAYS & LEAVES ==========
+     */
+
+    /**
+     * Lấy thông tin chi tiết công tháng với phép, lễ, OT (UPDATED 2026)
+     * @param string $monthKey - YYYY-MM
+     * @return array
+     */
+    public function getMonthlyAttendanceDetailNew($monthKey)
+    {
+        require_once 'app/helpers/HolidayCalculator.php';
+        require_once 'app/helpers/LeaveCalculator.php';
+        require_once 'app/helpers/AttendanceCalculator.php';
+
+        $monthKey = trim((string)$monthKey);
+        if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            return [];
+        }
+
+        $monthStart = $monthKey . '-01';
+        $monthEnd = date('Y-m-t', strtotime($monthStart));
+
+        // Lấy danh sách tất cả nhân viên hoạt động
+        $employees = $this->getEmployees('', true);
+
+        $result = [];
+
+        foreach ($employees as $employee) {
+            $maND = (int)($employee['maND'] ?? 0);
+            $hoTen = (string)($employee['hoTen'] ?? '');
+
+            // Lấy dữ liệu chấm công trong tháng
+            $attendanceData = $this->getMonthlyAttendanceRaw($maND, $monthStart, $monthEnd);
+
+            // Lấy thông tin phép của nhân viên
+            $leaveInfo = $this->getEmployeeLeaveInfo($maND);
+
+            // Lấy các yêu cầu xin phép đã approve
+            $leaveRequests = $this->getApprovedLeaveRequests($maND, $monthStart, $monthEnd);
+
+            // Tính toán chi tiết
+            $monthlyCalc = AttendanceCalculator::calculateMonthlyAttendance(
+                $monthKey,
+                $attendanceData,
+                $leaveRequests,
+                $leaveInfo
+            );
+
+            // Lấy số ngày làm việc tiêu chuẩn của tháng
+            $standardWorkDays = HolidayCalculator::getWorkingDaysCountInMonth($monthKey);
+
+            // So sánh với tiêu chuẩn
+            $comparison = AttendanceCalculator::compareWithStandard(
+                $monthlyCalc['totals']['total_work_days'] ?? 0,
+                $standardWorkDays
+            );
+
+            $result[] = [
+                'maND' => $maND,
+                'hoTen' => $hoTen,
+                'phongBan' => $employee['phongBan'] ?? '',
+                'daily_breakdown' => $monthlyCalc['daily_breakdown'] ?? [],
+                'work_days' => $monthlyCalc['totals']['total_work_days'] ?? 0,
+                'work_hours' => $monthlyCalc['totals']['working_hours'] ?? 0,
+                'overtime_hours' => $monthlyCalc['totals']['total_ot_hours'] ?? 0,
+                'leave_days_used' => $monthlyCalc['totals']['total_leave_days'] ?? 0,
+                'holiday_days' => $monthlyCalc['totals']['total_holiday_days'] ?? 0,
+                'weekend_days' => $monthlyCalc['totals']['total_weekend_days'] ?? 0,
+                'absent_days' => $monthlyCalc['totals']['total_absent_days'] ?? 0,
+                'standard_work_days' => $standardWorkDays,
+                'comparison' => $comparison,
+                'leave_info' => $leaveInfo,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Lấy dữ liệu chấm công thô (raw) trong khoảng ngày
+     * @param int $maND
+     * @param string $fromDate - YYYY-MM-DD
+     * @param string $toDate - YYYY-MM-DD
+     * @return array - [date => [checkIn, checkOut, ...]]
+     */
+    private function getMonthlyAttendanceRaw($maND, $fromDate, $toDate)
+    {
+        $maND = (int)$maND;
+        $fromDate = trim((string)$fromDate);
+        $toDate = trim((string)$toDate);
+
+        $sql = "
+            SELECT
+                DATE(created_at) as attendance_date,
+                MIN(CASE WHEN action = 'IN' THEN created_at END) as checkIn,
+                MAX(CASE WHEN action = 'OUT' THEN created_at END) as checkOut
+            FROM attendance_logs
+            WHERE maND = ?
+              AND DATE(created_at) >= ?
+              AND DATE(created_at) <= ?
+            GROUP BY DATE(created_at)
+            ORDER BY attendance_date ASC
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+
+        $stmt->bind_param('iss', $maND, $fromDate, $toDate);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        // Convert to [date => data] format
+        $data = [];
+        foreach ($rows as $row) {
+            $date = $row['attendance_date'];
+            $data[$date] = [
+                'checkIn' => $row['checkIn'],
+                'checkOut' => $row['checkOut'],
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Lấy thông tin phép của nhân viên từ database
+     * @param int $maND
+     * @return array
+     */
+    public function getEmployeeLeaveInfo($maND)
+    {
+        $maND = (int)$maND;
+
+        // Kiểm tra xem table `employee_leaves` có tồn tại không
+        // Nếu chưa, sử dụng giá trị mặc định
+        $table_exists = $this->conn->query("
+            SHOW TABLES LIKE 'employee_leaves'
+        ")->num_rows > 0;
+
+        if ($table_exists) {
+            $sql = "
+                SELECT
+                    job_type,
+                    seniority_years,
+                    annual_leave_remaining,
+                    annual_leave_used,
+                    start_date
+                FROM employee_leaves
+                WHERE maND = ?
+                LIMIT 1
+            ";
+
+            $stmt = $this->conn->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param('i', $maND);
+                $stmt->execute();
+                $row = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if ($row) {
+                    return [
+                        'jobType' => $row['job_type'] ?? 'basic',
+                        'seniority' => (int)($row['seniority_years'] ?? 0),
+                        'usedLeaves' => (float)($row['annual_leave_used'] ?? 0),
+                        'remainingLeaves' => (float)($row['annual_leave_remaining'] ?? 0),
+                        'startDate' => $row['start_date'] ?? '',
+                    ];
+                }
+            }
+        }
+
+        // Mặc định: công việc bình thường, 0 năm thâm niên, 12 ngày phép, chưa dùng
+        return [
+            'jobType' => 'basic',
+            'seniority' => 0,
+            'usedLeaves' => 0,
+            'remainingLeaves' => 12,
+            'startDate' => date('Y-01-01'),
+        ];
+    }
+
+    /**
+     * Lấy các yêu cầu xin phép đã được phê duyệt
+     * @param int $maND
+     * @param string $fromDate
+     * @param string $toDate
+     * @return array - [date => leave_type]
+     */
+    private function getApprovedLeaveRequests($maND, $fromDate, $toDate)
+    {
+        $maND = (int)$maND;
+        $fromDate = trim((string)$fromDate);
+        $toDate = trim((string)$toDate);
+
+        // Kiểm tra xem table `leave_requests` có tồn tại không
+        $table_exists = $this->conn->query("
+            SHOW TABLES LIKE 'leave_requests'
+        ")->num_rows > 0;
+
+        if (!$table_exists) {
+            return [];
+        }
+
+        $sql = "
+            SELECT
+                leave_date,
+                leave_type,
+                is_half_day
+            FROM leave_requests
+            WHERE maND = ?
+              AND status = 'approved'
+              AND leave_date >= ?
+              AND leave_date <= ?
+            ORDER BY leave_date ASC
+        ";
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+
+        $stmt->bind_param('iss', $maND, $fromDate, $toDate);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        $data = [];
+        foreach ($rows as $row) {
+            $date = $row['leave_date'];
+            $leaveType = $row['leave_type'] ?? 'annual';
+            $isHalfDay = (int)($row['is_half_day'] ?? 0);
+
+            if ($isHalfDay) {
+                // Nửa ngày phép = 0.5 ngày
+                $data[$date] = [
+                    'type' => $leaveType,
+                    'is_half_day' => true,
+                    'work_value_deduction' => 0.5,
+                ];
+            } else {
+                // Ngày phép đầy đủ
+                $data[$date] = [
+                    'type' => $leaveType,
+                    'is_half_day' => false,
+                    'work_value_deduction' => 1.0,
+                ];
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Lấy thông tin ngày lễ tháng
+     * @param string $monthKey - YYYY-MM
+     * @return array
+     */
+    public function getHolidaysForMonth($monthKey)
+    {
+        require_once 'app/helpers/HolidayCalculator.php';
+
+        $monthKey = trim((string)$monthKey);
+        if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            return [];
+        }
+
+        $holidays = HolidayCalculator::getHolidaysInMonth($monthKey);
+
+        return [
+            'month' => $monthKey,
+            'holidays' => $holidays,
+            'count' => count($holidays),
+            'working_days' => HolidayCalculator::getWorkingDaysCountInMonth($monthKey),
+        ];
+    }
+
+    /**
      * ========== SYSTEM SETTINGS MANAGEMENT ==========
      */
 

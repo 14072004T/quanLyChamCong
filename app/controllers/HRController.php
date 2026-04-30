@@ -424,6 +424,57 @@ class HRController
         }
     }
 
+    /**
+     * API: Lấy dữ liệu tính công chi tiết theo quy định 2026 (có phép, lễ, OT)
+     */
+    public function payrollDetailApi()
+    {
+        AuthMiddleware::requirePermission('hr-api-payroll');
+        $this->jsonOnly(['GET']);
+
+        $monthKey = trim($_GET['month'] ?? date('Y-m'));
+        if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            $this->respond([
+                'success' => false,
+                'message' => 'Kỳ chấm công không hợp lệ',
+            ], 422);
+        }
+
+        // Lấy dữ liệu chi tiết với phép, lễ, OT
+        $detailedData = $this->model->getMonthlyAttendanceDetailNew($monthKey);
+
+        $this->respond([
+            'success' => true,
+            'month_key' => $monthKey,
+            'data' => $detailedData,
+            'count' => count($detailedData),
+        ]);
+    }
+
+    /**
+     * API: Lấy thông tin ngày lễ tháng
+     */
+    public function holidaysApi()
+    {
+        AuthMiddleware::requirePermission('hr-api-payroll');
+        $this->jsonOnly(['GET']);
+
+        $monthKey = trim($_GET['month'] ?? date('Y-m'));
+        if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            $this->respond([
+                'success' => false,
+                'message' => 'Tháng không hợp lệ',
+            ], 422);
+        }
+
+        $holidays = $this->model->getHolidaysForMonth($monthKey);
+
+        $this->respond([
+            'success' => true,
+            'data' => $holidays,
+        ]);
+    }
+
     private function respond(array $payload, int $status = 200)
     {
         http_response_code($status);
