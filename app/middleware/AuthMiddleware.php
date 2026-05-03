@@ -39,6 +39,7 @@ class AuthMiddleware
             'home',
             'cham-cong-dashboard',
             'pheduyet-bang-cong',
+            'pheduyet-yeucau',
             'quan-ly-cham-cong',
             'bao-cao-tong-hop',
             'thong-ke-bieu-do',
@@ -46,6 +47,8 @@ class AuthMiddleware
             'manager-api-approvals',
             'manager-api-approval-detail',
             'manager-api-approve',
+            'manager-api-requests',
+            'manager-api-request-action',
             'logout'
         ],
         'tech' => [

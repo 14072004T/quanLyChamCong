@@ -81,7 +81,7 @@ $days = ($fromTs && $toTs) ? (int)max(1, floor(abs($toTs - $fromTs) / 86400) + 1
                             <?php if ($count >= 100) break; ?>
                             <?php $count++; ?>
                             <tr>
-                                <td style="font-family: Consolas, monospace; font-size: .9em;">
+                                <td style="font-family: 'Inter', sans-serif; font-size: .9em;">
                                     <?= htmlspecialchars($row['created_at'] ?? '') ?>
                                 </td>
                                 <td>

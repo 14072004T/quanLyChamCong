@@ -92,7 +92,7 @@ if (!isset($_SESSION['user'])) {
                 placeholder="Mô tả chi tiết về mạng này (tùy chọn)"
                 maxlength="255"
                 rows="3"
-                style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; box-sizing: border-box; font-family: inherit;"
+                style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; box-sizing: border-box; font-family: 'Inter', sans-serif;"
             ></textarea>
             <small style="color: #64748b;">Mô tả mục đích sử dụng của mạng này</small>
         </div>
@@ -265,7 +265,7 @@ if (!isset($_SESSION['user'])) {
                     placeholder="Mô tả chi tiết"
                     maxlength="255"
                     rows="3"
-                    style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; box-sizing: border-box; font-family: inherit;"
+                    style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; box-sizing: border-box; font-family: 'Inter', sans-serif;"
                 ></textarea>
             </div>
 

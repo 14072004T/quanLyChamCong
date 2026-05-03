@@ -247,7 +247,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
             </div>
             <div class="form-group">
                 <label id="modalNoteLabel" style="font-weight:600;margin-bottom:6px;display:block;color:#334155;">Ghi chú HR</label>
-                <textarea id="modalNoteInput" rows="3" style="width:100%;border-radius:8px;border:1.5px solid #cbd5e1;padding:10px;font-family:inherit;font-size:0.9em;outline:none;" placeholder="Nhập ghi chú..."></textarea>
+                <textarea id="modalNoteInput" rows="3" style="width:100%;border-radius:8px;border:1.5px solid #cbd5e1;padding:10px;font-family:'Inter', sans-serif;font-size:0.9em;outline:none;" placeholder="Nhập ghi chú..."></textarea>
             </div>
             <div class="btn-group" style="display:flex;gap:12px;margin-top:20px;">
                 <button type="button" id="modalBtnConfirm" class="btn" style="flex:1;">Xác nhận</button>

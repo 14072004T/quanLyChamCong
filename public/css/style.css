@@ -1,7 +1,6 @@
 /* =======================================================
    RFT SYSTEM — MODERN UI DESIGN SYSTEM
    ======================================================= */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
 :root {
     /* Brand */
@@ -66,6 +65,16 @@
     --mau-vien:         #e2e8f0;
     --mau-chu-chinh:    #0f172a;
     --mau-xam-icon:     #94a3b8;
+
+    /* Page typography standard */
+    --page-title-size: 1.55rem;
+    --page-title-weight: 800;
+    --page-title-line: 1.25;
+    --page-title-color: #0f172a;
+    --page-subtitle-size: 0.95rem;
+    --page-subtitle-color: #64748b;
+    --form-text-size: 0.9rem;
+    --form-label-size: 0.78rem;
 }
 
 *, *::before, *::after {
@@ -80,7 +89,7 @@
 ::-webkit-scrollbar-thumb:hover { background: var(--brand-primary); }
 
 body {
-    font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Inter', sans-serif;
     background-color: var(--surface-bg);
     color: var(--gray-800);
     line-height: 1.6;
@@ -88,6 +97,64 @@ body {
     flex-direction: column;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
+}
+
+/* ===== SYSTEM TYPOGRAPHY STANDARD ===== */
+.dashboard-container h1:not(.header h1),
+.dashboard-container .hrd-title,
+.dashboard-container .mgr-title,
+.dashboard-container .mgrreq-title,
+.dashboard-container .mgrr-title {
+    margin: 0 0 6px !important;
+    color: var(--page-title-color) !important;
+    font-size: var(--page-title-size) !important;
+    font-weight: var(--page-title-weight) !important;
+    line-height: var(--page-title-line) !important;
+    letter-spacing: 0 !important;
+}
+
+.dashboard-container .hrd-subtitle,
+.dashboard-container .mgr-subtitle,
+.dashboard-container .mgrreq-subtitle,
+.dashboard-container .mgrr-subtitle {
+    margin: 0 !important;
+    color: var(--page-subtitle-color) !important;
+    font-size: var(--page-subtitle-size) !important;
+    line-height: 1.55 !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+}
+
+.dashboard-container label,
+.dashboard-container .form-group label,
+.dashboard-container .mgrr-field label,
+.dashboard-container .mgrreq-field label {
+    color: #64748b !important;
+    font-size: var(--form-label-size) !important;
+    font-weight: 700 !important;
+    line-height: 1.35 !important;
+    letter-spacing: 0 !important;
+}
+
+.dashboard-container input,
+.dashboard-container select,
+.dashboard-container textarea,
+.dashboard-container button {
+    font-family: 'Inter', sans-serif !important;
+}
+
+.dashboard-container input,
+.dashboard-container select,
+.dashboard-container textarea,
+.dashboard-container .btn,
+.dashboard-container .mgrr-btn,
+.dashboard-container .mgrreq-outline-btn,
+.dashboard-container .mgrreq-action,
+.dashboard-container .mgrreq-select,
+.dashboard-container .mgrr-select,
+.dashboard-container .mgrr-input {
+    font-size: var(--form-text-size) !important;
+    line-height: 1.4 !important;
 }
 
 

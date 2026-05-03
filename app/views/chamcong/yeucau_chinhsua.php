@@ -103,7 +103,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                                 <td>
                                     <strong><?= htmlspecialchars($row['attendance_date'] ?? '') ?></strong>
                                 </td>
-                                <td style="font-family: monospace; font-size: 0.9em;">
+                                <td style="font-family: 'Inter', sans-serif; font-size: 0.9em;">
                                     <?= htmlspecialchars($row['new_time'] ?? '') ?>
                                 </td>
                                 <td>

@@ -84,6 +84,7 @@ class ChamCongModel
             CREATE TABLE IF NOT EXISTS attendance_monthly_approval (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 month_key CHAR(7) NOT NULL,
+                department VARCHAR(120) NOT NULL DEFAULT '',
                 hr_sender_id INT NOT NULL,
                 manager_approver_id INT DEFAULT NULL,
                 status ENUM('draft','submitted','approved','rejected') NOT NULL DEFAULT 'draft',
@@ -92,9 +93,92 @@ class ChamCongModel
                 note VARCHAR(255) DEFAULT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY uk_month_key (month_key)
+                UNIQUE KEY uk_month_dept (month_key, department)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+        $this->conn->query("ALTER TABLE attendance_monthly_approval ADD COLUMN IF NOT EXISTS department VARCHAR(120) NOT NULL DEFAULT ''");
+        $this->conn->query("UPDATE attendance_monthly_approval SET department = '' WHERE department IS NULL");
+
+        $oldIndex = $this->conn->query("SHOW INDEX FROM attendance_monthly_approval WHERE Key_name = 'uk_month_key'");
+        if ($oldIndex && $oldIndex->num_rows > 0) {
+            $this->conn->query("ALTER TABLE attendance_monthly_approval DROP INDEX uk_month_key");
+        }
+        $newIndex = $this->conn->query("SHOW INDEX FROM attendance_monthly_approval WHERE Key_name = 'uk_month_dept'");
+        if ($newIndex && $newIndex->num_rows === 0) {
+            $this->conn->query("ALTER TABLE attendance_monthly_approval ADD UNIQUE KEY uk_month_dept (month_key, department)");
+        }
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS leave_requests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                maND INT NOT NULL,
+                leave_date DATE NOT NULL,
+                leave_type VARCHAR(50) NOT NULL DEFAULT 'annual',
+                is_half_day TINYINT(1) NOT NULL DEFAULT 0,
+                reason TEXT DEFAULT NULL,
+                status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                manager_note VARCHAR(255) DEFAULT NULL,
+                manager_approver_id INT DEFAULT NULL,
+                approved_at DATETIME DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS leave_type VARCHAR(50) NOT NULL DEFAULT 'annual'");
+        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS is_half_day TINYINT(1) NOT NULL DEFAULT 0");
+        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS manager_note VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS manager_approver_id INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS approved_at DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS ot_requests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                maND INT NOT NULL,
+                ot_date DATE NOT NULL,
+                start_time TIME DEFAULT NULL,
+                end_time TIME DEFAULT NULL,
+                hours DECIMAL(5,2) NOT NULL DEFAULT 0,
+                reason TEXT DEFAULT NULL,
+                status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                manager_note VARCHAR(255) DEFAULT NULL,
+                manager_approver_id INT DEFAULT NULL,
+                approved_at DATETIME DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $this->conn->query("ALTER TABLE ot_requests ADD COLUMN IF NOT EXISTS manager_note VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE ot_requests ADD COLUMN IF NOT EXISTS manager_approver_id INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE ot_requests ADD COLUMN IF NOT EXISTS approved_at DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE ot_requests ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS shift_change_requests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                maND INT NOT NULL,
+                request_date DATE NOT NULL,
+                current_shift_id INT DEFAULT NULL,
+                requested_shift_id INT DEFAULT NULL,
+                current_shift_name VARCHAR(100) DEFAULT NULL,
+                requested_shift_name VARCHAR(100) DEFAULT NULL,
+                reason TEXT DEFAULT NULL,
+                status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                manager_note VARCHAR(255) DEFAULT NULL,
+                manager_approver_id INT DEFAULT NULL,
+                approved_at DATETIME DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS current_shift_id INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS requested_shift_id INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS current_shift_name VARCHAR(100) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS requested_shift_name VARCHAR(100) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS manager_note VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS manager_approver_id INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS approved_at DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
 
         $this->conn->query("
             CREATE TABLE IF NOT EXISTS system_settings (
@@ -358,7 +442,7 @@ class ChamCongModel
         return $insert->execute();
     }
 
-    public function getMonthlyWorkSummary($monthKey)
+    public function getMonthlyWorkSummary($monthKey, $department = '')
     {
         $monthStart = $monthKey . '-01';
         $defaultWorkMinutes = (int)$this->getSettingValue('DEFAULT_WORK_MINUTES', '480');
@@ -388,11 +472,13 @@ class ChamCongModel
                     GROUP BY maND, DATE(created_at)
                 ) d ON d.maND = u.maND
                 WHERE u.trangThai = 1
+                  AND (? = '' OR u.phongBan = ?)
                 GROUP BY u.maND, u.hoTen, u.phongBan
                 ORDER BY u.hoTen";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("iiss", $defaultWorkMinutes, $defaultWorkMinutes, $monthStart, $monthStart);
+            $dept = trim((string)$department);
+            $stmt->bind_param("iissss", $defaultWorkMinutes, $defaultWorkMinutes, $monthStart, $monthStart, $dept, $dept);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
@@ -405,16 +491,12 @@ class ChamCongModel
         }
 
         $monthStart = $monthKey . '-01';
-        $sql = "SELECT c.maND, c.attendance_date, c.new_time, c.reason
-                FROM attendance_corrections c
-                WHERE c.status = 'approved'
-                  AND c.attendance_date >= ?
-                  AND c.attendance_date < DATE_ADD(?, INTERVAL 1 MONTH)
-                  AND (
-                    LOWER(c.reason) LIKE '%ot%'
-                    OR LOWER(c.reason) LIKE '%overtime%'
-                  )
-                ORDER BY c.attendance_date ASC, c.created_at ASC";
+        $sql = "SELECT maND, ot_date, start_time, end_time, hours, reason
+                FROM ot_requests
+                WHERE status = 'approved'
+                  AND ot_date >= ?
+                  AND ot_date < DATE_ADD(?, INTERVAL 1 MONTH)
+                ORDER BY ot_date ASC, created_at ASC";
 
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -429,7 +511,7 @@ class ChamCongModel
         $schedule = [];
         foreach ($rows as $row) {
             $maND = (int)($row['maND'] ?? 0);
-            $date = $row['attendance_date'] ?? '';
+            $date = $row['ot_date'] ?? '';
             if ($maND <= 0 || $date === '') {
                 continue;
             }
@@ -440,12 +522,226 @@ class ChamCongModel
 
             $schedule[$maND][$date] = [
                 'label' => 'OT',
-                'time' => !empty($row['new_time']) ? substr((string)$row['new_time'], 11, 5) : '',
+                'time' => trim(($row['start_time'] ? substr((string)$row['start_time'], 0, 5) : '') . ' - ' . ($row['end_time'] ? substr((string)$row['end_time'], 0, 5) : ''), ' -'),
+                'hours' => (float)($row['hours'] ?? 0),
                 'reason' => $row['reason'] ?? '',
             ];
         }
 
         return $schedule;
+    }
+
+    public function getManagerEmployeeRequests(array $filters = [], $limit = 300)
+    {
+        $limit = max(1, min((int)$limit, 500));
+        $status = trim($filters['status'] ?? '');
+        $type = trim($filters['type'] ?? '');
+        $keyword = trim($filters['q'] ?? '');
+        $date = trim($filters['date'] ?? '');
+        $dateFrom = trim($filters['date_from'] ?? '');
+        $dateTo = trim($filters['date_to'] ?? '');
+        $department = trim($filters['department'] ?? '');
+
+        $rows = [];
+        if ($type === '' || $type === 'leave') {
+            $rows = array_merge($rows, $this->getLeaveApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit));
+        }
+        if ($type === '' || $type === 'ot') {
+            $rows = array_merge($rows, $this->getOtApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit));
+        }
+        if ($type === '' || $type === 'shift') {
+            $rows = array_merge($rows, $this->getShiftChangeApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit));
+        }
+
+        usort($rows, function ($a, $b) {
+            return strcmp((string)($b['created_at'] ?? ''), (string)($a['created_at'] ?? ''));
+        });
+
+        return array_slice($rows, 0, $limit);
+    }
+
+    public function processManagerEmployeeRequest($type, $requestId, $action, $managerId, $note = '')
+    {
+        $type = trim((string)$type);
+        $requestId = (int)$requestId;
+        $managerId = (int)$managerId;
+        if ($requestId <= 0 || !in_array($type, ['leave', 'ot', 'shift'], true) || !in_array($action, ['approve', 'reject'], true)) {
+            return false;
+        }
+
+        $status = $action === 'approve' ? 'approved' : 'rejected';
+        if ($type === 'leave') {
+            $sql = "UPDATE leave_requests
+                    SET status = ?, manager_note = ?, manager_approver_id = ?, approved_at = NOW(), updated_at = NOW()
+                    WHERE id = ? AND status = 'pending'";
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) return false;
+            $stmt->bind_param('ssii', $status, $note, $managerId, $requestId);
+            return $stmt->execute();
+        }
+
+        if ($type === 'ot') {
+            $sql = "UPDATE ot_requests
+                    SET status = ?, manager_note = ?, manager_approver_id = ?, approved_at = NOW(), updated_at = NOW()
+                    WHERE id = ? AND status = 'pending'";
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) return false;
+            $stmt->bind_param('ssii', $status, $note, $managerId, $requestId);
+            return $stmt->execute();
+        }
+
+        return $this->processShiftChangeRequest($requestId, $status, $managerId, $note);
+    }
+
+    private function getLeaveApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit)
+    {
+        $sql = "SELECT CONCAT('leave:', r.id) AS uid, r.id, 'leave' AS request_type,
+                       r.maND, r.leave_date AS request_date, r.leave_type, r.is_half_day,
+                       NULL AS start_time, NULL AS end_time, NULL AS hours,
+                       NULL AS current_shift_name, NULL AS requested_shift_name,
+                       r.reason, r.status, r.manager_note, r.created_at, r.updated_at,
+                       n.hoTen, n.chucVu, n.phongBan
+                FROM leave_requests r
+                LEFT JOIN nguoidung n ON n.maND = r.maND";
+        return $this->fetchApprovalRequestRows($sql, 'r.leave_date', $status, $keyword, $date, $dateFrom, $dateTo, $department, $limit);
+    }
+
+    private function getOtApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit)
+    {
+        $sql = "SELECT CONCAT('ot:', r.id) AS uid, r.id, 'ot' AS request_type,
+                       r.maND, r.ot_date AS request_date, NULL AS leave_type, 0 AS is_half_day,
+                       r.start_time, r.end_time, r.hours,
+                       NULL AS current_shift_name, NULL AS requested_shift_name,
+                       r.reason, r.status, r.manager_note, r.created_at, r.updated_at,
+                       n.hoTen, n.chucVu, n.phongBan
+                FROM ot_requests r
+                LEFT JOIN nguoidung n ON n.maND = r.maND";
+        return $this->fetchApprovalRequestRows($sql, 'r.ot_date', $status, $keyword, $date, $dateFrom, $dateTo, $department, $limit);
+    }
+
+    private function getShiftChangeApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit)
+    {
+        $sql = "SELECT CONCAT('shift:', r.id) AS uid, r.id, 'shift' AS request_type,
+                       r.maND, r.request_date, NULL AS leave_type, 0 AS is_half_day,
+                       NULL AS start_time, NULL AS end_time, NULL AS hours,
+                       COALESCE(r.current_shift_name, cs.shift_name) AS current_shift_name,
+                       COALESCE(r.requested_shift_name, ns.shift_name) AS requested_shift_name,
+                       r.reason, r.status, r.manager_note, r.created_at, r.updated_at,
+                       n.hoTen, n.chucVu, n.phongBan
+                FROM shift_change_requests r
+                LEFT JOIN nguoidung n ON n.maND = r.maND
+                LEFT JOIN attendance_shifts cs ON cs.id = r.current_shift_id
+                LEFT JOIN attendance_shifts ns ON ns.id = r.requested_shift_id";
+        return $this->fetchApprovalRequestRows($sql, 'r.request_date', $status, $keyword, $date, $dateFrom, $dateTo, $department, $limit);
+    }
+
+    private function fetchApprovalRequestRows($baseSql, $dateColumn, $status, $keyword, $date, $dateFrom, $dateTo, $department, $limit)
+    {
+        $conditions = [];
+        $types = '';
+        $params = [];
+
+        if ($status !== '' && in_array($status, ['pending', 'approved', 'rejected'], true)) {
+            $conditions[] = "r.status = ?";
+            $types .= 's';
+            $params[] = $status;
+        }
+
+        if ($keyword !== '') {
+            $conditions[] = "(n.hoTen LIKE CONCAT('%', ?, '%') OR n.phongBan LIKE CONCAT('%', ?, '%') OR r.reason LIKE CONCAT('%', ?, '%'))";
+            $types .= 'sss';
+            $params[] = $keyword;
+            $params[] = $keyword;
+            $params[] = $keyword;
+        }
+
+        if ($department !== '') {
+            $conditions[] = "n.phongBan = ?";
+            $types .= 's';
+            $params[] = $department;
+        }
+
+        if ($date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $conditions[] = $dateColumn . " = ?";
+            $types .= 's';
+            $params[] = $date;
+        }
+
+        if ($dateFrom !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) {
+            $conditions[] = $dateColumn . " >= ?";
+            $types .= 's';
+            $params[] = $dateFrom;
+        }
+
+        if ($dateTo !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
+            $conditions[] = $dateColumn . " <= ?";
+            $types .= 's';
+            $params[] = $dateTo;
+        }
+
+        $sql = $baseSql;
+        if ($conditions) {
+            $sql .= " WHERE " . implode(' AND ', $conditions);
+        }
+        $sql .= " ORDER BY r.created_at DESC LIMIT " . (int)$limit;
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    private function processShiftChangeRequest($requestId, $status, $managerId, $note)
+    {
+        $this->conn->begin_transaction();
+        try {
+            $stmt = $this->conn->prepare("SELECT maND, request_date, requested_shift_id FROM shift_change_requests WHERE id = ? AND status = 'pending' FOR UPDATE");
+            if (!$stmt) {
+                $this->conn->rollback();
+                return false;
+            }
+            $stmt->bind_param('i', $requestId);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if (!$row) {
+                $this->conn->rollback();
+                return false;
+            }
+
+            $stmt = $this->conn->prepare("UPDATE shift_change_requests
+                    SET status = ?, manager_note = ?, manager_approver_id = ?, approved_at = NOW(), updated_at = NOW()
+                    WHERE id = ? AND status = 'pending'");
+            if (!$stmt) {
+                $this->conn->rollback();
+                return false;
+            }
+            $stmt->bind_param('ssii', $status, $note, $managerId, $requestId);
+            $ok = $stmt->execute();
+            $stmt->close();
+
+            if ($ok && $status === 'approved' && (int)($row['requested_shift_id'] ?? 0) > 0) {
+                $ok = $this->assignShift((int)$row['maND'], (int)$row['requested_shift_id'], $row['request_date']);
+            }
+
+            if (!$ok) {
+                $this->conn->rollback();
+                return false;
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Throwable $e) {
+            $this->conn->rollback();
+            return false;
+        }
     }
 
     public function getAttendanceReport($fromDate, $toDate, $department = '')
@@ -485,7 +781,7 @@ class ChamCongModel
         }, $rows);
     }
 
-    public function submitMonthlyApproval($monthKey, $hrSenderId)
+    public function submitMonthlyApproval($monthKey, $hrSenderId, $department = '')
     {
         $monthKey = trim($monthKey);
         $hrSenderId = (int)$hrSenderId;
@@ -493,59 +789,103 @@ class ChamCongModel
             return false;
         }
 
-        // Keep one record per month even if old DB schema does not have unique index.
-        $find = $this->conn->prepare("SELECT id FROM attendance_monthly_approval WHERE month_key = ? ORDER BY id DESC LIMIT 1");
-        if (!$find) {
+        $departments = [];
+        $department = trim((string)$department);
+        if ($department !== '') {
+            $departments = [$department];
+        } else {
+            $departments = $this->getDistinctDepartments();
+        }
+
+        if (empty($departments)) {
             return false;
         }
-        $find->bind_param("s", $monthKey);
-        $find->execute();
-        $existing = $find->get_result()->fetch_assoc();
-        $find->close();
 
-        if (!empty($existing['id'])) {
-            $id = (int)$existing['id'];
-            $update = $this->conn->prepare("UPDATE attendance_monthly_approval
-                                            SET hr_sender_id = ?, status = 'submitted', submitted_at = NOW(), approved_at = NULL, manager_approver_id = NULL, note = NULL
-                                            WHERE id = ?");
-            if (!$update) {
-                return false;
+        $okAll = true;
+        foreach ($departments as $dept) {
+            $dept = trim((string)$dept);
+            if ($dept === '') {
+                continue;
             }
-            $update->bind_param("ii", $hrSenderId, $id);
-            $ok = $update->execute();
-            $update->close();
-            return $ok;
+
+            $find = $this->conn->prepare("SELECT id FROM attendance_monthly_approval WHERE month_key = ? AND department = ? ORDER BY id DESC LIMIT 1");
+            if (!$find) {
+                $okAll = false;
+                continue;
+            }
+            $find->bind_param("ss", $monthKey, $dept);
+            $find->execute();
+            $existing = $find->get_result()->fetch_assoc();
+            $find->close();
+
+            if (!empty($existing['id'])) {
+                $id = (int)$existing['id'];
+                $update = $this->conn->prepare("UPDATE attendance_monthly_approval
+                                                SET hr_sender_id = ?, status = 'submitted', submitted_at = NOW(), approved_at = NULL, manager_approver_id = NULL, note = NULL
+                                                WHERE id = ?");
+                if (!$update) {
+                    $okAll = false;
+                    continue;
+                }
+                $update->bind_param("ii", $hrSenderId, $id);
+                $okAll = $update->execute() && $okAll;
+                $update->close();
+                continue;
+            }
+
+            $insert = $this->conn->prepare("INSERT INTO attendance_monthly_approval (month_key, department, hr_sender_id, status, submitted_at)
+                                            VALUES (?, ?, ?, 'submitted', NOW())");
+            if (!$insert) {
+                $okAll = false;
+                continue;
+            }
+            $insert->bind_param("ssi", $monthKey, $dept, $hrSenderId);
+            $okAll = $insert->execute() && $okAll;
+            $insert->close();
         }
 
-        $insert = $this->conn->prepare("INSERT INTO attendance_monthly_approval (month_key, hr_sender_id, status, submitted_at)
-                                        VALUES (?, ?, 'submitted', NOW())");
-        if (!$insert) {
-            return false;
-        }
-        $insert->bind_param("si", $monthKey, $hrSenderId);
-        $ok = $insert->execute();
-        $insert->close();
-        return $ok;
+        return $okAll;
     }
 
-    public function getMonthlyApprovals($status = null)
+    public function getMonthlyApprovals($status = null, $department = '')
     {
         $sql = "SELECT a.id, a.month_key, a.hr_sender_id, a.manager_approver_id, a.status, a.submitted_at, a.approved_at, a.note,
+                       a.department,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
                 FROM attendance_monthly_approval a
                 LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
                 LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id";
 
+        $conditions = [];
+        $types = '';
+        $params = [];
+
         if ($status) {
-            $sql .= " WHERE a.status = ?";
+            $conditions[] = "a.status = ?";
+            $types .= 's';
+            $params[] = $status;
+        }
+
+        $department = trim((string)$department);
+        if ($department !== '') {
+            $conditions[] = "a.department = ?";
+            $types .= 's';
+            $params[] = $department;
+        }
+
+        if (!empty($conditions)) {
+            $sql .= " WHERE " . implode(' AND ', $conditions);
         }
 
         $sql .= " ORDER BY COALESCE(a.approved_at, a.submitted_at, a.created_at) DESC, a.id DESC";
 
-        if ($status) {
+        if (!empty($params)) {
             $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("s", $status);
+            if (!$stmt) {
+                return [];
+            }
+            $stmt->bind_param($types, ...$params);
             $stmt->execute();
             return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         }
@@ -554,9 +894,10 @@ class ChamCongModel
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
 
-    public function getMonthlyApprovalHistory($year = null, $limit = 50)
+    public function getMonthlyApprovalHistory($year = null, $limit = 50, $department = '')
     {
         $sql = "SELECT a.id, a.month_key, a.hr_sender_id, a.manager_approver_id, a.status, a.submitted_at, a.approved_at, a.note,
+                       a.department,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
                 FROM attendance_monthly_approval a
@@ -571,6 +912,13 @@ class ChamCongModel
             $sql .= " AND a.month_key LIKE ?";
             $params[] = $year . '%';
             $types = 's';
+        }
+
+        $department = trim((string)$department);
+        if ($department !== '') {
+            $sql .= " AND a.department = ?";
+            $params[] = $department;
+            $types .= 's';
         }
 
         $sql .= " ORDER BY a.approved_at DESC, a.id DESC";
@@ -639,53 +987,120 @@ class ChamCongModel
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getMonthlyApprovalByMonth($monthKey)
+    public function getMonthlyApprovalByMonth($monthKey, $department = '')
     {
         $monthKey = trim($monthKey);
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
             return null;
         }
 
-        $stmt = $this->conn->prepare("SELECT a.id, a.month_key, a.status, a.submitted_at, a.approved_at, a.note,
-                                             u.hoTen AS hr_name,
-                                             u2.hoTen AS approver_name
-                                      FROM attendance_monthly_approval a
-                                      LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
-                                      LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id
-                                      WHERE a.month_key = ?
-                                      ORDER BY a.id DESC
-                                      LIMIT 1");
+        $department = trim((string)$department);
+        if ($department === '') {
+            $stmt = $this->conn->prepare("SELECT status, submitted_at, approved_at
+                                          FROM attendance_monthly_approval
+                                          WHERE month_key = ?");
+            if (!$stmt) {
+                return null;
+            }
+            $stmt->bind_param("s", $monthKey);
+            $stmt->execute();
+            $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+
+            if (empty($rows)) {
+                return null;
+            }
+
+            $status = 'approved';
+            $latestSubmitted = '';
+            $latestApproved = '';
+            foreach ($rows as $row) {
+                $rowStatus = $row['status'] ?? '';
+                if ($rowStatus === 'submitted') {
+                    $status = 'submitted';
+                } elseif ($rowStatus === 'rejected' && $status !== 'submitted') {
+                    $status = 'rejected';
+                }
+
+                $submittedAt = (string)($row['submitted_at'] ?? '');
+                $approvedAt = (string)($row['approved_at'] ?? '');
+                if ($submittedAt > $latestSubmitted) {
+                    $latestSubmitted = $submittedAt;
+                }
+                if ($approvedAt > $latestApproved) {
+                    $latestApproved = $approvedAt;
+                }
+            }
+
+            return [
+                'month_key' => $monthKey,
+                'status' => $status,
+                'submitted_at' => $latestSubmitted,
+                'approved_at' => $latestApproved,
+                'department' => 'ALL',
+            ];
+        }
+        $sql = "SELECT a.id, a.month_key, a.status, a.submitted_at, a.approved_at, a.note,
+                       a.department,
+                       u.hoTen AS hr_name,
+                       u2.hoTen AS approver_name
+                FROM attendance_monthly_approval a
+                LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
+                LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id
+                WHERE a.month_key = ?";
+
+        $params = [$monthKey];
+        $types = 's';
+        if ($department !== '') {
+            $sql .= " AND a.department = ?";
+            $params[] = $department;
+            $types .= 's';
+        }
+        $sql .= " ORDER BY a.id DESC LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return null;
         }
 
-        $stmt->bind_param("s", $monthKey);
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         return $row ?: null;
     }
 
-    public function getMonthlyApprovalDetail($approvalId)
+    public function getMonthlyApprovalDetail($approvalId, $department = '')
     {
         $approvalId = (int)$approvalId;
         if ($approvalId <= 0) {
             return null;
         }
 
-        $stmt = $this->conn->prepare("SELECT a.id, a.month_key, a.status, a.submitted_at, a.approved_at, a.note,
-                                             u.hoTen AS hr_name,
-                                             u2.hoTen AS approver_name
-                                      FROM attendance_monthly_approval a
-                                      LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
-                                      LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id
-                                      WHERE a.id = ?
-                                      LIMIT 1");
+        $department = trim((string)$department);
+        $sql = "SELECT a.id, a.month_key, a.status, a.submitted_at, a.approved_at, a.note,
+                       a.department,
+                       u.hoTen AS hr_name,
+                       u2.hoTen AS approver_name
+                FROM attendance_monthly_approval a
+                LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
+                LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id
+                WHERE a.id = ?";
+        if ($department !== '') {
+            $sql .= " AND a.department = ?";
+        }
+        $sql .= " LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return null;
         }
 
-        $stmt->bind_param("i", $approvalId);
+        if ($department !== '') {
+            $stmt->bind_param("is", $approvalId, $department);
+        } else {
+            $stmt->bind_param("i", $approvalId);
+        }
         $stmt->execute();
         $approval = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -695,7 +1110,7 @@ class ChamCongModel
         }
 
         $monthKey = trim($approval['month_key'] ?? '');
-        $rows = $this->getMonthlyWorkSummary($monthKey);
+        $rows = $this->getMonthlyWorkSummary($monthKey, $approval['department'] ?? '');
         $summary = [
             'employees' => count($rows),
             'total_work_days' => 0,
@@ -716,7 +1131,7 @@ class ChamCongModel
         ];
     }
 
-    public function updateMonthlyApproval($approvalId, $status, $managerId, $note = null)
+    public function updateMonthlyApproval($approvalId, $status, $managerId, $note = null, $department = '')
     {
         $approvalId = (int)$approvalId;
         $managerId = (int)$managerId;
@@ -724,18 +1139,29 @@ class ChamCongModel
             return false;
         }
 
+        $department = trim((string)$department);
         $sql = "UPDATE attendance_monthly_approval
                 SET status = ?, manager_approver_id = ?, approved_at = NOW(), note = ?
-            WHERE id = ? AND status = 'submitted'";
+                WHERE id = ? AND status = 'submitted'";
+        if ($department !== '') {
+            $sql .= " AND department = ?";
+        }
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("sisi", $status, $managerId, $note, $approvalId);
+        if (!$stmt) {
+            return false;
+        }
+        if ($department !== '') {
+            $stmt->bind_param("sisis", $status, $managerId, $note, $approvalId, $department);
+        } else {
+            $stmt->bind_param("sisi", $status, $managerId, $note, $approvalId);
+        }
         return $stmt->execute();
     }
 
     public function getCorrectionRequests($status = null, array $filters = [], $limit = 0, $historyOnly = false)
     {
         $sql = "SELECT c.id, c.maND, c.attendance_date, c.old_time, c.new_time, c.reason, c.status, c.hr_note, c.created_at,
-                       n.hoTen
+                       n.hoTen, n.chucVu, n.phongBan
                 FROM attendance_corrections c
                 LEFT JOIN nguoidung n ON n.maND = c.maND";
 
@@ -755,8 +1181,9 @@ class ChamCongModel
 
         $keyword = trim($filters['q'] ?? '');
         if ($keyword !== '') {
-            $conditions[] = "(n.hoTen LIKE CONCAT('%', ?, '%') OR reason LIKE CONCAT('%', ?, '%'))";
-            $types .= 'ss';
+            $conditions[] = "(n.hoTen LIKE CONCAT('%', ?, '%') OR n.phongBan LIKE CONCAT('%', ?, '%') OR reason LIKE CONCAT('%', ?, '%'))";
+            $types .= 'sss';
+            $params[] = $keyword;
             $params[] = $keyword;
             $params[] = $keyword;
         }

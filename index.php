@@ -97,12 +97,15 @@ $allowedPages = [
     // Manager
     'pheduyet-bang-cong',
     'bao-cao-tong-hop',
+    'pheduyet-yeucau',
     'thong-ke-bieu-do',
     'chi-tiet-bang-cong',
     'manager-api-approvals',
     'manager-api-approval-detail',
     'manager-api-approval-history',
     'manager-api-approve',
+    'manager-api-requests',
+    'manager-api-request-action',
     // Tech
     'wifi',
     'cau-hinh-he-thong',
@@ -295,6 +298,11 @@ switch ($page) {
         (new ManagerController())->reports();
         break;
 
+    case 'pheduyet-yeucau':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->requests();
+        break;
+
     case 'thong-ke-bieu-do':
         require_once 'app/controllers/ManagerController.php';
         (new ManagerController())->statistics();
@@ -323,6 +331,16 @@ switch ($page) {
     case 'manager-api-approve':
         require_once 'app/controllers/ManagerController.php';
         (new ManagerController())->processApprovalApi();
+        break;
+
+    case 'manager-api-requests':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->requestsApi();
+        break;
+
+    case 'manager-api-request-action':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->processRequestApi();
         break;
 
     // === TECH PANEL ===

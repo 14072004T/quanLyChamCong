@@ -21,7 +21,7 @@
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: 'Inter', sans-serif;
             background: #f8fafc;
             min-height: 100vh;
             display: flex;
@@ -85,7 +85,7 @@
             height: 48px;
             font-size: 26px;
             font-weight: 800;
-            font-family: 'Quicksand', sans-serif;
+            font-family: 'Inter', sans-serif;
             color: white;
             border-radius: 8px;
         }
@@ -318,7 +318,7 @@
             border: 1px solid var(--input-border);
             border-radius: 8px;
             color: white;
-            font-family: inherit;
+            font-family: 'Inter', sans-serif;
             font-size: 14px;
             transition: all 0.25s;
         }

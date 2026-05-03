@@ -71,7 +71,7 @@ $to = $to ?? date('Y-m-d');
                                 $count++;
                         ?>
                             <tr>
-                                <td style="font-family: monospace;">
+                                <td style="font-family: 'Inter', sans-serif;">
                                     <?= htmlspecialchars($row['created_at'] ?? '') ?>
                                 </td>
                                 <td>

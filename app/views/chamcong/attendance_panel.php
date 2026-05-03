@@ -37,7 +37,7 @@ $hoTen = $user['hoTen'] ?? 'User';
                 <label style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">
                     Server IP Address
                 </label>
-                <div id="ip-display" style="font-size: 16px; font-weight: 600; color: #0f172a; margin-top: 6px; font-family: monospace;">
+                <div id="ip-display" style="font-size: 16px; font-weight: 600; color: #0f172a; margin-top: 6px; font-family: 'Inter', sans-serif;">
                     <span style="color: #94a3b8;">Loading...</span>
                 </div>
             </div>
@@ -119,7 +119,7 @@ $hoTen = $user['hoTen'] ?? 'User';
 
 <style>
 .attendance-panel {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 .status-badge {

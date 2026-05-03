@@ -17,7 +17,7 @@ $menus = [
     ],
     'manager' => [
         ['page' => 'pheduyet-bang-cong', 'label' => 'Phê duyệt Bảng công', 'icon' => 'fa-circle-check'],
-        ['page' => 'thong-ke-bieu-do', 'label' => 'Thống kê & Biểu đồ', 'icon' => 'fa-chart-pie'],
+        ['page' => 'pheduyet-yeucau', 'label' => 'Phê duyệt yêu cầu', 'icon' => 'fa-clipboard-list'],
         ['page' => 'bao-cao-tong-hop', 'label' => 'Báo cáo tổng hợp', 'icon' => 'fa-file-lines'],
     ],
     'tech' => [
