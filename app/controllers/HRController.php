@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 require_once __DIR__ . '/../models/ChamCongModel.php';
 require_once __DIR__ . '/../middleware/AuthMiddleware.php';
@@ -132,7 +132,7 @@ class HRController
         }
 
         $salaryRows = $this->filterPayrollRows(
-            $this->model->getMonthlyWorkSummary($selectedMonth),
+            $this->model->getMonthlyAttendanceDetailNew($selectedMonth),
             $employeeKeyword
         );
         $monthlyApproval = $this->model->getMonthlyApprovalByMonth($selectedMonth);
@@ -155,7 +155,7 @@ class HRController
         }
 
         $salaryRows = $this->filterPayrollRows(
-            $this->model->getMonthlyWorkSummary($monthKey),
+            $this->model->getMonthlyAttendanceDetailNew($monthKey),
             $employeeKeyword
         );
         $summary = [
@@ -237,8 +237,13 @@ class HRController
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
                 $_SESSION['error'] = 'Kỳ chấm công không hợp lệ';
             } else {
-                $ok = $this->model->submitMonthlyApproval($monthKey, $hrSenderId);
-                $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đã gửi bảng công để phê duyệt' : 'Không thể gửi bảng công';
+                $department = trim($_POST['department'] ?? '');
+                $ok = $this->model->submitMonthlyApproval($monthKey, $hrSenderId, $department);
+                if ($department !== '') {
+                    $_SESSION[$ok ? 'success' : 'error'] = $ok ? "Đã gửi bảng công phòng $department để phê duyệt" : "Không thể gửi bảng công phòng $department";
+                } else {
+                    $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đã gửi bảng công toàn bộ các phòng để phê duyệt' : 'Không thể gửi bảng công';
+                }
             }
         }
 

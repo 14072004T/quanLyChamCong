@@ -331,6 +331,11 @@
         .input-group input::placeholder {
             color: #94a3b8;
         }
+        
+        .input-group input::-ms-reveal,
+        .input-group input::-ms-clear {
+            filter: invert(1);
+        }
 
         .btn-submit {
             width: 100%;

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 if (!isset($_SESSION['user'])) { header('Location: index.php?page=login'); exit(); }
 if (($_SESSION['role'] ?? '') !== 'hr') { header('Location: index.php?page=home'); exit(); }
 
@@ -28,17 +28,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
         radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 28%),
         linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
-.payroll-page {
-    margin-top: 0;
-}
-.payroll-page .sidebar-nav {
-    top: 0;
-    padding-top: calc(var(--header-h) - 10px);
-    max-height: 100vh;
-}
-.payroll-page .dashboard-container {
-    padding-top: var(--header-h);
-}
+
 .payroll-toolbar-head {
     display: flex;
     justify-content: space-between;
@@ -291,7 +281,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
     }
 }
 </style>
-<div class="main-container payroll-page">
+<div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
     <div class="dashboard-container">
 
@@ -375,9 +365,22 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                         <?php foreach ($salaryRows as $row): ?>
                                             <tr>
                                                 <td><?= htmlspecialchars($row['hoTen'] ?? '') ?></td>
-                                                <?php for ($d = 1; $d <= 31; $d++): ?>
-                                                    <td class="day-val">1.0</td>
-                                                <?php endfor; ?>
+                                                <?php 
+                                                $yearMonth = $selectedMonth;
+                                                $lastDay = (int)date('t', strtotime($yearMonth . '-01'));
+                                                for ($d = 1; $d <= 31; $d++): 
+                                                    if ($d > $lastDay) {
+                                                        echo '<td class="day-n"></td>';
+                                                    } else {
+                                                        $dateStr = sprintf('%s-%02d', $yearMonth, $d);
+                                                        $dayData = $row['daily_breakdown'][$dateStr] ?? null;
+                                                        $workValue = $dayData ? (float)($dayData['work_value'] ?? 0) : 0;
+                                                        $valStr = $workValue > 0 ? ($workValue == 1.0 ? '1.0' : '0.5') : '';
+                                                        $cls = $workValue > 0 ? 'day-val' : 'day-n';
+                                                        echo '<td class="' . $cls . '">' . htmlspecialchars($valStr) . '</td>';
+                                                    }
+                                                endfor; 
+                                                ?>
                                                 <td class="col-total"><?= htmlspecialchars((string)($row['work_days'] ?? 0)) ?></td>
                                                 <td class="col-total"><?= htmlspecialchars((string)($row['overtime_hours'] ?? 0)) ?></td>
                                             </tr>
@@ -396,9 +399,9 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Họ và Tên</th>
                                     <th>Mã NV</th>
-                                    <th>Tên NV</th>
+                                    <th>Họ và Tên</th>
+                                    <th>Phòng ban</th>
                                     <th>Ngày Công</th>
                                     <th>Giờ Làm</th>
                                     <th>Giờ OT</th>
@@ -409,9 +412,9 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                     <?php $idx = 1; foreach ($salaryRows as $row): ?>
                                         <tr>
                                             <td><?= $idx++ ?></td>
-                                            <td><?= htmlspecialchars($row['hoTen'] ?? '') ?></td>
                                             <td><?= (int)($row['maND'] ?? 0) ?></td>
                                             <td><?= htmlspecialchars($row['hoTen'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($row['phongBan'] ?? '-') ?></td>
                                             <td><?= htmlspecialchars((string)($row['work_days'] ?? 0)) ?></td>
                                             <td><?= htmlspecialchars((string)($row['work_hours'] ?? 0)) ?></td>
                                             <td><?= htmlspecialchars((string)($row['overtime_hours'] ?? 0)) ?></td>
@@ -422,24 +425,24 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                 <?php endif; ?>
                             </tbody>
                         </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="payroll-action-panel">
-                <div class="payroll-action-row">
-                    <div class="payroll-action-copy">
-                        <h3>Hoàn tất rà soát bảng công</h3>
-                        <p id="approval-status">
-                            <?php if ($monthlyApproval): ?>
-                                Trạng thái gửi duyệt: <span class="status-badge status-<?= strtolower($monthlyApproval['status'] ?? 'draft') ?>"><?= htmlspecialchars($monthlyApproval['status'] ?? 'draft') ?></span>
-                            <?php else: ?>
-                                Chưa gửi phê duyệt cho tháng này. Sau khi xác nhận, bảng tính công sẽ được chuyển đến quản lý để xét duyệt.
-                            <?php endif; ?>
-                        </p>
-                    </div>
-                    <div class="payroll-action-buttons">
-                        <button type="button" class="btn btn-success btn-sm" id="submit-payroll-btn"><i class="fas fa-paper-plane"></i> GỬI PHÊ DUYỆT</button>
+                        
+                        <div class="payroll-action-panel" style="margin-top: 24px;">
+                            <div class="payroll-action-row">
+                                <div class="payroll-action-copy">
+                                    <h3>Hoàn tất rà soát bảng công</h3>
+                                    <p id="approval-status">
+                                        <?php if ($monthlyApproval): ?>
+                                            Trạng thái gửi duyệt: <span class="status-badge status-<?= strtolower($monthlyApproval['status'] ?? 'draft') ?>"><?= htmlspecialchars($monthlyApproval['status'] ?? 'draft') ?></span>
+                                        <?php else: ?>
+                                            Chưa gửi phê duyệt cho tháng này. Sau khi xác nhận, bảng tính công sẽ được chuyển đến quản lý để xét duyệt.
+                                        <?php endif; ?>
+                                    </p>
+                                </div>
+                                <div class="payroll-action-buttons">
+                                    <button type="button" class="btn btn-success btn-sm" id="submit-payroll-btn"><i class="fas fa-paper-plane"></i> GỬI PHÊ DUYỆT</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -635,10 +638,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         gridBody.innerHTML = rows.map(function (row) {
             var cells = '<td>' + escapeHtml(row.hoTen) + '</td>';
+            var yearMonth = currentMonth();
+            var dt = new Date(yearMonth + '-01T00:00:00');
+            var lastDay = new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
+
             for (var d = 1; d <= 31; d++) {
-                var val = Number(row.work_days || 0) > 0 ? '1.0' : '';
-                var cls = val ? 'day-val' : 'day-n';
-                cells += '<td class="' + cls + '">' + (val || '') + '</td>';
+                if (d > lastDay) {
+                    cells += '<td class="day-n"></td>';
+                } else {
+                    var dateStr = yearMonth + '-' + (d < 10 ? '0' + d : d);
+                    var dayData = row.daily_breakdown ? row.daily_breakdown[dateStr] : null;
+                    var workValue = dayData ? Number(dayData.work_value || 0) : 0;
+                    var valStr = workValue > 0 ? (workValue === 1.0 ? '1.0' : '0.5') : '';
+                    var cls = workValue > 0 ? 'day-val' : 'day-n';
+                    cells += '<td class="' + cls + '">' + valStr + '</td>';
+                }
             }
             cells += '<td class="col-total">' + Number(row.work_days || 0) + '</td>';
             cells += '<td class="col-total">' + Number(row.overtime_hours || 0) + '</td>';
@@ -654,9 +668,9 @@ document.addEventListener('DOMContentLoaded', function () {
         tableBody.innerHTML = rows.map(function (row, i) {
             return '<tr>' +
                 '<td>' + (i + 1) + '</td>' +
-                '<td>' + escapeHtml(row.hoTen) + '</td>' +
                 '<td>' + Number(row.maND || 0) + '</td>' +
                 '<td>' + escapeHtml(row.hoTen) + '</td>' +
+                '<td>' + escapeHtml(row.phongBan || '-') + '</td>' +
                 '<td>' + Number(row.work_days || 0) + '</td>' +
                 '<td>' + Number(row.work_hours || 0) + '</td>' +
                 '<td>' + Number(row.overtime_hours || 0) + '</td>' +

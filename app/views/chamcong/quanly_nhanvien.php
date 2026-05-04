@@ -55,7 +55,16 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                 </div>
                 <div class="form-group" style="min-width:160px;">
                     <label>Phòng ban</label>
-                    <input type="text" name="phongBan" value="<?= htmlspecialchars($editing['phongBan'] ?? '') ?>">
+                    <select name="phongBan">
+                        <option value="">-- Chọn phòng ban --</option>
+                        <?php
+                        $departments = ['CNTT', 'IT', 'Kho', 'Sản xuất', 'Điều hành', 'Nhân sự'];
+                        $selectedDept = $editing['phongBan'] ?? '';
+                        foreach ($departments as $deptLabel):
+                        ?>
+                            <option value="<?= htmlspecialchars($deptLabel) ?>" <?= $selectedDept === $deptLabel ? 'selected' : '' ?>><?= htmlspecialchars($deptLabel) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="form-group" style="min-width:180px;">
                     <label>Chức vụ *</label>

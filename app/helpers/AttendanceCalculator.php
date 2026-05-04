@@ -7,11 +7,11 @@
  * - 0.5 = nửa ngày (sáng hoặc chiều)
  * - 0.0 = ngày phép / lễ / cuối tuần / lao động
  */
+require_once 'HolidayCalculator.php';
+require_once 'LeaveCalculator.php';
+
 class AttendanceCalculator
 {
-    require_once 'HolidayCalculator.php';
-    require_once 'LeaveCalculator.php';
-
     /**
      * Tính toán tổng công chi tiết cho một nhân viên trong tháng
      * @param string $monthKey - YYYY-MM

@@ -26,95 +26,289 @@ $departments = $departments ?? [];
 <?php include 'app/views/layouts/nav.php'; ?>
 
 <?php if ($isHr): ?>
+<?php
+// Group report rows by department
+$reportByDept = [];
+if (!empty($reportRows)) {
+    foreach ($reportRows as $row) {
+        $dept = $row['phongBan'] ?: 'Khác';
+        if (!isset($reportByDept[$dept])) $reportByDept[$dept] = [];
+        $reportByDept[$dept][] = $row;
+    }
+}
+?>
+<style>
+.hr-report-page {
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --primary: #3b82f6;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    background: #f8fafc;
+}
+.hrr-header {
+    margin-bottom: 24px;
+}
+.hrr-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 8px;
+    padding-top: 22px;
+}
+.hrr-subtitle {
+    color: var(--muted);
+    margin: 0;
+}
+.hrr-filters {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+.hrr-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    align-items: end;
+}
+.hrr-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.hrr-form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.hrr-input, .hrr-select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.hrr-input:focus, .hrr-select:focus {
+    border-color: var(--primary);
+}
+.hrr-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    color: #fff;
+    transition: background 0.2s, transform 0.1s;
+    text-decoration: none;
+}
+.hrr-btn:hover { transform: translateY(-1px); }
+.hrr-btn-primary { background: var(--primary); }
+.hrr-btn-primary:hover { background: #2563eb; }
+.hrr-btn-success { background: var(--success); }
+.hrr-btn-success:hover { background: #059669; }
+.hrr-btn-warning { background: var(--warning); color: #fff; }
+.hrr-btn-warning:hover { background: #d97706; }
+
+.hrr-dept-section {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+.hrr-dept-header {
+    background: #f1f5f9;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+}
+.hrr-dept-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.hrr-dept-badge {
+    background: #e2e8f0;
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+.hrr-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.hrr-table th, .hrr-table td {
+    padding: 12px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+.hrr-table th {
+    background: #f8fafc;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+.hrr-table td {
+    font-size: 0.95rem;
+    color: var(--text);
+}
+.hrr-table tr:last-child td {
+    border-bottom: none;
+}
+.hrr-table tbody tr:hover {
+    background: #f8fafc;
+}
+.hrr-avatar-text {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #dbeafe;
+    color: #1d4ed8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-right: 12px;
+}
+.hrr-user-cell {
+    display: flex;
+    align-items: center;
+}
+.hrr-empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--muted);
+}
+</style>
+
 <div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
-    <div class="dashboard-container">
-        <div class="panel">
-            <h2>Xuất báo cáo chấm công</h2>
+    <div class="dashboard-container hr-report-page">
+        <div class="hrr-header">
+            <h1 class="hrr-title">Báo Cáo & Chấm Công HR</h1>
+            <p class="hrr-subtitle">Quản lý giờ công và gửi bảng công cho các trưởng phòng phê duyệt</p>
         </div>
 
-        <?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
-        <?php if ($error): ?><div class="alert alert-error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
+        <?php if ($success): ?>
+            <div class="alert alert-success" style="margin-bottom: 20px; border-radius: 8px; padding: 12px 16px; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;"><i class="fas fa-check-circle"></i> <?= htmlspecialchars($success) ?></div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert alert-error" style="margin-bottom: 20px; border-radius: 8px; padding: 12px 16px; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
 
-        <div class="panel">
-            <form method="POST" action="index.php?page=<?= htmlspecialchars($reportActionPage) ?>" style="display:grid;gap:12px;">
-                <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end;">
-                    <div class="form-group">
-                        <label>Từ ngày</label>
-                        <input type="date" name="from_date" value="<?= htmlspecialchars($fromDate) ?>" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Đến ngày</label>
-                        <input type="date" name="to_date" value="<?= htmlspecialchars($toDate) ?>" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Phòng ban</label>
-                        <select name="department">
-                            <option value="">Tất cả phòng ban</option>
-                            <?php foreach ($departments as $dept): ?>
-                                <option value="<?= htmlspecialchars($dept) ?>" <?= $department === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Lọc</button>
+        <div class="hrr-filters">
+            <form method="POST" action="index.php?page=<?= htmlspecialchars($reportActionPage) ?>" class="hrr-filter-grid">
+                <div class="hrr-form-group">
+                    <label>Từ ngày</label>
+                    <input type="date" class="hrr-input" name="from_date" value="<?= htmlspecialchars($fromDate) ?>" required>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end;">
-                    <div class="form-group">
-                        <label>Định dạng</label>
-                        <select name="format">
-                            <option value="excel">Excel</option>
-                            <option value="html">Xem trên màn hình</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-success" name="export" value="1">
-                        <i class="fas fa-file-export"></i> Xuất báo cáo
-                    </button>
+                <div class="hrr-form-group">
+                    <label>Đến ngày</label>
+                    <input type="date" class="hrr-input" name="to_date" value="<?= htmlspecialchars($toDate) ?>" required>
                 </div>
-            </form>
-        </div>
-
-        <div class="panel">
-            <h3>Gửi bảng công để phê duyệt</h3>
-            <form method="POST" action="index.php?page=gui-bang-cong-phe-duyet" style="display:flex;gap:10px;align-items:end;">
-                <div class="form-group" style="margin-bottom:0;">
-                    <label>Kỳ chấm công</label>
-                    <input type="month" name="month_key" value="<?= htmlspecialchars(substr($toDate, 0, 7)) ?>" required>
-                </div>
-                <button type="submit" class="btn btn-secondary">Gửi phê duyệt</button>
-            </form>
-        </div>
-
-        <div class="panel">
-            <h3>Dữ liệu báo cáo</h3>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Mã NV</th>
-                        <th>Họ tên</th>
-                        <th>Phòng ban</th>
-                        <th>Số ngày có chấm công</th>
-                        <th>Số lần check-in</th>
-                        <th>Số lần check-out</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($reportRows)): ?>
-                        <?php foreach ($reportRows as $row): ?>
-                            <tr>
-                                <td><?= (int)($row['maND'] ?? 0) ?></td>
-                                <td><?= htmlspecialchars($row['hoTen'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($row['phongBan'] ?? '') ?></td>
-                                <td><?= (int)($row['work_days'] ?? 0) ?></td>
-                                <td><?= (int)($row['checkin_count'] ?? 0) ?></td>
-                                <td><?= (int)($row['checkout_count'] ?? 0) ?></td>
-                            </tr>
+                <div class="hrr-form-group">
+                    <label>Phòng ban</label>
+                    <select class="hrr-select" name="department">
+                        <option value="">Tất cả phòng ban</option>
+                        <?php foreach ($departments as $dept): ?>
+                            <option value="<?= htmlspecialchars($dept) ?>" <?= $department === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
                         <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td colspan="6" class="empty-state">Không có dữ liệu trong khoảng thời gian đã chọn.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="hrr-btn hrr-btn-primary" style="flex: 1;"><i class="fas fa-filter"></i> Lọc dữ liệu</button>
+                    <button type="submit" class="hrr-btn hrr-btn-success" name="export" value="1" title="Xuất Excel"><i class="fas fa-file-excel"></i> Xuất</button>
+                </div>
+            </form>
         </div>
+
+        <?php if (empty($reportByDept)): ?>
+            <div class="hrr-dept-section hrr-empty">
+                <i class="fas fa-folder-open" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 15px;"></i>
+                <h3>Không có dữ liệu</h3>
+                <p>Không tìm thấy dữ liệu chấm công trong khoảng thời gian đã chọn.</p>
+            </div>
+        <?php else: ?>
+            <form method="POST" action="index.php?page=gui-bang-cong-phe-duyet" style="margin-bottom: 24px; display: flex; justify-content: flex-end; gap: 15px; align-items: center; background: #fff; padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                <div class="hrr-form-group" style="flex-direction: row; align-items: center; margin-bottom: 0;">
+                    <label style="margin-bottom: 0;">Kỳ chấm công:</label>
+                    <input type="month" class="hrr-input" style="padding: 6px 12px; margin-left: 10px;" name="month_key" value="<?= htmlspecialchars(substr($toDate, 0, 7)) ?>" required>
+                </div>
+                <button type="submit" class="hrr-btn hrr-btn-warning" onclick="return confirm('Bạn có chắc chắn muốn gửi TẤT CẢ bảng công cho các trưởng phòng phê duyệt?');">
+                    <i class="fas fa-paper-plane"></i> Gửi duyệt toàn bộ
+                </button>
+            </form>
+
+            <?php foreach ($reportByDept as $deptName => $employees): ?>
+                <div class="hrr-dept-section">
+                    <div class="hrr-dept-header">
+                        <div class="hrr-dept-title">
+                            <i class="fas fa-building" style="color: #3b82f6;"></i> Phòng: <?= htmlspecialchars($deptName) ?>
+                            <span class="hrr-dept-badge"><?= count($employees) ?> nhân viên</span>
+                        </div>
+                        <form method="POST" action="index.php?page=gui-bang-cong-phe-duyet" style="margin: 0;">
+                            <input type="hidden" name="department" value="<?= htmlspecialchars($deptName) ?>">
+                            <input type="hidden" name="month_key" value="<?= htmlspecialchars(substr($toDate, 0, 7)) ?>">
+                            <button type="submit" class="hrr-btn hrr-btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="return confirm('Gửi bảng công phòng <?= htmlspecialchars($deptName) ?> cho Manager duyệt?');">
+                                <i class="fas fa-paper-plane"></i> Gửi duyệt phòng này
+                            </button>
+                        </form>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="hrr-table">
+                            <thead>
+                                <tr>
+                                    <th>Nhân viên</th>
+                                    <th>Số ngày công</th>
+                                    <th>Lần Check-in</th>
+                                    <th>Lần Check-out</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($employees as $row): 
+                                    $name = $row['hoTen'] ?? 'N/A';
+                                    $initials = mb_substr($name, 0, 1);
+                                ?>
+                                    <tr>
+                                        <td>
+                                            <div class="hrr-user-cell">
+                                                <span class="hrr-avatar-text"><?= htmlspecialchars($initials) ?></span>
+                                                <div>
+                                                    <strong><?= htmlspecialchars($name) ?></strong><br>
+                                                    <span style="font-size: 0.8rem; color: var(--muted);">Mã NV: <?= (int)($row['maND'] ?? 0) ?></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><span style="font-weight: 600; color: var(--primary); font-size: 1.1rem;"><?= (float)($row['work_days'] ?? 0) ?></span> ngày</td>
+                                        <td><?= (int)($row['checkin_count'] ?? 0) ?></td>
+                                        <td><?= (int)($row['checkout_count'] ?? 0) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 </div>
 <?php include 'app/views/layouts/footer.php'; return; ?>
