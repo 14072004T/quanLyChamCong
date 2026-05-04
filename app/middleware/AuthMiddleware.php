@@ -12,6 +12,8 @@ class AuthMiddleware
             'cham-cong-ra',
             'lich-su-cham-cong',
             'yeu-cau-chinh-sua-cham-cong',
+            'create-leave-request',
+            'store-leave-request',
             'logout'
         ],
         'hr' => [
@@ -33,6 +35,10 @@ class AuthMiddleware
             'hr-api-corrections',
             'hr-api-correction-action',
             'lich-su-cham-cong',
+            'create-leave-request',
+            'store-leave-request',
+            'list-leave-requests',
+            'approve-leave-request',
             'logout'
         ],
         'manager' => [
@@ -49,6 +55,10 @@ class AuthMiddleware
             'manager-api-approve',
             'manager-api-requests',
             'manager-api-request-action',
+            'create-leave-request',
+            'store-leave-request',
+            'list-leave-requests',
+            'approve-leave-request',
             'logout'
         ],
         'tech' => [
@@ -61,6 +71,8 @@ class AuthMiddleware
             'tech-delete-wifi',
             'tech-settings',
             'tech-update-setting',
+            'create-leave-request',
+            'store-leave-request',
             'logout'
         ]
     ];

@@ -14,7 +14,13 @@ class HRController
         }
 
         $this->model = new ChamCongModel();
-        AuthMiddleware::requireRole(['hr']);
+
+        // Đơn nghỉ phép: cho phép tất cả nhân viên đã đăng nhập
+        $leavePages = ['create-leave-request', 'store-leave-request'];
+        $currentPage = $_GET['page'] ?? '';
+        if (!in_array($currentPage, $leavePages, true)) {
+            AuthMiddleware::requireRole(['hr']);
+        }
     }
 
     public function employees()
@@ -478,6 +484,128 @@ class HRController
             'success' => true,
             'data' => $holidays,
         ]);
+    }
+
+    // ============================
+    // ĐƠN NGHỈ PHÉP (Leave Request)
+    // ============================
+
+    public function createLeaveRequest()
+    {
+        $message = $_SESSION['leave_success'] ?? '';
+        $error = $_SESSION['leave_error'] ?? '';
+        unset($_SESSION['leave_success'], $_SESSION['leave_error']);
+
+        $maND = (int)($_SESSION['user']['maND'] ?? 0);
+        $myRequests = $this->model->getLeaveRequestsByUser($maND);
+        require __DIR__ . '/../views/chamcong/leave_request_form.php';
+    }
+
+    public function storeLeaveRequest()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=create-leave-request');
+            exit;
+        }
+
+        $maND = (int)($_SESSION['user']['maND'] ?? 0);
+        $leave_type = trim($_POST['leave_type'] ?? 'personal');
+        $from_date = trim($_POST['from_date'] ?? '');
+        $to_date = trim($_POST['to_date'] ?? '');
+        $reason = trim($_POST['reason'] ?? '');
+
+        if ($from_date === '' || $to_date === '' || $reason === '') {
+            $_SESSION['leave_error'] = 'Vui lòng điền đầy đủ các trường bắt buộc (*)';
+            header('Location: index.php?page=create-leave-request');
+            exit;
+        }
+
+        if ($from_date > $to_date) {
+            $_SESSION['leave_error'] = 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc';
+            header('Location: index.php?page=create-leave-request');
+            exit;
+        }
+
+        // Handle file upload
+        $evidence_file = null;
+        if (isset($_FILES['evidence_file']) && $_FILES['evidence_file']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['evidence_file'];
+            $allowedExts = ['jpg', 'jpeg', 'png', 'pdf'];
+            $maxSize = 5 * 1024 * 1024; // 5MB
+
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, $allowedExts, true)) {
+                $_SESSION['leave_error'] = 'Chỉ chấp nhận file JPG, PNG hoặc PDF';
+                header('Location: index.php?page=create-leave-request');
+                exit;
+            }
+            if ($file['size'] > $maxSize) {
+                $_SESSION['leave_error'] = 'Kích thước file tối đa là 5MB';
+                header('Location: index.php?page=create-leave-request');
+                exit;
+            }
+
+            $uploadDir = 'uploads/leave_evidence/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+
+            $fileName = 'leave_' . $maND . '_' . date('YmdHis') . '_' . mt_rand(100, 999) . '.' . $ext;
+            $filePath = $uploadDir . $fileName;
+
+            if (move_uploaded_file($file['tmp_name'], $filePath)) {
+                $evidence_file = $filePath;
+            }
+        }
+
+        $ok = $this->model->insertLeaveRequest($maND, $leave_type, $from_date, $to_date, $reason, $evidence_file);
+        $_SESSION[$ok ? 'leave_success' : 'leave_error'] = $ok
+            ? 'Gửi đơn nghỉ phép thành công!'
+            : 'Không thể gửi đơn nghỉ phép. Vui lòng thử lại.';
+
+        header('Location: index.php?page=create-leave-request');
+        exit;
+    }
+
+    public function listLeaveRequests()
+    {
+        AuthMiddleware::requireRole(['hr', 'manager']);
+
+        $leaveRequests = $this->model->getAllLeaveRequests();
+        $successMsg = $_SESSION['leave_success'] ?? '';
+        $errorMsg = $_SESSION['leave_error'] ?? '';
+        unset($_SESSION['leave_success'], $_SESSION['leave_error']);
+
+        require __DIR__ . '/../views/chamcong/leave_request_list.php';
+    }
+
+    public function approveLeaveRequest()
+    {
+        AuthMiddleware::requireRole(['hr', 'manager']);
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=list-leave-requests');
+            exit;
+        }
+
+        $id = (int)($_POST['id'] ?? 0);
+        $status = trim($_POST['status'] ?? '');
+        $approvedBy = (int)($_SESSION['user']['maND'] ?? 0);
+
+        if ($id <= 0 || !in_array($status, ['approved', 'rejected'], true)) {
+            $_SESSION['leave_error'] = 'Dữ liệu không hợp lệ';
+            header('Location: index.php?page=list-leave-requests');
+            exit;
+        }
+
+        $ok = $this->model->updateLeaveRequestStatus($id, $status, $approvedBy);
+        $label = $status === 'approved' ? 'phê duyệt' : 'từ chối';
+        $_SESSION[$ok ? 'leave_success' : 'leave_error'] = $ok
+            ? "Đã $label đơn nghỉ phép thành công"
+            : "Không thể $label đơn nghỉ phép (có thể đã được xử lý)";
+
+        header('Location: index.php?page=list-leave-requests');
+        exit;
     }
 
     private function respond(array $payload, int $status = 200)

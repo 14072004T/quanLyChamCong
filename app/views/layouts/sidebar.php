@@ -4,26 +4,29 @@ $currentPage = $_GET['page'] ?? 'home';
 
 $menus = [
     'nhanvien' => [
-        ['page' => 'cham-cong-dashboard', 'label' => 'Chấm công vào', 'icon' => 'fa-fingerprint'],
-        ['page' => 'cham-cong-ra', 'label' => 'Chấm công ra', 'icon' => 'fa-right-from-bracket'],
+        ['page' => 'cham-cong-dashboard', 'label' => 'Chấm công', 'icon' => 'fa-fingerprint'],
         ['page' => 'lich-su-cham-cong', 'label' => 'Xem lịch sử', 'icon' => 'fa-clock-rotate-left'],
         ['page' => 'yeu-cau-chinh-sua-cham-cong', 'label' => 'Gửi yêu cầu chỉnh sửa', 'icon' => 'fa-pen-to-square'],
+        ['page' => 'create-leave-request', 'label' => 'Đơn nghỉ phép', 'icon' => 'fa-calendar-check'],
     ],
     'hr' => [
         ['page' => 'quan-ly-nhanvien', 'label' => 'Quản lý Nhân viên', 'icon' => 'fa-users'],
         ['page' => 'quan-ly-ca-lam', 'label' => 'Quản lý Ca làm việc', 'icon' => 'fa-business-time'],
         ['page' => 'xuly-yeucau', 'label' => 'Xử lý Yêu cầu', 'icon' => 'fa-clipboard-check'],
         ['page' => 'tinh-cong', 'label' => 'Tính công & Báo cáo', 'icon' => 'fa-calculator'],
+        ['page' => 'list-leave-requests', 'label' => 'Quản lý Đơn phép', 'icon' => 'fa-calendar-check'],
     ],
     'manager' => [
         ['page' => 'pheduyet-bang-cong', 'label' => 'Phê duyệt Bảng công', 'icon' => 'fa-circle-check'],
         ['page' => 'pheduyet-yeucau', 'label' => 'Phê duyệt yêu cầu', 'icon' => 'fa-clipboard-list'],
         ['page' => 'bao-cao-tong-hop', 'label' => 'Báo cáo tổng hợp', 'icon' => 'fa-file-lines'],
+        ['page' => 'list-leave-requests', 'label' => 'Quản lý Đơn phép', 'icon' => 'fa-calendar-check'],
     ],
     'tech' => [
         ['page' => 'cham-cong-dashboard', 'label' => 'Trang chính', 'icon' => 'fa-house'],
         ['page' => 'tech-wifi', 'label' => 'Quản lý WiFi', 'icon' => 'fa-wifi'],
         ['page' => 'tech-settings', 'label' => 'Cài đặt Hệ thống', 'icon' => 'fa-sliders'],
+        ['page' => 'create-leave-request', 'label' => 'Đơn nghỉ phép', 'icon' => 'fa-calendar-check'],
     ],
 ];
 

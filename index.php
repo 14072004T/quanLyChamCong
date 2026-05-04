@@ -118,6 +118,11 @@ $allowedPages = [
     'tech-settings',
     'tech-update-setting',
     'tech-update-settings',
+    // Đơn nghỉ phép
+    'create-leave-request',
+    'store-leave-request',
+    'list-leave-requests',
+    'approve-leave-request',
     // Legacy
     'cham-cong-dashboard',
     'hr-cham-cong',
@@ -397,6 +402,27 @@ switch ($page) {
     case 'luu-cauhinh':
         // TODO: Implement logic lưu cấu hình
         header('Location: index.php?page=cau-hinh-he-thong');
+        break;
+
+    // === ĐƠN NGHỈ PHÉP ===
+    case 'create-leave-request':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->createLeaveRequest();
+        break;
+
+    case 'store-leave-request':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->storeLeaveRequest();
+        break;
+
+    case 'list-leave-requests':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->listLeaveRequests();
+        break;
+
+    case 'approve-leave-request':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->approveLeaveRequest();
         break;
 
     default:

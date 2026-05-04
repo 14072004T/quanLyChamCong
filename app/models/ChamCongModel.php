@@ -189,6 +189,27 @@ class ChamCongModel
                 updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS don_nghi_phep (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                leave_type VARCHAR(50) NOT NULL DEFAULT 'personal',
+                from_date DATE NOT NULL,
+                to_date DATE NOT NULL,
+                reason TEXT NOT NULL,
+                evidence_file VARCHAR(255) DEFAULT NULL,
+                status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+                approved_by INT DEFAULT NULL,
+                approved_at DATETIME DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        // Migration for existing tables
+        $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS leave_type VARCHAR(50) NOT NULL DEFAULT 'personal'");
+        $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS evidence_file VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS approved_by INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS approved_at DATETIME DEFAULT NULL");
     }
 
     public function chamCong($maND, $action, $method, $wifiName, $note, $clientIP = null)
@@ -2199,4 +2220,96 @@ class ChamCongModel
         $stmt->close();
         return $result;
     }
+
+    // ============================
+    // ĐƠN NGHỈ PHÉP (Leave Request)
+    // ============================
+
+    public function insertLeaveRequest($user_id, $leave_type, $from_date, $to_date, $reason, $evidence_file = null)
+    {
+        $user_id = (int)$user_id;
+        $leave_type = trim($leave_type);
+        $from_date = trim($from_date);
+        $to_date = trim($to_date);
+        $reason = trim($reason);
+
+        $allowedTypes = ['sick', 'personal', 'emergency', 'wedding', 'funeral', 'other'];
+        if ($user_id <= 0 || $from_date === '' || $to_date === '' || $reason === '') {
+            return false;
+        }
+        if (!in_array($leave_type, $allowedTypes, true)) {
+            $leave_type = 'personal';
+        }
+        if ($from_date > $to_date) {
+            return false;
+        }
+
+        $sql = "INSERT INTO don_nghi_phep (user_id, leave_type, from_date, to_date, reason, evidence_file) VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param("isssss", $user_id, $leave_type, $from_date, $to_date, $reason, $evidence_file);
+        $result = $stmt->execute();
+        $stmt->close();
+        return $result;
+    }
+
+    public function getLeaveRequestsByUser($user_id)
+    {
+        $user_id = (int)$user_id;
+        $sql = "SELECT lr.*, nd.hoTen,
+                       approver.hoTen AS approver_name
+                FROM don_nghi_phep lr
+                LEFT JOIN nguoidung nd ON nd.maND = lr.user_id
+                LEFT JOIN nguoidung approver ON approver.maND = lr.approved_by
+                WHERE lr.user_id = ?
+                ORDER BY lr.created_at DESC";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function getAllLeaveRequests()
+    {
+        $sql = "SELECT lr.*, nd.hoTen, nd.phongBan,
+                       approver.hoTen AS approver_name
+                FROM don_nghi_phep lr
+                LEFT JOIN nguoidung nd ON nd.maND = lr.user_id
+                LEFT JOIN nguoidung approver ON approver.maND = lr.approved_by
+                ORDER BY
+                    CASE lr.status WHEN 'pending' THEN 0 ELSE 1 END,
+                    lr.created_at DESC";
+        $result = $this->conn->query($sql);
+        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    }
+
+    public function updateLeaveRequestStatus($id, $status, $approved_by = null)
+    {
+        $id = (int)$id;
+        $status = trim($status);
+        $approved_by = $approved_by !== null ? (int)$approved_by : null;
+
+        if ($id <= 0 || !in_array($status, ['approved', 'rejected'], true)) {
+            return false;
+        }
+
+        $sql = "UPDATE don_nghi_phep SET status = ?, approved_by = ?, approved_at = NOW() WHERE id = ? AND status = 'pending'";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param("sii", $status, $approved_by, $id);
+        $result = $stmt->execute();
+        $affected = $stmt->affected_rows > 0;
+        $stmt->close();
+        return $result && $affected;
+    }
 }
+
