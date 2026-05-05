@@ -51,6 +51,9 @@ class TechController
         $gateway = trim($_POST['gateway'] ?? '');
         $description = trim($_POST['description'] ?? '');
         $isActive = (int)($_POST['is_active'] ?? 1);
+        $ssid = trim($_POST['ssid'] ?? '');
+        $password = ''; // Ignore password as per requirement
+        $location = trim($_POST['location'] ?? '');
         $errors = [];
 
         // Validate wifi_name
@@ -91,12 +94,34 @@ class TechController
         }
 
         // Insert
-        $result = $this->model->addNetwork($wifiName, $ipRange, $gateway, $description, $isActive);
+        $result = $this->model->addNetwork($wifiName, $ipRange, $gateway, $description, $isActive, $ssid, $password, $location);
         if ($result) {
             $_SESSION['success'] = 'Thêm mạng thành công';
             echo json_encode(['success' => true, 'message' => 'Thêm mạng thành công']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Lỗi khi thêm mạng']);
+        }
+        exit;
+    }
+
+    /**
+     * Get WiFi details by ID for editing (includes password securely)
+     */
+    public function getWifiDetails()
+    {
+        header('Content-Type: application/json');
+        
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid ID']);
+            exit;
+        }
+
+        $network = $this->model->getNetworkById($id);
+        if ($network) {
+            echo json_encode(['success' => true, 'data' => $network]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Network not found']);
         }
         exit;
     }
@@ -121,6 +146,12 @@ class TechController
         $gateway = trim($_POST['gateway'] ?? '');
         $description = trim($_POST['description'] ?? '');
         $isActive = (int)($_POST['is_active'] ?? 1);
+        $ssid = trim($_POST['ssid'] ?? '');
+        $location = trim($_POST['location'] ?? '');
+        
+        // Preserve existing password as per requirement
+        $existingNetwork = $this->model->getNetworkById($wifiId);
+        $password = $existingNetwork['password'] ?? '';
         $errors = [];
 
         // Validate ID
@@ -166,7 +197,7 @@ class TechController
         }
 
         // Update
-        $result = $this->model->updateNetwork($wifiId, $wifiName, $ipRange, $gateway, $description, $isActive);
+        $result = $this->model->updateNetwork($wifiId, $wifiName, $ipRange, $gateway, $description, $isActive, $ssid, $password, $location);
         if ($result) {
             $_SESSION['success'] = 'Cập nhật mạng thành công';
             echo json_encode(['success' => true, 'message' => 'Cập nhật mạng thành công']);
@@ -279,7 +310,7 @@ class TechController
             $errors[] = 'Tên cài đặt không được vượt quá 100 ký tự';
         }
 
-        if (empty($settingValue)) {
+        if (!isset($_POST['setting_value']) || $settingValue === '') {
             $errors[] = 'Giá trị cài đặt không được để trống';
         }
 
@@ -327,6 +358,8 @@ class TechController
             case 'DEFAULT_WORK_MINUTES':
             case 'EARLY_CHECKIN_MINUTES':
             case 'LATE_CHECKOUT_MINUTES':
+            case 'LATE_THRESHOLD_MINUTES':
+            case 'OVERTIME_THRESHOLD_MINUTES':
                 if (!is_numeric($value)) {
                     $errors[] = 'Giá trị phải là số';
                 } elseif ((int)$value < 0) {

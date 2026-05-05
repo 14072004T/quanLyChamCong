@@ -572,12 +572,12 @@ body {
 
 .sidebar-nav {
     width: var(--sidebar-w);
-    background: linear-gradient(180deg, #0c1535 0%, #0f172a 40%, #1a3a6c 100%);
-    padding: 20px 12px;
+    background: #0f172a !important;
+    padding: 0 !important;
     border-right: none;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0;
     flex-shrink: 0;
     box-sizing: border-box;
     min-height: calc(100vh - var(--content-top) - 40px);
@@ -589,7 +589,31 @@ body {
 .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
 .sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,.5); }
 
-/* ===== SIDEBAR LOGO BLOCK ===== */
+.sidebar-top-section {
+    background: #1e293b;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.sidebar-top-section i {
+    font-size: 18px;
+    color: #60a5fa;
+}
+
+.sidebar-top-section span,
+.sidebar-top-section a {
+    color: #ffffff !important;
+    text-decoration: none;
+}
+
+/* ===== SIDEBAR LOGO BLOCK (LEGACY) ===== */
 .sidebar-logo-block {
     display: flex;
     align-items: center;
@@ -659,15 +683,13 @@ body {
 }
 
 .sidebar-nav h3 {
-    font-size: 0.65em;
-    text-align: left;
+    padding: 20px 20px 10px 20px !important;
+    color: #475569 !important;
+    font-size: 11px !important;
     font-weight: 700;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    padding: 6px 12px 4px;
-    margin-bottom: 4px;
-    margin-top: 8px;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    margin: 0 !important;
     background: none;
     border: none;
     box-shadow: none;
@@ -689,11 +711,12 @@ body {
     display: flex;
     align-items: center;
     gap: 11px;
-    padding: 10px 12px;
-    border-radius: var(--r-md);
+    padding: 12px 15px !important;
+    margin: 0 10px 4px 10px !important;
+    border-radius: 10px !important;
     text-decoration: none;
     color: #94a3b8;
-    font-size: 0.87em;
+    font-size: 14px !important;
     font-weight: 500;
     background: transparent;
     transition: all var(--t-base);
@@ -702,7 +725,6 @@ body {
     text-align: left;
     justify-content: flex-start;
     flex-wrap: nowrap;
-    margin-bottom: 0;
     border: none;
 }
 
@@ -732,9 +754,9 @@ body {
 .sidebar-nav ul li a:hover i { opacity: 1; color: #60a5fa; }
 
 .sidebar-nav ul li a.active {
-    background: rgba(59,130,246,.18);
-    color: #60a5fa;
-    font-weight: 600;
+    background: rgba(59, 130, 246, 0.15) !important;
+    color: #60a5fa !important;
+    font-weight: 600 !important;
 }
 
 .sidebar-nav ul li a.active::before {

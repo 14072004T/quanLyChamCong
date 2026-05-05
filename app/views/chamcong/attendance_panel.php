@@ -1,474 +1,227 @@
 <?php
-// Attendance Panel - Network-based Attendance System
-// Requires: User to be authenticated
-// Features: LAN validation, WiFi whitelist, real-time status
-
-if (!isset($_SESSION['user'])) {
-    header('Location: index.php?page=login');
-    exit;
-}
-
+// Attendance Panel - Refined Compact UI
+if (!isset($_SESSION['user'])) { header('Location: index.php?page=login'); exit; }
 $user = $_SESSION['user'];
-$maND = $user['maND'] ?? $user['maTK'] ?? '';
 $hoTen = $user['hoTen'] ?? 'User';
 ?>
 
-<div class="attendance-panel" style="max-width: 900px; margin: 0 auto; padding: 20px;">
-    <!-- Page Header -->
-    <div style="margin-bottom: 30px; text-align: center;">
-        <h1 style="font-size: 28px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
-            <i class="fas fa-clock"></i> Chấm Công
-        </h1>
-        <p style="color: #64748b; font-size: 15px;">
-            Xin chào, <strong><?= htmlspecialchars($hoTen) ?></strong>
-        </p>
-    </div>
-
-    <!-- Main Content Grid -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+<div class="att-refined-wrap">
+    <style>
+        .att-refined-wrap { max-width: 1100px; margin: 0 auto; padding: 20px; font-family: 'Inter', sans-serif; }
+        .att-header-mini { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: white; padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .att-header-info h2 { margin: 0; font-size: 18px; color: #1e293b; }
+        .att-header-info p { margin: 2px 0 0; font-size: 13px; color: #64748b; }
         
-        <!-- Network Status Card -->
-        <div class="status-card" style="background: white; border-radius: 12px; padding: 24px; border: 2px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-            <h3 style="margin-top: 0; margin-bottom: 16px; color: #1e293b; font-weight: 600;">
-                <i class="fas fa-network-wired"></i> Network Status
-            </h3>
-            
-            <div style="margin-bottom: 16px;">
-                <label style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">
-                    Server IP Address
-                </label>
-                <div id="ip-display" style="font-size: 16px; font-weight: 600; color: #0f172a; margin-top: 6px; font-family: 'Inter', sans-serif;">
-                    <span style="color: #94a3b8;">Loading...</span>
-                </div>
-            </div>
+        .att-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .att-card-mini { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .att-card-mini h3 { margin: 0 0 16px; font-size: 14px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+        
+        .att-status-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .att-status-label { font-size: 13px; color: #64748b; }
+        .att-status-val { font-size: 14px; font-weight: 600; color: #1e293b; }
+        
+        .badge-status { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .bg-success { background: #dcfce7; color: #166534; }
+        .bg-warning { background: #fef3c7; color: #92400e; }
+        .bg-danger { background: #fee2e2; color: #991b1b; }
+        .bg-info { background: #dbeafe; color: #1e40af; }
 
-            <div style="margin-bottom: 0;">
-                <label style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">
-                    Connection Status
-                </label>
-                <div id="network-validation" style="margin-top: 8px;">
-                    <span class="status-badge warning" style="background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; display: inline-block;">
-                        <i class="fas fa-hourglass-half"></i> Checking...
-                    </span>
-                </div>
+        .btn-group-att { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .btn-att-mid { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; color: white; }
+        .btn-att-mid:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-att-in { background: #10b981; }
+        .btn-att-in:hover:not(:disabled) { background: #059669; transform: translateY(-1px); }
+        .btn-att-out { background: #ef4444; }
+        .btn-att-out:hover:not(:disabled) { background: #dc2626; transform: translateY(-1px); }
+
+        .history-table-compact { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .history-table-compact th { text-align: left; padding: 10px; background: #f8fafc; color: #64748b; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+        .history-table-compact td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
+        
+        @media (max-width: 640px) { .att-grid { grid-template-columns: 1fr; } }
+    </style>
+
+    <div class="att-header-mini">
+        <div class="att-header-info">
+            <h2><i class="fas fa-fingerprint" style="color: #3b82f6;"></i> Chấm công hệ thống</h2>
+            <p>Xác thực mạng nội bộ và ghi nhận thời gian làm việc</p>
+        </div>
+        <div id="clock-mini" style="font-size: 20px; font-weight: 700; color: #1e293b;">--:--:--</div>
+    </div>
+
+    <div id="message-container"></div>
+
+    <div class="att-grid">
+        <!-- Network Info -->
+        <div class="att-card-mini">
+            <h3><i class="fas fa-network-wired"></i> Kết nối mạng</h3>
+            <div class="att-status-row">
+                <span class="att-status-label">Địa chỉ IP:</span>
+                <span id="ip-display" class="att-status-val">...</span>
+            </div>
+            <div class="att-status-row">
+                <span class="att-status-label">Chọn WiFi:</span>
+                <select id="wifi-select" class="yc-input" style="height: 30px; font-size: 12px; width: 140px; padding: 2px 8px;">
+                    <option value="">Đang tải...</option>
+                </select>
+            </div>
+            <div class="att-status-row">
+                <span class="att-status-label">Trạng thái:</span>
+                <span id="network-validation">
+                    <span class="badge-status bg-warning">Đang kiểm tra...</span>
+                </span>
             </div>
         </div>
 
-        <!-- Attendance Status Card -->
-        <div class="attendance-status-card" style="background: white; border-radius: 12px; padding: 24px; border: 2px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-            <h3 style="margin-top: 0; margin-bottom: 16px; color: #1e293b; font-weight: 600;">
-                <i class="fas fa-check-square"></i> Today's Status
-            </h3>
-            
-            <div style="margin-bottom: 16px;">
-                <label style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">
-                    Check In
-                </label>
-                <div id="checkin-time" style="font-size: 16px; font-weight: 600; color: #0f172a; margin-top: 6px;">
-                    <span style="color: #94a3b8;">—</span>
-                </div>
+        <!-- Today Info -->
+        <div class="att-card-mini">
+            <h3><i class="fas fa-calendar-day"></i> Trạng thái hôm nay</h3>
+            <div class="att-status-row">
+                <span class="att-status-label">Giờ vào:</span>
+                <span id="checkin-time" class="att-status-val">—</span>
             </div>
-
-            <div style="margin-bottom: 16px;">
-                <label style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">
-                    Check Out
-                </label>
-                <div id="checkout-time" style="font-size: 16px; font-weight: 600; color: #0f172a; margin-top: 6px;">
-                    <span style="color: #94a3b8;">—</span>
-                </div>
+            <div class="att-status-row">
+                <span class="att-status-label">Giờ ra:</span>
+                <span id="checkout-time" class="att-status-val">—</span>
             </div>
-
-            <div style="margin-bottom: 0;">
-                <label style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">
-                    Total Hours
-                </label>
-                <div id="total-hours" style="font-size: 16px; font-weight: 600; color: #0f172a; margin-top: 6px;">
-                    <span style="color: #94a3b8;">—</span>
-                </div>
+            <div class="att-status-row">
+                <span class="att-status-label">Tổng giờ:</span>
+                <span id="total-hours" class="att-status-val">—</span>
             </div>
         </div>
     </div>
 
-    <!-- Action Buttons -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 30px;">
-        <button id="checkin-btn" class="action-btn btn-checkin" style="padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; background: #10b981; color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
-            <i class="fas fa-sign-in-alt"></i> Check In
+    <div class="btn-group-att">
+        <button id="checkin-btn" class="btn-att-mid btn-att-in">
+            <i class="fas fa-sign-in-alt"></i> CHẤM CÔNG VÀO
         </button>
-        <button id="checkout-btn" class="action-btn btn-checkout" style="padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; background: #ef4444; color: white; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);">
-            <i class="fas fa-sign-out-alt"></i> Check Out
+        <button id="checkout-btn" class="btn-att-mid btn-att-out">
+            <i class="fas fa-sign-out-alt"></i> CHẤM CÔNG RA
         </button>
     </div>
 
-    <!-- Message Display -->
-    <div id="message-container" style="margin-bottom: 30px;">
-        <!-- Messages will be inserted here -->
-    </div>
-
-    <!-- History Section -->
-    <div style="background: white; border-radius: 12px; padding: 24px; border: 2px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-        <h3 style="margin-top: 0; margin-bottom: 16px; color: #1e293b; font-weight: 600;">
-            <i class="fas fa-history"></i> Recent Attendance
-        </h3>
-        <div id="history-list" style="max-height: 300px; overflow-y: auto;">
-            <div style="text-align: center; color: #94a3b8; padding: 20px;">
-                <i class="fas fa-spinner fa-spin" style="font-size: 20px;"></i>
-            </div>
+    <div class="att-card-mini">
+        <h3><i class="fas fa-history"></i> Lịch sử gần đây</h3>
+        <div id="history-list" style="overflow-x: auto;">
+            <p style="text-align: center; color: #94a3b8; padding: 20px;">Đang tải dữ liệu...</p>
         </div>
     </div>
 </div>
 
-<style>
-.attendance-panel {
-    font-family: 'Inter', sans-serif;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-}
-
-.status-badge.success {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.status-badge.error {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.status-badge.warning {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.action-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-.action-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-}
-
-.action-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btn-checkin:disabled {
-    background: #d1d5db;
-}
-
-.btn-checkout:disabled {
-    background: #d1d5db;
-}
-
-.message {
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-}
-
-.message.success {
-    background: #d1fae5;
-    color: #065f46;
-    border-left: 4px solid #10b981;
-}
-
-.message.error {
-    background: #fee2e2;
-    color: #991b1b;
-    border-left: 4px solid #ef4444;
-}
-
-.message.warning {
-    background: #fef3c7;
-    color: #92400e;
-    border-left: 4px solid #f59e0b;
-}
-
-.message.info {
-    background: #dbeafe;
-    color: #0c4a6e;
-    border-left: 4px solid #0284c7;
-}
-
-#history-list table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-}
-
-#history-list th {
-    background: #f8fafc;
-    padding: 12px;
-    text-align: left;
-    font-weight: 600;
-    color: #475569;
-    border-bottom: 2px solid #e2e8f0;
-}
-
-#history-list td {
-    padding: 12px;
-    border-bottom: 1px solid #e2e8f0;
-    color: #1e293b;
-}
-
-#history-list tr:hover {
-    background: #f8f afc;
-}
-</style>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const apiBase = 'index.php?page=';
-    const localeStr = 'en-US'; // Can be changed to 'vi-VN' for Vietnamese
 
-    // Initialize on page load
-    initializeAttendancePanel();
-
-    // Event listeners
-    document.getElementById('checkin-btn').addEventListener('click', performCheckIn);
-    document.getElementById('checkout-btn').addEventListener('click', performCheckOut);
-
-    /**
-     * Initialize the attendance panel
-     */
-    function initializeAttendancePanel() {
-        validateNetwork();
-        loadTodayAttendance();
-        loadRecentHistory();
-
-        // Refresh every 60 seconds
-        setInterval(() => {
-            validateNetwork();
-            loadTodayAttendance();
-        }, 60000);
+    function formatTimeFromHours(hours) {
+        if (!hours || hours <= 0) return '—';
+        const h = Math.floor(hours);
+        const m = Math.round((hours - h) * 60);
+        return (h > 0 ? h + 'h ' : '') + m + 'm';
     }
 
-    /**
-     * Validate network access (INFORMATIONAL ONLY - does NOT block)
-     * Actual IP validation happens during clock-in/out submission only
-     */
-    function validateNetwork() {
-        fetch(apiBase + 'attendance-validate-network', {
-            method: 'GET'
-        })
-        .then(res => res.json())
-        .then(data => {
-            // Display IP
-            const ipDisplay = document.getElementById('ip-display');
-            ipDisplay.innerHTML = `<code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 14px;">${data.ip || 'Unknown'}</code>`;
-
-            // Display status (INFORMATIONAL ONLY - does NOT disable buttons)
-            const validationDiv = document.getElementById('network-validation');
-            if (data.is_allowed) {
-                validationDiv.innerHTML = `
-                    <span class="status-badge success" style="background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; display: inline-block;">
-                        <i class="fas fa-check-circle"></i> Mạng nội bộ - có thể chấm công
-                    </span>
-                `;
-            } else {
-                validationDiv.innerHTML = `
-                    <span class="status-badge warning" style="background: #fed7aa; color: #92400e; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; display: inline-block;">
-                        <i class="fas fa-wifi"></i> Kết nối từ bên ngoài - vui lòng kết nối WiFi công ty để chấm công
-                    </span>
-                `;
-            }
-
-            // NOTE: Buttons are NOT disabled - user can still try to clock in
-            // If not in allowed network, they will get error message during submission
-            // This allows users to see the UI and understand what's needed
-        })
-        .catch(err => {
-            console.error('Network validation error:', err);
-            // Silent fail - do not block UI if network check fails
-        });
-    }
-
-    /**
-     * Load today's attendance times
-     */
-    function loadTodayAttendance() {
-        fetch(apiBase + 'attendance-today', {
-            method: 'GET'
-        })
-        .then(res => res.json())
-        .then(data => {
-            const checkinTime = document.getElementById('checkin-time');
-            const checkoutTime = document.getElementById('checkout-time');
-            const totalHours = document.getElementById('total-hours');
-
-            if (data.success) {
-                checkinTime.innerHTML = data.checkIn 
-                    ? `<time>${data.checkIn.split(' ')[1]}</time>` 
-                    : '<span style="color: #94a3b8;">—</span>';
-                checkoutTime.innerHTML = data.checkOut 
-                    ? `<time>${data.checkOut.split(' ')[1]}</time>` 
-                    : '<span style="color: #94a3b8;">—</span>';
-                totalHours.innerHTML = data.total_hours > 0 
-                    ? `<span>${data.total_hours} hours</span>` 
-                    : '<span style="color: #94a3b8;">—</span>';
-            }
-        })
-        .catch(err => console.error('Error loading today attendance:', err));
-    }
-
-    /**
-     * Load recent attendance history
-     */
-    function loadRecentHistory() {
-        fetch(apiBase + 'attendance-history?limit=10', {
-            method: 'GET'
-        })
-        .then(res => res.json())
-        .then(data => {
-            const historyList = document.getElementById('history-list');
-            
-            if (data.success && data.data.length > 0) {
-                let html = `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Check In</th>
-                                <th>Check Out</th>
-                                <th>Duration</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
+    function loadData() {
+        // IP check + Wifi list
+        fetch(apiBase + 'attendance-validate-network')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('ip-display').textContent = data.ip || 'Unknown';
+                document.getElementById('network-validation').innerHTML = data.is_allowed 
+                    ? '<span class="badge-status bg-success">Hợp lệ</span>'
+                    : '<span class="badge-status bg-danger">Mạng ngoài</span>';
                 
-                data.data.forEach(record => {
-                    html += `
-                        <tr>
-                            <td>${record.date}</td>
-                            <td>${record.checkIn || '—'}</td>
-                            <td>${record.checkOut || '—'}</td>
-                            <td>${record.hours > 0 ? record.hours + ' h' : '—'}</td>
-                        </tr>
-                    `;
-                });
-                
-                html += `
-                        </tbody>
-                    </table>
-                `;
-                historyList.innerHTML = html;
-            } else {
-                historyList.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">No attendance records found</div>';
-            }
-        })
-        .catch(err => {
-            console.error('Error loading history:', err);
-            document.getElementById('history-list').innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Error loading history</div>';
-        });
+                const wifiSelect = document.getElementById('wifi-select');
+                if (data.allowed_networks && data.allowed_networks.length > 0) {
+                    let options = '';
+                    let matched = false;
+                    data.allowed_networks.forEach(w => {
+                        const isMatch = data.ip && data.ip.startsWith(w.ip_range);
+                        options += `<option value="${w.wifi_name}" ${isMatch ? 'selected' : ''}>${w.wifi_name}</option>`;
+                        if (isMatch) matched = true;
+                    });
+                    wifiSelect.innerHTML = options;
+                } else {
+                    wifiSelect.innerHTML = '<option value="">Không có WiFi</option>';
+                }
+            });
+
+        // Today info
+        fetch(apiBase + 'attendance-today')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('checkin-time').textContent = data.checkIn ? data.checkIn.split(' ')[1] : '—';
+                    document.getElementById('checkout-time').textContent = data.checkOut ? data.checkOut.split(' ')[1] : '—';
+                    document.getElementById('total-hours').textContent = formatTimeFromHours(data.total_hours);
+                }
+            });
+
+        // History
+        fetch(apiBase + 'attendance-history?limit=5')
+            .then(res => res.json())
+            .then(data => {
+                const historyList = document.getElementById('history-list');
+                if (data.success && data.data.length > 0) {
+                    let html = '<table class="history-table-compact"><thead><tr><th>Ngày</th><th>WiFi</th><th>Vào</th><th>Ra</th></tr></thead><tbody>';
+                    data.data.forEach(r => {
+                        const wifiDisplay = r.wifi_name || 'Wifi Công ty';
+                        html += `<tr><td>${r.date}</td><td><span style="font-size:11px; color:#64748b">${wifiDisplay}</span></td><td>${r.checkIn || '—'}</td><td>${r.checkOut || '—'}</td></tr>`;
+                    });
+                    html += '</tbody></table>';
+                    historyList.innerHTML = html;
+                } else {
+                    historyList.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 10px;">Chưa có dữ liệu</p>';
+                }
+            });
     }
 
-    /**
-     * Perform check in (server-side validation only)
-     */
-    function performCheckIn() {
-        const btn = document.getElementById('checkin-btn');
-        
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chấm công...';
-
-        fetch(apiBase + 'attendance-check-in', {
-            method: 'POST'
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                showMessage('✓ Chấm công vào thành công!', 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
-            } else {
-                showMessage(data.message || 'Chấm công vào thất bại', 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Check In';
-            }
-        })
-        .catch(err => {
-            showMessage('Lỗi kết nối khi chấm công', 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Check In';
-        });
-    }
-
-    /**
-     * Perform check out (server-side validation only)
-     */
-    function performCheckOut() {
-        const btn = document.getElementById('checkout-btn');
-        
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chấm công...';
-
-        fetch(apiBase + 'attendance-check-out', {
-            method: 'POST'
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                showMessage('✓ Chấm công ra thành công!', 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
-            } else {
-                showMessage(data.message || 'Chấm công ra thất bại', 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Check Out';
-            }
-        })
-        .catch(err => {
-            showMessage('Lỗi kết nối khi chấm công', 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Check Out';
-        });
-    }
-
-    /**
-     * Show message to user
-     */
-    function showMessage(text, type = 'info') {
+    function showMsg(text, type) {
         const container = document.getElementById('message-container');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-        messageDiv.innerHTML = `
-            <div style="flex: 1;">
-                <strong>${text}</strong>
-            </div>
-            <button style="background: none; border: none; color: inherit; cursor: pointer; font-size: 18px; padding: 0;" onclick="this.parentElement.style.display='none';">
-                ×
-            </button>
-        `;
-        container.appendChild(messageDiv);
-
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (messageDiv.parentElement) {
-                messageDiv.remove();
-            }
-        }, 5000);
+        const div = document.createElement('div');
+        div.style.cssText = `padding:10px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; font-weight:600; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);`;
+        if (type === 'success') div.style.background = '#dcfce7', div.style.color = '#166534', div.style.border = '1px solid #bbf7d0';
+        else div.style.background = '#fee2e2', div.style.color = '#991b1b', div.style.border = '1px solid #fecaca';
+        div.innerHTML = `<span>${text}</span><i class="fas fa-times" style="cursor:pointer; opacity:0.5" onclick="this.parentElement.remove()"></i>`;
+        container.appendChild(div);
+        setTimeout(() => { if(div.parentElement) div.remove(); }, 5000);
     }
 
-    /**
-     * Update button states based on network validity
-     */
-    // NOTE: Buttons are no longer disabled based on network status
-    // Users can attempt to clock in from any network
-    // IP validation happens during submission - inline error message if not in allowed network
+    document.getElementById('checkin-btn').onclick = () => {
+        const btn = document.getElementById('checkin-btn');
+        const wifi = document.getElementById('wifi-select').value;
+        btn.disabled = true;
+        
+        const formData = new FormData();
+        formData.append('wifi_name', wifi);
+
+        fetch(apiBase + 'attendance-check-in', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) { showMsg('Chấm công vào thành công!', 'success'); loadData(); }
+                else { showMsg(data.message || 'Thất bại', 'error'); btn.disabled = false; }
+            });
+    };
+
+    document.getElementById('checkout-btn').onclick = () => {
+        const btn = document.getElementById('checkout-btn');
+        const wifi = document.getElementById('wifi-select').value;
+        btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('wifi_name', wifi);
+
+        fetch(apiBase + 'attendance-check-out', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) { showMsg('Chấm công ra thành công!', 'success'); loadData(); }
+                else { showMsg(data.message || 'Thất bại', 'error'); btn.disabled = false; }
+            });
+    };
+
+    function updateClock() {
+        document.getElementById('clock-mini').textContent = new Date().toLocaleTimeString('en-GB');
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+    loadData();
 });
 </script>

@@ -23,6 +23,27 @@
     $notificationCount = 0;
 
     if (isset($_SESSION['user'])) {
+        /**
+         * Helper to format minutes into "X giờ Y phút"
+         */
+        if (!function_exists('formatMinutes')) {
+            function formatMinutes($minutes) {
+                $minutes = (int)$minutes;
+                if ($minutes <= 0) return '0 phút';
+                $hours = floor($minutes / 60);
+                $remMinutes = $minutes % 60;
+                
+                $result = '';
+                if ($hours > 0) {
+                    $result .= $hours . ' giờ ';
+                }
+                if ($remMinutes > 0 || $hours == 0) {
+                    $result .= $remMinutes . ' phút';
+                }
+                return trim($result);
+            }
+        }
+        
         require_once 'app/models/ChamCongModel.php';
         $notificationModel = new ChamCongModel();
         $role = $_SESSION['role'] ?? 'nhanvien';

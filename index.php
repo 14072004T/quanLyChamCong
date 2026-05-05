@@ -72,6 +72,7 @@ $allowedPages = [
     'cham-cong-ra',
     'lich-su-cham-cong',
     'yeu-cau-chinh-sua-cham-cong',
+    'store-edit-request',
     'attendance-panel',
     // Attendance API endpoints
     'attendance-check-in',
@@ -107,10 +108,8 @@ $allowedPages = [
     'manager-api-requests',
     'manager-api-request-action',
     // Tech
-    'wifi',
-    'cau-hinh-he-thong',
-    'luu-cauhinh',
     'tech-wifi',
+    'tech-get-wifi',
     'tech-add-wifi',
     'tech-update-wifi',
     'tech-toggle-wifi',
@@ -123,11 +122,14 @@ $allowedPages = [
     'store-leave-request',
     'list-leave-requests',
     'approve-leave-request',
+    'leave-request-detail',
+    'get-leave-detail',
+    'get-correction-detail',
     // Legacy
     'cham-cong-dashboard',
     'hr-cham-cong',
     'quan-ly-cham-cong',
-    'ky-thuat-cham-cong',
+    'quan-ly-cham-cong',
 ];
 
 if (!in_array($page, $allowedPages, true)) {
@@ -181,6 +183,11 @@ switch ($page) {
         (new ChamCongController())->yeuCauChinhSua();
         break;
 
+    case 'store-edit-request':
+        require_once 'app/controllers/ChamCongController.php';
+        (new ChamCongController())->storeEditRequest();
+        break;
+
     case 'attendance-panel':
         require_once 'app/views/chamcong/attendance_panel.php';
         break;
@@ -209,6 +216,17 @@ switch ($page) {
     case 'attendance-history':
         require_once 'app/controllers/ChamCongController.php';
         (new ChamCongController())->getAttendanceHistory();
+        break;
+
+    case 'leave-request-detail':
+    case 'get-leave-detail':
+        require_once 'app/controllers/ChamCongController.php';
+        (new ChamCongController())->getLeaveDetail();
+        break;
+
+    case 'get-correction-detail':
+        require_once 'app/controllers/ChamCongController.php';
+        (new ChamCongController())->getCorrectionDetail();
         break;
 
     // === HR PANEL ===
@@ -359,6 +377,11 @@ switch ($page) {
         (new TechController())->addWifi();
         break;
 
+    case 'tech-get-wifi':
+        require_once 'app/controllers/TechController.php';
+        (new TechController())->getWifiDetails();
+        break;
+
     case 'tech-update-wifi':
         require_once 'app/controllers/TechController.php';
         (new TechController())->updateWifi();
@@ -387,21 +410,6 @@ switch ($page) {
     case 'tech-update-settings':
         require_once 'app/controllers/TechController.php';
         (new TechController())->updateSettings();
-        break;
-
-    // Legacy tech routes
-    case 'wifi':
-        require_once 'app/views/chamcong/wifi.php';
-        break;
-
-    case 'cau-hinh-he-thong':
-    case 'ky-thuat-cham-cong':
-        require_once 'app/views/chamcong/cauhinh.php';
-        break;
-
-    case 'luu-cauhinh':
-        // TODO: Implement logic lưu cấu hình
-        header('Location: index.php?page=cau-hinh-he-thong');
         break;
 
     // === ĐƠN NGHỈ PHÉP ===

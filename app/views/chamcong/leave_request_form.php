@@ -30,144 +30,98 @@ $statusIcons = [
 <?php include 'app/views/layouts/nav.php'; ?>
 
 <style>
-/* ===== LEAVE REQUEST FORM STYLES ===== */
-.lr-page-header { display: flex; align-items: center; gap: 16px; }
-.lr-page-header .lr-icon-circle {
-    width: 52px; height: 52px; border-radius: 14px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 22px; flex-shrink: 0;
-    box-shadow: 0 4px 14px rgba(99,102,241,.3);
-}
-.lr-page-header h2 { margin: 0; font-size: 1.35em; color: #1e293b; }
-.lr-page-header p { margin: 4px 0 0; color: #64748b; font-size: .9em; }
+/* ===== STRICT GRID LEAVE REQUEST FORM ===== */
+.lr-container { max-width: 1000px; margin: 0 auto; padding: 0 10px; font-family: 'Inter', sans-serif; }
+.lr-card { background: #fff; border-radius: 8px; padding: 16px; border: 1px solid #e2e8f0; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+.lr-card-title { font-size: 14px; font-weight: 600; color: #1e293b; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+.lr-card-title i { color: #4f6ef7; font-size: 13px; }
 
-.lr-card {
-    background: #fff; border-radius: 14px; padding: 28px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+/* FORCE GRID LAYOUT */
+.lr-grid-form {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    align-items: end;
 }
-.lr-card-title {
-    font-size: 1.05em; font-weight: 600; color: #1e293b; margin: 0 0 20px;
-    padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;
-    display: flex; align-items: center; gap: 10px;
-}
-.lr-card-title i { color: #6366f1; font-size: .95em; }
 
-.lr-field { margin-bottom: 20px; }
-.lr-field label {
-    display: block; font-weight: 500; color: #334155; margin-bottom: 6px; font-size: .9em;
-}
-.lr-field label .req { color: #ef4444; margin-left: 2px; }
+.lr-field { display: flex; flex-direction: column; gap: 4px; }
+.lr-field label { font-weight: 600; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+.lr-field label .req { color: #ef4444; }
+
 .lr-field input, .lr-field select, .lr-field textarea {
-    width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px;
-    font-size: .92em; font-family: 'Inter', sans-serif; color: #1e293b;
-    background: #f8fafc; transition: border-color .2s, box-shadow .2s;
-    box-sizing: border-box;
+    width: 100%; height: 34px; padding: 0 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+    font-size: 13px; font-family: 'Inter', sans-serif; color: #1e293b; background: #fff; box-sizing: border-box;
 }
-.lr-field input:focus, .lr-field select:focus, .lr-field textarea:focus {
-    outline: none; border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99,102,241,.12); background: #fff;
-}
-.lr-field textarea { resize: vertical; min-height: 90px; }
-.lr-field .lr-hint { font-size: .8em; color: #94a3b8; margin-top: 4px; display: block; }
-.lr-field .lr-error-hint { font-size: .8em; color: #ef4444; margin-top: 4px; display: none; }
+.lr-field textarea { height: 34px; min-height: 34px; resize: none; padding: 6px 10px; line-height: 20px; }
 
-.lr-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.lr-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-@media (max-width: 640px) {
-    .lr-grid-2, .lr-grid-3 { grid-template-columns: 1fr; }
-}
+/* Grid positioning */
+.col-span-3 { grid-column: span 3; }
+.col-span-2 { grid-column: span 2; }
 
 .lr-file-zone {
-    border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px;
-    text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
-    position: relative; background: #f8fafc;
+    border: 1px dashed #cbd5e1; border-radius: 6px; height: 34px; background: #f8fafc;
+    display: flex; align-items: center; gap: 8px; padding: 0 10px; cursor: pointer; position: relative; box-sizing: border-box;
 }
-.lr-file-zone:hover { border-color: #6366f1; background: #f1f0ff; }
-.lr-file-zone input[type="file"] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+.lr-file-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.lr-file-text { font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.btn-submit-wrap { display: flex; justify-content: flex-end; }
+.btn-success {
+    background: #4f6ef7; color: #fff; border: none; height: 34px; padding: 0 20px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;
 }
-.lr-file-zone .lr-file-icon { font-size: 28px; color: #94a3b8; margin-bottom: 8px; }
-.lr-file-zone .lr-file-text { font-size: .88em; color: #64748b; }
-.lr-file-zone .lr-file-text strong { color: #6366f1; }
-.lr-file-zone .lr-file-formats { font-size: .78em; color: #94a3b8; margin-top: 6px; }
-.lr-file-name {
-    font-size: .85em; color: #6366f1; margin-top: 8px; font-weight: 500; display: none;
+.btn-success:hover { background: #3b5de7; }
+
+/* Status Badges */
+.lr-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
+/* History Grid */
+.lr-history-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+}
+@media (max-width: 768px) {
+    .lr-history-grid { grid-template-columns: 1fr; }
 }
 
-.lr-actions { display: flex; gap: 12px; margin-top: 24px; }
-.lr-actions .btn { flex: 1; padding: 12px 20px; border-radius: 10px; font-size: .95em; font-weight: 600; }
+.lr-history-card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;
+    display: flex; flex-direction: column; gap: 8px; transition: all 0.2s ease;
+}
+.lr-history-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
-.lr-alert {
-    padding: 14px 18px; border-radius: 10px; margin-bottom: 20px;
-    display: flex; align-items: center; gap: 10px; font-size: .92em;
-    animation: lrSlideIn .3s ease;
-}
-@keyframes lrSlideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-.lr-alert-success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
-.lr-alert-success i { color: #10b981; }
-.lr-alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
-.lr-alert-error i { color: #ef4444; }
+/* Status-specific card styles */
+.lr-history-card.status-approved { background: #f0fdf4; border-left: 4px solid #10b981; }
+.lr-history-card.status-pending  { background: #fffbeb; border-left: 4px solid #f59e0b; }
+.lr-history-card.status-rejected { background: #fef2f2; border-left: 4px solid #ef4444; }
 
-/* History table */
-.lr-table { width: 100%; border-collapse: collapse; }
-.lr-table thead th {
-    background: #f8fafc; color: #64748b; font-size: .82em; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .4px; padding: 10px 14px;
-    text-align: left; border-bottom: 2px solid #e2e8f0;
-}
-.lr-table tbody td {
-    padding: 12px 14px; border-bottom: 1px solid #f1f5f9;
-    font-size: .9em; color: #334155; vertical-align: middle;
-}
-.lr-table tbody tr:hover { background: #f8fafc; }
-.lr-table tbody tr:last-child td { border-bottom: none; }
+/* Refined Badge Colors */
+.lr-badge-approved { background: #10b981; color: #fff; }
+.lr-badge-pending  { background: #f59e0b; color: #fff; }
+.lr-badge-rejected { background: #ef4444; color: #fff; }
 
-.lr-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 4px 12px; border-radius: 20px; font-size: .8em; font-weight: 600;
-    white-space: nowrap;
-}
-.lr-badge-pending  { background: #fef3c7; color: #92400e; }
-.lr-badge-approved { background: #d1fae5; color: #065f46; }
-.lr-badge-rejected { background: #fecaca; color: #991b1b; }
+/* Modal Styles */
+.lr-modal { display:none; position:fixed; z-index:9999; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(2px); }
+.lr-modal-content { background:#fff; border-radius:12px; width:100%; max-width:500px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1); overflow:hidden; animation:modalSlideUp 0.3s ease; }
+@keyframes modalSlideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+.lr-modal-header { padding:16px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; }
+.lr-modal-body { padding:20px; }
+.lr-modal-footer { padding:12px 20px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; }
+.lr-detail-row { display:flex; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px; }
+.lr-detail-label { width:120px; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; }
+.lr-detail-val { flex:1; font-size:13px; color:#1e293b; font-weight:500; }
+.lr-history-card { cursor: pointer; }
 
-.lr-type-chip {
-    display: inline-block; padding: 2px 10px; border-radius: 6px;
-    font-size: .8em; font-weight: 500; background: #ede9fe; color: #6d28d9;
-}
-
-.lr-empty {
-    text-align: center; padding: 40px 20px; color: #94a3b8;
-}
-.lr-empty i { font-size: 2.5em; margin-bottom: 12px; display: block; color: #cbd5e1; }
-
-.lr-approver-info { font-size: .78em; color: #64748b; margin-top: 3px; }
-.lr-approver-info i { font-size: .85em; margin-right: 2px; }
-
-.lr-info-box {
-    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
-    border: 1px solid #bfdbfe; border-radius: 12px; padding: 18px 22px;
-}
-.lr-info-box h4 { margin: 0 0 10px; color: #1e40af; font-size: .95em; }
-.lr-info-box ul { margin: 0; padding-left: 20px; color: #1e40af; font-size: .88em; }
-.lr-info-box ul li { margin-bottom: 5px; }
-
-.lr-loading { display: none; }
-.lr-loading.active {
-    display: inline-flex; align-items: center; gap: 8px;
-}
-.lr-spinner {
-    width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent;
-    border-radius: 50%; animation: lrSpin .6s linear infinite;
-}
+.lr-loading.active { display: inline-flex; align-items: center; }
+.lr-spinner { width: 12px; height: 12px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: lrSpin .6s linear infinite; }
 @keyframes lrSpin { to { transform: rotate(360deg); } }
 </style>
 
 <div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
     <div class="dashboard-container">
+    <div class="lr-container">
 
         <!-- Page Header -->
         <div class="panel">
@@ -200,65 +154,46 @@ $statusIcons = [
                 <i class="fas fa-pen-to-square"></i> Tạo Đơn Nghỉ Phép Mới
             </div>
 
-            <form method="POST" action="index.php?page=store-leave-request" enctype="multipart/form-data" id="leaveForm">
-                <!-- Row 1: Leave type -->
+            <form method="POST" action="index.php?page=store-leave-request" enctype="multipart/form-data" id="leaveForm" class="lr-grid-form">
+                <!-- Row 1 -->
                 <div class="lr-field">
                     <label for="leave_type">Loại nghỉ phép <span class="req">*</span></label>
                     <select id="leave_type" name="leave_type" required>
-                        <option value="" disabled selected>— Chọn loại nghỉ phép —</option>
+                        <option value="" disabled selected>— Chọn —</option>
                         <?php foreach ($leaveTypeLabels as $val => $lbl): ?>
                             <option value="<?= htmlspecialchars($val) ?>"><?= htmlspecialchars($lbl) ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <span class="lr-error-hint" id="err-leave-type">Vui lòng chọn loại nghỉ phép</span>
                 </div>
-
-                <!-- Row 2: Date range -->
-                <div class="lr-grid-2">
-                    <div class="lr-field">
-                        <label for="from_date">Từ ngày <span class="req">*</span></label>
-                        <input type="date" id="from_date" name="from_date" required min="<?= date('Y-m-d') ?>">
-                        <span class="lr-hint">Ngày bắt đầu nghỉ</span>
-                        <span class="lr-error-hint" id="err-from-date">Vui lòng chọn ngày bắt đầu</span>
-                    </div>
-                    <div class="lr-field">
-                        <label for="to_date">Đến ngày <span class="req">*</span></label>
-                        <input type="date" id="to_date" name="to_date" required min="<?= date('Y-m-d') ?>">
-                        <span class="lr-hint">Ngày kết thúc nghỉ</span>
-                        <span class="lr-error-hint" id="err-to-date">Ngày kết thúc phải sau ngày bắt đầu</span>
-                    </div>
-                </div>
-
-                <!-- Row 3: Reason -->
                 <div class="lr-field">
-                    <label for="reason">Lý do chi tiết <span class="req">*</span></label>
-                    <textarea id="reason" name="reason" rows="4"
-                              placeholder="Mô tả chi tiết lý do xin nghỉ phép. VD: Nghỉ phép năm theo kế hoạch, khám sức khỏe định kỳ..." required></textarea>
-                    <span class="lr-hint">Giải thích rõ ràng giúp đơn được phê duyệt nhanh hơn</span>
-                    <span class="lr-error-hint" id="err-reason">Vui lòng nhập lý do nghỉ phép</span>
+                    <label for="from_date">Từ ngày <span class="req">*</span></label>
+                    <input type="date" id="from_date" name="from_date" required min="<?= date('Y-m-d') ?>">
+                </div>
+                <div class="lr-field">
+                    <label for="to_date">Đến ngày <span class="req">*</span></label>
+                    <input type="date" id="to_date" name="to_date" required min="<?= date('Y-m-d') ?>">
                 </div>
 
-                <!-- Row 4: Evidence file -->
-                <div class="lr-field">
-                    <label>Minh chứng đính kèm <span style="color:#94a3b8; font-weight:400;">(không bắt buộc)</span></label>
+                <!-- Row 2 -->
+                <div class="lr-field col-span-3">
+                    <label for="reason">Lý do nghỉ phép <span class="req">*</span></label>
+                    <textarea id="reason" name="reason" placeholder="Nhập lý do ngắn gọn..." required></textarea>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="lr-field col-span-2">
+                    <label>Minh chứng (nếu có)</label>
                     <div class="lr-file-zone" id="fileZone">
+                        <i class="fas fa-paperclip"></i>
+                        <div class="lr-file-text" id="fileText">Chọn file minh chứng...</div>
                         <input type="file" name="evidence_file" id="evidence_file" accept=".jpg,.jpeg,.png,.pdf">
-                        <div class="lr-file-icon"><i class="fas fa-cloud-arrow-up"></i></div>
-                        <div class="lr-file-text"><strong>Kéo thả</strong> hoặc nhấn để chọn file</div>
-                        <div class="lr-file-formats">JPG, PNG hoặc PDF — tối đa 5MB</div>
                     </div>
-                    <div class="lr-file-name" id="fileName"></div>
                 </div>
-
-                <!-- Actions -->
-                <div class="lr-actions">
-                    <button type="submit" class="btn btn-success" id="submitBtn">
-                        <span id="submitText"><i class="fas fa-paper-plane"></i> Gửi Đơn Nghỉ Phép</span>
+                <div class="btn-submit-wrap">
+                    <button type="submit" class="btn-success" id="submitBtn">
+                        <span id="submitText"><i class="fas fa-paper-plane"></i> Gửi Đơn</span>
                         <span class="lr-loading" id="submitLoading"><span class="lr-spinner"></span> Đang gửi...</span>
                     </button>
-                    <a href="index.php?page=cham-cong-dashboard" class="btn btn-secondary" style="text-align: center;">
-                        <i class="fas fa-arrow-left"></i> Quay lại
-                    </a>
                 </div>
             </form>
         </div>
@@ -270,82 +205,73 @@ $statusIcons = [
             </div>
 
             <?php if (!empty($myRequests) && is_array($myRequests)): ?>
-                <div style="overflow-x: auto;">
-                <table class="lr-table">
-                    <thead>
-                        <tr>
-                            <th>Loại phép</th>
-                            <th>Từ ngày</th>
-                            <th>Đến ngày</th>
-                            <th>Lý do</th>
-                            <th>Minh chứng</th>
-                            <th>Trạng thái</th>
-                            <th>Ngày gửi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($myRequests as $row): ?>
-                            <?php
-                                $st = $row['status'] ?? 'pending';
-                                $lt = $row['leave_type'] ?? 'personal';
-                            ?>
-                            <tr>
-                                <td><span class="lr-type-chip"><?= htmlspecialchars($leaveTypeLabels[$lt] ?? $lt) ?></span></td>
-                                <td><strong><?= htmlspecialchars($row['from_date'] ?? '') ?></strong></td>
-                                <td><strong><?= htmlspecialchars($row['to_date'] ?? '') ?></strong></td>
-                                <td title="<?= htmlspecialchars($row['reason'] ?? '') ?>">
-                                    <?= htmlspecialchars(mb_strimwidth($row['reason'] ?? '', 0, 50, '...')) ?>
-                                </td>
-                                <td>
+                <div class="lr-history-grid">
+                    <?php foreach ($myRequests as $row): ?>
+                        <?php
+                            $status = $row['status'] ?? 'pending';
+                            $lt = $row['leave_type'] ?? 'personal';
+                            $badgeClass = 'lr-badge-' . $status;
+                            $iconClass = $statusIcons[$status] ?? 'fa-clock';
+                            $cardClass = 'status-' . $status;
+                        ?>
+                        <div class="lr-history-card <?= $cardClass ?>" data-id="<?= (int)$row['id'] ?>">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div style="font-size: 13px; font-weight: 700; color: #1e293b;">
+                                    <?= htmlspecialchars($leaveTypeLabels[$lt] ?? $lt) ?>
+                                </div>
+                                <span class="lr-badge <?= $badgeClass ?>"><i class="fas <?= $iconClass ?>"></i> <?= $statusLabels[$status] ?></span>
+                            </div>
+                            
+                            <div style="font-size: 12px; color: #475569; display: flex; gap: 8px;">
+                                <i class="far fa-calendar-alt" style="margin-top: 2px;"></i>
+                                <span style="font-weight: 600;">
+                                    <?= htmlspecialchars(date('d/m/Y', strtotime($row['from_date'] ?? ''))) ?> 
+                                    — 
+                                    <?= htmlspecialchars(date('d/m/Y', strtotime($row['to_date'] ?? ''))) ?>
+                                </span>
+                            </div>
+
+                            <div style="font-size: 12px; color: #475569; background: rgba(255,255,255,0.6); padding: 6px 10px; border-radius: 4px; border-left: 2px solid rgba(0,0,0,0.05);">
+                                <?= nl2br(htmlspecialchars($row['reason'] ?? '')) ?>
+                            </div>
+
+                            <div style="margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; gap: 10px;">
                                     <?php if (!empty($row['evidence_file'])): ?>
-                                        <a href="<?= htmlspecialchars($row['evidence_file']) ?>" target="_blank" style="color:#6366f1; font-size:.85em;">
-                                            <i class="fas fa-paperclip"></i> Xem file
+                                        <a href="uploads/leave_evidence/<?= htmlspecialchars($row['evidence_file']) ?>" target="_blank" style="font-size: 11px; color: #4f6ef7; text-decoration: none; font-weight: 600;">
+                                            <i class="fas fa-paperclip"></i> Minh chứng
                                         </a>
-                                    <?php else: ?>
-                                        <span style="color:#cbd5e1;">—</span>
                                     <?php endif; ?>
-                                </td>
-                                <td>
-                                    <span class="lr-badge lr-badge-<?= $st ?>">
-                                        <i class="fas <?= $statusIcons[$st] ?? 'fa-clock' ?>"></i>
-                                        <?= htmlspecialchars($statusLabels[$st] ?? $st) ?>
-                                    </span>
-                                    <?php if ($st !== 'pending' && !empty($row['approver_name'])): ?>
-                                        <div class="lr-approver-info">
-                                            <i class="fas fa-user-check"></i>
-                                            <?= htmlspecialchars($row['approver_name']) ?>
-                                            <?php if (!empty($row['approved_at'])): ?>
-                                                · <?= htmlspecialchars(substr($row['approved_at'], 0, 16)) ?>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </td>
-                                <td style="font-size:.88em; color:#64748b;">
-                                    <?= htmlspecialchars(substr($row['created_at'] ?? '', 0, 10)) ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                                </div>
+                                <div style="font-size: 10px; color: #64748b; font-style: italic;">
+                                    <?= htmlspecialchars(date('d/m/Y H:i', strtotime($row['created_at'] ?? ''))) ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <div class="lr-empty">
-                    <i class="fas fa-inbox"></i>
-                    <p>Chưa có đơn nghỉ phép nào.</p>
-                    <p style="font-size:.85em;">Điền form bên trên để gửi đơn đầu tiên.</p>
+                <div style="text-align: center; padding: 20px; color: #94a3b8;">
+                    <i class="fas fa-inbox" style="font-size: 20px; margin-bottom: 8px; display: block;"></i>
+                    Chưa có đơn nghỉ phép nào.
                 </div>
             <?php endif; ?>
         </div>
 
-        <!-- Info box -->
-        <div class="lr-info-box" style="margin-top: 20px;">
-            <h4><i class="fas fa-lightbulb"></i> Hướng dẫn gửi đơn</h4>
-            <ul>
-                <li>Chọn đúng loại nghỉ phép để HR xử lý chính xác</li>
-                <li>Ngày bắt đầu không được sau ngày kết thúc</li>
-                <li>Đính kèm minh chứng (giấy khám bệnh, giấy mời...) giúp phê duyệt nhanh hơn</li>
-                <li>Đơn sẽ được HR / Quản lý xem xét trong vòng 1-2 ngày làm việc</li>
-            </ul>
+        <!-- DETAIL MODAL -->
+        <div id="detailModal" class="lr-modal">
+            <div class="lr-modal-content">
+                <div class="lr-modal-header">
+                    <h4 style="margin:0; font-size:15px; font-weight:700; color:#1e293b;"><i class="fas fa-circle-info" style="color:#4f6ef7"></i> Chi tiết đơn nghỉ</h4>
+                    <button onclick="closeModal()" style="border:none; background:none; cursor:pointer; color:#94a3b8; font-size:18px;"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="lr-modal-body" id="modalBody">
+                    <p style="text-align:center; color:#64748b;">Đang tải...</p>
+                </div>
+                <div class="lr-modal-footer">
+                    <button class="btn-success" onclick="closeModal()">Đóng</button>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -357,7 +283,6 @@ document.addEventListener('DOMContentLoaded', function() {
     var fromDate = document.getElementById('from_date');
     var toDate = document.getElementById('to_date');
     var fileInput = document.getElementById('evidence_file');
-    var fileNameEl = document.getElementById('fileName');
     var submitBtn = document.getElementById('submitBtn');
     var submitText = document.getElementById('submitText');
     var submitLoading = document.getElementById('submitLoading');
@@ -372,11 +297,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Show file name
     fileInput.addEventListener('change', function() {
+        var fileTextEl = document.getElementById('fileText');
         if (this.files && this.files.length > 0) {
-            fileNameEl.textContent = '📎 ' + this.files[0].name;
-            fileNameEl.style.display = 'block';
+            fileTextEl.textContent = this.files[0].name;
+            fileTextEl.style.color = '#4f6ef7';
+            fileTextEl.style.fontWeight = '600';
         } else {
-            fileNameEl.style.display = 'none';
+            fileTextEl.textContent = 'Chọn minh chứng...';
+            fileTextEl.style.color = '';
+            fileTextEl.style.fontWeight = '';
         }
     });
 
@@ -445,7 +374,90 @@ document.addEventListener('DOMContentLoaded', function() {
     alerts.forEach(function(a) {
         setTimeout(function() { a.style.opacity = '0'; a.style.transform = 'translateY(-8px)'; setTimeout(function() { a.remove(); }, 300); }, 5000);
     });
+
+    // Detail Modal Logic
+    window.openModal = function(id) {
+        const modal = document.getElementById('detailModal');
+        const body = document.getElementById('modalBody');
+        modal.style.display = 'flex';
+        body.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:#4f6ef7"></i><p style="margin-top:10px; color:#64748b">Đang lấy dữ liệu...</p></div>';
+
+        fetch(`index.php?page=get-leave-detail&id=${id}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    const d = res.data;
+                    const statusClass = `lr-badge-${d.status}`;
+                    const statusText = d.status === 'approved' ? 'Đã duyệt' : (d.status === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
+                    
+                    body.innerHTML = `
+                        <div class="lr-detail-row">
+                            <div class="lr-detail-label">Loại nghỉ</div>
+                            <div class="lr-detail-val">${d.leave_type_text}</div>
+                        </div>
+                        <div class="lr-detail-row">
+                            <div class="lr-detail-label">Thời gian</div>
+                            <div class="lr-detail-val">${d.from_date_fmt} đến ${d.to_date_fmt}</div>
+                        </div>
+                        <div class="lr-detail-row">
+                            <div class="lr-detail-label">Lý do</div>
+                            <div class="lr-detail-val">${d.reason}</div>
+                        </div>
+                        <div class="lr-detail-row">
+                            <div class="lr-detail-label">Trạng thái</div>
+                            <div class="lr-detail-val"><span class="lr-badge ${statusClass}">${statusText}</span></div>
+                        </div>
+                        ${d.approver_name ? `
+                        <div class="lr-detail-row">
+                            <div class="lr-detail-label">Người duyệt</div>
+                            <div class="lr-detail-val">${d.approver_name}</div>
+                        </div>
+                        <div class="lr-detail-row">
+                            <div class="lr-detail-label">Ngày duyệt</div>
+                            <div class="lr-detail-val">${d.approved_at_fmt}</div>
+                        </div>
+                        ` : ''}
+                        ${d.hr_note ? `
+                        <div class="lr-detail-row">
+                            <div class="lr-detail-label">Phản hồi</div>
+                            <div class="lr-detail-val" style="color:#ef4444">${d.hr_note}</div>
+                        </div>
+                        ` : ''}
+                        <div class="lr-detail-row" style="border:none">
+                            <div class="lr-detail-label">Ngày gửi</div>
+                            <div class="lr-detail-val">${d.created_at_fmt}</div>
+                        </div>
+                    `;
+                } else {
+                    body.innerHTML = `<p style="color:#ef4444; text-align:center;">Lỗi: ${res.message}</p>`;
+                }
+            })
+            .catch(err => {
+                body.innerHTML = '<p style="color:#ef4444; text-align:center;">Không thể kết nối máy chủ.</p>';
+            });
+    };
+
+    window.closeModal = function() {
+        document.getElementById('detailModal').style.display = 'none';
+    };
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('detailModal');
+        if (event.target == modal) {
+            closeModal();
+        }
+    });
+
+    // Add click event to cards
+    document.querySelectorAll('.lr-history-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            if (id) openModal(id);
+        });
+    });
 });
 </script>
-
+    </div><!-- End lr-container -->
+</div>
 <?php include 'app/views/layouts/footer.php'; ?>

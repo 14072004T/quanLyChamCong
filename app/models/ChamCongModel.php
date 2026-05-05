@@ -48,6 +48,9 @@ class ChamCongModel
                 ip_range VARCHAR(50) DEFAULT NULL,
                 gateway VARCHAR(50) DEFAULT NULL,
                 description VARCHAR(255) DEFAULT NULL,
+                ssid VARCHAR(120) DEFAULT NULL,
+                password VARCHAR(120) DEFAULT NULL,
+                location VARCHAR(255) DEFAULT NULL,
                 is_active TINYINT(1) NOT NULL DEFAULT 1,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -57,6 +60,9 @@ class ChamCongModel
         $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS ip_range VARCHAR(50) DEFAULT NULL");
         $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS gateway VARCHAR(50) DEFAULT NULL");
         $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS ssid VARCHAR(120) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS password VARCHAR(120) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS location VARCHAR(255) DEFAULT NULL");
 
         $this->conn->query("
             CREATE TABLE IF NOT EXISTS attendance_shifts (
@@ -210,6 +216,11 @@ class ChamCongModel
         $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS evidence_file VARCHAR(255) DEFAULT NULL");
         $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS approved_by INT DEFAULT NULL");
         $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS approved_at DATETIME DEFAULT NULL");
+
+        // Migration: attendance_corrections — add nullable columns for edit request feature
+        $this->conn->query("ALTER TABLE attendance_corrections ADD COLUMN IF NOT EXISTS proposed_checkin DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE attendance_corrections ADD COLUMN IF NOT EXISTS proposed_checkout DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE attendance_corrections ADD COLUMN IF NOT EXISTS evidence_file VARCHAR(255) DEFAULT NULL");
     }
 
     public function chamCong($maND, $action, $method, $wifiName, $note, $clientIP = null)
@@ -254,9 +265,51 @@ class ChamCongModel
         return $stmt->execute();
     }
 
+    /**
+     * Insert enhanced edit request with proposed times and evidence file.
+     * All new fields are nullable — backward compatible with existing data.
+     */
+    public function insertEditRequest(array $data)
+    {
+        $maND = (int)($data['maND'] ?? 0);
+        $attendanceDate = trim($data['attendance_date'] ?? '');
+        $oldTime = !empty($data['old_time']) ? trim($data['old_time']) : null;
+        $newTime = !empty($data['new_time']) ? trim($data['new_time']) : null;
+        $reason = trim($data['reason'] ?? '');
+        $proposedCheckin = !empty($data['proposed_checkin']) ? trim($data['proposed_checkin']) : null;
+        $proposedCheckout = !empty($data['proposed_checkout']) ? trim($data['proposed_checkout']) : null;
+        $evidenceFile = !empty($data['evidence_file']) ? trim($data['evidence_file']) : null;
+
+        if ($maND <= 0 || $attendanceDate === '' || $reason === '') {
+            return false;
+        }
+
+        // Build new_time from proposed_checkin if not provided (backward compat)
+        if ($newTime === null && $proposedCheckin !== null) {
+            $newTime = $proposedCheckin;
+        }
+        if ($newTime === null) {
+            $newTime = date('Y-m-d H:i:s');
+        }
+
+        $sql = "INSERT INTO attendance_corrections 
+                (maND, attendance_date, old_time, new_time, reason, proposed_checkin, proposed_checkout, evidence_file)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param("isssssss", $maND, $attendanceDate, $oldTime, $newTime, $reason, $proposedCheckin, $proposedCheckout, $evidenceFile);
+        $result = $stmt->execute();
+        $stmt->close();
+        return $result;
+    }
+
     public function getYeuCauTheoNhanVien($maND)
     {
-        $sql = "SELECT id, attendance_date, old_time, new_time, reason, status, hr_note, created_at, updated_at
+        $sql = "SELECT id, attendance_date, old_time, new_time, reason, status, hr_note, 
+                       proposed_checkin, proposed_checkout, evidence_file,
+                       created_at, updated_at
                 FROM attendance_corrections
                 WHERE maND = ?
                 ORDER BY created_at DESC";
@@ -264,6 +317,219 @@ class ChamCongModel
         $stmt->bind_param("i", $maND);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /**
+     * Alias for getYeuCauTheoNhanVien — clearer name.
+     */
+    public function getEditRequestsByUser($maND)
+    {
+        return $this->getYeuCauTheoNhanVien($maND);
+    }
+
+    /**
+     * Get attendance records grouped by date for a user.
+     * Returns work_date, first_in, last_out for each day.
+     */
+    public function getAttendanceByUser($maND, $limit = 30)
+    {
+        $maND = (int)$maND;
+        $limit = max(1, min((int)$limit, 100));
+
+        $sql = "SELECT 
+                    DATE(created_at) AS work_date,
+                    MIN(CASE WHEN action = 'IN' THEN created_at END) AS first_in,
+                    MAX(CASE WHEN action = 'OUT' THEN created_at END) AS last_out
+                FROM attendance_logs
+                WHERE maND = ?
+                GROUP BY DATE(created_at)
+                ORDER BY work_date DESC
+                LIMIT ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+        $stmt->bind_param("ii", $maND, $limit);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    /**
+     * Get the assigned shift for a user on a given date.
+     * Returns null if no shift assigned (caller must handle NULL safely).
+     */
+    public function getShiftForUser($maND, $date = null)
+    {
+        $maND = (int)$maND;
+        if ($date === null) {
+            $date = date('Y-m-d');
+        }
+
+        $sql = "SELECT s.id AS shift_id, s.shift_name, s.start_time, s.end_time
+                FROM attendance_employee_shift aes
+                JOIN attendance_shifts s ON s.id = aes.shift_id AND s.is_active = 1
+                WHERE aes.maND = ?
+                  AND aes.effective_from <= ?
+                  AND (aes.effective_to IS NULL OR aes.effective_to >= ?)
+                ORDER BY aes.effective_from DESC
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return null;
+        }
+        $stmt->bind_param("iss", $maND, $date, $date);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
+    }
+
+    /**
+     * Calculate attendance status based on shift times.
+     * Handles: on-time, late, early leave, overtime, overnight shifts, missing check-out.
+     *
+     * @param string|null $checkIn  - Check-in datetime (e.g., '2026-05-05 08:15:00')
+     * @param string|null $checkOut - Check-out datetime (nullable for missing check-out)
+     * @param string|null $shiftStart - Shift start time (e.g., '08:00:00'), null = no shift
+     * @param string|null $shiftEnd   - Shift end time (e.g., '17:00:00'), null = no shift
+     * @return array ['statuses' => [], 'minutes_late' => int, 'minutes_early' => int, 'overtime_minutes' => int, 'labels' => []]
+     */
+    public function calculateShiftStatus($checkIn, $checkOut, $shiftStart, $shiftEnd)
+    {
+        $result = [
+            'statuses' => [],
+            'minutes_late' => 0,
+            'minutes_early' => 0,
+            'overtime_minutes' => 0,
+            'labels' => [],
+            'colors' => [],
+        ];
+
+        // Handle NULL shift safely — can't calculate without shift info
+        if ($shiftStart === null || $shiftEnd === null) {
+            $result['statuses'][] = 'no_shift';
+            $result['labels'][] = 'Chưa phân ca';
+            $result['colors'][] = '#94a3b8';
+            return $result;
+        }
+
+        // Handle no check-in at all
+        if ($checkIn === null) {
+            $result['statuses'][] = 'absent';
+            $result['labels'][] = 'Chưa chấm công';
+            $result['colors'][] = '#94a3b8';
+            return $result;
+        }
+
+        // Extract time parts for comparison
+        $checkInDate = date('Y-m-d', strtotime($checkIn));
+        $checkInTime = strtotime($checkIn);
+        $shiftStartTime = strtotime($checkInDate . ' ' . $shiftStart);
+
+        // Determine if overnight shift (end_time < start_time, e.g., 22:00 - 06:00)
+        $isOvernight = $shiftEnd < $shiftStart;
+        if ($isOvernight) {
+            $shiftEndTime = strtotime($checkInDate . ' ' . $shiftEnd . ' +1 day');
+        } else {
+            $shiftEndTime = strtotime($checkInDate . ' ' . $shiftEnd);
+        }
+
+        // === CHECK-IN analysis ===
+        $diffIn = ($checkInTime - $shiftStartTime) / 60; // minutes
+
+        if ($diffIn > 1) {
+            // Late (more than 1 minute grace)
+            $result['statuses'][] = 'late';
+            $result['minutes_late'] = (int)round($diffIn);
+            $result['labels'][] = 'Đi trễ ' . $result['minutes_late'] . ' phút';
+            $result['colors'][] = '#ef4444';
+        } elseif ($diffIn < -1) {
+            // Early arrival
+            $result['statuses'][] = 'early_arrival';
+            $result['labels'][] = 'Đến sớm ' . abs((int)round($diffIn)) . ' phút';
+            $result['colors'][] = '#10b981';
+        } else {
+            $result['statuses'][] = 'on_time';
+            $result['labels'][] = 'Đúng giờ';
+            $result['colors'][] = '#10b981';
+        }
+
+        // === CHECK-OUT analysis ===
+        if ($checkOut === null) {
+            // Missing check-out — still in shift or forgot
+            $result['statuses'][] = 'missing_checkout';
+            $result['labels'][] = 'Chưa chấm ra';
+            $result['colors'][] = '#f59e0b';
+        } else {
+            $checkOutTime = strtotime($checkOut);
+            $diffOut = ($checkOutTime - $shiftEndTime) / 60; // minutes
+
+            if ($diffOut < -1) {
+                // Left early
+                $result['statuses'][] = 'early_leave';
+                $result['minutes_early'] = abs((int)round($diffOut));
+                $result['labels'][] = 'Về sớm ' . $result['minutes_early'] . ' phút';
+                $result['colors'][] = '#f97316';
+            } elseif ($diffOut > 1) {
+                // Overtime
+                $result['statuses'][] = 'overtime';
+                $result['overtime_minutes'] = (int)round($diffOut);
+                $result['labels'][] = 'Tăng ca ' . $result['overtime_minutes'] . ' phút';
+                $result['colors'][] = '#3b82f6';
+            }
+        }
+
+        // If no special status for check-out, and check-in was on time — overall on_time
+        if (count($result['statuses']) === 1 && $result['statuses'][0] === 'on_time' && $checkOut !== null) {
+            // Just on_time, no additional status needed
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get today's full shift status for a user (for dashboard display).
+     * Returns shift info + attendance status + labels.
+     */
+    public function getTodayShiftStatus($maND)
+    {
+        $maND = (int)$maND;
+        $today = date('Y-m-d');
+
+        // Get shift assignment (handles NULL safely)
+        $shift = $this->getShiftForUser($maND, $today);
+
+        // Get today's check-in/check-out
+        $sql = "SELECT 
+                    MIN(CASE WHEN action = 'IN' THEN created_at END) AS first_in,
+                    MAX(CASE WHEN action = 'OUT' THEN created_at END) AS last_out
+                FROM attendance_logs
+                WHERE maND = ? AND DATE(created_at) = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return ['shift' => $shift, 'status' => ['statuses' => ['error'], 'labels' => ['Lỗi hệ thống'], 'colors' => ['#94a3b8'], 'minutes_late' => 0, 'minutes_early' => 0, 'overtime_minutes' => 0], 'first_in' => null, 'last_out' => null];
+        }
+        $stmt->bind_param("is", $maND, $today);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $firstIn = $row['first_in'] ?? null;
+        $lastOut = $row['last_out'] ?? null;
+
+        $shiftStart = $shift['start_time'] ?? null;
+        $shiftEnd = $shift['end_time'] ?? null;
+
+        $status = $this->calculateShiftStatus($firstIn, $lastOut, $shiftStart, $shiftEnd);
+
+        return [
+            'shift' => $shift,
+            'status' => $status,
+            'first_in' => $firstIn,
+            'last_out' => $lastOut,
+        ];
     }
 
     public function getThongKeTongQuan()
@@ -1312,6 +1578,18 @@ class ChamCongModel
     }
 
     /**
+     * Lấy danh sách cấu hình WiFi đang hoạt động (Tên + Dải IP)
+     * @return array
+     */
+    public function getActiveWifiConfigurations()
+    {
+        $sql = "SELECT wifi_name, ip_range FROM attendance_wifi WHERE is_active = 1";
+        $result = $this->conn->query($sql);
+        if (!$result) return [];
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /**
      * Lấy tất cả logs chấm công của hôm nay
      * @param int $maND
      * @return array
@@ -1508,7 +1786,7 @@ class ChamCongModel
      */
     public function getAllNetworks()
     {
-        $sql = "SELECT id, wifi_name, ip_range, gateway, description, is_active, created_at 
+        $sql = "SELECT id, wifi_name, ip_range, gateway, description, ssid, password, location, is_active, created_at 
                 FROM attendance_wifi ORDER BY id DESC";
         $result = $this->conn->query($sql);
         
@@ -1524,6 +1802,9 @@ class ChamCongModel
                 'ip_range' => (string)($row['ip_range'] ?? ''),
                 'gateway' => (string)($row['gateway'] ?? ''),
                 'description' => (string)($row['description'] ?? ''),
+                'ssid' => (string)($row['ssid'] ?? ''),
+                'password' => (string)($row['password'] ?? ''),
+                'location' => (string)($row['location'] ?? ''),
                 'is_active' => (int)($row['is_active'] ?? 0),
                 'created_at' => (string)($row['created_at'] ?? '')
             ];
@@ -1560,6 +1841,26 @@ class ChamCongModel
     }
 
     /**
+     * Get a network by ID
+     * @param int $id
+     * @return array|null
+     */
+    public function getNetworkById($id)
+    {
+        $id = (int)$id;
+        if ($id <= 0) return null;
+        $sql = "SELECT id, wifi_name, ip_range, gateway, description, ssid, password, location, is_active, created_at 
+                FROM attendance_wifi WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return null;
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result ?: null;
+    }
+
+    /**
      * Add new network with IP range and gateway
      * @param string $wifiName - Network name (SSID or label)
      * @param string $ipRange - IP range prefix (e.g., "192.168.1")
@@ -1568,25 +1869,28 @@ class ChamCongModel
      * @param int $isActive
      * @return bool
      */
-    public function addNetwork($wifiName, $ipRange, $gateway, $description = '', $isActive = 1)
+    public function addNetwork($wifiName, $ipRange, $gateway, $description = '', $isActive = 1, $ssid = null, $password = null, $location = null)
     {
         $wifiName = trim($wifiName);
         $ipRange = trim($ipRange);
         $gateway = trim($gateway);
         $description = trim($description);
         $isActive = (int)$isActive;
+        $ssid = $ssid !== null ? trim($ssid) : null;
+        $password = $password !== null ? trim($password) : null;
+        $location = $location !== null ? trim($location) : null;
         
         if (empty($wifiName) || empty($ipRange) || empty($gateway)) {
             return false;
         }
         
-        $sql = "INSERT INTO attendance_wifi (wifi_name, ip_range, gateway, description, is_active) 
-                VALUES (?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO attendance_wifi (wifi_name, ip_range, gateway, description, is_active, ssid, password, location) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
         }
-        $stmt->bind_param("ssssi", $wifiName, $ipRange, $gateway, $description, $isActive);
+        $stmt->bind_param("ssssisss", $wifiName, $ipRange, $gateway, $description, $isActive, $ssid, $password, $location);
         $result = $stmt->execute();
         $stmt->close();
         return $result;
@@ -1629,7 +1933,7 @@ class ChamCongModel
      * @param int $isActive
      * @return bool
      */
-    public function updateNetwork($networkId, $wifiName, $ipRange, $gateway, $description = '', $isActive = 1)
+    public function updateNetwork($networkId, $wifiName, $ipRange, $gateway, $description = '', $isActive = 1, $ssid = null, $password = null, $location = null)
     {
         $networkId = (int)$networkId;
         $wifiName = trim($wifiName);
@@ -1637,19 +1941,22 @@ class ChamCongModel
         $gateway = trim($gateway);
         $description = trim($description);
         $isActive = (int)$isActive;
+        $ssid = $ssid !== null ? trim($ssid) : null;
+        $password = $password !== null ? trim($password) : null;
+        $location = $location !== null ? trim($location) : null;
         
         if ($networkId <= 0 || empty($wifiName) || empty($ipRange) || empty($gateway)) {
             return false;
         }
 
         $sql = "UPDATE attendance_wifi 
-                SET wifi_name = ?, ip_range = ?, gateway = ?, description = ?, is_active = ? 
+                SET wifi_name = ?, ip_range = ?, gateway = ?, description = ?, is_active = ?, ssid = ?, password = ?, location = ? 
                 WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
         }
-        $stmt->bind_param("ssssi", $wifiName, $ipRange, $gateway, $description, $isActive, $networkId);
+        $stmt->bind_param("ssssisssi", $wifiName, $ipRange, $gateway, $description, $isActive, $ssid, $password, $location, $networkId);
         $result = $stmt->execute();
         $stmt->close();
         return $result;
@@ -1914,6 +2221,62 @@ class ChamCongModel
         }
 
         return $result;
+    }
+
+    public function getEmployeeDashboardStats($maND, $monthKey)
+    {
+        $maND = (int)$maND;
+        $monthStart = $monthKey . '-01';
+        $monthEnd = date('Y-m-t', strtotime($monthStart));
+
+        // 1. Get raw attendance
+        $rawAttendance = $this->getMonthlyAttendanceRaw($maND, $monthStart, $monthEnd);
+        
+        // 2. Get approved leaves
+        $leaves = $this->getApprovedLeaveRequests($maND, $monthStart, $monthEnd);
+        
+        $totalWorkDays = 0;
+        $totalLateMinutes = 0;
+        $totalOTMinutes = 0;
+        $totalLeaveDays = 0;
+
+        // Fetch shift assignment for this user (most likely fixed for the month)
+        $shift = $this->getShiftForUser($maND); 
+        $shiftStart = $shift['start_time'] ?? null;
+        $shiftEnd = $shift['end_time'] ?? null;
+
+        // Loop through the month
+        $daysInMonth = (int)date('t', strtotime($monthStart));
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dateStr = sprintf("%s-%02d", $monthKey, $d);
+            
+            // Check leave
+            if (isset($leaves[$dateStr])) {
+                $totalLeaveDays += (isset($leaves[$dateStr]['is_half_day']) && $leaves[$dateStr]['is_half_day']) ? 0.5 : 1.0;
+            }
+
+            // Check attendance
+            if (isset($rawAttendance[$dateStr])) {
+                $att = $rawAttendance[$dateStr];
+                if (!empty($att['checkIn'])) {
+                    $totalWorkDays += 1;
+                    
+                    // Calculate late/OT if shift is defined
+                    if ($shiftStart && $shiftEnd) {
+                        $status = $this->calculateShiftStatus($att['checkIn'], $att['checkOut'], $shiftStart, $shiftEnd);
+                        $totalLateMinutes += (int)($status['minutes_late'] ?? 0);
+                        $totalOTMinutes += (int)($status['overtime_minutes'] ?? 0);
+                    }
+                }
+            }
+        }
+
+        return [
+            'work_days' => $totalWorkDays,
+            'late_minutes' => $totalLateMinutes,
+            'ot_hours' => round($totalOTMinutes / 60, 1),
+            'leave_days' => $totalLeaveDays
+        ];
     }
 
     /**
@@ -2310,6 +2673,44 @@ class ChamCongModel
         $affected = $stmt->affected_rows > 0;
         $stmt->close();
         return $result && $affected;
+    }
+
+    /**
+     * Lấy chi tiết đơn nghỉ phép theo ID
+     * @param int $id
+     * @return array|null
+     */
+    public function getLeaveRequestById($id)
+    {
+        $sql = "SELECT d.*, n.hoTen as approver_name 
+                FROM don_nghi_phep d
+                LEFT JOIN nguoidung n ON d.approved_by = n.maND
+                WHERE d.id = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return null;
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
+    }
+
+    public function getLeaveById($id)
+    {
+        return $this->getLeaveRequestById($id);
+    }
+
+    /**
+     * Lấy chi tiết yêu cầu chỉnh sửa theo ID
+     * @param int $id
+     * @return array|null
+     */
+    public function getCorrectionById($id)
+    {
+        $sql = "SELECT * FROM attendance_corrections WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return null;
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
     }
 }
 

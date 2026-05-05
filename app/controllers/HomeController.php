@@ -17,6 +17,17 @@ class HomeController
         $isLoggedIn = true;
         $chamCongModel = new ChamCongModel();
         $thongKe = $chamCongModel->getThongKeTongQuan();
+        
+        $maND = $_SESSION['user']['maND'] ?? 0;
+        $todayLogs = $chamCongModel->getTodayLogs($maND) ?? [];
+        $todayStatus = [
+            'in' => null,
+            'out' => null
+        ];
+        foreach ($todayLogs as $log) {
+            if ($log['action'] === 'IN') $todayStatus['in'] = $log['created_at'];
+            if ($log['action'] === 'OUT') $todayStatus['out'] = $log['created_at'];
+        }
 
         require_once 'app/middleware/AuthMiddleware.php';
         $menuItems = $this->getMenuItemsByRole();

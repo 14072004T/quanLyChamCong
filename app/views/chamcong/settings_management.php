@@ -10,43 +10,29 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-// Define setting metadata with validation rules and descriptions
+// Define setting metadata
 $settingsMetadata = [
     'ALLOW_QR_CHECKIN' => [
-        'name' => 'Cho phép chấm công bằng QR',
+        'name' => 'Chấm công QR',
         'type' => 'boolean',
-        'description' => 'Bật/tắt tính năng chấm công qua mã QR',
-        'values' => [true => 'Bật', false => 'Tắt']
+        'description' => 'Sử dụng mã QR để chấm công qua di động',
     ],
     'ALLOW_OFFLINE_CHECKIN' => [
-        'name' => 'Cho phép chấm công ngoài tuyến',
+        'name' => 'Chấm công Offline',
         'type' => 'boolean',
-        'description' => 'Cho phép chấm công khi không có kết nối internet',
-        'values' => [true => 'Bật', false => 'Tắt']
+        'description' => 'Cho phép chấm công khi mất kết nối mạng',
     ],
-    'MAX_CORRECTION_DAYS' => [
-        'name' => 'Tối đa ngày chỉnh sửa',
+    'LATE_THRESHOLD_MINUTES' => [
+        'name' => 'Ngưỡng đi trễ',
         'type' => 'number',
-        'description' => 'Số ngày tối đa được phép chỉnh sửa bản ghi chấm công (phải > 0)',
-        'unit' => 'ngày'
+        'description' => 'Số phút tối đa cho phép vào muộn',
+        'unit' => 'phút',
     ],
-    'DEFAULT_WORK_MINUTES' => [
-        'name' => 'Phút làm việc mặc định',
+    'OVERTIME_THRESHOLD_MINUTES' => [
+        'name' => 'Ngưỡng tăng ca',
         'type' => 'number',
-        'description' => 'Số phút làm việc mặc định mỗi ngày (phải > 0)',
-        'unit' => 'phút'
-    ],
-    'TIMEZONE' => [
-        'name' => 'Múi giờ',
-        'type' => 'text',
-        'description' => 'Múi giờ hệ thống (VD: Asia/Ho_Chi_Minh)',
-        'maxlength' => 50
-    ],
-    'COMPANY_NAME' => [
-        'name' => 'Tên công ty',
-        'type' => 'text',
-        'description' => 'Tên công ty hiển thị trong báo cáo',
-        'maxlength' => 255
+        'description' => 'Số phút tối thiểu để bắt đầu tính OT',
+        'unit' => 'phút',
     ]
 ];
 
@@ -62,149 +48,60 @@ foreach ($settingsMetadata as $key => $meta) {
     }
 }
 ?>
+<div class="tech-container">
+<style>
+.tech-container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+.panel { background: white; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+</style>
 
-<div class="panel" style="margin-bottom: 20px;">
-    <h2><i class="fas fa-cogs"></i> Cấu hình hệ thống</h2>
-    <p style="color: #64748b;">Quản lý các cài đặt toàn cục của hệ thống chấm công</p>
+<div class="panel" style="margin-bottom: 24px; border-left: 4px solid #3b82f6;">
+    <h2 style="margin: 0; font-size: 20px; color: #1e293b;"><i class="fas fa-cogs" style="margin-right: 10px; color: #3b82f6;"></i>Cấu hình hệ thống</h2>
+    <p style="margin: 8px 0 0 0; color: #64748b; font-size: 14px;">Thiết lập các tham số vận hành cho hệ thống chấm công</p>
 </div>
 
-<!-- Success Message -->
+<!-- Success/Error Messages -->
 <?php if (!empty($success)): ?>
-    <div class="alert alert-success" style="margin-bottom: 16px;">
-        <i class="fas fa-check-circle"></i>
-        <strong><?= htmlspecialchars($success) ?></strong>
-    </div>
+    <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= htmlspecialchars($success) ?></div>
 <?php endif; ?>
-
-<!-- Error Messages -->
 <?php if (!empty($errors)): ?>
-    <div class="alert alert-error" style="margin-bottom: 16px;">
-        <i class="fas fa-exclamation-circle"></i>
-        <div>
-            <strong>Có lỗi xảy ra:</strong>
-            <ul style="margin: 8px 0 0 20px; padding: 0;">
-                <?php foreach ($errors as $error): ?>
-                    <li><?= htmlspecialchars($error) ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    </div>
+    <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <?= implode(', ', $errors) ?></div>
 <?php endif; ?>
 
-<!-- Settings Form -->
 <div class="panel">
-    <h3 style="margin-top: 0; margin-bottom: 20px;">
-        <i class="fas fa-sliders-h"></i> Cài đặt hệ thống
-    </h3>
-
-    <div style="display: grid; gap: 24px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
         <?php foreach ($settingsMetadata as $key => $meta): ?>
-            <div class="setting-group" style="padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <div style="display: grid; grid-template-columns: 1fr 200px; gap: 16px; align-items: start;">
-                    <!-- Left: Label & Description -->
-                    <div>
-                        <label for="setting_<?= htmlspecialchars($key) ?>" style="font-weight: 600; color: #1e293b; display: block; margin-bottom: 6px;">
-                            <?= htmlspecialchars($meta['name']) ?>
-                        </label>
-                        <p style="color: #64748b; font-size: 13px; margin: 0 0 12px 0;">
-                            <?= htmlspecialchars($meta['description']) ?>
-                        </p>
-
-                        <!-- Input Field -->
-                        <?php if ($meta['type'] === 'boolean'): ?>
-                            <select 
-                                id="setting_<?= htmlspecialchars($key) ?>"
-                                class="setting-input"
-                                data-key="<?= htmlspecialchars($key) ?>"
-                                style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;"
-                            >
-                                <option value="">-- Chọn --</option>
-                                <option value="1" <?= ($settingValues[$key] === '1' || $settingValues[$key] === 'true') ? 'selected' : '' ?>>Bật</option>
-                                <option value="0" <?= ($settingValues[$key] === '0' || $settingValues[$key] === 'false') ? 'selected' : '' ?>>Tắt</option>
-                            </select>
-                        <?php elseif ($meta['type'] === 'number'): ?>
-                            <input 
-                                type="number"
-                                id="setting_<?= htmlspecialchars($key) ?>"
-                                class="setting-input"
-                                data-key="<?= htmlspecialchars($key) ?>"
-                                value="<?= htmlspecialchars($settingValues[$key]) ?>"
-                                min="0"
-                                style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; width: 100%; box-sizing: border-box;"
-                                placeholder="Nhập số"
-                            >
-                            <?php if (isset($meta['unit'])): ?>
-                                <small style="color: #64748b; display: block; margin-top: 6px;">
-                                    Đơn vị: <?= htmlspecialchars($meta['unit']) ?>
-                                </small>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <input 
-                                type="text"
-                                id="setting_<?= htmlspecialchars($key) ?>"
-                                class="setting-input"
-                                data-key="<?= htmlspecialchars($key) ?>"
-                                value="<?= htmlspecialchars($settingValues[$key]) ?>"
-                                maxlength="<?= htmlspecialchars($meta['maxlength'] ?? 255) ?>"
-                                style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; width: 100%; box-sizing: border-box;"
-                                placeholder="Nhập giá trị"
-                            >
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- Right: Save Button & Status -->
-                    <div style="text-align: right;">
-                        <button 
-                            type="button" 
-                            class="btn btn-primary save-setting-btn"
-                            data-key="<?= htmlspecialchars($key) ?>"
-                            style="background: #3b82f6; color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; width: 100%;"
-                        >
-                            <i class="fas fa-save"></i> Lưu
-                        </button>
-                        <div class="setting-message" data-key="<?= htmlspecialchars($key) ?>" style="margin-top: 8px; font-size: 12px; display: none;"></div>
-                    </div>
+            <div class="setting-card-mini">
+                <div class="setting-header">
+                    <label for="setting_<?= htmlspecialchars($key) ?>"><?= htmlspecialchars($meta['name']) ?></label>
+                    <p><?= htmlspecialchars($meta['description']) ?></p>
                 </div>
+                
+                <div class="setting-body">
+                    <?php if ($meta['type'] === 'boolean'): ?>
+                        <select id="setting_<?= htmlspecialchars($key) ?>" class="setting-input-mini" data-key="<?= htmlspecialchars($key) ?>">
+                            <option value="1" <?= ($settingValues[$key] == '1' || $settingValues[$key] === 'true') ? 'selected' : '' ?>>Bật</option>
+                            <option value="0" <?= ($settingValues[$key] == '0' || $settingValues[$key] === 'false') ? 'selected' : '' ?>>Tắt</option>
+                        </select>
+                    <?php else: ?>
+                        <div style="position: relative; flex: 1;">
+                            <input type="number" id="setting_<?= htmlspecialchars($key) ?>" class="setting-input-mini" data-key="<?= htmlspecialchars($key) ?>" value="<?= htmlspecialchars($settingValues[$key]) ?>" min="0">
+                            <?php if (isset($meta['unit'])): ?>
+                                <span class="unit-tag"><?= htmlspecialchars($meta['unit']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <button type="button" class="btn-save-mini save-setting-btn" data-key="<?= htmlspecialchars($key) ?>">
+                        <i class="fas fa-save"></i>
+                    </button>
+                </div>
+                <div class="setting-message" data-key="<?= htmlspecialchars($key) ?>"></div>
             </div>
         <?php endforeach; ?>
     </div>
 </div>
 
-<!-- Reference Section -->
-<div class="panel" style="background: #eff6ff; border-left: 4px solid #0284c7; margin-top: 24px;">
-    <h3 style="margin-top: 0; color: #0c4a6e;">
-        <i class="fas fa-book"></i> Hướng dẫn cài đặt
-    </h3>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
-        <div>
-            <h4 style="color: #0c4a6e; margin-top: 0;">Cài đặt Boolean</h4>
-            <p style="font-size: 13px; color: #0c4a6e;">
-                <strong>Chấp nhận:</strong> 1, 0, true, false, yes, no<br>
-                <strong>Ví dụ:</strong> ALLOW_QR_CHECKIN = 1
-            </p>
-        </div>
-
-        <div>
-            <h4 style="color: #0c4a6e; margin-top: 0;">Cài đặt Số</h4>
-            <p style="font-size: 13px; color: #0c4a6e;">
-                <strong>Yêu cầu:</strong> Số nguyên dương (> 0)<br>
-                <strong>Ví dụ:</strong> MAX_CORRECTION_DAYS = 30
-            </p>
-        </div>
-
-        <div>
-            <h4 style="color: #0c4a6e; margin-top: 0;">Cài đặt Văn bản</h4>
-            <p style="font-size: 13px; color: #0c4a6e;">
-                <strong>Tối đa:</strong> 255 ký tự<br>
-                <strong>Ví dụ:</strong> COMPANY_NAME = Công ty ABC
-            </p>
-        </div>
-    </div>
-</div>
-
 <script>
-// Save individual settings
 document.querySelectorAll('.save-setting-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         const key = this.dataset.key;
@@ -212,20 +109,18 @@ document.querySelectorAll('.save-setting-btn').forEach(btn => {
         const value = inputElement.value;
         const messageDiv = document.querySelector('.setting-message[data-key="' + key + '"]');
 
-        // Basic validation
-        if (!value || (value && value.trim() === '')) {
-            messageDiv.innerHTML = '<span style="color: #ef4444;"><i class="fas fa-exclamation-circle"></i> Giá trị không được để trống</span>';
-            messageDiv.style.display = 'block';
+        if (value === undefined || value === null || value.toString().trim() === '') {
+            messageDiv.innerHTML = '<span style="color: #ef4444;">Không để trống</span>';
             return;
         }
 
         this.disabled = true;
-        const originalText = this.innerHTML;
-        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+        const originalContent = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
         const formData = new FormData();
-        formData.append('key', key);
-        formData.append('value', value);
+        formData.append('setting_key', key);
+        formData.append('setting_value', value);
 
         fetch('index.php?page=tech-update-settings', {
             method: 'POST',
@@ -234,30 +129,23 @@ document.querySelectorAll('.save-setting-btn').forEach(btn => {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                messageDiv.innerHTML = '<span style="color: #10b981;"><i class="fas fa-check-circle"></i> Lưu thành công</span>';
-                messageDiv.style.display = 'block';
-                setTimeout(() => {
-                    messageDiv.style.display = 'none';
-                }, 3000);
+                messageDiv.innerHTML = '<span style="color: #10b981;"><i class="fas fa-check-circle"></i> Đã lưu</span>';
+                setTimeout(() => messageDiv.innerHTML = '', 3000);
             } else {
-                const errorMsg = data.message || (data.errors && data.errors.join(', ')) || 'Lỗi không xác định';
-                messageDiv.innerHTML = '<span style="color: #ef4444;"><i class="fas fa-exclamation-circle"></i> ' + errorMsg + '</span>';
-                messageDiv.style.display = 'block';
+                messageDiv.innerHTML = '<span style="color: #ef4444;">Lỗi: ' + (data.message || 'Không xác định') + '</span>';
             }
         })
         .catch(err => {
-            messageDiv.innerHTML = '<span style="color: #ef4444;"><i class="fas fa-exclamation-circle"></i> Lỗi kết nối</span>';
-            messageDiv.style.display = 'block';
+            messageDiv.innerHTML = '<span style="color: #ef4444;">Lỗi kết nối</span>';
         })
         .finally(() => {
             this.disabled = false;
-            this.innerHTML = originalText;
+            this.innerHTML = originalContent;
         });
     });
 });
 
-// Allow Enter key to save
-document.querySelectorAll('.setting-input').forEach(input => {
+document.querySelectorAll('.setting-input-mini').forEach(input => {
     input.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             const key = this.dataset.key;
@@ -268,98 +156,19 @@ document.querySelectorAll('.setting-input').forEach(input => {
 </script>
 
 <style>
-.panel {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.alert {
-    padding: 12px 16px;
-    border-radius: 6px;
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-}
-
-.alert-success {
-    background: #d1fae5;
-    color: #065f46;
-    border: 1px solid #a7f3d0;
-}
-
-.alert-error {
-    background: #fee2e2;
-    color: #991b1b;
-    border: 1px solid #fecaca;
-}
-
-.alert-info {
-    background: #dbeafe;
-    color: #0c4a6e;
-    border: 1px solid #bfdbfe;
-}
-
-.setting-group {
-    transition: all 0.2s;
-}
-
-.setting-group:hover {
-    border-color: #cbd5e1;
-    background: #f8fafc;
-}
-
-.btn {
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
-.btn:hover:not(:disabled) {
-    opacity: 0.9;
-    transform: translateY(-1px);
-}
-
-.btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.btn-primary {
-    background: #3b82f6;
-    color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-    background: #2563eb;
-}
-
-select, input[type="text"], input[type="number"] {
-    padding: 8px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 14px;
-}
-
-select:focus, input[type="text"]:focus, input[type="number"]:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-@media (max-width: 768px) {
-    .setting-group {
-        grid-template-columns: 1fr !important;
-    }
-    
-    .setting-group > div:last-child {
-        text-align: left;
-    }
-}
+.setting-card-mini { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; transition: all 0.2s; }
+.setting-card-mini:hover { border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.setting-header { margin-bottom: 12px; }
+.setting-header label { display: block; font-weight: 600; color: #1e293b; font-size: 14px; margin-bottom: 2px; }
+.setting-header p { margin: 0; color: #64748b; font-size: 12px; line-height: 1.4; }
+.setting-body { display: flex; gap: 8px; align-items: center; }
+.setting-input-mini { flex: 1; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; width: 100%; box-sizing: border-box; font-family: inherit; }
+.unit-tag { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #94a3b8; pointer-events: none; }
+.btn-save-mini { background: #3b82f6; color: white; border: none; border-radius: 6px; width: 34px; height: 34px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.btn-save-mini:hover { background: #2563eb; transform: translateY(-1px); }
+.setting-message { font-size: 11px; margin-top: 4px; height: 16px; }
+.alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: flex; gap: 10px; align-items: center; }
+.alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 </style>
+</div>

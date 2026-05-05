@@ -20,13 +20,10 @@ $menus = [
         ['page' => 'pheduyet-bang-cong', 'label' => 'Phê duyệt Bảng công', 'icon' => 'fa-circle-check'],
         ['page' => 'pheduyet-yeucau', 'label' => 'Phê duyệt yêu cầu', 'icon' => 'fa-clipboard-list'],
         ['page' => 'bao-cao-tong-hop', 'label' => 'Báo cáo tổng hợp', 'icon' => 'fa-file-lines'],
-        ['page' => 'list-leave-requests', 'label' => 'Quản lý Đơn phép', 'icon' => 'fa-calendar-check'],
     ],
     'tech' => [
-        ['page' => 'cham-cong-dashboard', 'label' => 'Trang chính', 'icon' => 'fa-house'],
-        ['page' => 'tech-wifi', 'label' => 'Quản lý WiFi', 'icon' => 'fa-wifi'],
-        ['page' => 'tech-settings', 'label' => 'Cài đặt Hệ thống', 'icon' => 'fa-sliders'],
-        ['page' => 'create-leave-request', 'label' => 'Đơn nghỉ phép', 'icon' => 'fa-calendar-check'],
+        ['page' => 'tech-wifi', 'label' => 'Mạng & WiFi', 'icon' => 'fa-wifi'],
+        ['page' => 'tech-settings', 'label' => 'Cấu hình Hệ thống', 'icon' => 'fa-server'],
     ],
 ];
 
@@ -41,15 +38,9 @@ $roleLabels = [
 ?>
 
 <nav class="sidebar-nav">
-    <?php
-    $attendanceTabLabel = ($role === 'nhanvien') ? 'Chấm công' : 'Quản lý chấm công';
-    $attendanceTabIcon = ($role === 'nhanvien') ? 'fa-fingerprint' : 'fa-users-gear';
-    ?>
     <div class="sidebar-top-section">
-        <i class="fa-solid <?= htmlspecialchars($attendanceTabIcon) ?>"></i>
-        <a href="index.php?page=cham-cong-dashboard">
-            <?= htmlspecialchars($attendanceTabLabel) ?>
-        </a>
+        <i class="fa-solid fa-fingerprint"></i>
+        <span>CHẤM CÔNG</span>
     </div>
 
     <h3><?= htmlspecialchars($roleLabels[$role] ?? 'Menu') ?></h3>
