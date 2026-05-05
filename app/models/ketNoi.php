@@ -1,7 +1,7 @@
 <?php
 class KetNoi {
     // === THAY ĐỔI THÔNG TIN KẾT NỐI CỦA BẠN Ở ĐÂY ===
-    private $host = "localhost";
+    private $host = "127.0.0.1";
     private $user = "root";
     private $pass = "";     // Mật khẩu XAMPP của bạn (thường là rỗng)
     
@@ -23,13 +23,18 @@ class KetNoi {
         }
 
         // Tạo kết nối mới
-        $this->conn = new mysqli($this->host, $this->user, $this->pass, $this->dbname);
+        try {
+            $this->conn = new mysqli($this->host, $this->user, $this->pass, $this->dbname);
+        } catch (mysqli_sql_exception $e) {
+            error_log("Kết nối DB thất bại: " . $e->getMessage());
+            throw new Exception("Lỗi kết nối hệ thống. Vui lòng đảm bảo MySQL trong XAMPP đã được BẬT (Start).");
+        }
 
         // Kiểm tra lỗi kết nối
         if ($this->conn->connect_error) {
             // Ghi log và ném exception để lớp gọi (controller/model) có thể bắt và xử lý
             error_log("Kết nối DB thất bại: " . $this->conn->connect_error);
-            throw new Exception("Lỗi kết nối hệ thống. Vui lòng thử lại sau.");
+            throw new Exception("Lỗi kết nối hệ thống. Vui lòng kiểm tra cấu hình CSDL.");
         }
 
         // Thiết lập UTF-8 để lưu tiếng Việt

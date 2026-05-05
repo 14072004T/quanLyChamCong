@@ -378,6 +378,31 @@ class ChamCongController
             header('Location: index.php?page=cham-cong');
             exit;
         }
+
+        // Kiểm tra giờ ra của ca làm (Không cho phép IN sau khi ca đã kết thúc)
+        if ($action === 'IN') {
+            $shift = $this->model->getShiftForUser($maND);
+            if ($shift) {
+                $now = date('H:i:s');
+                $start = $shift['start_time'];
+                $end = $shift['end_time'];
+                
+                $isPastEnd = false;
+                if ($start < $end) {
+                    if ($now > $end) $isPastEnd = true;
+                } else {
+                    // Ca qua đêm (ví dụ 22:00 - 06:00)
+                    // Nếu hiện tại nằm trong khoảng [end, start], tức là ca cũ đã hết và chưa tới ca mới
+                    if ($now > $end && $now < $start) $isPastEnd = true;
+                }
+
+                if ($isPastEnd) {
+                    $_SESSION['error'] = 'Ca làm việc đã kết thúc (' . substr($end, 0, 5) . '). Bạn không thể chấm công vào.';
+                    header('Location: index.php?page=cham-cong');
+                    exit;
+                }
+            }
+        }
         
         // Lưu chấm công
         $note = trim($_POST['note'] ?? '');
@@ -497,6 +522,26 @@ class ChamCongController
         foreach ($logs as $log) {
             if ($log['action'] === 'IN') {
                 echo json_encode(['success' => false, 'message' => 'Bạn đã chấm công vào hôm nay rồi']);
+                exit;
+            }
+        }
+
+        // Kiểm tra giờ ra của ca làm (Không cho phép IN sau khi ca đã kết thúc)
+        $shift = $this->model->getShiftForUser($maND);
+        if ($shift) {
+            $now = date('H:i:s');
+            $start = $shift['start_time'];
+            $end = $shift['end_time'];
+            
+            $isPastEnd = false;
+            if ($start < $end) {
+                if ($now > $end) $isPastEnd = true;
+            } else {
+                if ($now > $end && $now < $start) $isPastEnd = true;
+            }
+
+            if ($isPastEnd) {
+                echo json_encode(['success' => false, 'message' => 'Ca làm việc đã kết thúc (' . substr($end, 0, 5) . '). Bạn không thể chấm công vào.']);
                 exit;
             }
         }
