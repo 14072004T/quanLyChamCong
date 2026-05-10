@@ -379,25 +379,46 @@ class ChamCongController
             exit;
         }
 
-        // Kiểm tra giờ ra của ca làm (Không cho phép IN sau khi ca đã kết thúc)
+        // Kiểm tra khung giờ ca làm: chỉ cho phép IN trong giờ ca chính thức
         if ($action === 'IN') {
             $shift = $this->model->getShiftForUser($maND);
+            if (!$shift) {
+                $_SESSION['error'] = 'Bạn chưa được phân ca làm việc. Vui lòng liên hệ HR để được gán ca.';
+                header('Location: index.php?page=cham-cong');
+                exit;
+            }
             if ($shift) {
-                $now = date('H:i:s');
+                $now   = date('H:i:s');
                 $start = $shift['start_time'];
-                $end = $shift['end_time'];
-                
-                $isPastEnd = false;
+                $end   = $shift['end_time'];
+
+                $isOutsideShift = false;
+                $isTooEarly     = false;
+
                 if ($start < $end) {
-                    if ($now > $end) $isPastEnd = true;
+                    // Ca bình thường (ví dụ 08:00 - 17:00)
+                    if ($now < $start) {
+                        $isOutsideShift = true;
+                        $isTooEarly     = true;
+                    } elseif ($now > $end) {
+                        $isOutsideShift = true;
+                    }
                 } else {
                     // Ca qua đêm (ví dụ 22:00 - 06:00)
-                    // Nếu hiện tại nằm trong khoảng [end, start], tức là ca cũ đã hết và chưa tới ca mới
-                    if ($now > $end && $now < $start) $isPastEnd = true;
+                    // Trong ca nếu: now >= start HOẶC now <= end
+                    // Ngoài ca nếu: end < now < start
+                    if ($now > $end && $now < $start) {
+                        $isOutsideShift = true;
+                        $isTooEarly     = true; // Đang trong khoảng nghỉ giữa 2 ca
+                    }
                 }
 
-                if ($isPastEnd) {
-                    $_SESSION['error'] = 'Ca làm việc đã kết thúc (' . substr($end, 0, 5) . '). Bạn không thể chấm công vào.';
+                if ($isOutsideShift) {
+                    if ($isTooEarly) {
+                        $_SESSION['error'] = 'Ca làm việc chưa bắt đầu. Ca của bạn bắt đầu lúc ' . substr($start, 0, 5) . '. Vui lòng chờ đến giờ.';
+                    } else {
+                        $_SESSION['error'] = 'Ca làm việc đã kết thúc (' . substr($end, 0, 5) . '). Bạn không thể chấm công vào.';
+                    }
                     header('Location: index.php?page=cham-cong');
                     exit;
                 }
@@ -526,22 +547,41 @@ class ChamCongController
             }
         }
 
-        // Kiểm tra giờ ra của ca làm (Không cho phép IN sau khi ca đã kết thúc)
+        // Kiểm tra khung giờ ca làm: chỉ cho phép IN trong giờ ca chính thức
         $shift = $this->model->getShiftForUser($maND);
+        if (!$shift) {
+            echo json_encode(['success' => false, 'message' => 'Bạn chưa được phân ca làm việc. Vui lòng liên hệ HR.']);
+            exit;
+        }
         if ($shift) {
-            $now = date('H:i:s');
+            $now   = date('H:i:s');
             $start = $shift['start_time'];
-            $end = $shift['end_time'];
-            
-            $isPastEnd = false;
+            $end   = $shift['end_time'];
+
+            $isOutsideShift = false;
+            $isTooEarly     = false;
+
             if ($start < $end) {
-                if ($now > $end) $isPastEnd = true;
+                // Ca bình thường (ví dụ 08:00 - 17:00)
+                if ($now < $start) {
+                    $isOutsideShift = true;
+                    $isTooEarly     = true;
+                } elseif ($now > $end) {
+                    $isOutsideShift = true;
+                }
             } else {
-                if ($now > $end && $now < $start) $isPastEnd = true;
+                // Ca qua đêm (ví dụ 22:00 - 06:00)
+                if ($now > $end && $now < $start) {
+                    $isOutsideShift = true;
+                    $isTooEarly     = true;
+                }
             }
 
-            if ($isPastEnd) {
-                echo json_encode(['success' => false, 'message' => 'Ca làm việc đã kết thúc (' . substr($end, 0, 5) . '). Bạn không thể chấm công vào.']);
+            if ($isOutsideShift) {
+                $msg = $isTooEarly
+                    ? 'Ca làm việc chưa bắt đầu. Ca của bạn bắt đầu lúc ' . substr($start, 0, 5) . '.'
+                    : 'Ca làm việc đã kết thúc (' . substr($end, 0, 5) . '). Bạn không thể chấm công vào.';
+                echo json_encode(['success' => false, 'message' => $msg]);
                 exit;
             }
         }
