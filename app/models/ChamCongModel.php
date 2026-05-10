@@ -2184,6 +2184,11 @@ class ChamCongModel
             if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') {
                 return false;
             }
+            
+            $phongBan = mb_strtolower(trim($e['phongBan'] ?? ''), 'UTF-8');
+            if (in_array($phongBan, ['it', 'điều hành', 'hr', 'nhân sự'])) {
+                return false;
+            }
             // Bỏ qua nhân viên được tạo sau tháng đang xem
             $createdAt = !empty($e['created_at']) ? substr($e['created_at'], 0, 10) : null;
             if ($createdAt && $createdAt > $monthEnd) {

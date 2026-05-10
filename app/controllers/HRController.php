@@ -49,9 +49,11 @@ class HRController
         $limit = max(0, (int)($_GET['limit'] ?? 20));
         $allEmployees = $this->model->getEmployees($keyword, $activeOnly, 0);
         
-        // Chỉ lấy role nhân viên
+        // Chỉ lấy role nhân viên và loại trừ phòng IT, Điều hành, HR
         $employees = array_values(array_filter($allEmployees, function($e) {
-            return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
+            if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') return false;
+            $phongBan = mb_strtolower(trim($e['phongBan'] ?? ''), 'UTF-8');
+            return !in_array($phongBan, ['it', 'điều hành', 'hr', 'nhân sự']);
         }));
         
         if ($limit > 0) {
@@ -152,7 +154,9 @@ class HRController
         );
         $allActive = $this->model->getEmployees('', true, 0);
         $filterEmployees = array_values(array_filter($allActive, function($e) {
-            return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
+            if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') return false;
+            $phongBan = mb_strtolower(trim($e['phongBan'] ?? ''), 'UTF-8');
+            return !in_array($phongBan, ['it', 'điều hành', 'hr', 'nhân sự']);
         }));
         
         $monthlyApproval = $this->model->getMonthlyApprovalByMonth($selectedMonth);

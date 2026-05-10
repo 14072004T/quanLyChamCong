@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 if (!isset($_SESSION['user'])) { header('Location: index.php?page=login'); exit(); }
 if ($_SESSION['role'] !== 'manager') { header('Location: index.php?page=home'); exit(); }
 
@@ -468,7 +468,12 @@ $managerDepartment = trim($_SESSION['user']['phongBan'] ?? '');
                 </div>
                 <div class="form-group">
                     <label>Phòng ban</label>
-                    <input type="text" value="<?= htmlspecialchars($managerDepartment ?: 'Chưa phân phòng') ?>" disabled>
+                    <select name="department" id="approval-department">
+                        <option value="">Tất cả phòng ban</option>
+                        <?php foreach ($departments as $dept): ?>
+                            <option value="<?= htmlspecialchars($dept) ?>" <?= $department === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Sắp xếp</label>
@@ -648,7 +653,8 @@ document.addEventListener('DOMContentLoaded', function () {
             status: data.get('status') || 'submitted',
             year: data.get('year') || '',
             q: (data.get('q') || '').trim(),
-            sort: data.get('sort') || 'newest'
+            sort: data.get('sort') || 'newest',
+            department: data.get('department') || ''
         };
     }
 
@@ -777,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var monthLabel = formatMonthLabel(row.month_key);
             var otDisplay = '<span class="ot-warning"><i class="fas fa-triangle-exclamation"></i></span> ' + Number(row.total_ot_hours || 0).toLocaleString();
             var dateDisplay = formatDate(row.submitted_at);
-            var deptLabel = row.department || managerDepartment || 'Chưa phân phòng';
+            var deptLabel = row.department || 'Chưa phân phòng';
             var statusMeta = getStatusMeta(row.status);
 
             var approvalId = Number(row.id || 0);
@@ -818,8 +824,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var otDisplay = '<span class="ot-warning"><i class="fas fa-triangle-exclamation"></i></span> ' + Number(row.total_ot_hours || 0).toLocaleString();
             var dateDisplay = row.approved_at ? formatDate(row.approved_at) : formatDate(row.submitted_at);
             var statusMeta = getStatusMeta(row.status);
-            var approvalId = Number(row.id || 0);
-            var deptLabel = row.department || managerDepartment || 'Chưa phân phòng';
+            var deptLabel = row.department || 'Chưa phân phòng';
 
             return '<tr>' +
                 '<td>' + escapeHtml(monthLabel) + '</td>' +
@@ -845,7 +850,7 @@ document.addEventListener('DOMContentLoaded', function () {
         };
         pendingTitle.textContent = statusTitles[params.status] || 'DANH SÁCH BẢNG CÔNG';
 
-        fetch('index.php?page=manager-api-approvals&status=' + encodeURIComponent(params.status) + '&year=' + encodeURIComponent(params.year), {
+        fetch('index.php?page=manager-api-approvals&status=' + encodeURIComponent(params.status) + '&year=' + encodeURIComponent(params.year) + '&department=' + encodeURIComponent(params.department), {
             headers: { 'Accept': 'application/json' }
         })
         .then(function (r) { return r.json(); })
@@ -861,7 +866,7 @@ document.addEventListener('DOMContentLoaded', function () {
             pendingBody.innerHTML = '<tr><td colspan="9" class="empty-state">Lỗi tải dữ liệu.</td></tr>';
         });
 
-        fetch('index.php?page=manager-api-approvals&status=history&year=' + encodeURIComponent(params.year), {
+        fetch('index.php?page=manager-api-approvals&status=history&year=' + encodeURIComponent(params.year) + '&department=' + encodeURIComponent(params.department), {
             headers: { 'Accept': 'application/json' }
         })
         .then(function (r) { return r.json(); })
@@ -882,9 +887,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         Promise.all([
-            fetch('index.php?page=manager-api-approvals&status=submitted&year=' + encodeURIComponent(params.year), { headers: { 'Accept': 'application/json' } }),
-            fetch('index.php?page=manager-api-approvals&status=approved&year=' + encodeURIComponent(params.year), { headers: { 'Accept': 'application/json' } }),
-            fetch('index.php?page=manager-api-approvals&status=rejected&year=' + encodeURIComponent(params.year), { headers: { 'Accept': 'application/json' } })
+            fetch('index.php?page=manager-api-approvals&status=submitted&year=' + encodeURIComponent(params.year) + '&department=' + encodeURIComponent(params.department), { headers: { 'Accept': 'application/json' } }),
+            fetch('index.php?page=manager-api-approvals&status=approved&year=' + encodeURIComponent(params.year) + '&department=' + encodeURIComponent(params.department), { headers: { 'Accept': 'application/json' } }),
+            fetch('index.php?page=manager-api-approvals&status=rejected&year=' + encodeURIComponent(params.year) + '&department=' + encodeURIComponent(params.department), { headers: { 'Accept': 'application/json' } })
         ])
         .then(function (responses) { return Promise.all(responses.map(function (r) { return r.json(); })); })
         .then(function (payloads) {

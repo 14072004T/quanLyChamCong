@@ -36,10 +36,9 @@ class ManagerController
     public function approvals()
     {
         AuthMiddleware::requirePermission('pheduyet-bang-cong');
-        $department = trim($_SESSION['user']['phongBan'] ?? '');
-        if ($department === '') {
-            $department = '__none__';
-        }
+        // Mặc định quản lý có thể xem tất cả phòng ban
+        $department = trim($_GET['department'] ?? '');
+        $departments = $this->model->getDistinctDepartments();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $approvalId = (int)($_POST['approval_id'] ?? 0);
@@ -262,11 +261,7 @@ class ManagerController
 
         $status = trim($_GET['status'] ?? '');
         $year = trim($_GET['year'] ?? '');
-        $department = trim($_SESSION['user']['phongBan'] ?? '');
-        if ($department === '') {
-            $department = '__none__';
-        }
-
+        $department = trim($_GET['department'] ?? '');
         $filterStatus = null;
         if ($status === 'submitted') $filterStatus = 'submitted';
         elseif ($status === 'approved') $filterStatus = 'approved';
