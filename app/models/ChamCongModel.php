@@ -2180,8 +2180,16 @@ class ChamCongModel
         $allEmployees = $this->getEmployees('', true);
         
         // Chỉ lấy nhân viên (bỏ HR, Quản lý, IT)
-        $employees = array_filter($allEmployees, function($e) {
-            return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
+        $employees = array_filter($allEmployees, function($e) use ($monthEnd) {
+            if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') {
+                return false;
+            }
+            // Bỏ qua nhân viên được tạo sau tháng đang xem
+            $createdAt = !empty($e['created_at']) ? substr($e['created_at'], 0, 10) : null;
+            if ($createdAt && $createdAt > $monthEnd) {
+                return false;
+            }
+            return true;
         });
 
         $result = [];
@@ -2192,6 +2200,7 @@ class ChamCongModel
 
             // Lấy dữ liệu chấm công trong tháng
             $attendanceData = $this->getMonthlyAttendanceRaw($maND, $monthStart, $monthEnd);
+
 
             // Lấy thông tin phép của nhân viên
             $leaveInfo = $this->getEmployeeLeaveInfo($maND);

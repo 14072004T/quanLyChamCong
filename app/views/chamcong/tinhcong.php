@@ -298,34 +298,37 @@ foreach (($salaryRows ?? []) as $summaryRow) {
         <?php endif; ?>
 
         <div class="panel payroll-toolbar">
-            <div class="payroll-toolbar-head">
-                    <div>
-                        <p>Theo dõi dữ liệu công theo tháng, lọc nhanh theo nhân viên và rà soát tổng công trước khi gửi cho quản lý phê duyệt.</p>
-                    </div>
-                </div>
                 <div class="payroll-metrics">
                     <div class="payroll-metric">
                         <span class="payroll-metric-label">Kỳ công</span>
-                        <strong><?= htmlspecialchars($selectedMonth) ?></strong>
+                        <strong id="metric-month"><?= htmlspecialchars($selectedMonth) ?></strong>
                     </div>
                     <div class="payroll-metric">
                         <span class="payroll-metric-label">Nhân sự hiển thị</span>
-                        <strong><?= (int)$summaryEmployees ?></strong>
+                        <strong id="metric-employees"><?= (int)$summaryEmployees ?></strong>
                     </div>
                     <div class="payroll-metric">
                         <span class="payroll-metric-label">Tổng ngày công</span>
-                        <strong><?= number_format($summaryWorkDays, 0) ?></strong>
+                        <strong id="metric-work-days"><?= number_format($summaryWorkDays, 0) ?></strong>
                     </div>
                     <div class="payroll-metric">
                         <span class="payroll-metric-label">Tổng OT hợp lệ</span>
-                        <strong><?= number_format($summaryOtHours, 2) ?>h</strong>
+                        <strong id="metric-ot"><?= number_format($summaryOtHours, 2) ?>h</strong>
                     </div>
                 </div>
                 <form id="payroll-filter-form" class="payroll-filter-grid">
+                    <input type="hidden" name="page" value="tinh-cong">
                     <div class="form-group">
                         <label>Nhân viên</label>
-                        <input type="text" name="employee_q" id="employee-search-input" list="employee-suggestions" placeholder="Nhân viên/name/dept" value="<?= htmlspecialchars($employeeKeyword) ?>" autocomplete="off">
-                        <datalist id="employee-suggestions"></datalist>
+                        <select name="employee_q" id="employee-search-input" style="padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px; width: 100%;">
+                            <option value="Tất cả">Hiển thị tất cả nhân viên</option>
+                            <?php foreach ($filterEmployees as $emp): ?>
+                                <?php $optVal = $emp['hoTen']; ?>
+                                <option value="<?= htmlspecialchars($optVal) ?>" <?= $employeeKeyword === $optVal ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars("#{$emp['maND']} - {$emp['hoTen']} - " . ($emp['phongBan'] ?? '')) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Tháng</label>
@@ -568,7 +571,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function currentEmployeeQuery() {
-        return employeeInput ? employeeInput.value.trim() : '';
+        var val = employeeInput ? employeeInput.value.trim() : '';
+        return (val === 'Tất cả') ? '' : val;
     }
 
     function formatDateTime(value) {
@@ -599,37 +603,7 @@ document.addEventListener('DOMContentLoaded', function () {
         detailModal.setAttribute('aria-hidden', 'true');
     }
 
-    function renderEmployeeSuggestions(rows) {
-        if (!employeeSuggestions) return;
-        employeeSuggestions.innerHTML = rows.map(function (row) {
-            var value = row.hoTen || '';
-            var label = [row.maND ? ('#' + row.maND) : '', row.phongBan || ''].filter(Boolean).join(' - ');
-            return '<option value="' + escapeHtml(value) + '">' + escapeHtml(label) + '</option>';
-        }).join('');
-    }
-
-    function loadEmployeeSuggestions(keyword) {
-        var params = new URLSearchParams({
-            page: 'hr-api-employees',
-            active: '1',
-            limit: '20'
-        });
-
-        if (keyword) {
-            params.set('q', keyword);
-        }
-
-        return fetch('index.php?' + params.toString(), {
-            headers: { 'Accept': 'application/json' }
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (json) {
-            renderEmployeeSuggestions(json.data || []);
-        })
-        .catch(function () {
-            renderEmployeeSuggestions([]);
-        });
-    }
+    // Native select dropdown handles options now, no need for AJAX suggestions
 
     function renderGridRows(rows) {
         if (!rows.length) {
@@ -785,6 +759,19 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!json.success) { alert(json.message || 'Lỗi'); return; }
             renderGridRows(json.data || []);
             renderTableRows(json.data || []);
+            
+            // Update metrics
+            if (json.summary) {
+                var monthEl = document.getElementById('metric-month');
+                var empEl = document.getElementById('metric-employees');
+                var daysEl = document.getElementById('metric-work-days');
+                var otEl = document.getElementById('metric-ot');
+                
+                if (monthEl) monthEl.textContent = currentMonth();
+                if (empEl) empEl.textContent = Number(json.summary.employees || 0);
+                if (daysEl) daysEl.textContent = Number(json.summary.total_work_days || 0).toLocaleString();
+                if (otEl) otEl.textContent = Number(json.summary.total_overtime_hours || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'h';
+            }
             var approval = json.approval;
             if (approval) {
                 var approvalMeta = getApprovalStatusMeta(approval.status);
@@ -804,14 +791,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     if (employeeInput) {
-        employeeInput.addEventListener('focus', function () {
-            loadEmployeeSuggestions(currentEmployeeQuery());
-        });
-
-        employeeInput.addEventListener('input', function () {
-            loadEmployeeSuggestions(currentEmployeeQuery());
-        });
-
         employeeInput.addEventListener('change', function () {
             loadPayroll();
         });

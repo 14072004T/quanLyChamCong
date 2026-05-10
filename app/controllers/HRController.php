@@ -47,7 +47,16 @@ class HRController
         $keyword = trim($_GET['q'] ?? '');
         $activeOnly = ($_GET['active'] ?? '1') !== '0';
         $limit = max(0, (int)($_GET['limit'] ?? 20));
-        $employees = $this->model->getEmployees($keyword, $activeOnly, $limit);
+        $allEmployees = $this->model->getEmployees($keyword, $activeOnly, 0);
+        
+        // Chỉ lấy role nhân viên
+        $employees = array_values(array_filter($allEmployees, function($e) {
+            return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
+        }));
+        
+        if ($limit > 0) {
+            $employees = array_slice($employees, 0, $limit);
+        }
 
         $this->respond([
             'success' => true,
@@ -141,6 +150,11 @@ class HRController
             $this->model->getMonthlyAttendanceDetailNew($selectedMonth),
             $employeeKeyword
         );
+        $allActive = $this->model->getEmployees('', true, 0);
+        $filterEmployees = array_values(array_filter($allActive, function($e) {
+            return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
+        }));
+        
         $monthlyApproval = $this->model->getMonthlyApprovalByMonth($selectedMonth);
         $approvalHistory = $this->model->getMonthlyApprovalsBySender((int)($_SESSION['user']['maND'] ?? 0), ['submitted', 'approved', 'rejected'], 12);
         require __DIR__ . '/../views/chamcong/tinhcong.php';
@@ -403,6 +417,10 @@ class HRController
     private function filterPayrollRows(array $rows, $keyword)
     {
         $keyword = trim((string)$keyword);
+        if (mb_strtolower($keyword, 'UTF-8') === 'tất cả') {
+            $keyword = '';
+        }
+        
         if ($keyword === '') {
             return $rows;
         }
