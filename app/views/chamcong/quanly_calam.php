@@ -8,6 +8,23 @@ unset($_SESSION['success'], $_SESSION['error']);
 ?>
 <?php include 'app/views/layouts/header.php'; ?>
 <?php include 'app/views/layouts/nav.php'; ?>
+<style>
+/* Modal Styles */
+.lr-modal { display:none; position:fixed; z-index:9999; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(2px); }
+.lr-modal-content { background:#fff; border-radius:12px; width:100%; max-width:500px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1); overflow:hidden; animation:modalSlideUp 0.3s ease; }
+@keyframes modalSlideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+.lr-modal-header { padding:16px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; }
+.lr-modal-body { padding:20px; }
+.lr-modal-footer { padding:12px 20px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; }
+.lr-detail-row { display:flex; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px; }
+.lr-detail-label { width:120px; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; }
+.lr-detail-val { flex:1; font-size:13px; color:#1e293b; font-weight:500; }
+.lr-badge-approved { background: #10b981; color: #fff; }
+.lr-badge-pending  { background: #f59e0b; color: #fff; }
+.lr-badge-rejected { background: #ef4444; color: #fff; }
+.lr-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
+</style>
+
 <div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
     <div class="dashboard-container">
@@ -103,6 +120,22 @@ unset($_SESSION['success'], $_SESSION['error']);
             </div>
         </div>
 
+        <!-- DETAIL MODAL -->
+        <div id="detailModal" class="lr-modal">
+            <div class="lr-modal-content">
+                <div class="lr-modal-header">
+                    <h4 style="margin:0; font-size:15px; font-weight:700; color:#1e293b;"><i class="fas fa-circle-info" style="color:#4f6ef7"></i> Chi tiết đơn nghỉ</h4>
+                    <button onclick="closeModal()" style="border:none; background:none; cursor:pointer; color:#94a3b8; font-size:18px;"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="lr-modal-body" id="modalBody">
+                    <p style="text-align:center; color:#64748b;">Đang tải...</p>
+                </div>
+                <div class="lr-modal-footer">
+                    <button class="btn btn-secondary btn-sm" onclick="closeModal()">Đóng</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -120,6 +153,51 @@ document.addEventListener('DOMContentLoaded', function () {
             return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];
         });
     }
+
+    // Modal Logic
+    window.openModal = function(id) {
+        if (!id || id == 0) return;
+        var modal = document.getElementById('detailModal');
+        var body = document.getElementById('modalBody');
+        modal.style.display = 'flex';
+        body.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:#4f6ef7"></i><p style="margin-top:10px; color:#64748b">Đang lấy dữ liệu...</p></div>';
+
+        fetch('index.php?page=get-leave-detail&id=' + id)
+            .then(function(res) { return res.json(); })
+            .then(function(res) {
+                if (res.success) {
+                    var d = res.data;
+                    var statusClass = 'lr-badge-' + d.status;
+                    var statusText = d.status === 'approved' ? 'Đã duyệt' : (d.status === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
+                    
+                    body.innerHTML = 
+                        '<div class="lr-detail-row"><div class="lr-detail-label">Loại nghỉ</div><div class="lr-detail-val">' + d.leave_type_text + '</div></div>' +
+                        '<div class="lr-detail-row"><div class="lr-detail-label">Thời gian</div><div class="lr-detail-val">' + d.from_date_fmt + ' đến ' + d.to_date_fmt + '</div></div>' +
+                        '<div class="lr-detail-row"><div class="lr-detail-label">Lý do</div><div class="lr-detail-val">' + d.reason + '</div></div>' +
+                        '<div class="lr-detail-row"><div class="lr-detail-label">Trạng thái</div><div class="lr-detail-val"><span class="lr-badge ' + statusClass + '">' + statusText + '</span></div></div>' +
+                        (d.approver_name ? '<div class="lr-detail-row"><div class="lr-detail-label">Người duyệt</div><div class="lr-detail-val">' + d.approver_name + '</div></div>' : '') +
+                        (d.approved_at_fmt ? '<div class="lr-detail-row"><div class="lr-detail-label">Ngày duyệt</div><div class="lr-detail-val">' + d.approved_at_fmt + '</div></div>' : '') +
+                        (d.hr_note ? '<div class="lr-detail-row"><div class="lr-detail-label">Phản hồi</div><div class="lr-detail-val" style="color:#ef4444">' + d.hr_note + '</div></div>' : '') +
+                        '<div class="lr-detail-row" style="border:none"><div class="lr-detail-label">Ngày gửi</div><div class="lr-detail-val">' + d.created_at_fmt + '</div></div>';
+                } else {
+                    body.innerHTML = '<p style="color:#ef4444; text-align:center;">Lỗi: ' + res.message + '</p>';
+                }
+            })
+            .catch(function(err) {
+                body.innerHTML = '<p style="color:#ef4444; text-align:center;">Không thể kết nối máy chủ.</p>';
+            });
+    };
+
+    window.closeModal = function() {
+        document.getElementById('detailModal').style.display = 'none';
+    };
+
+    window.addEventListener('click', function(event) {
+        var modal = document.getElementById('detailModal');
+        if (event.target == modal) {
+            closeModal();
+        }
+    });
 
     toggleBtn.addEventListener('click', function () {
         formPanel.style.display = formPanel.style.display === 'none' ? 'block' : 'none';
@@ -182,22 +260,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     var isWeekend = (dow === 0 || dow === 6);
                     var currentDate = month + '-' + String(d).padStart(2, '0');
                     var otInfo = employeeOtSchedule[currentDate] || null;
-                    if (isWeekend) {
-                        cells += '<td>';
+                    var dayBreakdown = (payroll.daily_breakdown && payroll.daily_breakdown[currentDate]) ? payroll.daily_breakdown[currentDate] : null;
+                    var isLeave = dayBreakdown && dayBreakdown.day_type === 'leave';
+
+                    cells += '<td>';
+                    if (isLeave) {
+                        var tooltip = dayBreakdown.leave_reason ? escapeHtml(dayBreakdown.day_type_label + ': ' + dayBreakdown.leave_reason) : escapeHtml(dayBreakdown.day_type_label || 'Nghỉ phép');
+                        var leaveId = dayBreakdown.leave_id || 0;
+                        cells += '<span onclick="openModal(' + leaveId + ')" class="shift-cell shift-off" style="background-color:#ef4444;color:white;border-color:#ef4444;display:inline-block;cursor:pointer;" title="' + tooltip + '">OFF</span>';
+                    } else if (isWeekend) {
                         cells += '<span class="shift-cell shift-off">OFF</span>';
-                        if (otInfo) {
-                            cells += '<span class="shift-cell shift-ot" title="' + escapeHtml(otInfo.reason || 'OT đã duyệt') + '">OT</span>';
-                        }
-                        cells += '</td>';
                     } else {
                         totalDays++;
-                        cells += '<td>';
                         cells += '<span class="shift-cell shift-hc">HC</span>';
-                        if (otInfo) {
-                            cells += '<span class="shift-cell shift-ot" title="' + escapeHtml(otInfo.reason || 'OT đã duyệt') + '">OT</span>';
-                        }
-                        cells += '</td>';
                     }
+
+                    if (otInfo) {
+                        cells += '<span class="shift-cell shift-ot" title="' + escapeHtml(otInfo.reason || 'OT đã duyệt') + '">OT</span>';
+                    }
+                    cells += '</td>';
                 }
                 var actualDays = Number(payroll.work_days || 0);
                 cells += '<td class="col-total">' + (actualDays > 0 ? actualDays : totalDays) + '</td>';

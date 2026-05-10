@@ -31,7 +31,7 @@ class AttendanceCalculator
         $month = (int)substr($monthKey, 5, 2);
 
         // Lấy ngày cuối cùng của tháng
-        $lastDay = (int)date('d', strtotime(date($year . '-' . $month . '-01 last day of')));
+        $lastDay = (int)date('t', strtotime("$year-$month-01"));
 
         $dailyBreakdown = [];
         $totals = [
@@ -115,11 +115,22 @@ class AttendanceCalculator
 
         // Kiểm tra nếu có xin phép
         if ($leaveType) {
+            $isHalfDay = false;
+            $leaveId = null;
+            $leaveReason = null;
+            if (is_array($leaveType)) {
+                $isHalfDay = !empty($leaveType['is_half_day']);
+                $leaveId = $leaveType['leave_id'] ?? null;
+                $leaveReason = $leaveType['reason'] ?? null;
+                $leaveType = $leaveType['type'] ?? 'annual';
+            }
             $leaveType = strtolower(trim((string)$leaveType));
             return [
                 'date' => $date,
                 'day_type' => 'leave',
                 'leave_type' => $leaveType,
+                'leave_id' => $leaveId,
+                'leave_reason' => $leaveReason,
                 'day_type_label' => self::getLeaveTypeLabel($leaveType),
                 'work_value' => 0.0,
                 'work_hours' => 0,

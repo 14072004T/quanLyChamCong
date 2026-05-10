@@ -383,6 +383,15 @@ class ChamCongModel
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
+
+        // Fallback to default shift (Hành chính) if no explicit assignment exists
+        if (!$row) {
+            $res = $this->conn->query("SELECT id AS shift_id, shift_name, start_time, end_time FROM attendance_shifts WHERE is_active = 1 ORDER BY id ASC LIMIT 1");
+            if ($res && $res->num_rows > 0) {
+                $row = $res->fetch_assoc();
+            }
+        }
+
         return $row ?: null;
     }
 
@@ -2168,7 +2177,12 @@ class ChamCongModel
         $monthEnd = date('Y-m-t', strtotime($monthStart));
 
         // Lấy danh sách tất cả nhân viên hoạt động
-        $employees = $this->getEmployees('', true);
+        $allEmployees = $this->getEmployees('', true);
+        
+        // Chỉ lấy nhân viên (bỏ HR, Quản lý, IT)
+        $employees = array_filter($allEmployees, function($e) {
+            return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
+        });
 
         $result = [];
 
@@ -2207,9 +2221,9 @@ class ChamCongModel
                 'hoTen' => $hoTen,
                 'phongBan' => $employee['phongBan'] ?? '',
                 'daily_breakdown' => $monthlyCalc['daily_breakdown'] ?? [],
-                'work_days' => $monthlyCalc['totals']['total_work_days'] ?? 0,
-                'work_hours' => $monthlyCalc['totals']['working_hours'] ?? 0,
-                'overtime_hours' => $monthlyCalc['totals']['total_ot_hours'] ?? 0,
+                'work_days' => round((float)($monthlyCalc['totals']['total_work_days'] ?? 0), 1),
+                'work_hours' => round((float)($monthlyCalc['totals']['working_hours'] ?? 0), 2),
+                'overtime_hours' => round((float)($monthlyCalc['totals']['total_ot_hours'] ?? 0), 2),
                 'leave_days_used' => $monthlyCalc['totals']['total_leave_days'] ?? 0,
                 'holiday_days' => $monthlyCalc['totals']['total_holiday_days'] ?? 0,
                 'weekend_days' => $monthlyCalc['totals']['total_weekend_days'] ?? 0,
@@ -2398,26 +2412,22 @@ class ChamCongModel
         $fromDate = trim((string)$fromDate);
         $toDate = trim((string)$toDate);
 
-        // Kiểm tra xem table `leave_requests` có tồn tại không
-        $table_exists = $this->conn->query("
-            SHOW TABLES LIKE 'leave_requests'
-        ")->num_rows > 0;
-
-        if (!$table_exists) {
-            return [];
-        }
-
+        // Sử dụng bảng `don_nghi_phep` thay vì `leave_requests` (vì leave_requests không tồn tại hoặc không dùng nữa)
         $sql = "
             SELECT
-                leave_date,
+                id,
+                from_date,
+                to_date,
                 leave_type,
-                is_half_day
-            FROM leave_requests
-            WHERE maND = ?
+                reason
+            FROM don_nghi_phep
+            WHERE user_id = ?
               AND status = 'approved'
-              AND leave_date >= ?
-              AND leave_date <= ?
-            ORDER BY leave_date ASC
+              AND (
+                  (from_date >= ? AND from_date <= ?) OR 
+                  (to_date >= ? AND to_date <= ?) OR
+                  (from_date <= ? AND to_date >= ?)
+              )
         ";
 
         $stmt = $this->conn->prepare($sql);
@@ -2425,35 +2435,67 @@ class ChamCongModel
             return [];
         }
 
-        $stmt->bind_param('iss', $maND, $fromDate, $toDate);
+        $stmt->bind_param('issssss', $maND, $fromDate, $toDate, $fromDate, $toDate, $fromDate, $toDate);
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
 
         $data = [];
         foreach ($rows as $row) {
-            $date = $row['leave_date'];
+            $currentDate = new DateTime($row['from_date']);
+            $endDate = new DateTime($row['to_date']);
             $leaveType = $row['leave_type'] ?? 'annual';
-            $isHalfDay = (int)($row['is_half_day'] ?? 0);
+            $leaveId = $row['id'] ?? 0;
+            $reason = $row['reason'] ?? '';
 
-            if ($isHalfDay) {
-                // Nửa ngày phép = 0.5 ngày
-                $data[$date] = [
-                    'type' => $leaveType,
-                    'is_half_day' => true,
-                    'work_value_deduction' => 0.5,
-                ];
-            } else {
-                // Ngày phép đầy đủ
-                $data[$date] = [
-                    'type' => $leaveType,
-                    'is_half_day' => false,
-                    'work_value_deduction' => 1.0,
-                ];
+            while ($currentDate <= $endDate) {
+                $dateStr = $currentDate->format('Y-m-d');
+                if ($dateStr >= $fromDate && $dateStr <= $toDate) {
+                    $data[$dateStr] = [
+                        'type' => $leaveType,
+                        'is_half_day' => false,
+                        'work_value_deduction' => 1.0,
+                        'leave_id' => $leaveId,
+                        'reason' => $reason
+                    ];
+                }
+                $currentDate->modify('+1 day');
             }
         }
 
         return $data;
+    }
+
+    /**
+     * Kiểm tra xem nhân viên có đang trong thời gian nghỉ phép đã được duyệt vào ngày hôm nay hay không
+     * @param int $maND
+     * @return bool
+     */
+    public function hasApprovedLeaveForToday($maND)
+    {
+        $maND = (int)$maND;
+        $today = date('Y-m-d');
+        
+        $sql = "
+            SELECT 1
+            FROM don_nghi_phep
+            WHERE user_id = ?
+              AND status = 'approved'
+              AND from_date <= ? 
+              AND to_date >= ?
+            LIMIT 1
+        ";
+        
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return false;
+        
+        $stmt->bind_param('iss', $maND, $today, $today);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $hasLeave = $result->num_rows > 0;
+        $stmt->close();
+        
+        return $hasLeave;
     }
 
     /**
