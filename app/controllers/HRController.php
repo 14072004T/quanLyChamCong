@@ -49,11 +49,9 @@ class HRController
         $limit = max(0, (int)($_GET['limit'] ?? 20));
         $allEmployees = $this->model->getEmployees($keyword, $activeOnly, 0);
         
-        // Chỉ lấy role nhân viên và loại trừ phòng IT, Điều hành, HR
+        // HR chỉ xem được nhân viên có chức vụ "Nhân viên" (tất cả phòng ban)
         $employees = array_values(array_filter($allEmployees, function($e) {
-            if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') return false;
-            $phongBan = mb_strtolower(trim($e['phongBan'] ?? ''), 'UTF-8');
-            return !in_array($phongBan, ['it', 'điều hành', 'hr', 'nhân sự']);
+            return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
         }));
         
         if ($limit > 0) {
@@ -153,10 +151,9 @@ class HRController
             $employeeKeyword
         );
         $allActive = $this->model->getEmployees('', true, 0);
+        // HR chỉ xem được nhân viên có chức vụ "Nhân viên" (tất cả phòng ban)
         $filterEmployees = array_values(array_filter($allActive, function($e) {
-            if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') return false;
-            $phongBan = mb_strtolower(trim($e['phongBan'] ?? ''), 'UTF-8');
-            return !in_array($phongBan, ['it', 'điều hành', 'hr', 'nhân sự']);
+            return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
         }));
         
         $monthlyApproval = $this->model->getMonthlyApprovalByMonth($selectedMonth);

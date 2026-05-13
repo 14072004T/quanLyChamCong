@@ -9,7 +9,8 @@ unset($_SESSION['success'], $_SESSION['error']);
 $editing = null;
 if (!empty($_GET['edit']) && !empty($employees)) {
     foreach ($employees as $emp) {
-        if ((int)$emp['maND'] === (int)$_GET['edit']) {
+        if ((int)$emp['maND'] === (int)$_GET['edit']
+    && ($emp['chucVu'] ?? '') === 'Nhân viên'){
             $editing = $emp;
             break;
         }
@@ -70,7 +71,7 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                     <label>Chức vụ *</label>
                     <select name="chucVu" required>
                         <?php
-                        $roles = ['Nhân viên', 'Bộ phận Nhân sự', 'Quản lý / Ban lãnh đạo', 'Bộ phận Kỹ thuật'];
+                        $roles = ['Nhân viên'];
                         $selectedRole = $editing['chucVu'] ?? 'Nhân viên';
                         foreach ($roles as $roleLabel):
                         ?>
@@ -113,29 +114,44 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                         <th>HÀNH ĐỘNG</th>
                     </tr>
                 </thead>
-                <tbody>
-                <?php if (!empty($employees)): ?>
-                    <?php foreach ($employees as $emp): ?>
-                        <tr>
-                            <td><?= (int)$emp['maND'] ?></td>
-                            <td><?= htmlspecialchars($emp['hoTen']) ?></td>
-                            <td><a href="mailto:<?= htmlspecialchars($emp['email'] ?? '') ?>" style="color:#3b82f6;"><?= htmlspecialchars($emp['email'] ?? '') ?></a></td>
-                            <td><?= htmlspecialchars($emp['phongBan'] ?? '') ?></td>
-                            <td><?= htmlspecialchars($emp['chucVu'] ?? '') ?></td>
-                            <td>
-                                <span class="status-badge <?= (int)$emp['trangThai'] === 1 ? 'status-approved' : 'status-rejected' ?>">
-                                    <?= (int)$emp['trangThai'] === 1 ? '• Hoạt động' : '• Ngừng' ?>
-                                </span>
-                            </td>
-                            <td>
-                                <a class="btn btn-sm btn-primary" href="index.php?page=quan-ly-nhanvien&edit=<?= (int)$emp['maND'] ?>">Sửa</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr><td colspan="7" class="empty-state">Không có nhân viên phù hợp.</td></tr>
-                <?php endif; ?>
-                </tbody>
+               <tbody>
+<?php if (!empty($employees)): ?>
+    <?php foreach ($employees as $emp): ?>
+
+        <?php if (($emp['chucVu'] ?? '') !== 'Nhân viên') continue; ?>
+
+        <tr>
+            <td><?= (int)$emp['maND'] ?></td>
+            <td><?= htmlspecialchars($emp['hoTen']) ?></td>
+            <td>
+                <a href="mailto:<?= htmlspecialchars($emp['email'] ?? '') ?>" style="color:#3b82f6;">
+                    <?= htmlspecialchars($emp['email'] ?? '') ?>
+                </a>
+            </td>
+            <td><?= htmlspecialchars($emp['phongBan'] ?? '') ?></td>
+            <td><?= htmlspecialchars($emp['chucVu'] ?? '') ?></td>
+            <td>
+                <span class="status-badge <?= (int)$emp['trangThai'] === 1 ? 'status-approved' : 'status-rejected' ?>">
+                    <?= (int)$emp['trangThai'] === 1 ? '• Hoạt động' : '• Ngừng' ?>
+                </span>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-primary"
+                   href="index.php?page=quan-ly-nhanvien&edit=<?= (int)$emp['maND'] ?>">
+                    Sửa
+                </a>
+            </td>
+        </tr>
+
+    <?php endforeach; ?>
+<?php else: ?>
+    <tr>
+        <td colspan="7" class="empty-state">
+            Không có nhân viên phù hợp.
+        </td>
+    </tr>
+<?php endif; ?>
+</tbody>
             </table>
         </div>
     </div>

@@ -688,8 +688,11 @@ class ChamCongModel
     public function getShifts()
     {
         $sql = "SELECT s.id, s.shift_name, s.start_time, s.end_time, s.is_active, s.created_at,
-                       (SELECT COUNT(*) FROM attendance_employee_shift aes
-                        WHERE aes.shift_id = s.id AND (aes.effective_to IS NULL OR aes.effective_to >= CURDATE())) AS assigned_count
+                       (SELECT COUNT(DISTINCT aes.maND) FROM attendance_employee_shift aes
+                        JOIN nguoidung nd ON nd.maND = aes.maND
+                        WHERE aes.shift_id = s.id 
+                          AND (aes.effective_to IS NULL OR aes.effective_to >= CURDATE())
+                          AND nd.chucVu = 'Nhân viên' AND nd.trangThai = 1) AS assigned_count
                 FROM attendance_shifts s
                 ORDER BY s.created_at DESC";
         $result = $this->conn->query($sql);
@@ -2179,16 +2182,12 @@ class ChamCongModel
         // Lấy danh sách tất cả nhân viên hoạt động
         $allEmployees = $this->getEmployees('', true);
         
-        // Chỉ lấy nhân viên (bỏ HR, Quản lý, IT)
+        // Chỉ lấy nhân viên
         $employees = array_filter($allEmployees, function($e) use ($monthEnd) {
             if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') {
                 return false;
             }
             
-            $phongBan = mb_strtolower(trim($e['phongBan'] ?? ''), 'UTF-8');
-            if (in_array($phongBan, ['it', 'điều hành', 'hr', 'nhân sự'])) {
-                return false;
-            }
             // Bỏ qua nhân viên được tạo sau tháng đang xem
             $createdAt = !empty($e['created_at']) ? substr($e['created_at'], 0, 10) : null;
             if ($createdAt && $createdAt > $monthEnd) {
@@ -2767,6 +2766,244 @@ class ChamCongModel
         $stmt->bind_param("i", $id);
         $stmt->execute();
         return $stmt->get_result()->fetch_assoc();
+    }
+
+    // =============================================
+    // EMPLOYEE TIMESHEET APPROVAL (Bảng công tháng cho nhân viên)
+    // =============================================
+
+    /**
+     * HR gửi bảng công đến từng nhân viên có dữ liệu chấm công trong tháng
+     */
+    public function submitTimesheetToEmployees($monthKey, $hrSenderId)
+    {
+        $monthKey = trim($monthKey);
+        $hrSenderId = (int)$hrSenderId;
+        if (!preg_match('/^\d{4}-\d{2}$/', $monthKey) || $hrSenderId <= 0) {
+            return false;
+        }
+
+        // Lấy danh sách nhân viên có dữ liệu chấm công trong tháng
+        $startDate = $monthKey . '-01';
+        $endDate = date('Y-m-t', strtotime($startDate));
+
+        $sql = "SELECT DISTINCT n.maND
+                FROM nguoidung n
+                INNER JOIN attendance_daily_summary ads ON ads.maND = n.maND
+                    AND ads.work_date >= ? AND ads.work_date <= ?
+                WHERE n.trangThai = 1 AND n.vaiTro = 'Nhân viên'";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return false;
+        $stmt->bind_param('ss', $startDate, $endDate);
+        $stmt->execute();
+        $employees = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        if (empty($employees)) return false;
+
+        $okAll = true;
+        foreach ($employees as $emp) {
+            $maND = (int)$emp['maND'];
+
+            // Kiểm tra nếu đã tồn tại
+            $find = $this->conn->prepare("SELECT id FROM employee_timesheet_approval WHERE month_key = ? AND maND = ? LIMIT 1");
+            if (!$find) { $okAll = false; continue; }
+            $find->bind_param('si', $monthKey, $maND);
+            $find->execute();
+            $existing = $find->get_result()->fetch_assoc();
+            $find->close();
+
+            if (!empty($existing['id'])) {
+                // Cập nhật lại (gửi lại)
+                $update = $this->conn->prepare("UPDATE employee_timesheet_approval SET hr_sender_id = ?, status = 'submitted', submitted_at = NOW(), approved_at = NULL, employee_note = NULL WHERE id = ?");
+                if (!$update) { $okAll = false; continue; }
+                $id = (int)$existing['id'];
+                $update->bind_param('ii', $hrSenderId, $id);
+                $okAll = $update->execute() && $okAll;
+                $update->close();
+            } else {
+                // Tạo mới
+                $insert = $this->conn->prepare("INSERT INTO employee_timesheet_approval (month_key, maND, hr_sender_id, status, submitted_at) VALUES (?, ?, ?, 'submitted', NOW())");
+                if (!$insert) { $okAll = false; continue; }
+                $insert->bind_param('sii', $monthKey, $maND, $hrSenderId);
+                $okAll = $insert->execute() && $okAll;
+                $insert->close();
+            }
+        }
+
+        return $okAll;
+    }
+
+    /**
+     * Lấy danh sách bảng công tháng đã gửi cho 1 nhân viên
+     */
+    public function getEmployeeTimesheetList($maND)
+    {
+        $maND = (int)$maND;
+        if ($maND <= 0) return [];
+
+        $sql = "SELECT eta.id, eta.month_key, eta.status, eta.submitted_at, eta.approved_at, eta.employee_note,
+                       u.hoTen AS hr_name
+                FROM employee_timesheet_approval eta
+                LEFT JOIN nguoidung u ON u.maND = eta.hr_sender_id
+                WHERE eta.maND = ?
+                ORDER BY eta.month_key DESC, eta.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return [];
+        $stmt->bind_param('i', $maND);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /**
+     * Lấy chi tiết bảng công tháng cho 1 nhân viên (dữ liệu chấm công)
+     */
+    public function getEmployeeTimesheetDetail($timesheetId, $maND)
+    {
+        $timesheetId = (int)$timesheetId;
+        $maND = (int)$maND;
+        if ($timesheetId <= 0 || $maND <= 0) return null;
+
+        $sql = "SELECT eta.id, eta.month_key, eta.status, eta.submitted_at, eta.approved_at, eta.employee_note,
+                       u.hoTen AS hr_name
+                FROM employee_timesheet_approval eta
+                LEFT JOIN nguoidung u ON u.maND = eta.hr_sender_id
+                WHERE eta.id = ? AND eta.maND = ?
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return null;
+        $stmt->bind_param('ii', $timesheetId, $maND);
+        $stmt->execute();
+        $approval = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$approval) return null;
+
+        $monthKey = trim($approval['month_key']);
+        $startDate = $monthKey . '-01';
+        $endDate = date('Y-m-t', strtotime($startDate));
+
+        // Lấy dữ liệu chấm công hàng ngày
+        $sql2 = "SELECT work_date, first_in, last_out, work_minutes, overtime_minutes, late_minutes, status
+                 FROM attendance_daily_summary
+                 WHERE maND = ? AND work_date >= ? AND work_date <= ?
+                 ORDER BY work_date ASC";
+        $stmt2 = $this->conn->prepare($sql2);
+        if (!$stmt2) return ['approval' => $approval, 'daily' => []];
+        $stmt2->bind_param('iss', $maND, $startDate, $endDate);
+        $stmt2->execute();
+        $dailyRows = $stmt2->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt2->close();
+
+        // Tính tổng
+        $totalWorkMinutes = 0;
+        $totalOTMinutes = 0;
+        $totalLateMinutes = 0;
+        $workDays = 0;
+        foreach ($dailyRows as $row) {
+            $totalWorkMinutes += (int)($row['work_minutes'] ?? 0);
+            $totalOTMinutes += (int)($row['overtime_minutes'] ?? 0);
+            $totalLateMinutes += (int)($row['late_minutes'] ?? 0);
+            if ((int)($row['work_minutes'] ?? 0) > 0) $workDays++;
+        }
+
+        return [
+            'approval' => $approval,
+            'daily' => $dailyRows,
+            'summary' => [
+                'work_days' => $workDays,
+                'total_work_hours' => round($totalWorkMinutes / 60, 2),
+                'total_ot_hours' => round($totalOTMinutes / 60, 2),
+                'total_late_hours' => round($totalLateMinutes / 60, 2),
+            ],
+        ];
+    }
+
+    /**
+     * Nhân viên duyệt bảng công
+     */
+    public function approveEmployeeTimesheet($timesheetId, $maND, $note = '')
+    {
+        $timesheetId = (int)$timesheetId;
+        $maND = (int)$maND;
+        if ($timesheetId <= 0 || $maND <= 0) return false;
+
+        $sql = "UPDATE employee_timesheet_approval
+                SET status = 'approved', approved_at = NOW(), employee_note = ?
+                WHERE id = ? AND maND = ? AND status = 'submitted'";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return false;
+        $stmt->bind_param('sii', $note, $timesheetId, $maND);
+        return $stmt->execute() && $stmt->affected_rows > 0;
+    }
+
+    /**
+     * Đếm bảng công chờ nhân viên duyệt
+     */
+    public function countPendingTimesheets($maND)
+    {
+        $maND = (int)$maND;
+        if ($maND <= 0) return 0;
+        $sql = "SELECT COUNT(*) AS cnt FROM employee_timesheet_approval WHERE maND = ? AND status = 'submitted'";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return 0;
+        $stmt->bind_param('i', $maND);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (int)($row['cnt'] ?? 0);
+    }
+
+    /**
+     * Lấy danh sách bảng công chờ nhân viên duyệt (cho notification)
+     */
+    public function getPendingTimesheets($maND, $limit = 5)
+    {
+        $maND = (int)$maND;
+        if ($maND <= 0) return [];
+        $sql = "SELECT eta.id, eta.month_key, eta.submitted_at,
+                       u.hoTen AS hr_name
+                FROM employee_timesheet_approval eta
+                LEFT JOIN nguoidung u ON u.maND = eta.hr_sender_id
+                WHERE eta.maND = ? AND eta.status = 'submitted'
+                ORDER BY eta.submitted_at DESC
+                LIMIT ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return [];
+        $stmt->bind_param('ii', $maND, $limit);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /**
+     * HR: Lấy tổng quan trạng thái bảng công nhân viên đã gửi theo tháng
+     */
+    public function getTimesheetApprovalSummary($monthKey = null)
+    {
+        $sql = "SELECT eta.month_key,
+                       COUNT(*) AS total,
+                       SUM(CASE WHEN eta.status = 'submitted' THEN 1 ELSE 0 END) AS pending,
+                       SUM(CASE WHEN eta.status = 'approved' THEN 1 ELSE 0 END) AS approved,
+                       MAX(eta.submitted_at) AS last_submitted
+                FROM employee_timesheet_approval eta";
+        $params = [];
+        $types = '';
+        if ($monthKey) {
+            $sql .= " WHERE eta.month_key = ?";
+            $params[] = $monthKey;
+            $types = 's';
+        }
+        $sql .= " GROUP BY eta.month_key ORDER BY eta.month_key DESC";
+
+        if ($types) {
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) return [];
+            $stmt->bind_param($types, ...$params);
+            $stmt->execute();
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        }
+        $result = $this->conn->query($sql);
+        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
 }
 

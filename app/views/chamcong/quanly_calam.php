@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Fetch employees + attendance data
         Promise.all([
-            fetch('index.php?page=hr-api-employees', { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); }),
+            fetch('index.php?page=hr-api-employees&limit=0', { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); }),
             fetch('index.php?page=hr-api-payroll&month=' + encodeURIComponent(month), { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); })
         ]).then(function(results) {
             var employees = (results[0].data || []).filter(function(e) { return e.trangThai == 1; });

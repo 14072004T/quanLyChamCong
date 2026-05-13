@@ -1,0 +1,14 @@
+# RESTful API URL Rewrite for quanLyChamCong
+# Routes /api/{path} to api.php/{path}
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /quanlychamcong/
+
+    # Skip existing files and directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Route /api/* to api.php
+    RewriteRule ^api/(.*)$ api.php/$1 [QSA,L]
+</IfModule>

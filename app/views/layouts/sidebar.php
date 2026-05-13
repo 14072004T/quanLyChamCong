@@ -6,6 +6,7 @@ $menus = [
     'nhanvien' => [
         ['page' => 'cham-cong-dashboard', 'label' => 'Chấm công', 'icon' => 'fa-fingerprint'],
         ['page' => 'lich-su-cham-cong', 'label' => 'Xem lịch sử', 'icon' => 'fa-clock-rotate-left'],
+        ['page' => 'bang-cong-thang', 'label' => 'Bảng công tháng', 'icon' => 'fa-file-invoice'],
         ['page' => 'yeu-cau-chinh-sua-cham-cong', 'label' => 'Gửi yêu cầu chỉnh sửa', 'icon' => 'fa-pen-to-square'],
         ['page' => 'create-leave-request', 'label' => 'Đơn nghỉ phép', 'icon' => 'fa-calendar-check'],
     ],
@@ -17,7 +18,6 @@ $menus = [
         ['page' => 'list-leave-requests', 'label' => 'Quản lý Đơn phép', 'icon' => 'fa-calendar-check'],
     ],
     'manager' => [
-        ['page' => 'pheduyet-bang-cong', 'label' => 'Phê duyệt Bảng công', 'icon' => 'fa-circle-check'],
         ['page' => 'pheduyet-yeucau', 'label' => 'Phê duyệt yêu cầu', 'icon' => 'fa-clipboard-list'],
         ['page' => 'bao-cao-tong-hop', 'label' => 'Báo cáo tổng hợp', 'icon' => 'fa-file-lines'],
     ],
