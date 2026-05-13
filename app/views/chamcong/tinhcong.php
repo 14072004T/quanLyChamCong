@@ -287,7 +287,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
 
         <div class="panel">
             <h2 style="border:none;padding:0;margin:0 0 6px;">TÍNH CÔNG & BÁO CÁO</h2>
-            <p style="color:#64748b;margin:0;">Theo dõi dữ liệu công theo tháng, lọc nhanh theo nhân viên và rà soát tổng công trước khi gửi cho quản lý phê duyệt.</p>
+            <p style="color:#64748b;margin:0;">Theo dõi dữ liệu công theo tháng, lọc nhanh theo nhân viên và rà soát tổng công trước khi gửi đến nhân viên xác nhận.</p>
         </div>
 
         <?php if ($success): ?>
@@ -346,7 +346,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                         <button class="sub-tab active" data-tab="tab-tinhcong"><i class="fas fa-calculator"></i> Tính toán Công & OT</button>
                         <button class="sub-tab" data-tab="tab-bangchamcong"><i class="fas fa-table-list"></i> Bảng Chấm Công</button>
                     </div>
-                    <p>Dữ liệu dưới đây phản ánh bảng công của kỳ đã chọn. Bạn nên kiểm tra OT, ngày công và số giờ làm trước khi gửi phê duyệt.</p>
+                    <p>Dữ liệu dưới đây phản ánh bảng công của kỳ đã chọn. Bạn nên kiểm tra OT, ngày công và số giờ làm trước khi gửi đến nhân viên.</p>
                 </div>
                 <div class="payroll-board-body">
                     <div class="tab-content active" id="tab-tinhcong">
@@ -435,14 +435,14 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                     <h3>Hoàn tất rà soát bảng công</h3>
                                     <p id="approval-status">
                                         <?php if ($monthlyApproval): ?>
-                                            Trạng thái gửi duyệt: <span class="status-badge status-<?= strtolower($monthlyApproval['status'] ?? 'draft') ?>"><?= htmlspecialchars($monthlyApproval['status'] ?? 'draft') ?></span>
+                                            Trạng thái: <span class="status-badge status-<?= strtolower($monthlyApproval['status'] ?? 'draft') ?>"><?= htmlspecialchars($monthlyApproval['status'] ?? 'draft') ?></span>
                                         <?php else: ?>
-                                            Chưa gửi phê duyệt cho tháng này. Sau khi xác nhận, bảng tính công sẽ được chuyển đến quản lý để xét duyệt.
+                                            Chưa gửi bảng công cho tháng này. Sau khi xác nhận, bảng công sẽ được gửi đến từng nhân viên để xác nhận.
                                         <?php endif; ?>
                                     </p>
                                 </div>
                                 <div class="payroll-action-buttons">
-                                    <button type="button" class="btn btn-success btn-sm" id="submit-payroll-btn"><i class="fas fa-paper-plane"></i> GỬI PHÊ DUYỆT</button>
+                                    <button type="button" class="btn btn-success btn-sm" id="submit-payroll-btn"><i class="fas fa-paper-plane"></i> GỬI BẢNG CÔNG CHO NHÂN VIÊN</button>
                                 </div>
                             </div>
                         </div>
@@ -452,44 +452,51 @@ foreach (($salaryRows ?? []) as $summaryRow) {
 
             <div class="panel approval-history-panel">
                 <div class="approval-history-head">
-                    <h3>Lịch sử gửi bảng công</h3>
-                    <p>Lưu lại các kỳ HR đã gửi và trạng thái manager xử lý để theo dõi lại khi cần.</p>
+                    <h3>Lịch sử gửi bảng công cho nhân viên</h3>
+                    <p>Theo dõi trạng thái nhân viên đã duyệt bảng công theo từng tháng.</p>
                 </div>
                 <div class="approval-history-body">
                     <table class="table">
                         <thead>
                             <tr>
                                 <th>Kỳ công</th>
-                                <th>Trạng thái</th>
+                                <th>Tổng NV</th>
+                                <th>Chờ duyệt</th>
+                                <th>Đã duyệt</th>
                                 <th>Ngày gửi</th>
-                                <th>Ngày xử lý</th>
-                                <th>Manager</th>
-                                <th>Ghi chú</th>
                             </tr>
                         </thead>
                         <tbody id="approval-history-body">
                             <?php if (!empty($approvalHistory)): ?>
                                 <?php foreach ($approvalHistory as $row): ?>
                                     <?php
-                                    $status = strtolower((string)($row['status'] ?? 'submitted'));
-                                    $statusClass = $status === 'approved' ? 'status-approved' : ($status === 'rejected' ? 'status-rejected' : 'status-pending');
-                                    $statusLabel = $status === 'approved' ? 'Đã duyệt' : ($status === 'rejected' ? 'Đã trả về' : 'Chờ duyệt');
+                                    $total = (int)($row['total'] ?? 0);
+                                    $pending = (int)($row['pending'] ?? 0);
+                                    $approved = (int)($row['approved'] ?? 0);
+                                    $allApproved = $pending === 0 && $total > 0;
                                     ?>
                                     <tr>
+                                        <td><strong><?= htmlspecialchars((string)($row['month_key'] ?? '')) ?></strong></td>
+                                        <td><?= $total ?></td>
                                         <td>
-                                            <button type="button" class="history-detail-trigger js-history-detail" data-id="<?= (int)($row['id'] ?? 0) ?>">
-                                                <?= htmlspecialchars((string)($row['month_key'] ?? '')) ?>
-                                            </button>
+                                            <?php if ($pending > 0): ?>
+                                                <span class="status-badge status-pending"><?= $pending ?> chờ</span>
+                                            <?php else: ?>
+                                                <span style="color:#22c55e">0</span>
+                                            <?php endif; ?>
                                         </td>
-                                        <td><span class="status-badge <?= $statusClass ?>"><?= htmlspecialchars($statusLabel) ?></span></td>
-                                        <td><?= htmlspecialchars((string)($row['submitted_at'] ?? '')) ?></td>
-                                        <td><?= htmlspecialchars((string)($row['approved_at'] ?? '-')) ?></td>
-                                        <td><?= htmlspecialchars((string)($row['approver_name'] ?? '-')) ?></td>
-                                        <td><?= htmlspecialchars((string)($row['note'] ?? '-')) ?></td>
+                                        <td>
+                                            <?php if ($allApproved): ?>
+                                                <span class="status-badge status-approved">✓ Tất cả</span>
+                                            <?php else: ?>
+                                                <span><?= $approved ?>/<?= $total ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?= htmlspecialchars((string)($row['last_submitted'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <tr><td colspan="6" class="empty-state">Chưa có lịch sử gửi bảng công.</td></tr>
+                                <tr><td colspan="5" class="empty-state">Chưa có lịch sử gửi bảng công.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -655,19 +662,28 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderApprovalHistory(rows) {
         if (!approvalHistoryBody) return;
         if (!rows.length) {
-            approvalHistoryBody.innerHTML = '<tr><td colspan="6" class="empty-state">Chưa có lịch sử gửi bảng công.</td></tr>';
+            approvalHistoryBody.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có lịch sử gửi bảng công.</td></tr>';
             return;
         }
 
         approvalHistoryBody.innerHTML = rows.map(function (row) {
-            var meta = getApprovalStatusMeta(row.status);
+            var total = Number(row.total || 0);
+            var pending = Number(row.pending || 0);
+            var approved = Number(row.approved || 0);
+            var allApproved = pending === 0 && total > 0;
+            var pendingHtml = pending > 0
+                ? '<span class="status-badge status-pending">' + pending + ' chờ</span>'
+                : '<span style="color:#22c55e">0</span>';
+            var approvedHtml = allApproved
+                ? '<span class="status-badge status-approved">✓ Tất cả</span>'
+                : '<span>' + approved + '/' + total + '</span>';
+
             return '<tr>' +
-                '<td><button type="button" class="history-detail-trigger js-history-detail" data-id="' + Number(row.id || 0) + '">' + escapeHtml(row.month_key || '') + '</button></td>' +
-                '<td><span class="status-badge ' + meta.cls + '">' + escapeHtml(meta.label) + '</span></td>' +
-                '<td>' + escapeHtml(formatDateTime(row.submitted_at)) + '</td>' +
-                '<td>' + escapeHtml(formatDateTime(row.approved_at)) + '</td>' +
-                '<td>' + escapeHtml(row.approver_name || '-') + '</td>' +
-                '<td>' + escapeHtml(row.note || '-') + '</td>' +
+                '<td><strong>' + escapeHtml(row.month_key || '') + '</strong></td>' +
+                '<td>' + total + '</td>' +
+                '<td>' + pendingHtml + '</td>' +
+                '<td>' + approvedHtml + '</td>' +
+                '<td>' + escapeHtml(formatDateTime(row.last_submitted)) + '</td>' +
                 '</tr>';
         }).join('');
     }
@@ -775,10 +791,9 @@ document.addEventListener('DOMContentLoaded', function () {
             var approval = json.approval;
             if (approval) {
                 var approvalMeta = getApprovalStatusMeta(approval.status);
-                var approverText = approval.approver_name ? (' | Manager: ' + approval.approver_name) : '';
-                approvalStatus.innerHTML = 'Trạng thái gửi duyệt: <span class="status-badge ' + approvalMeta.cls + '">' + escapeHtml(approvalMeta.label) + '</span>' + escapeHtml(approverText);
+                approvalStatus.innerHTML = 'Trạng thái: <span class="status-badge ' + approvalMeta.cls + '">' + escapeHtml(approvalMeta.label) + '</span>';
             } else {
-                approvalStatus.textContent = 'Chưa gửi phê duyệt cho tháng này.';
+                approvalStatus.textContent = 'Chưa gửi bảng công cho tháng này.';
             }
             renderApprovalHistory(json.approvalHistory || []);
         })
@@ -797,7 +812,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     submitBtn.addEventListener('click', function () {
-        if (!window.confirm('Bạn có chắc muốn gửi bảng tính công đến quản lý hay không?')) {
+        if (!window.confirm('Bạn có chắc muốn gửi bảng công đến từng nhân viên không?')) {
             return;
         }
         var form = new FormData();

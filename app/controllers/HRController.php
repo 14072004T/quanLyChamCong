@@ -157,7 +157,7 @@ class HRController
         }));
         
         $monthlyApproval = $this->model->getMonthlyApprovalByMonth($selectedMonth);
-        $approvalHistory = $this->model->getMonthlyApprovalsBySender((int)($_SESSION['user']['maND'] ?? 0), ['submitted', 'approved', 'rejected'], 12);
+        $approvalHistory = $this->model->getTimesheetApprovalSummary();
         require __DIR__ . '/../views/chamcong/tinhcong.php';
     }
 
@@ -197,7 +197,8 @@ class HRController
             'data' => $salaryRows,
             'summary' => $summary,
             'approval' => $this->model->getMonthlyApprovalByMonth($monthKey),
-            'approvalHistory' => $this->model->getMonthlyApprovalsBySender((int)($_SESSION['user']['maND'] ?? 0), ['submitted', 'approved', 'rejected'], 12),
+            'approvalSummary' => $this->model->getTimesheetApprovalSummary($monthKey),
+            'approvalHistory' => $this->model->getTimesheetApprovalSummary(),
             'otSchedule' => $this->model->getApprovedOtSchedule($monthKey),
         ]);
     }
@@ -258,13 +259,8 @@ class HRController
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
                 $_SESSION['error'] = 'Kỳ chấm công không hợp lệ';
             } else {
-                $department = trim($_POST['department'] ?? '');
-                $ok = $this->model->submitMonthlyApproval($monthKey, $hrSenderId, $department);
-                if ($department !== '') {
-                    $_SESSION[$ok ? 'success' : 'error'] = $ok ? "Đã gửi bảng công phòng $department để phê duyệt" : "Không thể gửi bảng công phòng $department";
-                } else {
-                    $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đã gửi bảng công toàn bộ các phòng để phê duyệt' : 'Không thể gửi bảng công';
-                }
+                $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
+                $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đã gửi bảng công đến từng nhân viên thành công' : 'Không thể gửi bảng công. Có thể chưa có dữ liệu chấm công trong tháng này.';
             }
         }
 
@@ -286,11 +282,11 @@ class HRController
             ], 422);
         }
 
-        $ok = $this->model->submitMonthlyApproval($monthKey, $hrSenderId);
+        $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
         $this->respond([
             'success' => $ok,
-            'message' => $ok ? 'Đã gửi bảng công để phê duyệt' : 'Không thể gửi bảng công',
-            'approval' => $this->model->getMonthlyApprovalByMonth($monthKey),
+            'message' => $ok ? 'Đã gửi bảng công đến từng nhân viên' : 'Không thể gửi bảng công. Kiểm tra dữ liệu chấm công.',
+            'approvalSummary' => $this->model->getTimesheetApprovalSummary($monthKey),
         ], $ok ? 200 : 500);
     }
 

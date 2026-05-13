@@ -819,5 +819,85 @@ class ChamCongController
         }
         exit;
     }
+
+    // =============================================
+    // BẢNG CÔNG THÁNG CHO NHÂN VIÊN
+    // =============================================
+
+    /**
+     * Trang bảng công tháng cho nhân viên
+     */
+    public function monthlyTimesheet()
+    {
+        $this->requireLogin();
+        AuthMiddleware::requirePermission('bang-cong-thang');
+
+        $maND = (int)($_SESSION['user']['maND'] ?? 0);
+        $timesheetList = $this->model->getEmployeeTimesheetList($maND);
+
+        require 'app/views/chamcong/bang_cong_thang.php';
+    }
+
+    /**
+     * API: Lấy danh sách & chi tiết bảng công tháng cho nhân viên
+     * GET: danh sách hoặc chi tiết (nếu có ?id=)
+     */
+    public function monthlyTimesheetApi()
+    {
+        $this->requireLogin();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $maND = (int)($_SESSION['user']['maND'] ?? 0);
+        $id = (int)($_GET['id'] ?? 0);
+
+        if ($id > 0) {
+            // Chi tiết 1 bảng công
+            $detail = $this->model->getEmployeeTimesheetDetail($id, $maND);
+            if (!$detail) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Không tìm thấy bảng công']);
+                exit;
+            }
+            echo json_encode(['success' => true, 'data' => $detail], JSON_UNESCAPED_UNICODE);
+        } else {
+            // Danh sách tất cả
+            $list = $this->model->getEmployeeTimesheetList($maND);
+            echo json_encode(['success' => true, 'data' => $list], JSON_UNESCAPED_UNICODE);
+        }
+        exit;
+    }
+
+    /**
+     * API: Nhân viên duyệt bảng công
+     * POST: { timesheet_id, note }
+     */
+    public function approveTimesheetApi()
+    {
+        $this->requireLogin();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        $maND = (int)($_SESSION['user']['maND'] ?? 0);
+        $timesheetId = (int)($_POST['timesheet_id'] ?? 0);
+        $note = trim($_POST['note'] ?? '');
+
+        if ($timesheetId <= 0) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']);
+            exit;
+        }
+
+        $ok = $this->model->approveEmployeeTimesheet($timesheetId, $maND, $note);
+        echo json_encode([
+            'success' => $ok,
+            'message' => $ok ? 'Đã xác nhận duyệt bảng công thành công' : 'Không thể duyệt bảng công'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 ?>

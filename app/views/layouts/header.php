@@ -88,11 +88,24 @@
                     'link' => 'index.php?page=yeu-cau-chinh-sua-cham-cong',
                 ];
             }
+
+            // Bảng công tháng chờ nhân viên duyệt
+            $pendingTimesheets = $notificationModel->getPendingTimesheets($maND, 4);
+            $notificationCount += count($pendingTimesheets);
+            foreach ($pendingTimesheets as $ts) {
+                $parts = explode('-', $ts['month_key'] ?? '');
+                $monthText = count($parts) === 2 ? "Tháng {$parts[1]}/{$parts[0]}" : ($ts['month_key'] ?? '');
+                $notificationItems[] = [
+                    'title' => 'Bảng công ' . $monthText . ' chờ xác nhận',
+                    'meta' => 'HR gửi: ' . ($ts['hr_name'] ?? 'HR'),
+                    'time' => $ts['submitted_at'] ?? '',
+                    'link' => 'index.php?page=bang-cong-thang',
+                ];
+            }
         } elseif ($role === 'hr') {
             $pendingCorrections = $notificationModel->getCorrectionRequests('pending');
-            $pendingMonthly = $notificationModel->getMonthlyApprovals('submitted');
-            $processedMonthly = $notificationModel->getMonthlyApprovalsBySender($maND, ['approved', 'rejected'], 6);
-            $notificationCount = count($pendingCorrections) + count($pendingMonthly) + count($processedMonthly);
+            $timesheetSummary = $notificationModel->getTimesheetApprovalSummary();
+            $notificationCount = count($pendingCorrections);
 
             foreach (array_slice($pendingCorrections, 0, 3) as $row) {
                 $notificationItems[] = [
@@ -102,43 +115,23 @@
                     'link' => 'index.php?page=xuly-yeucau&request_id=' . (int)($row['id'] ?? 0) . '#request-' . (int)($row['id'] ?? 0),
                 ];
             }
-            foreach (array_slice($pendingMonthly, 0, 3) as $row) {
-                $notificationItems[] = [
-                    'title' => 'Bảng công chưa được quản lý phê duyệt',
-                    'meta' => 'Kỳ: ' . ($row['month_key'] ?? ''),
-                    'time' => $row['submitted_at'] ?? '',
-                    'link' => 'index.php?page=tinh-cong&month=' . urlencode((string)($row['month_key'] ?? '')),
-                ];
-            }
-            foreach (array_slice($processedMonthly, 0, 3) as $row) {
-                $notificationItems[] = [
-                    'title' => ($row['status'] ?? '') === 'approved' ? 'Bảng công đã được duyệt' : 'Bảng công bị trả về',
-                    'meta' => 'Kỳ: ' . ($row['month_key'] ?? '') . ' - QL: ' . ($row['approver_name'] ?? 'Chưa rõ'),
-                    'time' => $row['approved_at'] ?? $row['submitted_at'] ?? '',
-                    'link' => 'index.php?page=tinh-cong&month=' . urlencode((string)($row['month_key'] ?? '')),
-                ];
+            foreach (array_slice($timesheetSummary, 0, 3) as $row) {
+                $total = (int)($row['total'] ?? 0);
+                $pending = (int)($row['pending'] ?? 0);
+                $approved = (int)($row['approved'] ?? 0);
+                if ($total > 0) {
+                    $notificationCount++;
+                    $notificationItems[] = [
+                        'title' => 'Bảng công kỳ ' . ($row['month_key'] ?? '') . ': ' . $approved . '/' . $total . ' NV đã duyệt',
+                        'meta' => $pending > 0 ? 'Còn ' . $pending . ' nhân viên chưa duyệt' : 'Tất cả nhân viên đã duyệt ✓',
+                        'time' => $row['last_submitted'] ?? '',
+                        'link' => 'index.php?page=tinh-cong&month=' . urlencode((string)($row['month_key'] ?? '')),
+                    ];
+                }
             }
         } elseif ($role === 'manager') {
-            $pendingCorrections = $notificationModel->getCorrectionRequests('pending');
-            $pendingMonthly = $notificationModel->getMonthlyApprovals('submitted');
-            $notificationCount = count($pendingCorrections) + count($pendingMonthly);
-
-            foreach (array_slice($pendingMonthly, 0, 4) as $row) {
-                $notificationItems[] = [
-                    'title' => 'Có bảng công chờ phê duyệt',
-                    'meta' => 'Kỳ: ' . ($row['month_key'] ?? ''),
-                    'time' => $row['submitted_at'] ?? '',
-                    'link' => 'index.php?page=pheduyet-bang-cong&approval_id=' . (int)($row['id'] ?? 0),
-                ];
-            }
-            foreach (array_slice($pendingCorrections, 0, 2) as $row) {
-                $notificationItems[] = [
-                    'title' => 'Có yêu cầu chỉnh sửa chưa approve',
-                    'meta' => ($row['hoTen'] ?? 'Nhân viên') . ' - ' . ($row['attendance_date'] ?? ''),
-                    'time' => $row['created_at'] ?? '',
-                    'link' => 'index.php?page=pheduyet-bang-cong',
-                ];
-            }
+            // Manager chỉ còn yêu cầu chỉnh sửa/nghỉ phép
+            $notificationCount = 0;
         }
     }
     ?>

@@ -11,7 +11,7 @@ $dept = htmlspecialchars($_SESSION['user']['phongBan'] ?? '');
 $today = date('d/m/Y');
 $monthLabel = 'Tháng ' . date('m/Y');
 $inToday = (int)($stats['in_today'] ?? 0);
-$pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
+$pendingApprovals = 0; // Manager không còn phê duyệt bảng công
 $totalEmployees = count($salaryRows);
 $totalWorkDays = array_sum(array_map(function ($row) { return (float)($row['work_days'] ?? 0); }, $salaryRows));
 $totalOtHours = array_sum(array_map(function ($row) { return (float)($row['overtime_hours'] ?? 0); }, $salaryRows));
@@ -61,11 +61,11 @@ $totalOtHours = array_sum(array_map(function ($row) { return (float)($row['overt
         </div>
     </div>
     <div class="hrd-stat-card">
-        <div class="hrd-stat-icon purple"><i class="fas fa-clipboard-check"></i></div>
+        <div class="hrd-stat-icon purple"><i class="fas fa-clipboard-list"></i></div>
         <div class="hrd-stat-body">
-            <div class="hrd-stat-label">Bảng công chờ duyệt</div>
-            <div class="hrd-stat-value" id="mgr-appr-pending"><?= $pendingApprovals ?></div>
-            <a href="index.php?page=pheduyet-bang-cong" class="hrd-stat-link">Phê duyệt ngay</a>
+            <div class="hrd-stat-label">Yêu cầu chờ duyệt</div>
+            <div class="hrd-stat-value" id="mgr-appr-pending">--</div>
+            <a href="index.php?page=pheduyet-yeucau" class="hrd-stat-link">Xem yêu cầu</a>
         </div>
     </div>
 </div>
@@ -103,32 +103,11 @@ $totalOtHours = array_sum(array_map(function ($row) { return (float)($row['overt
 
     <div class="hrd-panel mgr-approval-status">
         <div class="hrd-panel-head">
-            <span>Tình trạng phê duyệt</span>
-            <a href="index.php?page=pheduyet-bang-cong" class="hrd-see-all" style="margin-top:0;font-size:.78em">Xem tất cả</a>
+            <span>Thông báo</span>
         </div>
-        <div class="mgr-approval-item mgr-appr-orange">
-            <div class="mgr-appr-icon"><i class="fas fa-hourglass-half"></i></div>
-            <div class="mgr-appr-info">
-                <div class="mgr-appr-name">Bảng công chờ duyệt</div>
-                <div class="mgr-appr-sub">HR gửi bảng công cần bạn xử lý</div>
-            </div>
-            <div class="mgr-appr-count mgr-appr-count-orange"><?= $pendingApprovals ?></div>
-        </div>
-        <div class="mgr-approval-item mgr-appr-green">
-            <div class="mgr-appr-icon"><i class="fas fa-check-circle"></i></div>
-            <div class="mgr-appr-info">
-                <div class="mgr-appr-name">Đã phê duyệt</div>
-                <div class="mgr-appr-sub">Bảng công đã được duyệt</div>
-            </div>
-            <div class="mgr-appr-count mgr-appr-count-green" id="mgr-appr-approved">--</div>
-        </div>
-        <div class="mgr-approval-item mgr-appr-red">
-            <div class="mgr-appr-icon"><i class="fas fa-redo-alt"></i></div>
-            <div class="mgr-appr-info">
-                <div class="mgr-appr-name">Đã trả về</div>
-                <div class="mgr-appr-sub">Bảng công cần HR chỉnh sửa</div>
-            </div>
-            <div class="mgr-appr-count mgr-appr-count-red" id="mgr-appr-rejected">--</div>
+        <div style="padding:18px;color:#64748b;text-align:center">
+            <i class="fas fa-info-circle" style="font-size:1.5rem;margin-bottom:8px;display:block;color:#93c5fd"></i>
+            <p style="margin:0">Bảng công tháng hiện được gửi trực tiếp đến nhân viên để xác nhận.</p>
         </div>
     </div>
 </div>

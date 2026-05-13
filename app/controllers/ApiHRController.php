@@ -251,10 +251,10 @@ class ApiHRController
     }
 
     // ========================================================
-    // 1.4 TỔNG HỢP CÔNG & GỬI MANAGER PHÊ DUYỆT
+    // 1.4 TỔNG HỢP CÔNG & GỬI BẢNG CÔNG ĐẾN NHÂN VIÊN
     // GET    /hr/payroll               — Bảng tổng hợp công
     // GET    /hr/payroll/detail        — Chi tiết tính công
-    // POST   /hr/payroll/submit        — Gửi bảng công cho Manager
+    // POST   /hr/payroll/submit        — Gửi bảng công đến từng nhân viên
     // GET    /hr/payroll/approval/{id} — Chi tiết kỳ phê duyệt
     // GET    /hr/payroll/ot-schedule   — Lịch OT đã duyệt
     // ========================================================
@@ -278,13 +278,11 @@ class ApiHRController
 
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) respondError('Kỳ chấm công không hợp lệ', 422);
 
-            $ok = $this->model->submitMonthlyApproval($monthKey, $hrSenderId, $department);
-            $msg = $department !== ''
-                ? ($ok ? "Đã gửi bảng công phòng $department để phê duyệt" : "Không thể gửi")
-                : ($ok ? 'Đã gửi bảng công toàn bộ các phòng để phê duyệt' : 'Không thể gửi');
+            $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
+            $msg = $ok ? 'Đã gửi bảng công đến từng nhân viên thành công' : 'Không thể gửi bảng công. Kiểm tra dữ liệu chấm công.';
 
             respond(
-                ['success' => $ok, 'message' => $msg, 'approval' => $this->model->getMonthlyApprovalByMonth($monthKey)],
+                ['success' => $ok, 'message' => $msg, 'approvalSummary' => $this->model->getTimesheetApprovalSummary($monthKey)],
                 $ok ? 200 : 500
             );
             return;

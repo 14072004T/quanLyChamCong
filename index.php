@@ -77,6 +77,10 @@ $allowedPages = [
     'yeu-cau-chinh-sua-cham-cong',
     'store-edit-request',
     'attendance-panel',
+    // Nhân viên - Bảng công tháng
+    'bang-cong-thang',
+    'nv-api-monthly-timesheet',
+    'nv-api-approve-timesheet',
     // Attendance API endpoints
     'attendance-check-in',
     'attendance-check-out',
@@ -99,15 +103,9 @@ $allowedPages = [
     'hr-api-corrections',
     'hr-api-correction-action',
     // Manager
-    'pheduyet-bang-cong',
     'bao-cao-tong-hop',
     'pheduyet-yeucau',
     'thong-ke-bieu-do',
-    'chi-tiet-bang-cong',
-    'manager-api-approvals',
-    'manager-api-approval-detail',
-    'manager-api-approval-history',
-    'manager-api-approve',
     'manager-api-requests',
     'manager-api-request-action',
     // Tech
@@ -193,6 +191,22 @@ switch ($page) {
 
     case 'attendance-panel':
         require_once 'app/views/chamcong/attendance_panel.php';
+        break;
+
+    // === NHÂN VIÊN - BẢNG CÔNG THÁNG ===
+    case 'bang-cong-thang':
+        require_once 'app/controllers/ChamCongController.php';
+        (new ChamCongController())->monthlyTimesheet();
+        break;
+
+    case 'nv-api-monthly-timesheet':
+        require_once 'app/controllers/ChamCongController.php';
+        (new ChamCongController())->monthlyTimesheetApi();
+        break;
+
+    case 'nv-api-approve-timesheet':
+        require_once 'app/controllers/ChamCongController.php';
+        (new ChamCongController())->approveTimesheetApi();
         break;
 
     // === ATTENDANCE API ENDPOINTS ===
@@ -309,11 +323,6 @@ switch ($page) {
         break;
 
     // === MANAGER PANEL ===
-    case 'pheduyet-bang-cong':
-        require_once 'app/controllers/ManagerController.php';
-        (new ManagerController())->approvals();
-        break;
-
     case 'quan-ly-cham-cong':
         require_once 'app/controllers/ChamCongController.php';
         (new ChamCongController())->quanLyPanel();
@@ -332,31 +341,6 @@ switch ($page) {
     case 'thong-ke-bieu-do':
         require_once 'app/controllers/ManagerController.php';
         (new ManagerController())->statistics();
-        break;
-
-    case 'chi-tiet-bang-cong':
-        require_once 'app/controllers/ManagerController.php';
-        (new ManagerController())->attendanceDetails();
-        break;
-
-    case 'manager-api-approvals':
-        require_once 'app/controllers/ManagerController.php';
-        (new ManagerController())->approvalsApi();
-        break;
-
-    case 'manager-api-approval-detail':
-        require_once 'app/controllers/ManagerController.php';
-        (new ManagerController())->approvalDetailApi();
-        break;
-
-    case 'manager-api-approval-history':
-        require_once 'app/controllers/ManagerController.php';
-        (new ManagerController())->approvalHistoryApi();
-        break;
-
-    case 'manager-api-approve':
-        require_once 'app/controllers/ManagerController.php';
-        (new ManagerController())->processApprovalApi();
         break;
 
     case 'manager-api-requests':
