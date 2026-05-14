@@ -255,6 +255,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 var totalDays = 0;
                 var cells = '<td>' + escapeHtml(emp.hoTen) + '<br><small style="color:#64748b;">' + escapeHtml(emp.phongBan || '') + '</small></td>';
 
+                var empCreatedDate = emp.created_at ? emp.created_at.substring(0, 10) : '';
+
                 for (var d = 1; d <= days; d++) {
                     var dow = getDayOfWeek(month, d);
                     var isWeekend = (dow === 0 || dow === 6);
@@ -265,21 +267,27 @@ document.addEventListener('DOMContentLoaded', function () {
                     var isHoliday = dayBreakdown && dayBreakdown.day_type === 'holiday';
 
                     cells += '<td>';
-                    if (isLeave) {
-                        var tooltip = dayBreakdown.leave_reason ? escapeHtml(dayBreakdown.day_type_label + ': ' + dayBreakdown.leave_reason) : escapeHtml(dayBreakdown.day_type_label || 'Nghỉ phép');
-                        var leaveId = dayBreakdown.leave_id || 0;
-                        cells += '<span onclick="openModal(' + leaveId + ')" class="shift-cell shift-off" style="background-color:#ef4444;color:white;border-color:#ef4444;display:inline-block;cursor:pointer;" title="' + tooltip + '">OFF</span>';
-                    } else if (isHoliday) {
-                        cells += '<span class="shift-cell shift-off" style="background-color:#f59e0b;color:white;border-color:#f59e0b;" title="' + escapeHtml(dayBreakdown.day_type_label || 'Ngày lễ') + '">LỄ</span>';
-                    } else if (isWeekend) {
-                        cells += '<span class="shift-cell shift-off">OFF</span>';
+                    
+                    // Chỉ hiển thị ca làm kể từ ngày nhân viên được tạo
+                    if (empCreatedDate && currentDate < empCreatedDate) {
+                        cells += '<span style="color:#e2e8f0;">-</span>';
                     } else {
-                        totalDays++;
-                        cells += '<span class="shift-cell shift-hc">HC</span>';
-                    }
+                        if (isLeave) {
+                            var tooltip = dayBreakdown.leave_reason ? escapeHtml(dayBreakdown.day_type_label + ': ' + dayBreakdown.leave_reason) : escapeHtml(dayBreakdown.day_type_label || 'Nghỉ phép');
+                            var leaveId = dayBreakdown.leave_id || 0;
+                            cells += '<span onclick="openModal(' + leaveId + ')" class="shift-cell shift-off" style="background-color:#ef4444;color:white;border-color:#ef4444;display:inline-block;cursor:pointer;" title="' + tooltip + '">OFF</span>';
+                        } else if (isHoliday) {
+                            cells += '<span class="shift-cell shift-off" style="background-color:#f59e0b;color:white;border-color:#f59e0b;" title="' + escapeHtml(dayBreakdown.day_type_label || 'Ngày lễ') + '">LỄ</span>';
+                        } else if (isWeekend) {
+                            cells += '<span class="shift-cell shift-off">OFF</span>';
+                        } else {
+                            totalDays++;
+                            cells += '<span class="shift-cell shift-hc">HC</span>';
+                        }
 
-                    if (otInfo) {
-                        cells += '<span class="shift-cell shift-ot" title="' + escapeHtml(otInfo.reason || 'OT đã duyệt') + '">OT</span>';
+                        if (otInfo) {
+                            cells += '<span class="shift-cell shift-ot" title="' + escapeHtml(otInfo.reason || 'OT đã duyệt') + '">OT</span>';
+                        }
                     }
                     cells += '</td>';
                 }
