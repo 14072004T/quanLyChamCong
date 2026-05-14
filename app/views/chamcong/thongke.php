@@ -23,9 +23,13 @@ if (!empty($departmentSummary)) {
     }
 }
 
+$dist = $statsSummary['status_distribution'] ?? [];
 $attendanceChart = [
-    (int)($statsSummary['checked_employees'] ?? 0),
-    (int)($statsSummary['unchecked_employees'] ?? 0),
+    (int)($dist['on_time'] ?? 0),
+    (int)($dist['late'] ?? 0),
+    (int)($dist['absent'] ?? 0),
+    (int)($dist['leave'] ?? 0),
+    (int)($dist['holiday'] ?? 0),
 ];
 ?>
 <div class="main-container">
@@ -137,12 +141,12 @@ $attendanceChart = [
     new Chart(document.getElementById('attendancePieChart'), {
         type: 'doughnut',
         data: {
-            labels: ['Đã chấm', 'Chưa chấm'],
+            labels: ['Đúng giờ', 'Đi trễ', 'Vắng mặt', 'Nghỉ phép', 'Ngày lễ'],
             datasets: [{
                 data: attendanceData,
-                backgroundColor: ['#22c55e', '#ef4444'],
-                borderColor: ['#16a34a', '#dc2626'],
-                borderWidth: 1
+                backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6'],
+                borderColor: ['#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff'],
+                borderWidth: 2
             }]
         },
         options: {

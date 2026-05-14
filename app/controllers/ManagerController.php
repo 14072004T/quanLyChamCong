@@ -79,7 +79,9 @@ class ManagerController
         $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $department);
         $departments = $this->model->getDistinctDepartments();
         $monthKey = substr($fromDate, 0, 7);
-        $payrollRows = $this->model->getMonthlyWorkSummary($monthKey);
+        
+        // Sử dụng dữ liệu tính toán chính xác mới (có khấu trừ nghỉ trưa, bù công)
+        $payrollRows = $this->model->getMonthlyAttendanceDetailNew($monthKey);
         if ($department !== '') {
             $payrollRows = array_values(array_filter($payrollRows, function ($row) use ($department) {
                 return (string)($row['phongBan'] ?? '') === $department;
@@ -139,15 +141,48 @@ class ManagerController
             $selectedMonth = date('Y-m');
         }
 
-        $salaryRows = $this->model->getMonthlyWorkSummary($selectedMonth);
+        $salaryRows = $this->model->getMonthlyAttendanceDetailNew($selectedMonth);
         $totalEmployees = count($salaryRows);
         $checkedEmployees = 0;
         $totalHours = 0;
+        
+        $statusDistribution = [
+            'on_time' => 0,
+            'late' => 0,
+            'absent' => 0,
+            'leave' => 0,
+            'holiday' => 0
+        ];
+
         foreach ($salaryRows as $row) {
-            if ((float)($row['work_hours'] ?? 0) > 0) {
+            // Check if employee had any activity this month
+            if ((float)($row['work_days'] ?? 0) > 0) {
                 $checkedEmployees++;
             }
             $totalHours += (float)($row['work_hours'] ?? 0);
+
+            // Accumulate daily statuses for the chart
+            $breakdown = $row['daily_breakdown'] ?? [];
+            foreach ($breakdown as $day) {
+                $type = $day['day_type'] ?? '';
+                if ($type === 'working') {
+                    $checkIn = $day['check_in'] ?? '';
+                    // Extract time part from datetime
+                    $timeIn = $checkIn ? substr($checkIn, 11, 8) : '';
+                    if ($timeIn && $timeIn > '08:00:59') {
+                        $statusDistribution['late']++;
+                    } else {
+                        $statusDistribution['on_time']++;
+                    }
+                } elseif ($type === 'absent') {
+                    $statusDistribution['absent']++;
+                } elseif ($type === 'leave') {
+                    $statusDistribution['leave']++;
+                } elseif ($type === 'holiday') {
+                    $statusDistribution['holiday']++;
+                }
+                // We ignore 'weekend' to focus on work capacity/discipline
+            }
         }
 
         $statsSummary = [
@@ -156,6 +191,7 @@ class ManagerController
             'unchecked_employees' => max($totalEmployees - $checkedEmployees, 0),
             'attendance_rate' => $totalEmployees > 0 ? round(($checkedEmployees / $totalEmployees) * 100, 2) : 0,
             'total_hours' => round($totalHours, 2),
+            'status_distribution' => $statusDistribution
         ];
 
         $departmentSummary = [];
@@ -218,7 +254,13 @@ class ManagerController
         // enrich each row with summary
         foreach ($rows as &$row) {
             $monthKey = $row['month_key'] ?? '';
-            $summary = $this->model->getMonthlyWorkSummary($monthKey, $department);
+            $summary = $this->model->getMonthlyAttendanceDetailNew($monthKey);
+            if ($department !== '') {
+                $summary = array_values(array_filter($summary, function($s) use ($department) {
+                    return (string)($s['phongBan'] ?? '') === $department;
+                }));
+            }
+
             $totalEmployees = count($summary);
             $totalWorkDays = 0;
             $totalOTHours = 0;
@@ -329,7 +371,13 @@ class ManagerController
         // enrich each row with summary
         foreach ($rows as &$row) {
             $monthKey = $row['month_key'] ?? '';
-            $summary = $this->model->getMonthlyWorkSummary($monthKey, $department);
+                        $summary = $this->model->getMonthlyAttendanceDetailNew($monthKey);
+            if ($department !== '') {
+                $summary = array_values(array_filter($summary, function($s) use ($department) {
+                    return (string)($s['phongBan'] ?? '') === $department;
+                }));
+            }
+
             $totalEmployees = count($summary);
             $totalWorkDays = 0;
             $totalOTHours = 0;

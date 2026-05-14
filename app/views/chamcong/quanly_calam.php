@@ -59,7 +59,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                 <table class="attendance-grid" id="monthly-shift-grid">
                     <thead id="shift-grid-head"></thead>
                     <tbody id="shift-grid-body">
-                        <tr><td colspan="33" class="empty-state">Đang tải lịch phân ca...</td></tr>
+                        <tr><td colspan="32" class="empty-state">Đang tải lịch phân ca...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var isWeekend = (dow === 0 || dow === 6);
             headHtml += '<th style="' + (isWeekend ? 'color:#f59e0b;' : '') + '">' + d + '<br><small>' + getDayLabel(dow) + '</small></th>';
         }
-        headHtml += '<th>TỔNG CÔNG</th></tr>';
+        headHtml += '</tr>';
         gridHead.innerHTML = headHtml;
 
         // Fetch employees + attendance data
@@ -245,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
             payrollData.forEach(function(p) { payrollMap[p.maND] = p; });
 
             if (!employees.length) {
-                gridBody.innerHTML = '<tr><td colspan="' + (days + 2) + '" class="empty-state">Không có nhân viên.</td></tr>';
+                gridBody.innerHTML = '<tr><td colspan="' + (days + 1) + '" class="empty-state">Không có nhân viên.</td></tr>';
                 return;
             }
 
@@ -283,18 +283,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     cells += '</td>';
                 }
-                var actualDays = Number(payroll.work_days || 0);
-                var actualHours = Number(payroll.work_hours || 0);
-                
-                // Hiển thị công và giờ (Nếu chưa có dữ liệu thực tế thì dùng số ngày dự kiến)
-                var displayDays = actualDays > 0 ? actualDays : totalDays;
-                var displayHours = actualHours > 0 ? actualHours : (totalDays * 8);
-
-                cells += '<td class="col-total">' + displayDays + ' công<br><small style="color:#3b82f6; font-weight:600;">' + displayHours + ' giờ</small></td>';
                 return '<tr>' + cells + '</tr>';
             }).join('');
         }).catch(function() {
-            gridBody.innerHTML = '<tr><td colspan="' + (days + 2) + '" class="empty-state">Lỗi tải dữ liệu.</td></tr>';
+            gridBody.innerHTML = '<tr><td colspan="' + (days + 1) + '" class="empty-state">Lỗi tải dữ liệu.</td></tr>';
         });
     }
 
