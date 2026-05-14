@@ -394,7 +394,8 @@ function loadTimesheetDetail(id) {
                 var dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
                 var dayLabel = dateStr.substring(8, 10) + '/' + dateStr.substring(5, 7);
                 var dayName = dayNames[d.getDay()] || '';
-                var showEditBtn = approval.status === 'submitted';
+                var isRestricted = ['weekend', 'leave', 'holiday'].includes(row.status);
+                var showEditBtn = approval.status === 'submitted' && !isRestricted;
 
                 return '<tr' + (row.status === 'absent' ? ' style="opacity:0.5"' : '') + '>' +
                     '<td><strong>' + dayLabel + '</strong> <small style="color:#94a3b8">' + dayName + '</small></td>' +
