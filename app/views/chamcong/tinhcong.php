@@ -464,6 +464,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                 <th>Chờ duyệt</th>
                                 <th>Đã duyệt</th>
                                 <th>Ngày gửi</th>
+                                <th>Chi tiết</th>
                             </tr>
                         </thead>
                         <tbody id="approval-history-body">
@@ -497,10 +498,15 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                             </div>
                                         </td>
                                         <td><?= htmlspecialchars((string)($row['last_submitted'] ?? '')) ?></td>
+                                        <td>
+                                            <button type="button" class="btn btn-info btn-xs" onclick="showApprovalDetails('<?= htmlspecialchars((string)($row['month_key'] ?? '')) ?>')">
+                                                <i class="fas fa-eye"></i> Xem danh sách
+                                            </button>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <tr><td colspan="5" class="empty-state">Chưa có lịch sử gửi bảng công.</td></tr>
+                                <tr><td colspan="6" class="empty-state">Chưa có lịch sử gửi bảng công.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -727,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderApprovalHistory(rows) {
         if (!approvalHistoryBody) return;
         if (!rows.length) {
-            approvalHistoryBody.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có lịch sử gửi bảng công.</td></tr>';
+            approvalHistoryBody.innerHTML = '<tr><td colspan="6" class="empty-state">Chưa có lịch sử gửi bảng công.</td></tr>';
             return;
         }
 
@@ -751,6 +757,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td><div style="cursor:pointer" onclick="showApprovalDetails(\'' + monthKey + '\')">' + pendingHtml + '</div></td>' +
                 '<td><div style="cursor:pointer" onclick="showApprovalDetails(\'' + monthKey + '\')">' + approvedHtml + '</div></td>' +
                 '<td>' + escapeHtml(formatDateTime(row.last_submitted)) + '</td>' +
+                '<td><button type="button" class="btn btn-info btn-xs" onclick="showApprovalDetails(\'' + monthKey + '\')"><i class="fas fa-eye"></i> Xem danh sách</button></td>' +
                 '</tr>';
         }).join('');
     }
@@ -767,10 +774,22 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch('index.php?page=hr-api-timesheet-approval-details&month=' + encodeURIComponent(monthKey), {
             headers: { 'Accept': 'application/json' }
         })
-            .then(function(r) { return r.json(); })
-            .then(function(json) {
+            .then(function(r) {
+                if (!r.ok) throw new Error('Mã lỗi: ' + r.status);
+                return r.text();
+            })
+            .then(function(text) {
+                var json;
+                try {
+                    json = JSON.parse(text);
+                } catch(e) {
+                    console.error('Invalid JSON:', text);
+                    var snippet = text.substring(0, 100).replace(/</g, '&lt;');
+                    throw new Error('Dữ liệu không đúng định dạng JSON. Phản hồi: ' + snippet + '...');
+                }
+
                 if (!json.success) {
-                    body.innerHTML = '<tr><td colspan="4" class="empty-state">' + escapeHtml(json.message) + '</td></tr>';
+                    body.innerHTML = '<tr><td colspan="4" class="empty-state">' + escapeHtml(json.message || 'Lỗi từ máy chủ') + '</td></tr>';
                     return;
                 }
                 var rows = json.data || [];
@@ -790,7 +809,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(function(err) {
                 console.error(err);
-                body.innerHTML = '<tr><td colspan="4" class="empty-state">Lỗi hệ thống khi tải dữ liệu.</td></tr>';
+                body.innerHTML = '<tr><td colspan="4" class="empty-state">Lỗi: ' + escapeHtml(err.message) + '</td></tr>';
             });
     };
 

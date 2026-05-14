@@ -507,7 +507,7 @@ class HRController
 
     public function timesheetApprovalDetailsApi()
     {
-        AuthMiddleware::requirePermission('hr-api-payroll');
+        AuthMiddleware::requirePermission('hr-api-timesheet-approval-details');
         $this->jsonOnly(['GET']);
 
         $monthKey = trim($_GET['month'] ?? '');
@@ -524,9 +524,18 @@ class HRController
 
     private function respond(array $payload, int $status = 200)
     {
+        if (ob_get_length()) ob_clean();
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+        $json = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Lỗi mã hóa JSON: ' . json_last_error_msg()
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            echo $json;
+        }
         exit;
     }
 }

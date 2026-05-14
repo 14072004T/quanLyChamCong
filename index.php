@@ -100,6 +100,7 @@ $allowedPages = [
     'hr-api-payroll',
     'hr-api-payroll-submit',
     'hr-api-approval-detail',
+    'hr-api-timesheet-approval-details',
     'hr-api-corrections',
     'hr-api-correction-action',
     // Manager
