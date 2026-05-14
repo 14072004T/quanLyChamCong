@@ -172,7 +172,26 @@ foreach ($timesheetList as $ts) {
 @media (max-width: 768px) {
     .ts-stats { grid-template-columns: 1fr; }
     .ts-summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .ts-summary-grid { grid-template-columns: repeat(2, 1fr); }
     .ts-hero, .ts-list-wrap { padding: 18px; }
+}
+.yc-btn-edit {
+    padding: 4px 8px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #2563eb;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.yc-btn-edit:hover {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
 }
 </style>
 
@@ -264,6 +283,7 @@ foreach ($timesheetList as $ts) {
                             <th>OT</th>
                             <th>Đi trễ</th>
                             <th>Trạng thái</th>
+                            <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="ts-detail-body">
@@ -302,10 +322,12 @@ function formatMinutes(m) {
 
 function statusBadge(st) {
     var map = {
-        'normal': '<span style="color:#22c55e">✓ Bình thường</span>',
-        'late':   '<span style="color:#f59e0b">⚠ Đi trễ</span>',
-        'absent': '<span style="color:#ef4444">✗ Vắng</span>',
-        'leave':  '<span style="color:#6366f1">📋 Nghỉ phép</span>'
+        'working': '<span style="color:#22c55e">✓ Bình thường</span>',
+        'late':    '<span style="color:#f59e0b">⚠ Đi trễ</span>',
+        'absent':  '<span style="color:#ef4444">✗ Vắng</span>',
+        'leave':   '<span style="color:#6366f1">📋 Nghỉ phép</span>',
+        'holiday': '<span style="color:#f97316">🎉 Ngày lễ</span>',
+        'weekend': '<span style="color:#94a3b8">🏠 Cuối tuần</span>'
     };
     return map[st] || st;
 }
@@ -318,12 +340,16 @@ function closeModal() {
     currentTimesheetId = null;
 }
 
+function requestCorrection(date, cin, cout) {
+    window.location.href = 'index.php?page=yeu-cau-chinh-sua-cham-cong&date=' + date + '&in=' + encodeURIComponent(cin) + '&out=' + encodeURIComponent(cout);
+}
+
 function loadTimesheetDetail(id) {
     currentTimesheetId = id;
     document.getElementById('ts-modal-title').textContent = 'Chi tiết bảng công';
     document.getElementById('ts-modal-subtitle').textContent = 'Đang tải dữ liệu...';
     document.getElementById('ts-summary').innerHTML = '';
-    document.getElementById('ts-detail-body').innerHTML = '<tr><td colspan="7" class="empty-state">Đang tải...</td></tr>';
+    document.getElementById('ts-detail-body').innerHTML = '<tr><td colspan="8" class="empty-state">Đang tải...</td></tr>';
     document.getElementById('ts-action-bar').innerHTML = '';
     openModal();
 
@@ -360,7 +386,7 @@ function loadTimesheetDetail(id) {
 
         // Daily table
         if (!daily.length) {
-            document.getElementById('ts-detail-body').innerHTML = '<tr><td colspan="7" class="empty-state">Không có dữ liệu chấm công</td></tr>';
+            document.getElementById('ts-detail-body').innerHTML = '<tr><td colspan="8" class="empty-state">Không có dữ liệu chấm công</td></tr>';
         } else {
             document.getElementById('ts-detail-body').innerHTML = daily.map(function(row) {
                 var dateStr = row.work_date || '';
@@ -368,6 +394,7 @@ function loadTimesheetDetail(id) {
                 var dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
                 var dayLabel = dateStr.substring(8, 10) + '/' + dateStr.substring(5, 7);
                 var dayName = dayNames[d.getDay()] || '';
+                var showEditBtn = approval.status === 'submitted';
 
                 return '<tr' + (row.status === 'absent' ? ' style="opacity:0.5"' : '') + '>' +
                     '<td><strong>' + dayLabel + '</strong> <small style="color:#94a3b8">' + dayName + '</small></td>' +
@@ -376,7 +403,13 @@ function loadTimesheetDetail(id) {
                     '<td>' + formatMinutes(row.work_minutes) + '</td>' +
                     '<td style="color:#2563eb;font-weight:600">' + formatMinutes(row.overtime_minutes) + '</td>' +
                     '<td style="color:#f59e0b">' + formatMinutes(row.late_minutes) + '</td>' +
-                    '<td>' + statusBadge(row.status) + '</td>' +
+                    '<td>' + statusBadge(row.late_minutes > 0 ? 'late' : row.status) + '</td>' +
+                    '<td>' + 
+                        (showEditBtn ? 
+                        '<button class="yc-btn-edit" onclick="requestCorrection(\'' + row.work_date + '\', \'' + (row.first_in || '') + '\', \'' + (row.last_out || '') + '\')">' +
+                            '<i class="fas fa-edit"></i> Sửa' +
+                        '</button>' : '') +
+                    '</td>' +
                     '</tr>';
             }).join('');
         }

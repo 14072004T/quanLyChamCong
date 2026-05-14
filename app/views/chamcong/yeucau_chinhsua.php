@@ -144,7 +144,7 @@ $todayOut = $todayShiftStatus['last_out'] ?? null;
                     <!-- Date Selection Row -->
                     <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
                         <label class="yc-label" style="margin-bottom: 0; white-space: nowrap;">Ngày cần điều chỉnh:</label>
-                        <input type="date" id="attendance-date" name="attendance_date" class="yc-input" required max="<?= date('Y-m-d') ?>" style="width: 180px;">
+                        <input type="date" id="attendance-date" name="attendance_date" class="yc-input" required max="<?= date('Y-m-d') ?>" style="width: 180px;" value="<?= htmlspecialchars($_GET['date'] ?? '') ?>">
                     </div>
 
                     <!-- Comparison Grid -->
@@ -174,11 +174,11 @@ $todayOut = $todayShiftStatus['last_out'] ?? null;
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <div class="yc-form-group">
                                     <label class="yc-label">Giờ vào mới</label>
-                                    <input type="datetime-local" id="proposed-checkin" name="proposed_checkin" class="yc-input" style="height: 32px;">
+                                    <input type="time" id="proposed-checkin" name="proposed_checkin" class="yc-input" style="height: 32px;">
                                 </div>
                                 <div class="yc-form-group">
                                     <label class="yc-label">Giờ ra mới</label>
-                                    <input type="datetime-local" id="proposed-checkout" name="proposed_checkout" class="yc-input" style="height: 32px;">
+                                    <input type="time" id="proposed-checkout" name="proposed_checkout" class="yc-input" style="height: 32px;">
                                 </div>
                             </div>
                         </div>
@@ -245,7 +245,7 @@ $todayOut = $todayShiftStatus['last_out'] ?? null;
                                 <div style="margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
                                     <div>
                                         <?php if (!empty($row['evidence_file'])): ?>
-                                            <a href="uploads/attendance_evidence/<?= htmlspecialchars($row['evidence_file']) ?>" target="_blank" style="font-size: 11px; color: var(--yc-primary); text-decoration: none; font-weight: 600;"><i class="fas fa-file-alt"></i> Minh chứng</a>
+                                            <button type="button" onclick="event.stopPropagation(); previewEvidence('<?= htmlspecialchars($row['evidence_file']) ?>')" style="background:none; border:none; padding:0; font-size: 11px; color: var(--yc-primary); cursor:pointer; font-weight: 600;"><i class="fas fa-file-alt"></i> Minh chứng</button>
                                         <?php endif; ?>
                                     </div>
                                     <div style="font-size: 10px; color: #64748b; font-style: italic;">Gửi: <?= date('d/m/Y H:i', strtotime($row['created_at'] ?? '')) ?></div>
@@ -305,6 +305,14 @@ document.getElementById('attendance-date').addEventListener('change', function()
         }
     }
 });
+ 
+ // On page load, check if date is already filled (from URL)
+ window.addEventListener('DOMContentLoaded', function() {
+     var dateInput = document.getElementById('attendance-date');
+     if (dateInput.value) {
+         dateInput.dispatchEvent(new Event('change'));
+     }
+ });
 
 // File preview
 document.getElementById('evidenceFile').addEventListener('change', function() {
@@ -416,6 +424,16 @@ window.openModal = function(id) {
                         <div class="yc-detail-val" style="color:var(--yc-danger)">${d.hr_note}</div>
                     </div>
                     ` : ''}
+                    ${d.evidence_file ? `
+                    <div class="yc-detail-row">
+                        <div class="yc-detail-label">Minh chứng</div>
+                        <div class="yc-detail-val">
+                            <button type="button" onclick="previewEvidence('${d.evidence_file}')" style="background:none; border:none; padding:0; color:var(--yc-primary); cursor:pointer; font-weight:600;">
+                                <i class="fas fa-file-alt"></i> Xem minh chứng
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
                     <div class="yc-detail-row" style="border:none">
                         <div class="yc-detail-label">Ngày gửi</div>
                         <div class="yc-detail-val">${d.created_at_fmt}</div>
@@ -429,6 +447,25 @@ window.openModal = function(id) {
             body.innerHTML = '<p style="color:var(--yc-danger); text-align:center;">Không thể kết nối máy chủ.</p>';
         });
 };
+ 
+window.previewEvidence = function(filename) {
+    if (!filename || filename === 'null') return;
+    const modal = document.getElementById('evidenceModal');
+    const body = document.getElementById('evidenceModalBody');
+    const ext = filename.split('.').pop().toLowerCase();
+    const path = 'uploads/attendance_evidence/' + filename;
+    
+    modal.style.display = 'flex';
+    body.innerHTML = '<div style="padding:20px;"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>';
+    
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+        body.innerHTML = '<img src="' + path + '" style="max-width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">';
+    } else if (ext === 'pdf') {
+        body.innerHTML = '<iframe src="' + path + '" style="width:100%; height:600px; border:none; border-radius:8px;"></iframe>';
+    } else {
+        body.innerHTML = '<p style="padding:40px;">Không thể xem trực tiếp định dạng này. <a href="' + path + '" target="_blank" class="yc-btn-primary" style="display:inline-block; text-decoration:none;">Tải xuống file</a></p>';
+    }
+}
 
 window.closeModal = function() {
     document.getElementById('detailModal').style.display = 'none';
@@ -451,3 +488,15 @@ document.querySelectorAll('.yc-history-card').forEach(card => {
 });
 </script>
 <?php include 'app/views/layouts/footer.php'; ?>
+
+<!-- EVIDENCE PREVIEW MODAL -->
+<div id="evidenceModal" class="yc-modal">
+    <div class="yc-modal-content" style="max-width: 800px; width: 95%;">
+        <div class="yc-modal-header">
+            <h4 style="margin:0; font-size:15px; font-weight:700; color:#1e293b;"><i class="fas fa-file-image" style="color:var(--yc-primary)"></i> Xem minh chứng</h4>
+            <button onclick="document.getElementById('evidenceModal').style.display='none'" style="border:none; background:none; cursor:pointer; color:#94a3b8; font-size:18px;"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="yc-modal-body" id="evidenceModalBody" style="text-align:center; max-height: 80vh; overflow-y: auto; padding: 10px;">
+        </div>
+    </div>
+</div>

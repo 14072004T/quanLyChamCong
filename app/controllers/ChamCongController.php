@@ -169,6 +169,14 @@ class ChamCongController
         $proposedCheckin = trim($_POST['proposed_checkin'] ?? '');
         $proposedCheckout = trim($_POST['proposed_checkout'] ?? '');
 
+        // Combine date and time if inputs are time-only (HH:mm)
+        if ($proposedCheckin && strlen($proposedCheckin) === 5) {
+            $proposedCheckin = $attendanceDate . ' ' . $proposedCheckin . ':00';
+        }
+        if ($proposedCheckout && strlen($proposedCheckout) === 5) {
+            $proposedCheckout = $attendanceDate . ' ' . $proposedCheckout . ':00';
+        }
+
         // Validation
         if ($attendanceDate === '' || $reason === '') {
             $_SESSION['edit_request_error'] = 'Vui lòng nhập đầy đủ ngày và lý do.';

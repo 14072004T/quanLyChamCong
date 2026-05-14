@@ -114,6 +114,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                         <th>Ngày</th>
                         <th>Chi tiết</th>
                         <th>Lý do</th>
+                        <th>Minh chứng</th>
                         <th style="min-width:160px;">Hành động</th>
                     </tr>
                 </thead>
@@ -144,6 +145,15 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                                 <td><?= htmlspecialchars(($row['old_time'] ? substr($row['old_time'], 11, 5) : '--:--') . ' -> ' . substr((string)($row['new_time'] ?? ''), 11, 5)) ?></td>
                                 <td style="max-width:220px;"><?= htmlspecialchars($row['reason'] ?? '') ?></td>
                                 <td>
+                                    <?php if (!empty($row['evidence_file'])): ?>
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="previewEvidence('<?= htmlspecialchars($row['evidence_file']) ?>')" title="Xem minh chứng">
+                                            <i class="fas fa-file-image"></i> Xem
+                                        </button>
+                                    <?php else: ?>
+                                        <small style="color:#94a3b8;">N/A</small>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <div style="display:flex;gap:8px;">
                                         <button type="button" class="btn-approve js-request-action" data-action="approve" data-id="<?= (int)$row['id'] ?>"><i class="fas fa-check"></i> Duyệt</button>
                                         <button type="button" class="btn-return js-request-action" data-action="reject" data-id="<?= (int)$row['id'] ?>"><i class="fas fa-times"></i> Từ chối</button>
@@ -169,6 +179,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                         <th>Ngày</th>
                         <th>Giờ vào</th>
                         <th>Giờ ra</th>
+                        <th>Minh chứng</th>
                         <th>Nguồn</th>
                     </tr>
                 </thead>
@@ -181,13 +192,22 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                                 data-date="<?= htmlspecialchars($row['attendance_date'] ?? '') ?>"
                                 data-old="<?= htmlspecialchars($row['old_time'] ? substr($row['old_time'], 11, 5) : '--:--') ?>"
                                 data-new="<?= htmlspecialchars(substr((string)($row['new_time'] ?? ''), 11, 5)) ?>"
+                                data-new="<?= htmlspecialchars(substr((string)($row['new_time'] ?? ''), 11, 5)) ?>"
                                 data-reason="<?= htmlspecialchars($row['reason'] ?? '') ?>"
-                                data-hrnote="<?= htmlspecialchars($row['hr_note'] ?? 'Không') ?>">
+                                data-hrnote="<?= htmlspecialchars($row['hr_note'] ?? 'Không') ?>"
+                                data-evidence="<?= htmlspecialchars($row['evidence_file'] ?? '') ?>">
                                 <td><i class="fas fa-clock" style="color:#94a3b8;"></i></td>
                                 <td><?= htmlspecialchars($row['hoTen'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($row['attendance_date'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($row['old_time'] ? substr($row['old_time'], 11, 5) : '--:--') ?></td>
                                 <td><?= htmlspecialchars(substr((string)($row['new_time'] ?? ''), 11, 5)) ?></td>
+                                <td>
+                                    <?php if (!empty($row['evidence_file'])): ?>
+                                        <span style="color:#2563eb;"><i class="fas fa-paperclip"></i> Có file</span>
+                                    <?php else: ?>
+                                        <span style="color:#94a3b8;">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?php if(($row['status'] ?? '') === 'approved'): ?>
                                         <span class="req-type-badge type-ot"><i class="fas fa-check"></i> Đã duyệt</span>
@@ -222,6 +242,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                 <div class="modal-detail-row"><strong>Ngày:</strong> <span id="histModalDate"></span></div>
                 <div class="modal-detail-row"><strong>Từ -> Mới:</strong> <span id="histModalTimeDetail"></span></div>
                 <div class="modal-detail-row"><strong>Lý do gửi:</strong> <span id="histModalReason"></span></div>
+                <div class="modal-detail-row"><strong>Minh chứng:</strong> <span id="histModalEvidence"></span></div>
                 <div class="modal-detail-row" style="margin-bottom:0;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:8px;"><strong>Ghi chú HR:</strong> <span id="histModalHRNote" style="color:#0f172a;font-weight:700;"></span></div>
             </div>
             <div class="btn-group" style="display:flex;justify-content:center;margin-top:10px;">
@@ -243,7 +264,8 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                 <div class="modal-detail-row"><strong>Nhân viên:</strong> <span id="modalEmpName"></span></div>
                 <div class="modal-detail-row"><strong>Ngày:</strong> <span id="modalDate"></span></div>
                 <div class="modal-detail-row"><strong>Chi tiết:</strong> <span id="modalTimeDetail"></span></div>
-                <div class="modal-detail-row" style="margin-bottom:0;"><strong>Lý do:</strong> <span id="modalReason"></span></div>
+                <div class="modal-detail-row"><strong>Lý do:</strong> <span id="modalReason"></span></div>
+                <div class="modal-detail-row" style="margin-bottom:0;"><strong>Minh chứng:</strong> <span id="modalEvidence"></span></div>
             </div>
             <div class="form-group">
                 <label id="modalNoteLabel" style="font-weight:600;margin-bottom:6px;display:block;color:#334155;">Ghi chú HR</label>
@@ -281,6 +303,24 @@ document.addEventListener('DOMContentLoaded', function () {
     function currentFilters() {
         return new URLSearchParams(new FormData(filterForm));
     }
+    
+    window.previewEvidence = function(filename) {
+        if (!filename) return;
+        var content = document.getElementById('evidencePreviewContent');
+        var ext = filename.split('.').pop().toLowerCase();
+        var path = 'uploads/attendance_evidence/' + filename;
+        
+        content.innerHTML = '<div style="padding:20px;"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>';
+        document.getElementById('evidencePreviewModal').classList.add('show');
+        
+        if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+            content.innerHTML = '<img src="' + path + '" style="max-width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">';
+        } else if (ext === 'pdf') {
+            content.innerHTML = '<iframe src="' + path + '" style="width:100%; height:600px; border:none; border-radius:8px;"></iframe>';
+        } else {
+            content.innerHTML = '<p style="padding:40px;">Không thể xem trực tiếp định dạng này. <a href="' + path + '" target="_blank" class="btn btn-primary">Tải xuống file</a></p>';
+        }
+    }
 
     function getTypeInfo(reason) {
         var r = (reason || '').toLowerCase();
@@ -292,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderPending(rows) {
         if (!rows.length) {
-            pendingBody.innerHTML = '<tr><td colspan="6" class="empty-state">Không có yêu cầu chờ duyệt.</td></tr>';
+            pendingBody.innerHTML = '<tr><td colspan="7" class="empty-state">Không có yêu cầu chờ duyệt.</td></tr>';
             return;
         }
         pendingBody.innerHTML = rows.map(function (row) {
@@ -306,6 +346,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td>' + escapeHtml(row.attendance_date) + '</td>' +
                 '<td>' + escapeHtml(detail) + '</td>' +
                 '<td style="max-width:220px;">' + escapeHtml(row.reason) + '</td>' +
+                '<td>' + (row.evidence_file ? '<button type="button" onclick="previewEvidence(\'' + row.evidence_file + '\')" class="btn btn-secondary btn-sm"><i class="fas fa-file-image"></i> Xem</button>' : '<small style="color:#94a3b8">N/A</small>') + '</td>' +
                 '<td><div style="display:flex;gap:8px;">' +
                 '<button type="button" class="btn-approve js-request-action" data-action="approve" data-id="' + Number(row.id) + '"><i class="fas fa-check"></i> Duyệt</button>' +
                 '<button type="button" class="btn-return js-request-action" data-action="reject" data-id="' + Number(row.id) + '"><i class="fas fa-times"></i> Từ chối</button>' +
@@ -317,7 +358,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderHistory(rows) {
         if (!rows.length) {
-            historyBody.innerHTML = '<tr><td colspan="6" class="empty-state">Chưa có lịch sử xử lý.</td></tr>';
+            historyBody.innerHTML = '<tr><td colspan="7" class="empty-state">Chưa có lịch sử xử lý.</td></tr>';
             return;
         }
         historyBody.innerHTML = rows.map(function (row) {
@@ -337,12 +378,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 ' data-old="' + escapeHtml(oldT) + '"' +
                 ' data-new="' + escapeHtml(newT) + '"' +
                 ' data-reason="' + escapeHtml(row.reason) + '"' +
-                ' data-hrnote="' + escapeHtml(row.hr_note || 'Không') + '">' +
+                ' data-hrnote="' + escapeHtml(row.hr_note || 'Không') + '"' +
+                ' data-evidence="' + escapeHtml(row.evidence_file || '') + '">' +
                 '<td><i class="fas fa-clock" style="color:#94a3b8;"></i></td>' +
                 '<td>' + escapeHtml(row.hoTen) + '</td>' +
                 '<td>' + escapeHtml(row.attendance_date) + '</td>' +
                 '<td>' + escapeHtml(oldT) + '</td>' +
                 '<td>' + escapeHtml(newT) + '</td>' +
+                '<td>' + (row.evidence_file ? '<span style="color:#2563eb;"><i class="fas fa-paperclip"></i> Có file</span>' : '<span style="color:#94a3b8">-</span>') + '</td>' +
                 '<td>' + stBadge + '</td>' +
                 '</tr>';
         }).join('');
@@ -444,6 +487,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('modalDate').textContent = tds[2].textContent.trim();
                 document.getElementById('modalTimeDetail').textContent = tds[3].textContent.trim();
                 document.getElementById('modalReason').textContent = tds[4].textContent.trim();
+                
+                var evidenceHtml = tds[5].innerHTML.trim();
+                // If it's the button, we want to keep its onclick behavior but maybe style it differently in modal
+                document.getElementById('modalEvidence').innerHTML = evidenceHtml;
             }
         } else {
              // Fallback
@@ -496,6 +543,10 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('histModalDate').textContent = tr.getAttribute('data-date');
         document.getElementById('histModalTimeDetail').textContent = tr.getAttribute('data-old') + ' -> ' + tr.getAttribute('data-new');
         document.getElementById('histModalReason').textContent = tr.getAttribute('data-reason');
+        
+        var evidence = tr.getAttribute('data-evidence');
+        document.getElementById('histModalEvidence').innerHTML = evidence ? '<button type="button" onclick="previewEvidence(\'' + evidence + '\')" style="background:none;border:none;color:#2563eb;text-decoration:none;cursor:pointer;font-weight:600;padding:0;"><i class="fas fa-file-image"></i> Xem minh chứng</button>' : '<span style="color:#94a3b8">N/A</span>';
+
         document.getElementById('histModalHRNote').textContent = tr.getAttribute('data-hrnote');
 
         document.getElementById('historyModal').classList.add('show');
@@ -503,3 +554,16 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <?php include 'app/views/layouts/footer.php'; ?>
+
+<!-- Evidence Preview Modal -->
+<div id="evidencePreviewModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 800px; width: 95%;">
+        <div class="modal-head">
+            <h3>Xem minh chứng</h3>
+            <button type="button" onclick="document.getElementById('evidencePreviewModal').classList.remove('show')" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.2em;"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="text-align: center; max-height: 80vh; overflow-y: auto; padding: 10px;">
+            <div id="evidencePreviewContent"></div>
+        </div>
+    </div>
+</div>

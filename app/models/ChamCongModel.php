@@ -1459,7 +1459,7 @@ class ChamCongModel
 
     public function getCorrectionRequests($status = null, array $filters = [], $limit = 0, $historyOnly = false)
     {
-        $sql = "SELECT c.id, c.maND, c.attendance_date, c.old_time, c.new_time, c.reason, c.status, c.hr_note, c.created_at,
+        $sql = "SELECT c.id, c.maND, c.attendance_date, c.old_time, c.new_time, c.reason, c.status, c.hr_note, c.created_at, c.evidence_file,
                        n.hoTen, n.chucVu, n.phongBan
                 FROM attendance_corrections c
                 LEFT JOIN nguoidung n ON n.maND = c.maND";
@@ -2319,6 +2319,7 @@ class ChamCongModel
         $fromDate = trim((string)$fromDate);
         $toDate = trim((string)$toDate);
 
+        // 1. Get raw logs from attendance_logs
         $sql = "
             SELECT
                 DATE(created_at) as attendance_date,
@@ -2352,6 +2353,35 @@ class ChamCongModel
             ];
         }
 
+        // 2. Fetch approved corrections and OVERRIDE raw logs
+        $sqlCorr = "SELECT attendance_date, proposed_checkin, proposed_checkout 
+                    FROM attendance_corrections 
+                    WHERE maND = ? AND status = 'approved' 
+                    AND attendance_date >= ? AND attendance_date <= ?";
+        $stmtCorr = $this->conn->prepare($sqlCorr);
+        if ($stmtCorr) {
+            $stmtCorr->bind_param('iss', $maND, $fromDate, $toDate);
+            $stmtCorr->execute();
+            $corrections = $stmtCorr->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmtCorr->close();
+
+            foreach ($corrections as $corr) {
+                $date = $corr['attendance_date'];
+                if (!isset($data[$date])) {
+                    $data[$date] = ['checkIn' => null, 'checkOut' => null];
+                }
+                
+                // Override only if proposed values are provided in the request
+                if (!empty($corr['proposed_checkin'])) {
+                    $data[$date]['checkIn'] = $corr['proposed_checkin'];
+                }
+                if (!empty($corr['proposed_checkout'])) {
+                    $data[$date]['checkOut'] = $corr['proposed_checkout'];
+                }
+            }
+        }
+
+        ksort($data); // Keep chronological order
         return $data;
     }
 
@@ -2880,40 +2910,56 @@ class ChamCongModel
         if (!$approval) return null;
 
         $monthKey = trim($approval['month_key']);
-        $startDate = $monthKey . '-01';
-        $endDate = date('Y-m-t', strtotime($startDate));
+        $monthStart = $monthKey . '-01';
+        $monthEnd = date('Y-m-t', strtotime($monthStart));
 
-        // Lấy dữ liệu chấm công hàng ngày
-        $sql2 = "SELECT work_date, first_in, last_out, work_minutes, overtime_minutes, late_minutes, status
-                 FROM attendance_daily_summary
-                 WHERE maND = ? AND work_date >= ? AND work_date <= ?
-                 ORDER BY work_date ASC";
-        $stmt2 = $this->conn->prepare($sql2);
-        if (!$stmt2) return ['approval' => $approval, 'daily' => []];
-        $stmt2->bind_param('iss', $maND, $startDate, $endDate);
-        $stmt2->execute();
-        $dailyRows = $stmt2->get_result()->fetch_all(MYSQLI_ASSOC);
-        $stmt2->close();
+        // --- DYNAMIC CALCULATION ---
+        require_once 'app/helpers/AttendanceCalculator.php';
+        
+        $attendanceData = $this->getMonthlyAttendanceRaw($maND, $monthStart, $monthEnd);
+        $leaveInfo = $this->getEmployeeLeaveInfo($maND);
+        $leaveRequests = $this->getApprovedLeaveRequests($maND, $monthStart, $monthEnd);
+        
+        // Fetch shift assignment
+        $shift = $this->getShiftForUser($maND);
+        $shiftStart = $shift['start_time'] ?? null;
+        $shiftEnd = $shift['end_time'] ?? null;
 
-        // Tính tổng
-        $totalWorkMinutes = 0;
-        $totalOTMinutes = 0;
+        $monthlyCalc = AttendanceCalculator::calculateMonthlyAttendance(
+            $monthKey,
+            $attendanceData,
+            $leaveRequests,
+            $leaveInfo
+        );
+
+        $dailyRows = [];
         $totalLateMinutes = 0;
-        $workDays = 0;
-        foreach ($dailyRows as $row) {
-            $totalWorkMinutes += (int)($row['work_minutes'] ?? 0);
-            $totalOTMinutes += (int)($row['overtime_minutes'] ?? 0);
-            $totalLateMinutes += (int)($row['late_minutes'] ?? 0);
-            if ((int)($row['work_minutes'] ?? 0) > 0) $workDays++;
+        foreach ($monthlyCalc['daily_breakdown'] as $date => $day) {
+            $lateMinutes = 0;
+            if ($day['day_type'] === 'working' && !empty($day['check_in']) && $shiftStart && $shiftEnd) {
+                $status = $this->calculateShiftStatus($day['check_in'], $day['check_out'], $shiftStart, $shiftEnd);
+                $lateMinutes = (int)($status['minutes_late'] ?? 0);
+                $totalLateMinutes += $lateMinutes;
+            }
+
+            $dailyRows[] = [
+                'work_date' => $date,
+                'first_in' => $day['check_in'] ?? null,
+                'last_out' => $day['check_out'] ?? null,
+                'work_minutes' => $day['work_minutes'] ?? 0,
+                'overtime_minutes' => ($day['ot_hours'] ?? 0) * 60,
+                'late_minutes' => $lateMinutes,
+                'status' => $day['day_type']
+            ];
         }
 
         return [
             'approval' => $approval,
             'daily' => $dailyRows,
             'summary' => [
-                'work_days' => $workDays,
-                'total_work_hours' => round($totalWorkMinutes / 60, 2),
-                'total_ot_hours' => round($totalOTMinutes / 60, 2),
+                'work_days' => round($monthlyCalc['totals']['total_work_days'], 1),
+                'total_work_hours' => round($monthlyCalc['totals']['working_hours'], 2),
+                'total_ot_hours' => round($monthlyCalc['totals']['total_ot_hours'], 2),
                 'total_late_hours' => round($totalLateMinutes / 60, 2),
             ],
         ];
