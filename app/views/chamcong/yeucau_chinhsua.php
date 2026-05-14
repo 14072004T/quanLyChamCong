@@ -309,8 +309,23 @@ document.getElementById('attendance-date').addEventListener('change', function()
  // On page load, check if date is already filled (from URL)
  window.addEventListener('DOMContentLoaded', function() {
      var dateInput = document.getElementById('attendance-date');
+     var urlParams = new URLSearchParams(window.location.search);
+     var urlIn = urlParams.get('in');
+     var urlOut = urlParams.get('out');
+
      if (dateInput.value) {
-         dateInput.dispatchEvent(new Event('change'));
+         if (urlIn || urlOut) {
+             var inField = document.getElementById('original-checkin');
+             var outField = document.getElementById('original-checkout');
+             if (urlIn && urlIn !== 'null' && urlIn !== '') {
+                 inField.value = urlIn.substring(11, 16) + ' (' + urlIn.substring(0, 10) + ')';
+             }
+             if (urlOut && urlOut !== 'null' && urlOut !== '') {
+                 outField.value = urlOut.substring(11, 16) + ' (' + urlOut.substring(0, 10) + ')';
+             }
+         } else {
+             dateInput.dispatchEvent(new Event('change'));
+         }
      }
  });
 
