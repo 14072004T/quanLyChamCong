@@ -309,6 +309,11 @@ switch ($page) {
         (new HRController())->approvalDetailApi();
         break;
 
+    case 'hr-api-timesheet-approval-details':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->timesheetApprovalDetailsApi();
+        break;
+
     case 'hr-api-corrections':
         require_once 'app/controllers/HRController.php';
         (new HRController())->correctionsApi();

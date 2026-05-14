@@ -3051,5 +3051,22 @@ class ChamCongModel
         $result = $this->conn->query($sql);
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
+    /**
+     * HR: Lấy chi tiết trạng thái phê duyệt của từng nhân viên theo kỳ công
+     */
+    public function getTimesheetApprovalDetails($monthKey)
+    {
+        $sql = "SELECT eta.id, eta.maND, u.hoTen, u.phongBan, eta.status, eta.submitted_at, eta.approved_at
+                FROM employee_timesheet_approval eta
+                JOIN nguoidung u ON u.maND = eta.maND
+                WHERE eta.month_key = ?
+                ORDER BY u.phongBan, u.hoTen";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return [];
+        $stmt->bind_param('s', $monthKey);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
 }
+
 

@@ -479,18 +479,22 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                         <td><strong><?= htmlspecialchars((string)($row['month_key'] ?? '')) ?></strong></td>
                                         <td><?= $total ?></td>
                                         <td>
-                                            <?php if ($pending > 0): ?>
-                                                <span class="status-badge status-pending"><?= $pending ?> chờ</span>
-                                            <?php else: ?>
-                                                <span style="color:#22c55e">0</span>
-                                            <?php endif; ?>
+                                            <div style="cursor:pointer;" onclick="showApprovalDetails('<?= htmlspecialchars((string)($row['month_key'] ?? '')) ?>')">
+                                                <?php if ($pending > 0): ?>
+                                                    <span class="status-badge status-pending"><?= $pending ?> chờ</span>
+                                                <?php else: ?>
+                                                    <span style="color:#22c55e">0</span>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                         <td>
-                                            <?php if ($allApproved): ?>
-                                                <span class="status-badge status-approved">✓ Tất cả</span>
-                                            <?php else: ?>
-                                                <span><?= $approved ?>/<?= $total ?></span>
-                                            <?php endif; ?>
+                                            <div style="cursor:pointer;" onclick="showApprovalDetails('<?= htmlspecialchars((string)($row['month_key'] ?? '')) ?>')">
+                                                <?php if ($allApproved): ?>
+                                                    <span class="status-badge status-approved">✓ Tất cả</span>
+                                                <?php else: ?>
+                                                    <span><?= $approved ?>/<?= $total ?></span>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                         <td><?= htmlspecialchars((string)($row['last_submitted'] ?? '')) ?></td>
                                     </tr>
@@ -539,7 +543,88 @@ foreach (($salaryRows ?? []) as $summaryRow) {
     </div>
 </div>
 
+<div class="payroll-detail-modal" id="employeeApprovalModal" aria-hidden="true">
+    <div class="payroll-detail-card" style="width: min(800px, 100%);">
+        <div class="payroll-detail-head">
+            <div>
+                <h3>Trạng thái nhân viên duyệt bảng công</h3>
+                <p id="emp-approval-month-label">Tháng ...</p>
+            </div>
+            <button type="button" class="payroll-detail-close" onclick="closeEmpApprovalModal()">×</button>
+        </div>
+        <div class="payroll-detail-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Nhân viên</th>
+                            <th>Phòng ban</th>
+                            <th>Trạng thái</th>
+                            <th>Thời gian duyệt</th>
+                        </tr>
+                    </thead>
+                    <tbody id="emp-approval-grid-body">
+                        <tr><td colspan="4" class="empty-state">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="payroll-detail-modal" id="dailyDetailModal" aria-hidden="true">
+    <div class="payroll-detail-card" style="width: 400px;">
+        <div class="payroll-detail-head">
+            <div>
+                <h3>Chi tiết chấm công</h3>
+                <p id="daily-detail-date-label"></p>
+            </div>
+            <button type="button" class="payroll-detail-close" onclick="closeDailyDetailModal()">×</button>
+        </div>
+        <div class="payroll-detail-body">
+            <div class="payroll-meta-box" style="margin-bottom:12px;">
+                <strong>Nhân viên</strong>
+                <div id="daily-detail-name"></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="payroll-meta-box">
+                    <strong>Giờ vào</strong>
+                    <div id="daily-detail-in" style="font-size:1.2rem; font-weight:700; color:#22c55e;"></div>
+                </div>
+                <div class="payroll-meta-box">
+                    <strong>Giờ ra</strong>
+                    <div id="daily-detail-out" style="font-size:1.2rem; font-weight:700; color:#3b82f6;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</script>
 <script>
+    function escapeHtml(val) {
+        return String(val ?? '').replace(/[&<>\"]/g, function (c) {
+            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];
+        });
+    }
+
+    function formatDateTime(value) {
+        if (!value) return '-';
+        return String(value).replace('T', ' ');
+    }
+
+    function getApprovalStatusMeta(status) {
+        var normalized = String(status || 'submitted').toLowerCase();
+        if (normalized === 'approved') {
+            return { label: 'Đã duyệt', cls: 'status-approved' };
+        }
+        if (normalized === 'rejected') {
+            return { label: 'Đã trả về', cls: 'status-rejected' };
+        }
+        return { label: 'Chờ duyệt', cls: 'status-pending' };
+    }
+
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.sub-tab').forEach(function (tab) {
         tab.addEventListener('click', function () {
@@ -567,12 +652,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var detailGridBody = document.getElementById('payroll-detail-grid-body');
     var detailCloseBtn = document.getElementById('payroll-detail-close');
 
-    function escapeHtml(val) {
-        return String(val ?? '').replace(/[&<>\"]/g, function (c) {
-            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];
-        });
-    }
-
     function currentMonth() {
         return filterForm.querySelector('[name="month"]').value;
     }
@@ -580,22 +659,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function currentEmployeeQuery() {
         var val = employeeInput ? employeeInput.value.trim() : '';
         return (val === 'Tất cả') ? '' : val;
-    }
-
-    function formatDateTime(value) {
-        if (!value) return '-';
-        return String(value).replace('T', ' ');
-    }
-
-    function getApprovalStatusMeta(status) {
-        var normalized = String(status || 'submitted').toLowerCase();
-        if (normalized === 'approved') {
-            return { label: 'Đã duyệt', cls: 'status-approved' };
-        }
-        if (normalized === 'rejected') {
-            return { label: 'Đã trả về', cls: 'status-rejected' };
-        }
-        return { label: 'Chờ duyệt', cls: 'status-pending' };
     }
 
     function openDetailModal() {
@@ -632,7 +695,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     var workValue = dayData ? Number(dayData.work_value || 0) : 0;
                     var valStr = workValue > 0 ? (workValue === 1.0 ? '1.0' : '0.5') : '';
                     var cls = workValue > 0 ? 'day-val' : 'day-n';
-                    cells += '<td class="' + cls + '">' + valStr + '</td>';
+                    var checkIn = dayData && dayData.check_in ? dayData.check_in : '';
+                    var checkOut = dayData && dayData.check_out ? dayData.check_out : '';
+                    cells += '<td class="' + cls + '" style="cursor:pointer" onclick="showDailyDetail(\'' + escapeHtml(row.hoTen) + '\', \'' + dateStr + '\', \'' + checkIn + '\', \'' + checkOut + '\')">' + valStr + '</td>';
                 }
             }
             cells += '<td class="col-total">' + Number(row.work_days || 0) + '</td>';
@@ -671,6 +736,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var pending = Number(row.pending || 0);
             var approved = Number(row.approved || 0);
             var allApproved = pending === 0 && total > 0;
+            var monthKey = escapeHtml(row.month_key || '');
+
             var pendingHtml = pending > 0
                 ? '<span class="status-badge status-pending">' + pending + ' chờ</span>'
                 : '<span style="color:#22c55e">0</span>';
@@ -679,14 +746,70 @@ document.addEventListener('DOMContentLoaded', function () {
                 : '<span>' + approved + '/' + total + '</span>';
 
             return '<tr>' +
-                '<td><strong>' + escapeHtml(row.month_key || '') + '</strong></td>' +
+                '<td><strong>' + monthKey + '</strong></td>' +
                 '<td>' + total + '</td>' +
-                '<td>' + pendingHtml + '</td>' +
-                '<td>' + approvedHtml + '</td>' +
+                '<td><div style="cursor:pointer" onclick="showApprovalDetails(\'' + monthKey + '\')">' + pendingHtml + '</div></td>' +
+                '<td><div style="cursor:pointer" onclick="showApprovalDetails(\'' + monthKey + '\')">' + approvedHtml + '</div></td>' +
                 '<td>' + escapeHtml(formatDateTime(row.last_submitted)) + '</td>' +
                 '</tr>';
         }).join('');
     }
+
+    window.showApprovalDetails = function(monthKey) {
+        var modal = document.getElementById('employeeApprovalModal');
+        var body = document.getElementById('emp-approval-grid-body');
+        var label = document.getElementById('emp-approval-month-label');
+        
+        label.textContent = 'Kỳ công: ' + monthKey;
+        body.innerHTML = '<tr><td colspan="4" class="empty-state">Đang tải dữ liệu...</td></tr>';
+        modal.classList.add('open');
+
+        fetch('index.php?page=hr-api-timesheet-approval-details&month=' + encodeURIComponent(monthKey), {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function(r) { return r.json(); })
+            .then(function(json) {
+                if (!json.success) {
+                    body.innerHTML = '<tr><td colspan="4" class="empty-state">' + escapeHtml(json.message) + '</td></tr>';
+                    return;
+                }
+                var rows = json.data || [];
+                if (!rows.length) {
+                    body.innerHTML = '<tr><td colspan="4" class="empty-state">Không có dữ liệu nhân viên.</td></tr>';
+                    return;
+                }
+                body.innerHTML = rows.map(function(row) {
+                    var statusMeta = getApprovalStatusMeta(row.status);
+                    return '<tr>' +
+                        '<td><strong>' + escapeHtml(row.hoTen) + '</strong><br><small>#' + row.maND + '</small></td>' +
+                        '<td>' + escapeHtml(row.phongBan || '-') + '</td>' +
+                        '<td><span class="status-badge ' + statusMeta.cls + '">' + statusMeta.label + '</span></td>' +
+                        '<td>' + (row.approved_at ? escapeHtml(formatDateTime(row.approved_at)) : '-') + '</td>' +
+                        '</tr>';
+                }).join('');
+            })
+            .catch(function(err) {
+                console.error(err);
+                body.innerHTML = '<tr><td colspan="4" class="empty-state">Lỗi hệ thống khi tải dữ liệu.</td></tr>';
+            });
+    };
+
+    window.closeEmpApprovalModal = function() {
+        document.getElementById('employeeApprovalModal').classList.remove('open');
+    };
+
+    window.showDailyDetail = function(name, date, checkIn, checkOut) {
+        var modal = document.getElementById('dailyDetailModal');
+        document.getElementById('daily-detail-name').textContent = name;
+        document.getElementById('daily-detail-date-label').textContent = 'Ngày: ' + date;
+        document.getElementById('daily-detail-in').textContent = checkIn ? checkIn.substring(11, 19) : '--:--';
+        document.getElementById('daily-detail-out').textContent = checkOut ? checkOut.substring(11, 19) : '--:--';
+        modal.classList.add('open');
+    };
+
+    window.closeDailyDetailModal = function() {
+        document.getElementById('dailyDetailModal').classList.remove('open');
+    };
 
     function loadApprovalDetail(approvalId) {
         if (!approvalId) return;

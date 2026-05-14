@@ -505,6 +505,23 @@ class HRController
         ]);
     }
 
+    public function timesheetApprovalDetailsApi()
+    {
+        AuthMiddleware::requirePermission('hr-api-payroll');
+        $this->jsonOnly(['GET']);
+
+        $monthKey = trim($_GET['month'] ?? '');
+        if (!$monthKey) {
+            $this->respond(['success' => false, 'message' => 'Thiếu kỳ công'], 422);
+        }
+
+        $details = $this->model->getTimesheetApprovalDetails($monthKey);
+        $this->respond([
+            'success' => true,
+            'data' => $details
+        ]);
+    }
+
     private function respond(array $payload, int $status = 200)
     {
         http_response_code($status);
