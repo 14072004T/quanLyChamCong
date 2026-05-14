@@ -104,10 +104,7 @@ $allowedPages = [
     'hr-api-correction-action',
     // Manager
     'bao-cao-tong-hop',
-    'pheduyet-yeucau',
     'thong-ke-bieu-do',
-    'manager-api-requests',
-    'manager-api-request-action',
     // Tech
     'tech-wifi',
     'tech-get-wifi',
@@ -333,24 +330,9 @@ switch ($page) {
         (new ManagerController())->reports();
         break;
 
-    case 'pheduyet-yeucau':
-        require_once 'app/controllers/ManagerController.php';
-        (new ManagerController())->requests();
-        break;
-
     case 'thong-ke-bieu-do':
         require_once 'app/controllers/ManagerController.php';
         (new ManagerController())->statistics();
-        break;
-
-    case 'manager-api-requests':
-        require_once 'app/controllers/ManagerController.php';
-        (new ManagerController())->requestsApi();
-        break;
-
-    case 'manager-api-request-action':
-        require_once 'app/controllers/ManagerController.php';
-        (new ManagerController())->processRequestApi();
         break;
 
     // === TECH PANEL ===
@@ -401,23 +383,23 @@ switch ($page) {
 
     // === ĐƠN NGHỈ PHÉP ===
     case 'create-leave-request':
-        require_once 'app/controllers/HRController.php';
-        (new HRController())->createLeaveRequest();
+        require_once 'app/controllers/ChamCongController.php';
+        (new ChamCongController())->createLeaveRequest();
         break;
 
     case 'store-leave-request':
-        require_once 'app/controllers/HRController.php';
-        (new HRController())->storeLeaveRequest();
+        require_once 'app/controllers/ChamCongController.php';
+        (new ChamCongController())->storeLeaveRequest();
         break;
 
     case 'list-leave-requests':
-        require_once 'app/controllers/HRController.php';
-        (new HRController())->listLeaveRequests();
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->listLeaveRequests();
         break;
 
     case 'approve-leave-request':
-        require_once 'app/controllers/HRController.php';
-        (new HRController())->approveLeaveRequest();
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->approveLeaveRequest();
         break;
 
     default:

@@ -43,8 +43,6 @@ class AuthMiddleware
             'lich-su-cham-cong',
             'create-leave-request',
             'store-leave-request',
-            'list-leave-requests',
-            'approve-leave-request',
             'get-leave-detail',
             'get-correction-detail',
             'logout'
@@ -52,12 +50,9 @@ class AuthMiddleware
         'manager' => [
             'home',
             'cham-cong-dashboard',
-            'pheduyet-yeucau',
             'quan-ly-cham-cong',
             'bao-cao-tong-hop',
             'thong-ke-bieu-do',
-            'manager-api-requests',
-            'manager-api-request-action',
             'create-leave-request',
             'store-leave-request',
             'list-leave-requests',

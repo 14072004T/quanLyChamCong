@@ -27,7 +27,7 @@ $totalOtHours = array_sum(array_map(function ($row) { return (float)($row['overt
     </div>
 </div>
 
-<div class="hrd-stats-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:18px">
+<div class="hrd-stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
     <div class="hrd-stat-card">
         <div class="hrd-stat-icon blue"><i class="fas fa-users"></i></div>
         <div class="hrd-stat-body">
@@ -58,14 +58,6 @@ $totalOtHours = array_sum(array_map(function ($row) { return (float)($row['overt
             <div class="hrd-stat-label">Tổng giờ OT</div>
             <div class="hrd-stat-value"><?= number_format($totalOtHours, 1) ?></div>
             <div class="hrd-stat-trend" style="color:#64748b"><?= htmlspecialchars($monthLabel) ?></div>
-        </div>
-    </div>
-    <div class="hrd-stat-card">
-        <div class="hrd-stat-icon purple"><i class="fas fa-clipboard-list"></i></div>
-        <div class="hrd-stat-body">
-            <div class="hrd-stat-label">Yêu cầu chờ duyệt</div>
-            <div class="hrd-stat-value" id="mgr-appr-pending">--</div>
-            <a href="index.php?page=pheduyet-yeucau" class="hrd-stat-link">Xem yêu cầu</a>
         </div>
     </div>
 </div>
@@ -113,15 +105,6 @@ $totalOtHours = array_sum(array_map(function ($row) { return (float)($row['overt
 </div>
 
 <div class="mgr-row3">
-    <div class="hrd-panel">
-        <div class="hrd-panel-head">
-            <span>Yêu cầu nhân viên chờ duyệt</span>
-            <a href="index.php?page=pheduyet-yeucau" class="hrd-see-all" style="margin-top:0;font-size:.78em">Xem tất cả</a>
-        </div>
-        <div id="mgr-request-list">
-            <div class="empty-state" style="padding:18px">Đang tải...</div>
-        </div>
-    </div>
 
     <div class="hrd-panel">
         <div class="hrd-panel-head">
@@ -222,28 +205,5 @@ $totalOtHours = array_sum(array_map(function ($row) { return (float)($row['overt
         .then(function(json) { document.getElementById('mgr-appr-rejected').textContent = (json.data || []).length; })
         .catch(function() {});
 
-    fetch('index.php?page=manager-api-requests&status=pending&limit=5', { headers: { Accept: 'application/json' } })
-        .then(function(r) { return r.json(); })
-        .then(function(json) {
-            var list = document.getElementById('mgr-request-list');
-            var rows = json.data || [];
-            if (!rows.length) {
-                list.innerHTML = '<div class="empty-state" style="padding:18px">Không có yêu cầu chờ duyệt.</div>';
-                return;
-            }
-            var labels = { leave: 'Nghỉ phép', ot: 'Làm thêm giờ', shift: 'Đổi ca' };
-            var icons = { leave: 'fa-umbrella-beach', ot: 'fa-clock', shift: 'fa-calendar-alt' };
-            list.innerHTML = rows.map(function(row) {
-                var type = row.request_type || 'leave';
-                return '<div class="hrd-abnormal-item">'
-                    + '<div class="hrd-av"><i class="fas ' + (icons[type] || 'fa-file') + '"></i></div>'
-                    + '<div class="hrd-abnormal-info"><div class="hrd-abnormal-name">' + escHtml(row.hoTen || 'Nhân viên') + '</div><div class="hrd-abnormal-dept">' + escHtml(labels[type] || 'Yêu cầu') + ' - ' + escHtml(row.request_date || '') + '</div></div>'
-                    + '<span class="hrd-abnormal-tag" style="background:#fef3c7;color:#d97706">Chờ duyệt</span>'
-                    + '<a href="index.php?page=pheduyet-yeucau&request_id=' + encodeURIComponent(row.id) + '" style="color:#94a3b8;margin-left:4px"><i class="fas fa-chevron-right"></i></a></div>';
-            }).join('');
-        })
-        .catch(function() {
-            document.getElementById('mgr-request-list').innerHTML = '<div class="empty-state" style="padding:18px">Không thể tải yêu cầu.</div>';
-        });
 })();
 </script>

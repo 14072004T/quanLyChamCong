@@ -10,7 +10,7 @@ class ManagerController
     public function __construct()
     {
         $this->model = new ChamCongModel();
-        // Require manager role
+        // Require manager role for all pages served by this controller
         AuthMiddleware::requireRole(['manager']);
     }
 
@@ -160,80 +160,6 @@ class ManagerController
         }
 
         require __DIR__ . '/../views/chamcong/thongke.php';
-    }
-
-    /**
-     * Display requests (leaves, OT, shifts)
-     */
-    public function requests()
-    {
-        AuthMiddleware::requirePermission('pheduyet-yeucau');
-
-        require __DIR__ . '/../views/chamcong/pheduyet_yeucau.php';
-    }
-
-    /**
-     * API: Get employee requests for manager approval as JSON.
-     */
-    public function requestsApi()
-    {
-        AuthMiddleware::requirePermission('manager-api-requests');
-        $this->jsonOnly(['GET']);
-
-        $filters = [
-            'q' => trim($_GET['q'] ?? ''),
-            'date' => trim($_GET['date'] ?? ''),
-            'type' => trim($_GET['type'] ?? ''),
-            'status' => trim($_GET['status'] ?? ''),
-            'department' => trim($_GET['department'] ?? ''),
-            'date_from' => trim($_GET['date_from'] ?? ''),
-            'date_to' => trim($_GET['date_to'] ?? ''),
-        ];
-        if (!in_array($filters['type'], ['', 'leave', 'ot', 'shift'], true)) {
-            $filters['type'] = '';
-        }
-        if (!in_array($filters['status'], ['', 'pending', 'approved', 'rejected'], true)) {
-            $filters['status'] = '';
-        }
-        $limit = (int)($_GET['limit'] ?? 100);
-        if ($limit <= 0 || $limit > 500) {
-            $limit = 100;
-        }
-
-        $rows = $this->model->getManagerEmployeeRequests($filters, $limit);
-        $this->respond([
-            'success' => true,
-            'data' => $rows,
-            'count' => count($rows),
-        ]);
-    }
-
-    /**
-     * API: Process one employee request as JSON.
-     */
-    public function processRequestApi()
-    {
-        AuthMiddleware::requirePermission('manager-api-request-action');
-        $this->jsonOnly(['POST']);
-
-        $requestId = (int)($_POST['request_id'] ?? 0);
-        $type = trim($_POST['type'] ?? '');
-        $action = trim($_POST['action'] ?? '');
-        $note = trim($_POST['note'] ?? '');
-
-        if ($requestId <= 0 || !in_array($type, ['leave', 'ot', 'shift'], true) || !in_array($action, ['approve', 'reject'], true)) {
-            $this->respond([
-                'success' => false,
-                'message' => 'Dữ liệu xử lý yêu cầu không hợp lệ',
-            ], 422);
-        }
-
-        $managerId = (int)($_SESSION['user']['maND'] ?? 0);
-        $ok = $this->model->processManagerEmployeeRequest($type, $requestId, $action, $managerId, $note);
-        $this->respond([
-            'success' => $ok,
-            'message' => $ok ? 'Đã xử lý yêu cầu' : 'Không thể xử lý yêu cầu',
-        ], $ok ? 200 : 500);
     }
 
     /**
@@ -416,6 +342,55 @@ class ManagerController
             'data' => $rows,
             'count' => count($rows),
         ]);
+    }
+
+    /* ---- helpers ---- */
+
+    // ============================
+    // ĐƠN NGHỈ PHÉP (Leave Request) - Quản lý bởi Manager
+    // ============================
+
+    /**
+     * Danh sách tất cả đơn nghỉ phép
+     */
+    public function listLeaveRequests()
+    {
+        $leaveRequests = $this->model->getAllLeaveRequests();
+        $successMsg = $_SESSION['leave_success'] ?? '';
+        $errorMsg   = $_SESSION['leave_error'] ?? '';
+        unset($_SESSION['leave_success'], $_SESSION['leave_error']);
+
+        require __DIR__ . '/../views/chamcong/leave_request_list.php';
+    }
+
+    /**
+     * Phê duyệt / Từ chối đơn nghỉ phép
+     */
+    public function approveLeaveRequest()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=list-leave-requests');
+            exit;
+        }
+
+        $id          = (int)($_POST['id'] ?? 0);
+        $status      = trim($_POST['status'] ?? '');
+        $approvedBy  = (int)($_SESSION['user']['maND'] ?? 0);
+
+        if ($id <= 0 || !in_array($status, ['approved', 'rejected'], true)) {
+            $_SESSION['leave_error'] = 'Dữ liệu không hợp lệ';
+            header('Location: index.php?page=list-leave-requests');
+            exit;
+        }
+
+        $ok    = $this->model->updateLeaveRequestStatus($id, $status, $approvedBy);
+        $label = $status === 'approved' ? 'phê duyệt' : 'từ chối';
+        $_SESSION[$ok ? 'leave_success' : 'leave_error'] = $ok
+            ? "Đã $label đơn nghỉ phép thành công"
+            : "Không thể $label đơn nghỉ phép (có thể đã được xử lý)";
+
+        header('Location: index.php?page=list-leave-requests');
+        exit;
     }
 
     /* ---- helpers ---- */
