@@ -216,8 +216,17 @@ class HRController
                 require_once __DIR__ . '/../helpers/ExcelExporter.php';
                 $exporter = new ExcelExporter();
                 $monthKey = substr($fromDate, 0, 7);
+                
+                // Sử dụng dữ liệu chi tiết mới cho báo cáo Excel
+                $detailedReportRows = $this->model->getMonthlyAttendanceDetailNew($monthKey);
+                if ($department !== '') {
+                    $detailedReportRows = array_values(array_filter($detailedReportRows, function($r) use ($department) {
+                        return (string)($r['phongBan'] ?? '') === $department;
+                    }));
+                }
+                
                 $userName = $_SESSION['user']['hoTen'] ?? 'Không xác định';
-                $exporter->exportAttendanceReport($reportRows, $monthKey, $department, $userName);
+                $exporter->exportAttendanceReport($detailedReportRows, $monthKey, $department, $userName);
                 exit;
             } else {
                 // CSV export

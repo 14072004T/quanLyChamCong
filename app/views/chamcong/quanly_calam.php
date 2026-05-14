@@ -262,12 +262,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     var otInfo = employeeOtSchedule[currentDate] || null;
                     var dayBreakdown = (payroll.daily_breakdown && payroll.daily_breakdown[currentDate]) ? payroll.daily_breakdown[currentDate] : null;
                     var isLeave = dayBreakdown && dayBreakdown.day_type === 'leave';
+                    var isHoliday = dayBreakdown && dayBreakdown.day_type === 'holiday';
 
                     cells += '<td>';
                     if (isLeave) {
                         var tooltip = dayBreakdown.leave_reason ? escapeHtml(dayBreakdown.day_type_label + ': ' + dayBreakdown.leave_reason) : escapeHtml(dayBreakdown.day_type_label || 'Nghỉ phép');
                         var leaveId = dayBreakdown.leave_id || 0;
                         cells += '<span onclick="openModal(' + leaveId + ')" class="shift-cell shift-off" style="background-color:#ef4444;color:white;border-color:#ef4444;display:inline-block;cursor:pointer;" title="' + tooltip + '">OFF</span>';
+                    } else if (isHoliday) {
+                        cells += '<span class="shift-cell shift-off" style="background-color:#f59e0b;color:white;border-color:#f59e0b;" title="' + escapeHtml(dayBreakdown.day_type_label || 'Ngày lễ') + '">LỄ</span>';
                     } else if (isWeekend) {
                         cells += '<span class="shift-cell shift-off">OFF</span>';
                     } else {
@@ -281,7 +284,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     cells += '</td>';
                 }
                 var actualDays = Number(payroll.work_days || 0);
-                cells += '<td class="col-total">' + (actualDays > 0 ? actualDays : totalDays) + '</td>';
+                var actualHours = Number(payroll.work_hours || 0);
+                
+                // Hiển thị công và giờ (Nếu chưa có dữ liệu thực tế thì dùng số ngày dự kiến)
+                var displayDays = actualDays > 0 ? actualDays : totalDays;
+                var displayHours = actualHours > 0 ? actualHours : (totalDays * 8);
+
+                cells += '<td class="col-total">' + displayDays + ' công<br><small style="color:#3b82f6; font-weight:600;">' + displayHours + ' giờ</small></td>';
                 return '<tr>' + cells + '</tr>';
             }).join('');
         }).catch(function() {

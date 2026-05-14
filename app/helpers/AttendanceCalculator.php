@@ -146,6 +146,12 @@ class AttendanceCalculator
 
             if ($checkIn && $checkOut) {
                 $workMinutes = self::calculateWorkMinutes($checkIn, $checkOut);
+                
+                // Trừ 60 phút nghỉ trưa nếu làm việc trên 5 tiếng (300 phút)
+                if ($workMinutes >= 300) {
+                    $workMinutes -= 60;
+                }
+
                 $workHours = round($workMinutes / 60, 2);
 
                 // Standard work time: 480 minutes (8 hours)
