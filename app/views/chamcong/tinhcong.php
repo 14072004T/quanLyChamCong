@@ -334,9 +334,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                         <label>Tháng</label>
                         <input type="month" name="month" value="<?= htmlspecialchars($selectedMonth) ?>" required>
                     </div>
-                    <div class="payroll-filter-actions">
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-calculator"></i> TÍNH CÔNG</button>
-                    </div>
+                    
                 </form>
             </div>
 
