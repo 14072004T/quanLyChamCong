@@ -180,6 +180,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                         <th>Giờ vào</th>
                         <th>Giờ ra</th>
                         <th>Minh chứng</th>
+                        <th>Ngày duyệt</th>
                         <th>Nguồn</th>
                     </tr>
                 </thead>
@@ -208,6 +209,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                                         <span style="color:#94a3b8;">-</span>
                                     <?php endif; ?>
                                 </td>
+                                <td><?= !empty($row['updated_at']) ? htmlspecialchars(substr($row['updated_at'], 0, 16)) : '-' ?></td>
                                 <td>
                                     <?php if(($row['status'] ?? '') === 'approved'): ?>
                                         <span class="req-type-badge type-ot"><i class="fas fa-check"></i> Đã duyệt</span>
@@ -220,7 +222,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="6" class="empty-state">Chưa có lịch sử xử lý.</td></tr>
+                        <tr><td colspan="8" class="empty-state">Chưa có lịch sử xử lý.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -358,12 +360,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderHistory(rows) {
         if (!rows.length) {
-            historyBody.innerHTML = '<tr><td colspan="7" class="empty-state">Chưa có lịch sử xử lý.</td></tr>';
+            historyBody.innerHTML = '<tr><td colspan="8" class="empty-state">Chưa có lịch sử xử lý.</td></tr>';
             return;
         }
         historyBody.innerHTML = rows.map(function (row) {
             var oldT = row.old_time ? String(row.old_time).slice(11, 16) : '--:--';
             var newT = row.new_time ? String(row.new_time).slice(11, 16) : '--:--';
+            var approvedAt = row.updated_at ? String(row.updated_at).slice(0, 16) : '-';
             var st = row.status || '';
             var stBadge = '';
             
@@ -386,6 +389,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td>' + escapeHtml(oldT) + '</td>' +
                 '<td>' + escapeHtml(newT) + '</td>' +
                 '<td>' + (row.evidence_file ? '<span style="color:#2563eb;"><i class="fas fa-paperclip"></i> Có file</span>' : '<span style="color:#94a3b8">-</span>') + '</td>' +
+                '<td>' + escapeHtml(approvedAt) + '</td>' +
                 '<td>' + stBadge + '</td>' +
                 '</tr>';
         }).join('');

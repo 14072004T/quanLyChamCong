@@ -1516,7 +1516,7 @@ class ChamCongModel
 
     public function getCorrectionRequests($status = null, array $filters = [], $limit = 0, $historyOnly = false)
     {
-        $sql = "SELECT c.id, c.maND, c.attendance_date, c.old_time, c.new_time, c.reason, c.status, c.hr_note, c.created_at, c.evidence_file,
+        $sql = "SELECT c.id, c.maND, c.attendance_date, c.old_time, c.new_time, c.reason, c.status, c.hr_note, c.created_at, c.updated_at, c.evidence_file,
                        n.hoTen, n.chucVu, n.phongBan
                 FROM attendance_corrections c
                 LEFT JOIN nguoidung n ON n.maND = c.maND";
