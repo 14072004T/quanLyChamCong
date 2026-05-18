@@ -77,7 +77,6 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 <th>GIỜ BẮT ĐẦU</th>
                                 <th>GIỜ KẾT THÚC</th>
                                 <th>TRẠNG THÁI</th>
-                                <th>SỐ NV GÁN</th>
                             </tr>
                         </thead>
                         <tbody id="shift-list-body">
@@ -88,11 +87,10 @@ unset($_SESSION['success'], $_SESSION['error']);
                                         <td><?= htmlspecialchars(substr($shift['start_time'], 0, 5)) ?></td>
                                         <td><?= htmlspecialchars(substr($shift['end_time'], 0, 5)) ?></td>
                                         <td><span class="status-badge <?= (int)$shift['is_active'] ? 'status-approved' : 'status-rejected' ?>"><?= (int)$shift['is_active'] ? 'Đang dùng' : 'Tắt' ?></span></td>
-                                        <td><?= (int)($shift['assigned_count'] ?? 0) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <tr><td colspan="5" class="empty-state">Chưa có ca làm việc.</td></tr>
+                                <tr><td colspan="4" class="empty-state">Chưa có ca làm việc.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>

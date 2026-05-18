@@ -14,6 +14,11 @@ class HomeController
             exit;
         }
 
+        if (($_SESSION['role'] ?? '') === 'manager') {
+            header('Location: index.php?page=bao-cao-tong-hop');
+            exit;
+        }
+
         $isLoggedIn = true;
         $chamCongModel = new ChamCongModel();
         $thongKe = $chamCongModel->getThongKeTongQuan();
