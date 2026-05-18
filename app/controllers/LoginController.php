@@ -3,7 +3,13 @@ require_once 'app/models/ketNoi.php';
 
 class LoginController {
     private function getDefaultPageForRole($role) {
-        return in_array($role, ['hr', 'manager'], true) ? 'cham-cong-dashboard' : 'home';
+        if ($role === 'manager') {
+            return 'bao-cao-tong-hop';
+        } elseif ($role === 'hr') {
+            return 'cham-cong-dashboard';
+        } else {
+            return 'home';
+        }
     }
 
     public function index() {

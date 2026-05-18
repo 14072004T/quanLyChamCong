@@ -20,12 +20,8 @@ class ManagerController
     public function dashboard()
     {
         $stats = $this->model->getThongKeTongQuan() ?? [];
-        $department = trim($_SESSION['user']['phongBan'] ?? '');
-        if ($department === '') {
-            $department = '__none__';
-        }
-        $payrolls = $this->model->getMonthlyApprovals(null, $department);
-        $salaryRows = $this->model->getMonthlyWorkSummary(date('Y-m'), $department);
+        $payrolls = $this->model->getMonthlyApprovals(null, '');
+        $salaryRows = $this->model->getMonthlyWorkSummary(date('Y-m'), '');
 
         require __DIR__ . '/../views/chamcong/manager_panel.php';
     }
@@ -72,21 +68,17 @@ class ManagerController
 
         $fromDate = $_POST['from_date'] ?? $_GET['from_date'] ?? date('Y-m-01');
         $toDate = $_POST['to_date'] ?? $_GET['to_date'] ?? date('Y-m-d');
+        // Manager có thể lọc theo phòng ban hoặc xem tất cả
         $department = trim($_POST['department'] ?? $_GET['department'] ?? '');
         $format = strtolower($_POST['format'] ?? 'html');
         $export = (int)($_POST['export'] ?? 0);
 
         $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $department);
-        $departments = $this->model->getDistinctDepartments();
+        $departments = $this->model->getValidDepartments();
         $monthKey = substr($fromDate, 0, 7);
         
         // Sử dụng dữ liệu tính toán chính xác mới (có khấu trừ nghỉ trưa, bù công)
-        $payrollRows = $this->model->getMonthlyAttendanceDetailNew($monthKey);
-        if ($department !== '') {
-            $payrollRows = array_values(array_filter($payrollRows, function ($row) use ($department) {
-                return (string)($row['phongBan'] ?? '') === $department;
-            }));
-        }
+        $payrollRows = $this->model->getMonthlyAttendanceDetailNew($monthKey, $department);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $export && in_array($format, ['excel', 'csv'], true)) {
             if ($format === 'excel') {
@@ -95,12 +87,7 @@ class ManagerController
                 $monthKey = substr($fromDate, 0, 7);
 
                 // Sử dụng dữ liệu chi tiết mới cho báo cáo Excel
-                $detailedReportRows = $this->model->getMonthlyAttendanceDetailNew($monthKey);
-                if ($department !== '') {
-                    $detailedReportRows = array_values(array_filter($detailedReportRows, function($r) use ($department) {
-                        return (string)($r['phongBan'] ?? '') === $department;
-                    }));
-                }
+                $detailedReportRows = $this->model->getMonthlyAttendanceDetailNew($monthKey, $department);
 
                 $userName = $_SESSION['user']['hoTen'] ?? 'Không xác định';
                 $exporter->exportAttendanceReport($detailedReportRows, $monthKey, $department, $userName);
@@ -215,9 +202,6 @@ class ManagerController
         AuthMiddleware::requirePermission('chi-tiet-bang-cong');
 
         $department = trim($_SESSION['user']['phongBan'] ?? '');
-        if ($department === '') {
-            $department = '__none__';
-        }
         $approvalRows = $this->model->getMonthlyApprovals(null, $department);
         require __DIR__ . '/../views/chamcong/pheduyet.php';
     }
@@ -254,12 +238,7 @@ class ManagerController
         // enrich each row with summary
         foreach ($rows as &$row) {
             $monthKey = $row['month_key'] ?? '';
-            $summary = $this->model->getMonthlyAttendanceDetailNew($monthKey);
-            if ($department !== '') {
-                $summary = array_values(array_filter($summary, function($s) use ($department) {
-                    return (string)($s['phongBan'] ?? '') === $department;
-                }));
-            }
+            $summary = $this->model->getMonthlyAttendanceDetailNew($monthKey, $department);
 
             $totalEmployees = count($summary);
             $totalWorkDays = 0;
@@ -290,9 +269,6 @@ class ManagerController
 
         $approvalId = (int)($_GET['approval_id'] ?? 0);
         $department = trim($_SESSION['user']['phongBan'] ?? '');
-        if ($department === '') {
-            $department = '__none__';
-        }
         if ($approvalId <= 0) {
             $this->respond([
                 'success' => false,
@@ -326,9 +302,6 @@ class ManagerController
         $action = trim($_POST['action'] ?? '');
         $note = trim($_POST['note'] ?? '');
         $department = trim($_SESSION['user']['phongBan'] ?? '');
-        if ($department === '') {
-            $department = '__none__';
-        }
 
         $status = $action === 'approve' ? 'approved' : ($action === 'reject' ? 'rejected' : '');
         $managerId = (int)($_SESSION['user']['maND'] ?? 0);
@@ -358,9 +331,6 @@ class ManagerController
         $year = trim($_GET['year'] ?? '');
         $limit = (int)($_GET['limit'] ?? 50);
         $department = trim($_SESSION['user']['phongBan'] ?? '');
-        if ($department === '') {
-            $department = '__none__';
-        }
 
         if ($limit <= 0 || $limit > 500) {
             $limit = 50;
@@ -371,12 +341,7 @@ class ManagerController
         // enrich each row with summary
         foreach ($rows as &$row) {
             $monthKey = $row['month_key'] ?? '';
-                        $summary = $this->model->getMonthlyAttendanceDetailNew($monthKey);
-            if ($department !== '') {
-                $summary = array_values(array_filter($summary, function($s) use ($department) {
-                    return (string)($s['phongBan'] ?? '') === $department;
-                }));
-            }
+            $summary = $this->model->getMonthlyAttendanceDetailNew($monthKey, $department);
 
             $totalEmployees = count($summary);
             $totalWorkDays = 0;

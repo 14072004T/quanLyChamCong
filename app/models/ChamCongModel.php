@@ -631,6 +631,46 @@ class ChamCongModel
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
 
+    public function getEmployeesByDepartment($department = '', $keyword = '', $activeOnly = false)
+    {
+        $department = trim((string)$department);
+        $keyword = trim((string)$keyword);
+        
+        $sql = "SELECT maND, maTK, hoTen, email, soDienThoai, chucVu, phongBan, trangThai, created_at
+                FROM nguoidung
+                WHERE trangThai = 1
+                  AND chucVu = 'Nhân viên'";
+        $types = '';
+        $params = [];
+
+        // Filter by department
+        if ($department !== '') {
+            $sql .= " AND phongBan = ?";
+            $types .= 's';
+            $params[] = $department;
+        }
+
+        // Filter by keyword
+        if ($keyword !== '') {
+            $sql .= " AND (hoTen LIKE CONCAT('%', ?, '%') OR email LIKE CONCAT('%', ?, '%'))";
+            $types .= 'ss';
+            $params[] = $keyword;
+            $params[] = $keyword;
+        }
+
+        $sql .= " ORDER BY hoTen ASC";
+
+        if ($types !== '') {
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param($types, ...$params);
+            $stmt->execute();
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        }
+
+        $result = $this->conn->query($sql);
+        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    }
+
     public function saveEmployee(array $payload)
     {
         $maND = (int)($payload['maND'] ?? 0);
@@ -771,6 +811,7 @@ class ChamCongModel
                     GROUP BY maND, DATE(created_at)
                 ) d ON d.maND = u.maND
                 WHERE u.trangThai = 1
+                  AND u.chucVu = 'Nhân viên'
                   AND (? = '' OR u.phongBan = ?)
                 GROUP BY u.maND, u.hoTen, u.phongBan
                 ORDER BY u.hoTen";
@@ -1045,6 +1086,9 @@ class ChamCongModel
 
     public function getAttendanceReport($fromDate, $toDate, $department = '')
     {
+        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
+        
         $sql = "SELECT u.maND, u.hoTen, u.phongBan,
                        COUNT(DISTINCT DATE(l.created_at)) AS work_days,
                        SUM(CASE WHEN l.action = 'IN' THEN 1 ELSE 0 END) AS checkin_count,
@@ -1053,20 +1097,28 @@ class ChamCongModel
                 LEFT JOIN attendance_logs l ON l.maND = u.maND
                     AND DATE(l.created_at) >= ?
                     AND DATE(l.created_at) <= ?
-                WHERE u.trangThai = 1";
+                WHERE u.trangThai = 1
+                  AND u.chucVu = 'Nhân viên'
+                  AND u.phongBan IN ($placeholders)";
+
+        $params = [$fromDate, $toDate];
+        $types = 'ss';
+        
+        foreach ($validDepts as $dept) {
+            $params[] = $dept;
+            $types .= 's';
+        }
 
         if ($department !== '') {
             $sql .= " AND u.phongBan = ?";
+            $params[] = $department;
+            $types .= 's';
         }
 
         $sql .= " GROUP BY u.maND, u.hoTen, u.phongBan ORDER BY u.hoTen";
 
         $stmt = $this->conn->prepare($sql);
-        if ($department !== '') {
-            $stmt->bind_param("sss", $fromDate, $toDate, $department);
-        } else {
-            $stmt->bind_param("ss", $fromDate, $toDate);
-        }
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
@@ -1078,6 +1130,11 @@ class ChamCongModel
         return array_map(function ($r) {
             return $r['phongBan'];
         }, $rows);
+    }
+
+    public function getValidDepartments()
+    {
+        return ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
     }
 
     public function submitMonthlyApproval($monthKey, $hrSenderId, $department = '')
@@ -2165,13 +2222,16 @@ class ChamCongModel
      * @param string $monthKey - YYYY-MM
      * @return array
      */
-    public function getMonthlyAttendanceDetailNew($monthKey)
+    public function getMonthlyAttendanceDetailNew($monthKey, $department = '')
     {
         require_once 'app/helpers/HolidayCalculator.php';
         require_once 'app/helpers/LeaveCalculator.php';
         require_once 'app/helpers/AttendanceCalculator.php';
 
         $monthKey = trim((string)$monthKey);
+        $department = trim((string)$department);
+        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
             return [];
         }
@@ -2182,10 +2242,23 @@ class ChamCongModel
         // Lấy danh sách tất cả nhân viên hoạt động
         $allEmployees = $this->getEmployees('', true);
         
-        // Chỉ lấy nhân viên
-        $employees = array_filter($allEmployees, function($e) use ($monthEnd) {
+        // Chỉ lấy nhân viên (filter theo phòng ban nếu có)
+        $employees = array_filter($allEmployees, function($e) use ($monthEnd, $department, $validDepts) {
             if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') {
                 return false;
+            }
+            
+            // Filter theo phòng ban hợp lệ
+            $empDept = (string)($e['phongBan'] ?? '');
+            if (!in_array($empDept, $validDepts, true)) {
+                return false;
+            }
+            
+            // Filter theo phòng ban cụ thể nếu có
+            if ($department !== '') {
+                if ($empDept !== $department) {
+                    return false;
+                }
             }
             
             // Bỏ qua nhân viên được tạo sau tháng đang xem

@@ -835,10 +835,7 @@ $updatedAt = date('H:i, d/m/Y');
             </section>
         </div>
 
-        <div class="mgrr-note">
-            <span class="mgrr-icon mgrr-blue" style="width:26px;height:26px;font-size:.8rem"><i class="fas fa-info"></i></span>
-            <div><strong>Lưu ý</strong><br>Báo cáo này chỉ bao gồm dữ liệu của phòng ban mà bạn quản lý.</div>
-        </div>
+        
         <div class="mgrr-updated"><i class="far fa-clock"></i> Dữ liệu được cập nhật lúc <?= htmlspecialchars($updatedAt) ?></div>
     </div>
 </div>

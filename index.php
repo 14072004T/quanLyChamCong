@@ -14,9 +14,14 @@ require_once 'app/middleware/AuthMiddleware.php';
 
 $defaultPage = 'login';
 if (isset($_SESSION['user'])) {
-    $defaultPage = in_array(($_SESSION['role'] ?? 'nhanvien'), ['hr', 'manager'], true)
-        ? 'cham-cong-dashboard'
-        : 'home';
+    $role = $_SESSION['role'] ?? 'nhanvien';
+    if ($role === 'manager') {
+        $defaultPage = 'bao-cao-tong-hop';
+    } elseif ($role === 'hr') {
+        $defaultPage = 'cham-cong-dashboard';
+    } else {
+        $defaultPage = 'home';
+    }
 }
 
 $page = $_GET['page'] ?? $defaultPage;

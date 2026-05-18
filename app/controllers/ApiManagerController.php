@@ -46,11 +46,10 @@ class ApiManagerController
     {
         if ($method !== 'GET') respondError('Method not allowed', 405);
 
-        $department = $this->getManagerDepartment();
         $keyword = trim($_GET['q'] ?? '');
         $activeOnly = (int)($_GET['active_only'] ?? 1) === 1;
 
-        $rows = $this->model->getEmployeesByDepartment($department, $keyword, $activeOnly);
+        $rows = $this->model->getEmployeesByDepartment('', $keyword, $activeOnly);
         respond([
             'success' => true,
             'data' => $rows,
@@ -63,8 +62,7 @@ class ApiManagerController
      */
     private function getManagerDepartment()
     {
-        $department = trim($_SESSION['user']['phongBan'] ?? '');
-        return $department !== '' ? $department : '__none__';
+        return trim($_SESSION['user']['phongBan'] ?? '');
     }
 
     // ========================================================
