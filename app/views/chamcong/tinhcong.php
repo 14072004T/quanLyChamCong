@@ -9,6 +9,16 @@ $monthlyApproval = $monthlyApproval ?? null;
 $approvalHistory = $approvalHistory ?? [];
 $employeeKeyword = $employeeKeyword ?? '';
 $selectedMonth = $selectedMonth ?? date('Y-m');
+$exportFromDate = $selectedMonth . '-01';
+$exportToDate = date('Y-m-t', strtotime($exportFromDate));
+$exportSummary = null;
+foreach ($approvalHistory as $row) {
+    if (($row['month_key'] ?? '') === $selectedMonth) {
+        $exportSummary = $row;
+        break;
+    }
+}
+$canExport = $exportSummary && (int)($exportSummary['pending'] ?? 0) === 0 && (int)($exportSummary['total'] ?? 0) > 0;
 $summaryEmployees = count($salaryRows ?? []);
 $summaryWorkDays = 0;
 $summaryWorkHours = 0;
@@ -334,9 +344,16 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                         <label>Tháng</label>
                         <input type="month" name="month" value="<?= htmlspecialchars($selectedMonth) ?>" required>
                     </div>
-                    
                 </form>
             </div>
+
+            <form id="payroll-export-form" method="POST" action="index.php?page=xuat-bao-cao" style="display:none">
+                <input type="hidden" name="from_date" id="export-from-date" value="<?= htmlspecialchars($exportFromDate) ?>">
+                <input type="hidden" name="to_date" id="export-to-date" value="<?= htmlspecialchars($exportToDate) ?>">
+                <input type="hidden" name="department" value="">
+                <input type="hidden" name="format" value="excel">
+                <input type="hidden" name="export" value="1">
+            </form>
 
             <div class="panel payroll-board">
                 <div class="payroll-board-head">
@@ -395,7 +412,12 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                     </div>
 
                     <div class="tab-content" id="tab-bangchamcong">
-                        <h3>Tổng toán tháng <span id="list-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                            <h3 style="margin:0;">Tổng toán tháng <span id="list-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
+                            <button class="btn btn-success btn-sm" type="submit" form="payroll-export-form" id="payroll-export-btn" title="<?= $canExport ? 'Tất cả nhân viên đã duyệt, có thể xuất.' : 'Chỉ xuất khi tất cả nhân viên đã duyệt bảng công.' ?>" <?= $canExport ? '' : 'disabled' ?>>
+                                Xuất Excel
+                            </button>
+                        </div>
                         <table class="table" id="payroll-summary-table">
                             <thead>
                                 <tr>
@@ -644,6 +666,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var employeeInput = document.getElementById('employee-search-input');
     var employeeSuggestions = document.getElementById('employee-suggestions');
     var submitBtn = document.getElementById('submit-payroll-btn');
+    var monthInput = filterForm ? filterForm.querySelector('[name="month"]') : null;
+    var exportBtn = document.getElementById('payroll-export-btn');
+    var exportFromInput = document.getElementById('export-from-date');
+    var exportToInput = document.getElementById('export-to-date');
     var gridBody = document.getElementById('attendance-grid-body');
     var tableBody = document.getElementById('payroll-table-body');
     var approvalStatus = document.getElementById('approval-status');
@@ -663,6 +689,34 @@ document.addEventListener('DOMContentLoaded', function () {
     function currentEmployeeQuery() {
         var val = employeeInput ? employeeInput.value.trim() : '';
         return (val === 'Tất cả') ? '' : val;
+    }
+
+    function pad2(num) {
+        return num < 10 ? '0' + num : String(num);
+    }
+
+    function updateExportRange(monthKey) {
+        if (!exportFromInput || !exportToInput) return;
+        var parts = String(monthKey || '').split('-');
+        if (parts.length !== 2) return;
+        var year = Number(parts[0]);
+        var month = Number(parts[1]);
+        if (!year || !month) return;
+        var lastDay = new Date(year, month, 0).getDate();
+        exportFromInput.value = year + '-' + pad2(month) + '-01';
+        exportToInput.value = year + '-' + pad2(month) + '-' + pad2(lastDay);
+    }
+
+    function updateExportState(summary) {
+        if (!exportBtn) return;
+        var row = Array.isArray(summary) ? summary[0] : summary;
+        var total = row ? Number(row.total || 0) : 0;
+        var pending = row ? Number(row.pending || 0) : total;
+        var canExport = total > 0 && pending === 0;
+        exportBtn.disabled = !canExport;
+        exportBtn.title = canExport
+            ? 'Tất cả nhân viên đã duyệt, có thể xuất.'
+            : 'Chỉ xuất khi tất cả nhân viên đã duyệt bảng công.';
     }
 
     function openDetailModal() {
@@ -915,6 +969,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!json.success) { alert(json.message || 'Lỗi'); return; }
             renderGridRows(json.data || []);
             renderTableRows(json.data || []);
+            updateExportRange(currentMonth());
+            updateExportState(json.approvalSummary || []);
             
             // Update metrics
             if (json.summary) {
@@ -947,6 +1003,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (employeeInput) {
         employeeInput.addEventListener('change', function () {
+            loadPayroll();
+        });
+    }
+
+    if (monthInput) {
+        monthInput.addEventListener('change', function () {
             loadPayroll();
         });
     }
@@ -995,6 +1057,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    updateExportRange(currentMonth());
+    updateExportState(<?= json_encode($exportSummary ?? new stdClass()) ?>);
     loadEmployeeSuggestions(currentEmployeeQuery());
 });
 </script>

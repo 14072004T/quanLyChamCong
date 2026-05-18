@@ -709,14 +709,6 @@ $updatedAt = date('H:i, d/m/Y');
                 </select>
             </div>
             <button class="mgrr-btn primary" type="submit"><i class="fas fa-filter"></i> Lọc</button>
-            <button class="mgrr-btn" type="submit" form="mgrr-export-form"><i class="fas fa-download"></i> Xuất Excel</button>
-        </form>
-        <form id="mgrr-export-form" method="POST" action="index.php?page=bao-cao-tong-hop" style="display:none">
-            <input type="hidden" name="from_date" value="<?= htmlspecialchars($fromDate) ?>">
-            <input type="hidden" name="to_date" value="<?= htmlspecialchars($toDate) ?>">
-            <input type="hidden" name="department" value="<?= htmlspecialchars($department) ?>">
-            <input type="hidden" name="format" value="excel">
-            <input type="hidden" name="export" value="1">
         </form>
 
         <div class="mgrr-stats">

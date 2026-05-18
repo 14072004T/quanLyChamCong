@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/HolidayCalculator.php';
 
 class ExcelExporter
 {
@@ -49,14 +50,15 @@ class ExcelExporter
     
     /* Data Cells */
     .day-cell { text-align: center; width: 30px; }
-    .weekend-cell { background-color: #F2F2F2; color: #7f8c8d; }
     .holiday-cell { background-color: #FFEB9C; color: #9C6500; font-weight: bold; }
+    .weekend-cell { background-color: #FFEB9C; color: #9C6500; font-weight: bold; }
     .leave-cell { background-color: #C6EFCE; color: #006100; font-weight: bold; }
     .absent-cell { background-color: #FFC7CE; color: #9C0006; }
     
     /* Summary Cells */
     .summary-header { background-color: #D9E1F2; font-weight: bold; text-align: center; }
     .summary-value { font-weight: bold; text-align: center; background-color: #F8FAFC; }
+    .summary-hours { background-color: #FECACA; color: #b91c1c; font-weight: bold; }
     
     /* Signature Styles */
     .sig-container { border: none; margin-top: 30px; }
@@ -73,19 +75,19 @@ class ExcelExporter
 <div class="table-container">
     <table>
         <tr>
-            <td colspan="' . ($daysInMonth + 8) . '" class="company-name">CÔNG TY TNHH QUẢN LÝ NHÂN SỰ 2026</td>
+            <td colspan="' . ($daysInMonth + 9) . '" class="company-name">CÔNG TY TNHH QUẢN LÝ NHÂN SỰ 2026</td>
         </tr>
         <tr>
-            <td colspan="' . ($daysInMonth + 8) . '" class="report-title">BẢNG TỔNG HỢP CÔNG THÁNG ' . $month . '/' . $year . '</td>
+            <td colspan="' . ($daysInMonth + 9) . '" class="report-title">BẢNG TỔNG HỢP CÔNG THÁNG ' . $month . '/' . $year . '</td>
         </tr>
         <tr>
-            <td colspan="' . ($daysInMonth + 8) . '" class="report-meta">Phòng ban: ' . htmlspecialchars($deptName) . '</td>
+            <td colspan="' . ($daysInMonth + 9) . '" class="report-meta">Phòng ban: ' . htmlspecialchars($deptName) . '</td>
         </tr>
         <tr>
             <td colspan="' . ($daysInMonth / 2) . '" class="info-cell"><strong>Người xuất:</strong> ' . htmlspecialchars($userName) . '</td>
-            <td colspan="' . ($daysInMonth / 2 + 8) . '" class="info-cell" style="text-align: right;"><strong>Ngày xuất:</strong> ' . $currentDate . '</td>
+            <td colspan="' . ($daysInMonth / 2 + 9) . '" class="info-cell" style="text-align: right;"><strong>Ngày xuất:</strong> ' . $currentDate . '</td>
         </tr>
-        <tr style="height: 20px;"><td colspan="' . ($daysInMonth + 8) . '" style="border: none;"></td></tr>
+        <tr style="height: 20px;"><td colspan="' . ($daysInMonth + 9) . '" style="border: none;"></td></tr>
     </table>
 
     <table>
@@ -96,19 +98,21 @@ class ExcelExporter
                 <th rowspan="2" class="header-cell">Họ và Tên</th>
                 <th rowspan="2" class="header-cell">Phòng ban</th>
                 <th colspan="' . $daysInMonth . '" class="header-cell">Ngày trong tháng</th>
-                <th colspan="5" class="header-cell">Tổng cộng</th>
+                <th colspan="6" class="header-cell">Tổng cộng</th>
             </tr>
             <tr>';
         
         for ($i = 1; $i <= $daysInMonth; $i++) {
             $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $i);
             $dayOfWeek = date('w', strtotime($dateStr));
+            $isHoliday = HolidayCalculator::isHoliday($dateStr);
             $isWeekend = ($dayOfWeek == 0 || $dayOfWeek == 6);
-            $style = $isWeekend ? 'background-color: #D9D9D9;' : '';
+            $style = ($isHoliday || $isWeekend) ? 'background-color: #FFEB9C;' : '';
             $html .= '<th class="header-cell" style="' . $style . '">' . $i . '</th>';
         }
 
         $html .= '<th class="summary-header">Công</th>
+            <th class="summary-header summary-hours" style="background-color: #FECACA; color: #b91c1c;">Giờ làm (h)</th>
                 <th class="summary-header">Phép</th>
                 <th class="summary-header">Lễ</th>
                 <th class="summary-header">Vắng</th>
@@ -133,15 +137,18 @@ class ExcelExporter
                 $val = '';
                 $class = 'day-cell';
                 
-                if ($dayData) {
+                $isHoliday = HolidayCalculator::isHoliday($dateStr);
+                if ($isHoliday) {
+                    $val = 'L';
+                    $class .= ' holiday-cell';
+                } elseif ($dayData) {
                     $type = $dayData['day_type'] ?? '';
-                    if ($type === 'holiday') {
-                        $val = 'L';
-                        $class .= ' holiday-cell';
-                    } elseif ($type === 'weekend') {
+                    if ($type === 'weekend') {
                         $dayOfWeek = date('w', strtotime($dateStr));
                         $val = ($dayOfWeek == 0) ? 'CN' : 'T7';
-                        $class .= ' weekend-cell';
+                        if ($dayOfWeek == 0 || $dayOfWeek == 6) {
+                            $class .= ' weekend-cell';
+                        }
                     } elseif ($type === 'leave') {
                         $val = 'P';
                         $class .= ' leave-cell';
@@ -160,6 +167,7 @@ class ExcelExporter
             }
 
             $html .= '<td class="summary-value">' . ($row['work_days'] ?? 0) . '</td>
+                <td class="summary-value summary-hours" style="background-color: #FECACA; color: #b91c1c;">' . ($row['work_hours'] ?? 0) . '</td>
                 <td class="summary-value">' . ($row['leave_days_used'] ?? 0) . '</td>
                 <td class="summary-value">' . ($row['holiday_days'] ?? 0) . '</td>
                 <td class="summary-value">' . ($row['absent_days'] ?? 0) . '</td>
@@ -172,7 +180,7 @@ class ExcelExporter
 
     <table class="legend">
         <tr>
-            <td colspan="' . ($daysInMonth + 8) . '" style="border: none; padding-top: 15px;">
+            <td colspan="' . ($daysInMonth + 9) . '" style="border: none; padding-top: 15px;">
                 <strong>Ghi chú:</strong> 
                 (x): Công đầy đủ; (0.5): Nửa công; (P): Nghỉ phép; (L): Nghỉ lễ; (CN): Chủ nhật; (T7): Thứ bảy; (V): Vắng không phép
             </td>

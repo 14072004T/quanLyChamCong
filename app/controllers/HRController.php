@@ -207,15 +207,24 @@ class HRController
         $department = trim($_POST['department'] ?? $_GET['department'] ?? '');
         $format = strtolower($_POST['format'] ?? 'html');
         $export = (int)($_POST['export'] ?? 0);
+        $monthKey = substr($fromDate, 0, 7);
 
         $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $department);
         $departments = $this->model->getDistinctDepartments();
 
+        $summaryRows = $this->model->getTimesheetApprovalSummary($monthKey);
+        $summaryRow = $summaryRows[0] ?? null;
+        $canExport = $summaryRow && (int)($summaryRow['total'] ?? 0) > 0 && (int)($summaryRow['pending'] ?? 0) === 0;
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $export && in_array($format, ['excel', 'csv'], true)) {
+            if (!$canExport) {
+                $_SESSION['error'] = 'Chỉ xuất khi tất cả nhân viên đã duyệt bảng công.';
+                header('Location: index.php?page=tinh-cong&month=' . urlencode($monthKey));
+                exit;
+            }
             if ($format === 'excel') {
                 require_once __DIR__ . '/../helpers/ExcelExporter.php';
                 $exporter = new ExcelExporter();
-                $monthKey = substr($fromDate, 0, 7);
                 
                 // Sử dụng dữ liệu chi tiết mới cho báo cáo Excel
                 $detailedReportRows = $this->model->getMonthlyAttendanceDetailNew($monthKey);
