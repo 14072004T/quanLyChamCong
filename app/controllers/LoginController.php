@@ -30,9 +30,9 @@ class LoginController {
         }
 
         $username = trim($_POST['username'] ?? '');
-        $password = trim($_POST['password'] ?? '');
+        $matKhau = trim($_POST['matKhau'] ?? '');
 
-        if (empty($username) || empty($password)) {
+        if (empty($username) || empty($matKhau)) {
             header("Location: index.php?page=login&error=1");
             exit;
         }
@@ -55,7 +55,7 @@ class LoginController {
             $user = $result->fetch_assoc();
             
             // Kiểm tra mật khẩu trước
-            if (md5($password) !== $user['matKhau']) {
+            if (md5($matKhau) !== $user['matKhau']) {
                 header("Location: index.php?page=login&error=1");
                 exit;
             }

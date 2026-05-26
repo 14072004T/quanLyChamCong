@@ -15,234 +15,250 @@ class ChamCongModel
     private function ensureTables()
     {
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS attendance_logs (
+            CREATE TABLE IF NOT EXISTS lichSuChamCong (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
-                action ENUM('IN', 'OUT') NOT NULL,
-                method ENUM('LAN', 'QR') NOT NULL DEFAULT 'LAN',
-                wifi_name VARCHAR(120) DEFAULT NULL,
-                note VARCHAR(255) DEFAULT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                hanhDong ENUM('IN', 'OUT') NOT NULL,
+                phuongThuc ENUM('LAN', 'QR') NOT NULL DEFAULT 'LAN',
+                tenWifi VARCHAR(120) DEFAULT NULL,
+                ghiChu VARCHAR(255) DEFAULT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS attendance_corrections (
+            CREATE TABLE IF NOT EXISTS suaChamCong (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
-                attendance_date DATE NOT NULL,
-                old_time DATETIME DEFAULT NULL,
-                new_time DATETIME NOT NULL,
-                reason TEXT NOT NULL,
-                status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
-                hr_note VARCHAR(255) DEFAULT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+                ngayChamCong DATE NOT NULL,
+                gioCu DATETIME DEFAULT NULL,
+                gioMoi DATETIME NOT NULL,
+                lyDo TEXT NOT NULL,
+                trangThai ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+                ghiChuNS VARCHAR(255) DEFAULT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS attendance_wifi (
+            CREATE TABLE IF NOT EXISTS wifiChamCong (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                wifi_name VARCHAR(120) NOT NULL UNIQUE,
-                ip_range VARCHAR(50) DEFAULT NULL,
-                gateway VARCHAR(50) DEFAULT NULL,
-                description VARCHAR(255) DEFAULT NULL,
+                tenWifi VARCHAR(120) NOT NULL UNIQUE,
+                daiIP VARCHAR(50) DEFAULT NULL,
+                congMacDinh VARCHAR(50) DEFAULT NULL,
+                moTa VARCHAR(255) DEFAULT NULL,
                 ssid VARCHAR(120) DEFAULT NULL,
-                password VARCHAR(120) DEFAULT NULL,
-                location VARCHAR(255) DEFAULT NULL,
-                is_active TINYINT(1) NOT NULL DEFAULT 1,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                matKhau VARCHAR(120) DEFAULT NULL,
+                viTri VARCHAR(255) DEFAULT NULL,
+                hoatDong TINYINT(1) NOT NULL DEFAULT 1,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
         // Add missing columns if they don't exist (for existing databases)
-        $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS ip_range VARCHAR(50) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS gateway VARCHAR(50) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS ssid VARCHAR(120) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS password VARCHAR(120) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE attendance_wifi ADD COLUMN IF NOT EXISTS location VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS daiIP VARCHAR(50) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS congMacDinh VARCHAR(50) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS moTa VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS ssid VARCHAR(120) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS matKhau VARCHAR(120) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS viTri VARCHAR(255) DEFAULT NULL");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS attendance_shifts (
+            CREATE TABLE IF NOT EXISTS caLamViec (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                shift_name VARCHAR(100) NOT NULL,
-                start_time TIME NOT NULL,
-                end_time TIME NOT NULL,
-                is_active TINYINT(1) NOT NULL DEFAULT 1,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                tenCa VARCHAR(100) NOT NULL,
+                gioBatDau TIME NOT NULL,
+                gioKetThuc TIME NOT NULL,
+                hoatDong TINYINT(1) NOT NULL DEFAULT 1,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
         $this->conn->query(" 
-            CREATE TABLE IF NOT EXISTS attendance_employee_shift (
+            CREATE TABLE IF NOT EXISTS caNhanVien (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
-                shift_id INT NOT NULL,
-                effective_from DATE NOT NULL,
-                effective_to DATE DEFAULT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                maCa INT NOT NULL,
+                hieuLucTu DATE NOT NULL,
+                hieuLucDen DATE DEFAULT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
         $this->conn->query(" 
-            CREATE TABLE IF NOT EXISTS attendance_monthly_approval (
+            CREATE TABLE IF NOT EXISTS duyetCongThang (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                month_key CHAR(7) NOT NULL,
-                department VARCHAR(120) NOT NULL DEFAULT '',
-                hr_sender_id INT NOT NULL,
-                manager_approver_id INT DEFAULT NULL,
-                status ENUM('draft','submitted','approved','rejected') NOT NULL DEFAULT 'draft',
-                submitted_at DATETIME DEFAULT NULL,
-                approved_at DATETIME DEFAULT NULL,
-                note VARCHAR(255) DEFAULT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY uk_month_dept (month_key, department)
+                thangNam CHAR(7) NOT NULL,
+                phongBan VARCHAR(120) NOT NULL DEFAULT '',
+                maNguoiGuiNS INT NOT NULL,
+                maNguoiDuyetQL INT DEFAULT NULL,
+                trangThai ENUM('draft','submitted','approved','rejected') NOT NULL DEFAULT 'draft',
+                ngayGui DATETIME DEFAULT NULL,
+                ngayDuyet DATETIME DEFAULT NULL,
+                ghiChu VARCHAR(255) DEFAULT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uk_month_dept (thangNam, phongBan)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-        $this->conn->query("ALTER TABLE attendance_monthly_approval ADD COLUMN IF NOT EXISTS department VARCHAR(120) NOT NULL DEFAULT ''");
-        $this->conn->query("UPDATE attendance_monthly_approval SET department = '' WHERE department IS NULL");
+        $this->conn->query("ALTER TABLE duyetCongThang ADD COLUMN IF NOT EXISTS phongBan VARCHAR(120) NOT NULL DEFAULT ''");
+        $this->conn->query("UPDATE duyetCongThang SET phongBan = '' WHERE phongBan IS NULL");
 
-        $oldIndex = $this->conn->query("SHOW INDEX FROM attendance_monthly_approval WHERE Key_name = 'uk_month_key'");
+        $oldIndex = $this->conn->query("SHOW INDEX FROM duyetCongThang WHERE Key_name = 'uk_month_key'");
         if ($oldIndex && $oldIndex->num_rows > 0) {
-            $this->conn->query("ALTER TABLE attendance_monthly_approval DROP INDEX uk_month_key");
+            $this->conn->query("ALTER TABLE duyetCongThang DROP INDEX uk_month_key");
         }
-        $newIndex = $this->conn->query("SHOW INDEX FROM attendance_monthly_approval WHERE Key_name = 'uk_month_dept'");
+        $newIndex = $this->conn->query("SHOW INDEX FROM duyetCongThang WHERE Key_name = 'uk_month_dept'");
         if ($newIndex && $newIndex->num_rows === 0) {
-            $this->conn->query("ALTER TABLE attendance_monthly_approval ADD UNIQUE KEY uk_month_dept (month_key, department)");
+            $this->conn->query("ALTER TABLE duyetCongThang ADD UNIQUE KEY uk_month_dept (thangNam, phongBan)");
         }
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS leave_requests (
+            CREATE TABLE IF NOT EXISTS duyetCongNhanVien (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                thangNam CHAR(7) NOT NULL,
+                maND INT NOT NULL,
+                maNguoiGuiNS INT NOT NULL,
+                trangThai ENUM('draft','submitted','approved','rejected') NOT NULL DEFAULT 'draft',
+                ngayGui DATETIME DEFAULT NULL,
+                ngayDuyet DATETIME DEFAULT NULL,
+                ghiChu VARCHAR(255) DEFAULT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uk_month_user (thangNam, maND)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS yeuCauNghiPhep (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
-                leave_date DATE NOT NULL,
-                leave_type VARCHAR(50) NOT NULL DEFAULT 'annual',
-                is_half_day TINYINT(1) NOT NULL DEFAULT 0,
-                reason TEXT DEFAULT NULL,
-                status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-                manager_note VARCHAR(255) DEFAULT NULL,
-                manager_approver_id INT DEFAULT NULL,
-                approved_at DATETIME DEFAULT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+                ngayNghi DATE NOT NULL,
+                loaiNghiPhep VARCHAR(50) NOT NULL DEFAULT 'annual',
+                laNuaNgay TINYINT(1) NOT NULL DEFAULT 0,
+                lyDo TEXT DEFAULT NULL,
+                trangThai ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                ghiChuQL VARCHAR(255) DEFAULT NULL,
+                maNguoiDuyetQL INT DEFAULT NULL,
+                ngayDuyet DATETIME DEFAULT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS leave_type VARCHAR(50) NOT NULL DEFAULT 'annual'");
-        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS is_half_day TINYINT(1) NOT NULL DEFAULT 0");
-        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS manager_note VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS manager_approver_id INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS approved_at DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
+        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS loaiNghiPhep VARCHAR(50) NOT NULL DEFAULT 'annual'");
+        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS laNuaNgay TINYINT(1) NOT NULL DEFAULT 0");
+        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS ghiChuQL VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS maNguoiDuyetQL INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS ngayDuyet DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS ot_requests (
+            CREATE TABLE IF NOT EXISTS yeuCauTangCa (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
-                ot_date DATE NOT NULL,
-                start_time TIME DEFAULT NULL,
-                end_time TIME DEFAULT NULL,
-                hours DECIMAL(5,2) NOT NULL DEFAULT 0,
-                reason TEXT DEFAULT NULL,
-                status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-                manager_note VARCHAR(255) DEFAULT NULL,
-                manager_approver_id INT DEFAULT NULL,
-                approved_at DATETIME DEFAULT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+                ngayTangCa DATE NOT NULL,
+                gioBatDau TIME DEFAULT NULL,
+                gioKetThuc TIME DEFAULT NULL,
+                soGio DECIMAL(5,2) NOT NULL DEFAULT 0,
+                lyDo TEXT DEFAULT NULL,
+                trangThai ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                ghiChuQL VARCHAR(255) DEFAULT NULL,
+                maNguoiDuyetQL INT DEFAULT NULL,
+                ngayDuyet DATETIME DEFAULT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-        $this->conn->query("ALTER TABLE ot_requests ADD COLUMN IF NOT EXISTS manager_note VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE ot_requests ADD COLUMN IF NOT EXISTS manager_approver_id INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE ot_requests ADD COLUMN IF NOT EXISTS approved_at DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE ot_requests ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
+        $this->conn->query("ALTER TABLE yeuCauTangCa ADD COLUMN IF NOT EXISTS ghiChuQL VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauTangCa ADD COLUMN IF NOT EXISTS maNguoiDuyetQL INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauTangCa ADD COLUMN IF NOT EXISTS ngayDuyet DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauTangCa ADD COLUMN IF NOT EXISTS ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS shift_change_requests (
+            CREATE TABLE IF NOT EXISTS yeuCauDoiCa (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
-                request_date DATE NOT NULL,
-                current_shift_id INT DEFAULT NULL,
-                requested_shift_id INT DEFAULT NULL,
-                current_shift_name VARCHAR(100) DEFAULT NULL,
-                requested_shift_name VARCHAR(100) DEFAULT NULL,
-                reason TEXT DEFAULT NULL,
-                status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-                manager_note VARCHAR(255) DEFAULT NULL,
-                manager_approver_id INT DEFAULT NULL,
-                approved_at DATETIME DEFAULT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+                ngayYeuCau DATE NOT NULL,
+                maCaHienTai INT DEFAULT NULL,
+                maCaMoi INT DEFAULT NULL,
+                tenCaHienTai VARCHAR(100) DEFAULT NULL,
+                tenCaMoi VARCHAR(100) DEFAULT NULL,
+                lyDo TEXT DEFAULT NULL,
+                trangThai ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                ghiChuQL VARCHAR(255) DEFAULT NULL,
+                maNguoiDuyetQL INT DEFAULT NULL,
+                ngayDuyet DATETIME DEFAULT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS current_shift_id INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS requested_shift_id INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS current_shift_name VARCHAR(100) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS requested_shift_name VARCHAR(100) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS manager_note VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS manager_approver_id INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS approved_at DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE shift_change_requests ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
+        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS maCaHienTai INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS maCaMoi INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS tenCaHienTai VARCHAR(100) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS tenCaMoi VARCHAR(100) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS ghiChuQL VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS maNguoiDuyetQL INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS ngayDuyet DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS system_settings (
+            CREATE TABLE IF NOT EXISTS caiDatHeThong (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                setting_key VARCHAR(100) NOT NULL UNIQUE,
-                setting_value VARCHAR(255) DEFAULT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+                tenCaiDat VARCHAR(100) NOT NULL UNIQUE,
+                giaTri VARCHAR(255) DEFAULT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS don_nghi_phep (
+            CREATE TABLE IF NOT EXISTS donNghiPhep (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                leave_type VARCHAR(50) NOT NULL DEFAULT 'personal',
-                from_date DATE NOT NULL,
-                to_date DATE NOT NULL,
-                reason TEXT NOT NULL,
-                evidence_file VARCHAR(255) DEFAULT NULL,
-                status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
-                approved_by INT DEFAULT NULL,
-                approved_at DATETIME DEFAULT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                maND INT NOT NULL,
+                loaiNghiPhep VARCHAR(50) NOT NULL DEFAULT 'personal',
+                tuNgay DATE NOT NULL,
+                denNgay DATE NOT NULL,
+                lyDo TEXT NOT NULL,
+                tepMinhChung VARCHAR(255) DEFAULT NULL,
+                trangThai ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+                nguoiDuyet INT DEFAULT NULL,
+                ngayDuyet DATETIME DEFAULT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
         // Migration for existing tables
-        $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS leave_type VARCHAR(50) NOT NULL DEFAULT 'personal'");
-        $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS evidence_file VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS approved_by INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE don_nghi_phep ADD COLUMN IF NOT EXISTS approved_at DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE donNghiPhep ADD COLUMN IF NOT EXISTS loaiNghiPhep VARCHAR(50) NOT NULL DEFAULT 'personal'");
+        $this->conn->query("ALTER TABLE donNghiPhep ADD COLUMN IF NOT EXISTS tepMinhChung VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE donNghiPhep ADD COLUMN IF NOT EXISTS nguoiDuyet INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE donNghiPhep ADD COLUMN IF NOT EXISTS ngayDuyet DATETIME DEFAULT NULL");
 
-        // Migration: attendance_corrections — add nullable columns for edit request feature
-        $this->conn->query("ALTER TABLE attendance_corrections ADD COLUMN IF NOT EXISTS proposed_checkin DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE attendance_corrections ADD COLUMN IF NOT EXISTS proposed_checkout DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE attendance_corrections ADD COLUMN IF NOT EXISTS evidence_file VARCHAR(255) DEFAULT NULL");
+        // Migration: suaChamCong — add nullable columns for edit request feature
+        $this->conn->query("ALTER TABLE suaChamCong ADD COLUMN IF NOT EXISTS gioVaoDeXuat DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE suaChamCong ADD COLUMN IF NOT EXISTS gioRaDeXuat DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE suaChamCong ADD COLUMN IF NOT EXISTS tepMinhChung VARCHAR(255) DEFAULT NULL");
     }
 
-    public function chamCong($maND, $action, $method, $wifiName, $note, $clientIP = null)
+    public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null)
     {
         // Get client IP if not provided (server-side only, cannot be spoofed)
         if ($clientIP === null) {
             $clientIP = $this->getServerIP();
         }
 
-        $sql = "INSERT INTO attendance_logs (maND, action, method, wifi_name, note, created_at) 
+        $sql = "INSERT INTO lichSuChamCong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) 
                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("issss", $maND, $action, $method, $wifiName, $note);
+        $stmt->bind_param("issss", $maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu);
         return $stmt->execute();
     }
 
     public function getLichSuTheoNhanVien($maND, $limit = 30)
     {
-        $sql = "SELECT id, action, method, wifi_name, note, created_at
-                FROM attendance_logs
+        $sql = "SELECT id, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao
+                FROM lichSuChamCong
                 WHERE maND = ?
-                ORDER BY created_at DESC
+                ORDER BY ngayTao DESC
                 LIMIT ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ii", $maND, $limit);
@@ -256,12 +272,12 @@ class ChamCongModel
         return $this->getLichSuTheoNhanVien($maND, $limit);
     }
 
-    public function taoYeuCauChinhSua($maND, $attendanceDate, $oldTime, $newTime, $reason)
+    public function taoYeuCauChinhSua($maND, $attendanceDate, $oldTime, $newTime, $lyDo)
     {
-        $sql = "INSERT INTO attendance_corrections (maND, attendance_date, old_time, new_time, reason)
+        $sql = "INSERT INTO suaChamCong (maND, ngayChamCong, gioCu, gioMoi, lyDo)
                 VALUES (?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("issss", $maND, $attendanceDate, $oldTime, $newTime, $reason);
+        $stmt->bind_param("issss", $maND, $attendanceDate, $oldTime, $newTime, $lyDo);
         return $stmt->execute();
     }
 
@@ -272,19 +288,19 @@ class ChamCongModel
     public function insertEditRequest(array $data)
     {
         $maND = (int)($data['maND'] ?? 0);
-        $attendanceDate = trim($data['attendance_date'] ?? '');
-        $oldTime = !empty($data['old_time']) ? trim($data['old_time']) : null;
-        $newTime = !empty($data['new_time']) ? trim($data['new_time']) : null;
-        $reason = trim($data['reason'] ?? '');
-        $proposedCheckin = !empty($data['proposed_checkin']) ? trim($data['proposed_checkin']) : null;
-        $proposedCheckout = !empty($data['proposed_checkout']) ? trim($data['proposed_checkout']) : null;
-        $evidenceFile = !empty($data['evidence_file']) ? trim($data['evidence_file']) : null;
+        $attendanceDate = trim($data['ngayChamCong'] ?? '');
+        $oldTime = !empty($data['gioCu']) ? trim($data['gioCu']) : null;
+        $newTime = !empty($data['gioMoi']) ? trim($data['gioMoi']) : null;
+        $lyDo = trim($data['lyDo'] ?? '');
+        $proposedCheckin = !empty($data['gioVaoDeXuat']) ? trim($data['gioVaoDeXuat']) : null;
+        $proposedCheckout = !empty($data['gioRaDeXuat']) ? trim($data['gioRaDeXuat']) : null;
+        $evidenceFile = !empty($data['tepMinhChung']) ? trim($data['tepMinhChung']) : null;
 
-        if ($maND <= 0 || $attendanceDate === '' || $reason === '') {
+        if ($maND <= 0 || $attendanceDate === '' || $lyDo === '') {
             return false;
         }
 
-        // Build new_time from proposed_checkin if not provided (backward compat)
+        // Build gioMoi from gioVaoDeXuat if not provided (backward compat)
         if ($newTime === null && $proposedCheckin !== null) {
             $newTime = $proposedCheckin;
         }
@@ -292,14 +308,14 @@ class ChamCongModel
             $newTime = date('Y-m-d H:i:s');
         }
 
-        $sql = "INSERT INTO attendance_corrections 
-                (maND, attendance_date, old_time, new_time, reason, proposed_checkin, proposed_checkout, evidence_file)
+        $sql = "INSERT INTO suaChamCong 
+                (maND, ngayChamCong, gioCu, gioMoi, lyDo, gioVaoDeXuat, gioRaDeXuat, tepMinhChung)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
         }
-        $stmt->bind_param("isssssss", $maND, $attendanceDate, $oldTime, $newTime, $reason, $proposedCheckin, $proposedCheckout, $evidenceFile);
+        $stmt->bind_param("isssssss", $maND, $attendanceDate, $oldTime, $newTime, $lyDo, $proposedCheckin, $proposedCheckout, $evidenceFile);
         $result = $stmt->execute();
         $stmt->close();
         return $result;
@@ -307,12 +323,12 @@ class ChamCongModel
 
     public function getYeuCauTheoNhanVien($maND)
     {
-        $sql = "SELECT id, attendance_date, old_time, new_time, reason, status, hr_note, 
-                       proposed_checkin, proposed_checkout, evidence_file,
-                       created_at, updated_at
-                FROM attendance_corrections
+        $sql = "SELECT id, ngayChamCong, gioCu, gioMoi, lyDo, trangThai, ghiChuNS, 
+                       gioVaoDeXuat, gioRaDeXuat, tepMinhChung,
+                       ngayTao, ngayCapNhat
+                FROM suaChamCong
                 WHERE maND = ?
-                ORDER BY created_at DESC";
+                ORDER BY ngayTao DESC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $maND);
         $stmt->execute();
@@ -329,7 +345,7 @@ class ChamCongModel
 
     /**
      * Get attendance records grouped by date for a user.
-     * Returns work_date, first_in, last_out for each day.
+     * Returns ngayLamViec, gioVaoDau, gioRaCuoi for each day.
      */
     public function getAttendanceByUser($maND, $limit = 30)
     {
@@ -337,13 +353,13 @@ class ChamCongModel
         $limit = max(1, min((int)$limit, 100));
 
         $sql = "SELECT 
-                    DATE(created_at) AS work_date,
-                    MIN(CASE WHEN action = 'IN' THEN created_at END) AS first_in,
-                    MAX(CASE WHEN action = 'OUT' THEN created_at END) AS last_out
-                FROM attendance_logs
+                    DATE(ngayTao) AS ngayLamViec,
+                    MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) AS gioVaoDau,
+                    MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) AS gioRaCuoi
+                FROM lichSuChamCong
                 WHERE maND = ?
-                GROUP BY DATE(created_at)
-                ORDER BY work_date DESC
+                GROUP BY DATE(ngayTao)
+                ORDER BY ngayLamViec DESC
                 LIMIT ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -367,13 +383,13 @@ class ChamCongModel
             $date = date('Y-m-d');
         }
 
-        $sql = "SELECT s.id AS shift_id, s.shift_name, s.start_time, s.end_time
-                FROM attendance_employee_shift aes
-                JOIN attendance_shifts s ON s.id = aes.shift_id AND s.is_active = 1
+        $sql = "SELECT s.id AS maCa, s.tenCa, s.gioBatDau, s.gioKetThuc
+                FROM caNhanVien aes
+                JOIN caLamViec s ON s.id = aes.maCa AND s.hoatDong = 1
                 WHERE aes.maND = ?
-                  AND aes.effective_from <= ?
-                  AND (aes.effective_to IS NULL OR aes.effective_to >= ?)
-                ORDER BY aes.effective_from DESC
+                  AND aes.hieuLucTu <= ?
+                  AND (aes.hieuLucDen IS NULL OR aes.hieuLucDen >= ?)
+                ORDER BY aes.hieuLucTu DESC
                 LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -386,7 +402,7 @@ class ChamCongModel
 
         // Fallback to default shift (Hành chính) if no explicit assignment exists
         if (!$row) {
-            $res = $this->conn->query("SELECT id AS shift_id, shift_name, start_time, end_time FROM attendance_shifts WHERE is_active = 1 ORDER BY id ASC LIMIT 1");
+            $res = $this->conn->query("SELECT id AS maCa, tenCa, gioBatDau, gioKetThuc FROM caLamViec WHERE hoatDong = 1 ORDER BY id ASC LIMIT 1");
             if ($res && $res->num_rows > 0) {
                 $row = $res->fetch_assoc();
             }
@@ -396,14 +412,14 @@ class ChamCongModel
     }
 
     /**
-     * Calculate attendance status based on shift times.
+     * Calculate attendance trangThai based on shift times.
      * Handles: on-time, late, early leave, overtime, overnight shifts, missing check-out.
      *
      * @param string|null $checkIn  - Check-in datetime (e.g., '2026-05-05 08:15:00')
      * @param string|null $checkOut - Check-out datetime (nullable for missing check-out)
      * @param string|null $shiftStart - Shift start time (e.g., '08:00:00'), null = no shift
      * @param string|null $shiftEnd   - Shift end time (e.g., '17:00:00'), null = no shift
-     * @return array ['statuses' => [], 'minutes_late' => int, 'minutes_early' => int, 'overtime_minutes' => int, 'labels' => []]
+     * @return array ['statuses' => [], 'minutes_late' => int, 'minutes_early' => int, 'phutTangCa' => int, 'labels' => []]
      */
     public function calculateShiftStatus($checkIn, $checkOut, $shiftStart, $shiftEnd)
     {
@@ -411,7 +427,7 @@ class ChamCongModel
             'statuses' => [],
             'minutes_late' => 0,
             'minutes_early' => 0,
-            'overtime_minutes' => 0,
+            'phutTangCa' => 0,
             'labels' => [],
             'colors' => [],
         ];
@@ -437,7 +453,7 @@ class ChamCongModel
         $checkInTime = strtotime($checkIn);
         $shiftStartTime = strtotime($checkInDate . ' ' . $shiftStart);
 
-        // Determine if overnight shift (end_time < start_time, e.g., 22:00 - 06:00)
+        // Determine if overnight shift (gioKetThuc < gioBatDau, e.g., 22:00 - 06:00)
         $isOvernight = $shiftEnd < $shiftStart;
         if ($isOvernight) {
             $shiftEndTime = strtotime($checkInDate . ' ' . $shiftEnd . ' +1 day');
@@ -484,23 +500,23 @@ class ChamCongModel
             } elseif ($diffOut > 1) {
                 // Overtime
                 $result['statuses'][] = 'overtime';
-                $result['overtime_minutes'] = (int)round($diffOut);
-                $result['labels'][] = 'Tăng ca ' . $result['overtime_minutes'] . ' phút';
+                $result['phutTangCa'] = (int)round($diffOut);
+                $result['labels'][] = 'Tăng ca ' . $result['phutTangCa'] . ' phút';
                 $result['colors'][] = '#3b82f6';
             }
         }
 
-        // If no special status for check-out, and check-in was on time — overall on_time
+        // If no special trangThai for check-out, and check-in was on time — overall on_time
         if (count($result['statuses']) === 1 && $result['statuses'][0] === 'on_time' && $checkOut !== null) {
-            // Just on_time, no additional status needed
+            // Just on_time, no additional trangThai needed
         }
 
         return $result;
     }
 
     /**
-     * Get today's full shift status for a user (for dashboard display).
-     * Returns shift info + attendance status + labels.
+     * Get today's full shift trangThai for a user (for dashboard display).
+     * Returns shift info + attendance trangThai + labels.
      */
     public function getTodayShiftStatus($maND)
     {
@@ -512,32 +528,32 @@ class ChamCongModel
 
         // Get today's check-in/check-out
         $sql = "SELECT 
-                    MIN(CASE WHEN action = 'IN' THEN created_at END) AS first_in,
-                    MAX(CASE WHEN action = 'OUT' THEN created_at END) AS last_out
-                FROM attendance_logs
-                WHERE maND = ? AND DATE(created_at) = ?";
+                    MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) AS gioVaoDau,
+                    MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) AS gioRaCuoi
+                FROM lichSuChamCong
+                WHERE maND = ? AND DATE(ngayTao) = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
-            return ['shift' => $shift, 'status' => ['statuses' => ['error'], 'labels' => ['Lỗi hệ thống'], 'colors' => ['#94a3b8'], 'minutes_late' => 0, 'minutes_early' => 0, 'overtime_minutes' => 0], 'first_in' => null, 'last_out' => null];
+            return ['shift' => $shift, 'trangThai' => ['statuses' => ['error'], 'labels' => ['Lỗi hệ thống'], 'colors' => ['#94a3b8'], 'minutes_late' => 0, 'minutes_early' => 0, 'phutTangCa' => 0], 'gioVaoDau' => null, 'gioRaCuoi' => null];
         }
         $stmt->bind_param("is", $maND, $today);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        $firstIn = $row['first_in'] ?? null;
-        $lastOut = $row['last_out'] ?? null;
+        $firstIn = $row['gioVaoDau'] ?? null;
+        $lastOut = $row['gioRaCuoi'] ?? null;
 
-        $shiftStart = $shift['start_time'] ?? null;
-        $shiftEnd = $shift['end_time'] ?? null;
+        $shiftStart = $shift['gioBatDau'] ?? null;
+        $shiftEnd = $shift['gioKetThuc'] ?? null;
 
-        $status = $this->calculateShiftStatus($firstIn, $lastOut, $shiftStart, $shiftEnd);
+        $trangThai = $this->calculateShiftStatus($firstIn, $lastOut, $shiftStart, $shiftEnd);
 
         return [
             'shift' => $shift,
-            'status' => $status,
-            'first_in' => $firstIn,
-            'last_out' => $lastOut,
+            'trangThai' => $trangThai,
+            'gioVaoDau' => $firstIn,
+            'gioRaCuoi' => $lastOut,
         ];
     }
 
@@ -558,10 +574,10 @@ class ChamCongModel
         $result = $this->conn->query("
             SELECT
                 COUNT(*) AS total_logs_today,
-                SUM(CASE WHEN action = 'IN' THEN 1 ELSE 0 END) AS in_today,
-                SUM(CASE WHEN action = 'OUT' THEN 1 ELSE 0 END) AS out_today
-            FROM attendance_logs
-            WHERE DATE(created_at) = CURDATE()
+                SUM(CASE WHEN hanhDong = 'IN' THEN 1 ELSE 0 END) AS in_today,
+                SUM(CASE WHEN hanhDong = 'OUT' THEN 1 ELSE 0 END) AS out_today
+            FROM lichSuChamCong
+            WHERE DATE(ngayTao) = CURDATE()
         ");
         if ($result) {
             $row = $result->fetch_assoc();
@@ -575,14 +591,14 @@ class ChamCongModel
             }
         }
 
-        $result2 = $this->conn->query("SELECT COUNT(*) AS pending_requests FROM attendance_corrections WHERE status = 'pending'");
+        $result2 = $this->conn->query("SELECT COUNT(*) AS pending_requests FROM suaChamCong WHERE trangThai = 'pending'");
         if ($result2) {
             $row2 = $result2->fetch_assoc();
             $data['pending_requests'] = (int) ($row2['pending_requests'] ?? 0);
             $data['pending_corrections'] = $data['pending_requests'];
         }
 
-        $result3 = $this->conn->query("SELECT COUNT(*) AS pending_approvals FROM attendance_monthly_approval WHERE status = 'submitted'");
+        $result3 = $this->conn->query("SELECT COUNT(*) AS pending_approvals FROM duyetCongThang WHERE trangThai = 'submitted'");
         if ($result3) {
             $row3 = $result3->fetch_assoc();
             $data['pending_approvals'] = (int) ($row3['pending_approvals'] ?? 0);
@@ -593,7 +609,7 @@ class ChamCongModel
 
     public function getEmployees($keyword = '', $activeOnly = false, $limit = 0)
     {
-        $sql = "SELECT maND, maTK, hoTen, email, soDienThoai, chucVu, phongBan, trangThai, created_at
+        $sql = "SELECT maND, maTK, hoTen, email, soDienThoai, chucVu, phongBan, trangThai, ngayTao
                 FROM nguoidung";
         $conditions = [];
         $types = '';
@@ -631,23 +647,23 @@ class ChamCongModel
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
 
-    public function getEmployeesByDepartment($department = '', $keyword = '', $activeOnly = false)
+    public function getEmployeesByDepartment($phongBan = '', $keyword = '', $activeOnly = false)
     {
-        $department = trim((string)$department);
+        $phongBan = trim((string)$phongBan);
         $keyword = trim((string)$keyword);
         
-        $sql = "SELECT maND, maTK, hoTen, email, soDienThoai, chucVu, phongBan, trangThai, created_at
+        $sql = "SELECT maND, maTK, hoTen, email, soDienThoai, chucVu, phongBan, trangThai, ngayTao
                 FROM nguoidung
                 WHERE trangThai = 1
                   AND chucVu = 'Nhân viên'";
         $types = '';
         $params = [];
 
-        // Filter by department
-        if ($department !== '') {
+        // Filter by phongBan
+        if ($phongBan !== '') {
             $sql .= " AND phongBan = ?";
             $types .= 's';
-            $params[] = $department;
+            $params[] = $phongBan;
         }
 
         // Filter by keyword
@@ -727,14 +743,14 @@ class ChamCongModel
 
     public function getShifts()
     {
-        $sql = "SELECT s.id, s.shift_name, s.start_time, s.end_time, s.is_active, s.created_at,
-                       (SELECT COUNT(DISTINCT aes.maND) FROM attendance_employee_shift aes
+        $sql = "SELECT s.id, s.tenCa, s.gioBatDau, s.gioKetThuc, s.hoatDong, s.ngayTao,
+                       (SELECT COUNT(DISTINCT aes.maND) FROM caNhanVien aes
                         JOIN nguoidung nd ON nd.maND = aes.maND
-                        WHERE aes.shift_id = s.id 
-                          AND (aes.effective_to IS NULL OR aes.effective_to >= CURDATE())
+                        WHERE aes.maCa = s.id 
+                          AND (aes.hieuLucDen IS NULL OR aes.hieuLucDen >= CURDATE())
                           AND nd.chucVu = 'Nhân viên' AND nd.trangThai = 1) AS assigned_count
-                FROM attendance_shifts s
-                ORDER BY s.created_at DESC";
+                FROM caLamViec s
+                ORDER BY s.ngayTao DESC";
         $result = $this->conn->query($sql);
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
@@ -742,23 +758,23 @@ class ChamCongModel
     public function saveShift(array $payload)
     {
         $id = (int)($payload['id'] ?? 0);
-        $name = trim($payload['shift_name'] ?? '');
-        $start = trim($payload['start_time'] ?? '');
-        $end = trim($payload['end_time'] ?? '');
-        $isActive = (int)($payload['is_active'] ?? 1);
+        $name = trim($payload['tenCa'] ?? '');
+        $start = trim($payload['gioBatDau'] ?? '');
+        $end = trim($payload['gioKetThuc'] ?? '');
+        $isActive = (int)($payload['hoatDong'] ?? 1);
 
         if ($name === '' || $start === '' || $end === '' || $start >= $end) {
             return false;
         }
 
         if ($id > 0) {
-            $sql = "UPDATE attendance_shifts SET shift_name = ?, start_time = ?, end_time = ?, is_active = ? WHERE id = ?";
+            $sql = "UPDATE caLamViec SET tenCa = ?, gioBatDau = ?, gioKetThuc = ?, hoatDong = ? WHERE id = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("sssii", $name, $start, $end, $isActive, $id);
             return $stmt->execute();
         }
 
-        $sql = "INSERT INTO attendance_shifts (shift_name, start_time, end_time, is_active) VALUES (?, ?, ?, ?)";
+        $sql = "INSERT INTO caLamViec (tenCa, gioBatDau, gioKetThuc, hoatDong) VALUES (?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("sssi", $name, $start, $end, $isActive);
         return $stmt->execute();
@@ -772,43 +788,43 @@ class ChamCongModel
             return false;
         }
 
-        $closeCurrent = $this->conn->prepare("UPDATE attendance_employee_shift SET effective_to = DATE_SUB(?, INTERVAL 1 DAY) WHERE maND = ? AND effective_to IS NULL");
+        $closeCurrent = $this->conn->prepare("UPDATE caNhanVien SET hieuLucDen = DATE_SUB(?, INTERVAL 1 DAY) WHERE maND = ? AND hieuLucDen IS NULL");
         $closeCurrent->bind_param("si", $effectiveFrom, $maND);
         $closeCurrent->execute();
 
-        $insert = $this->conn->prepare("INSERT INTO attendance_employee_shift (maND, shift_id, effective_from) VALUES (?, ?, ?)");
+        $insert = $this->conn->prepare("INSERT INTO caNhanVien (maND, maCa, hieuLucTu) VALUES (?, ?, ?)");
         $insert->bind_param("iis", $maND, $shiftId, $effectiveFrom);
         return $insert->execute();
     }
 
-    public function getMonthlyWorkSummary($monthKey, $department = '')
+    public function getMonthlyWorkSummary($monthKey, $phongBan = '')
     {
         $monthStart = $monthKey . '-01';
         $defaultWorkMinutes = (int)$this->getSettingValue('DEFAULT_WORK_MINUTES', '480');
 
         $sql = "SELECT u.maND, u.hoTen, u.phongBan,
-                       COUNT(CASE WHEN d.first_in IS NOT NULL THEN 1 END) AS work_days,
-                       ROUND(SUM(d.work_minutes) / 60, 2) AS work_hours,
-                       ROUND(SUM(CASE WHEN d.work_minutes > ? THEN d.work_minutes - ? ELSE 0 END) / 60, 2) AS overtime_hours
+                       COUNT(CASE WHEN d.gioVaoDau IS NOT NULL THEN 1 END) AS work_days,
+                       ROUND(SUM(d.phutLamViec) / 60, 2) AS work_hours,
+                       ROUND(SUM(CASE WHEN d.phutLamViec > ? THEN d.phutLamViec - ? ELSE 0 END) / 60, 2) AS overtime_hours
                 FROM nguoidung u
                 LEFT JOIN (
                     SELECT maND,
-                           DATE(created_at) AS work_date,
-                           MIN(CASE WHEN action = 'IN' THEN created_at END) AS first_in,
-                           MAX(CASE WHEN action = 'OUT' THEN created_at END) AS last_out,
+                           DATE(ngayTao) AS ngayLamViec,
+                           MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) AS gioVaoDau,
+                           MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) AS gioRaCuoi,
                            CASE
-                               WHEN MIN(CASE WHEN action = 'IN' THEN created_at END) IS NOT NULL
-                                AND MAX(CASE WHEN action = 'OUT' THEN created_at END) IS NOT NULL
+                               WHEN MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) IS NOT NULL
+                                AND MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) IS NOT NULL
                                THEN GREATEST(TIMESTAMPDIFF(MINUTE,
-                                       MIN(CASE WHEN action = 'IN' THEN created_at END),
-                                       MAX(CASE WHEN action = 'OUT' THEN created_at END)
+                                       MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END),
+                                       MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END)
                                    ), 0)
                                ELSE 0
-                           END AS work_minutes
-                    FROM attendance_logs
-                    WHERE created_at >= ?
-                      AND created_at < DATE_ADD(?, INTERVAL 1 MONTH)
-                    GROUP BY maND, DATE(created_at)
+                           END AS phutLamViec
+                    FROM lichSuChamCong
+                    WHERE ngayTao >= ?
+                      AND ngayTao < DATE_ADD(?, INTERVAL 1 MONTH)
+                    GROUP BY maND, DATE(ngayTao)
                 ) d ON d.maND = u.maND
                 WHERE u.trangThai = 1
                   AND u.chucVu = 'Nhân viên'
@@ -817,7 +833,7 @@ class ChamCongModel
                 ORDER BY u.hoTen";
 
         $stmt = $this->conn->prepare($sql);
-            $dept = trim((string)$department);
+            $dept = trim((string)$phongBan);
             $stmt->bind_param("iissss", $defaultWorkMinutes, $defaultWorkMinutes, $monthStart, $monthStart, $dept, $dept);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -831,12 +847,12 @@ class ChamCongModel
         }
 
         $monthStart = $monthKey . '-01';
-        $sql = "SELECT maND, ot_date, start_time, end_time, hours, reason
-                FROM ot_requests
-                WHERE status = 'approved'
-                  AND ot_date >= ?
-                  AND ot_date < DATE_ADD(?, INTERVAL 1 MONTH)
-                ORDER BY ot_date ASC, created_at ASC";
+        $sql = "SELECT maND, ngayTangCa, gioBatDau, gioKetThuc, soGio, lyDo
+                FROM yeuCauTangCa
+                WHERE trangThai = 'approved'
+                  AND ngayTangCa >= ?
+                  AND ngayTangCa < DATE_ADD(?, INTERVAL 1 MONTH)
+                ORDER BY ngayTangCa ASC, ngayTao ASC";
 
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -851,7 +867,7 @@ class ChamCongModel
         $schedule = [];
         foreach ($rows as $row) {
             $maND = (int)($row['maND'] ?? 0);
-            $date = $row['ot_date'] ?? '';
+            $date = $row['ngayTangCa'] ?? '';
             if ($maND <= 0 || $date === '') {
                 continue;
             }
@@ -862,9 +878,9 @@ class ChamCongModel
 
             $schedule[$maND][$date] = [
                 'label' => 'OT',
-                'time' => trim(($row['start_time'] ? substr((string)$row['start_time'], 0, 5) : '') . ' - ' . ($row['end_time'] ? substr((string)$row['end_time'], 0, 5) : ''), ' -'),
-                'hours' => (float)($row['hours'] ?? 0),
-                'reason' => $row['reason'] ?? '',
+                'time' => trim(($row['gioBatDau'] ? substr((string)$row['gioBatDau'], 0, 5) : '') . ' - ' . ($row['gioKetThuc'] ? substr((string)$row['gioKetThuc'], 0, 5) : ''), ' -'),
+                'soGio' => (float)($row['soGio'] ?? 0),
+                'lyDo' => $row['lyDo'] ?? '',
             ];
         }
 
@@ -874,131 +890,131 @@ class ChamCongModel
     public function getManagerEmployeeRequests(array $filters = [], $limit = 300)
     {
         $limit = max(1, min((int)$limit, 500));
-        $status = trim($filters['status'] ?? '');
+        $trangThai = trim($filters['trangThai'] ?? '');
         $type = trim($filters['type'] ?? '');
         $keyword = trim($filters['q'] ?? '');
         $date = trim($filters['date'] ?? '');
         $dateFrom = trim($filters['date_from'] ?? '');
         $dateTo = trim($filters['date_to'] ?? '');
-        $department = trim($filters['department'] ?? '');
+        $phongBan = trim($filters['phongBan'] ?? '');
 
         $rows = [];
         if ($type === '' || $type === 'leave') {
-            $rows = array_merge($rows, $this->getLeaveApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit));
+            $rows = array_merge($rows, $this->getLeaveApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit));
         }
         if ($type === '' || $type === 'ot') {
-            $rows = array_merge($rows, $this->getOtApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit));
+            $rows = array_merge($rows, $this->getOtApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit));
         }
         if ($type === '' || $type === 'shift') {
-            $rows = array_merge($rows, $this->getShiftChangeApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit));
+            $rows = array_merge($rows, $this->getShiftChangeApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit));
         }
 
         usort($rows, function ($a, $b) {
-            return strcmp((string)($b['created_at'] ?? ''), (string)($a['created_at'] ?? ''));
+            return strcmp((string)($b['ngayTao'] ?? ''), (string)($a['ngayTao'] ?? ''));
         });
 
         return array_slice($rows, 0, $limit);
     }
 
-    public function processManagerEmployeeRequest($type, $requestId, $action, $managerId, $note = '')
+    public function processManagerEmployeeRequest($type, $requestId, $hanhDong, $managerId, $ghiChu = '')
     {
         $type = trim((string)$type);
         $requestId = (int)$requestId;
         $managerId = (int)$managerId;
-        if ($requestId <= 0 || !in_array($type, ['leave', 'ot', 'shift'], true) || !in_array($action, ['approve', 'reject'], true)) {
+        if ($requestId <= 0 || !in_array($type, ['leave', 'ot', 'shift'], true) || !in_array($hanhDong, ['approve', 'reject'], true)) {
             return false;
         }
 
-        $status = $action === 'approve' ? 'approved' : 'rejected';
+        $trangThai = $hanhDong === 'approve' ? 'approved' : 'rejected';
         if ($type === 'leave') {
-            $sql = "UPDATE leave_requests
-                    SET status = ?, manager_note = ?, manager_approver_id = ?, approved_at = NOW(), updated_at = NOW()
-                    WHERE id = ? AND status = 'pending'";
+            $sql = "UPDATE yeuCauNghiPhep
+                    SET trangThai = ?, ghiChuQL = ?, maNguoiDuyetQL = ?, ngayDuyet = NOW(), ngayCapNhat = NOW()
+                    WHERE id = ? AND trangThai = 'pending'";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) return false;
-            $stmt->bind_param('ssii', $status, $note, $managerId, $requestId);
+            $stmt->bind_param('ssii', $trangThai, $ghiChu, $managerId, $requestId);
             return $stmt->execute();
         }
 
         if ($type === 'ot') {
-            $sql = "UPDATE ot_requests
-                    SET status = ?, manager_note = ?, manager_approver_id = ?, approved_at = NOW(), updated_at = NOW()
-                    WHERE id = ? AND status = 'pending'";
+            $sql = "UPDATE yeuCauTangCa
+                    SET trangThai = ?, ghiChuQL = ?, maNguoiDuyetQL = ?, ngayDuyet = NOW(), ngayCapNhat = NOW()
+                    WHERE id = ? AND trangThai = 'pending'";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) return false;
-            $stmt->bind_param('ssii', $status, $note, $managerId, $requestId);
+            $stmt->bind_param('ssii', $trangThai, $ghiChu, $managerId, $requestId);
             return $stmt->execute();
         }
 
-        return $this->processShiftChangeRequest($requestId, $status, $managerId, $note);
+        return $this->processShiftChangeRequest($requestId, $trangThai, $managerId, $ghiChu);
     }
 
-    private function getLeaveApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit)
+    private function getLeaveApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit)
     {
         $sql = "SELECT CONCAT('leave:', r.id) AS uid, r.id, 'leave' AS request_type,
-                       r.maND, r.leave_date AS request_date, r.leave_type, r.is_half_day,
-                       NULL AS start_time, NULL AS end_time, NULL AS hours,
-                       NULL AS current_shift_name, NULL AS requested_shift_name,
-                       r.reason, r.status, r.manager_note, r.created_at, r.updated_at,
+                       r.maND, r.ngayNghi AS ngayYeuCau, r.loaiNghiPhep, r.laNuaNgay,
+                       NULL AS gioBatDau, NULL AS gioKetThuc, NULL AS soGio,
+                       NULL AS tenCaHienTai, NULL AS tenCaMoi,
+                       r.lyDo, r.trangThai, r.ghiChuQL, r.ngayTao, r.ngayCapNhat,
                        n.hoTen, n.chucVu, n.phongBan
-                FROM leave_requests r
+                FROM yeuCauNghiPhep r
                 LEFT JOIN nguoidung n ON n.maND = r.maND";
-        return $this->fetchApprovalRequestRows($sql, 'r.leave_date', $status, $keyword, $date, $dateFrom, $dateTo, $department, $limit);
+        return $this->fetchApprovalRequestRows($sql, 'r.ngayNghi', $trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit);
     }
 
-    private function getOtApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit)
+    private function getOtApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit)
     {
         $sql = "SELECT CONCAT('ot:', r.id) AS uid, r.id, 'ot' AS request_type,
-                       r.maND, r.ot_date AS request_date, NULL AS leave_type, 0 AS is_half_day,
-                       r.start_time, r.end_time, r.hours,
-                       NULL AS current_shift_name, NULL AS requested_shift_name,
-                       r.reason, r.status, r.manager_note, r.created_at, r.updated_at,
+                       r.maND, r.ngayTangCa AS ngayYeuCau, NULL AS loaiNghiPhep, 0 AS laNuaNgay,
+                       r.gioBatDau, r.gioKetThuc, r.soGio,
+                       NULL AS tenCaHienTai, NULL AS tenCaMoi,
+                       r.lyDo, r.trangThai, r.ghiChuQL, r.ngayTao, r.ngayCapNhat,
                        n.hoTen, n.chucVu, n.phongBan
-                FROM ot_requests r
+                FROM yeuCauTangCa r
                 LEFT JOIN nguoidung n ON n.maND = r.maND";
-        return $this->fetchApprovalRequestRows($sql, 'r.ot_date', $status, $keyword, $date, $dateFrom, $dateTo, $department, $limit);
+        return $this->fetchApprovalRequestRows($sql, 'r.ngayTangCa', $trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit);
     }
 
-    private function getShiftChangeApprovalRequests($status, $keyword, $date, $dateFrom, $dateTo, $department, $limit)
+    private function getShiftChangeApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit)
     {
         $sql = "SELECT CONCAT('shift:', r.id) AS uid, r.id, 'shift' AS request_type,
-                       r.maND, r.request_date, NULL AS leave_type, 0 AS is_half_day,
-                       NULL AS start_time, NULL AS end_time, NULL AS hours,
-                       COALESCE(r.current_shift_name, cs.shift_name) AS current_shift_name,
-                       COALESCE(r.requested_shift_name, ns.shift_name) AS requested_shift_name,
-                       r.reason, r.status, r.manager_note, r.created_at, r.updated_at,
+                       r.maND, r.ngayYeuCau, NULL AS loaiNghiPhep, 0 AS laNuaNgay,
+                       NULL AS gioBatDau, NULL AS gioKetThuc, NULL AS soGio,
+                       COALESCE(r.tenCaHienTai, cs.tenCa) AS tenCaHienTai,
+                       COALESCE(r.tenCaMoi, ns.tenCa) AS tenCaMoi,
+                       r.lyDo, r.trangThai, r.ghiChuQL, r.ngayTao, r.ngayCapNhat,
                        n.hoTen, n.chucVu, n.phongBan
-                FROM shift_change_requests r
+                FROM yeuCauDoiCa r
                 LEFT JOIN nguoidung n ON n.maND = r.maND
-                LEFT JOIN attendance_shifts cs ON cs.id = r.current_shift_id
-                LEFT JOIN attendance_shifts ns ON ns.id = r.requested_shift_id";
-        return $this->fetchApprovalRequestRows($sql, 'r.request_date', $status, $keyword, $date, $dateFrom, $dateTo, $department, $limit);
+                LEFT JOIN caLamViec cs ON cs.id = r.maCaHienTai
+                LEFT JOIN caLamViec ns ON ns.id = r.maCaMoi";
+        return $this->fetchApprovalRequestRows($sql, 'r.ngayYeuCau', $trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit);
     }
 
-    private function fetchApprovalRequestRows($baseSql, $dateColumn, $status, $keyword, $date, $dateFrom, $dateTo, $department, $limit)
+    private function fetchApprovalRequestRows($baseSql, $dateColumn, $trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit)
     {
         $conditions = [];
         $types = '';
         $params = [];
 
-        if ($status !== '' && in_array($status, ['pending', 'approved', 'rejected'], true)) {
-            $conditions[] = "r.status = ?";
+        if ($trangThai !== '' && in_array($trangThai, ['pending', 'approved', 'rejected'], true)) {
+            $conditions[] = "r.trangThai = ?";
             $types .= 's';
-            $params[] = $status;
+            $params[] = $trangThai;
         }
 
         if ($keyword !== '') {
-            $conditions[] = "(n.hoTen LIKE CONCAT('%', ?, '%') OR n.phongBan LIKE CONCAT('%', ?, '%') OR r.reason LIKE CONCAT('%', ?, '%'))";
+            $conditions[] = "(n.hoTen LIKE CONCAT('%', ?, '%') OR n.phongBan LIKE CONCAT('%', ?, '%') OR r.lyDo LIKE CONCAT('%', ?, '%'))";
             $types .= 'sss';
             $params[] = $keyword;
             $params[] = $keyword;
             $params[] = $keyword;
         }
 
-        if ($department !== '') {
+        if ($phongBan !== '') {
             $conditions[] = "n.phongBan = ?";
             $types .= 's';
-            $params[] = $department;
+            $params[] = $phongBan;
         }
 
         if ($date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
@@ -1023,7 +1039,7 @@ class ChamCongModel
         if ($conditions) {
             $sql .= " WHERE " . implode(' AND ', $conditions);
         }
-        $sql .= " ORDER BY r.created_at DESC LIMIT " . (int)$limit;
+        $sql .= " ORDER BY r.ngayTao DESC LIMIT " . (int)$limit;
 
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -1038,11 +1054,11 @@ class ChamCongModel
         return $rows;
     }
 
-    private function processShiftChangeRequest($requestId, $status, $managerId, $note)
+    private function processShiftChangeRequest($requestId, $trangThai, $managerId, $ghiChu)
     {
         $this->conn->begin_transaction();
         try {
-            $stmt = $this->conn->prepare("SELECT maND, request_date, requested_shift_id FROM shift_change_requests WHERE id = ? AND status = 'pending' FOR UPDATE");
+            $stmt = $this->conn->prepare("SELECT maND, ngayYeuCau, maCaMoi FROM yeuCauDoiCa WHERE id = ? AND trangThai = 'pending' FOR UPDATE");
             if (!$stmt) {
                 $this->conn->rollback();
                 return false;
@@ -1056,19 +1072,19 @@ class ChamCongModel
                 return false;
             }
 
-            $stmt = $this->conn->prepare("UPDATE shift_change_requests
-                    SET status = ?, manager_note = ?, manager_approver_id = ?, approved_at = NOW(), updated_at = NOW()
-                    WHERE id = ? AND status = 'pending'");
+            $stmt = $this->conn->prepare("UPDATE yeuCauDoiCa
+                    SET trangThai = ?, ghiChuQL = ?, maNguoiDuyetQL = ?, ngayDuyet = NOW(), ngayCapNhat = NOW()
+                    WHERE id = ? AND trangThai = 'pending'");
             if (!$stmt) {
                 $this->conn->rollback();
                 return false;
             }
-            $stmt->bind_param('ssii', $status, $note, $managerId, $requestId);
+            $stmt->bind_param('ssii', $trangThai, $ghiChu, $managerId, $requestId);
             $ok = $stmt->execute();
             $stmt->close();
 
-            if ($ok && $status === 'approved' && (int)($row['requested_shift_id'] ?? 0) > 0) {
-                $ok = $this->assignShift((int)$row['maND'], (int)$row['requested_shift_id'], $row['request_date']);
+            if ($ok && $trangThai === 'approved' && (int)($row['maCaMoi'] ?? 0) > 0) {
+                $ok = $this->assignShift((int)$row['maND'], (int)$row['maCaMoi'], $row['ngayYeuCau']);
             }
 
             if (!$ok) {
@@ -1084,19 +1100,19 @@ class ChamCongModel
         }
     }
 
-    public function getAttendanceReport($fromDate, $toDate, $department = '')
+    public function getAttendanceReport($fromDate, $toDate, $phongBan = '')
     {
         $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
         $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
         
         $sql = "SELECT u.maND, u.hoTen, u.phongBan,
-                       COUNT(DISTINCT DATE(l.created_at)) AS work_days,
-                       SUM(CASE WHEN l.action = 'IN' THEN 1 ELSE 0 END) AS checkin_count,
-                       SUM(CASE WHEN l.action = 'OUT' THEN 1 ELSE 0 END) AS checkout_count
+                       COUNT(DISTINCT DATE(l.ngayTao)) AS work_days,
+                       SUM(CASE WHEN l.hanhDong = 'IN' THEN 1 ELSE 0 END) AS checkin_count,
+                       SUM(CASE WHEN l.hanhDong = 'OUT' THEN 1 ELSE 0 END) AS checkout_count
                 FROM nguoidung u
-                LEFT JOIN attendance_logs l ON l.maND = u.maND
-                    AND DATE(l.created_at) >= ?
-                    AND DATE(l.created_at) <= ?
+                LEFT JOIN lichSuChamCong l ON l.maND = u.maND
+                    AND DATE(l.ngayTao) >= ?
+                    AND DATE(l.ngayTao) <= ?
                 WHERE u.trangThai = 1
                   AND u.chucVu = 'Nhân viên'
                   AND u.phongBan IN ($placeholders)";
@@ -1109,9 +1125,9 @@ class ChamCongModel
             $types .= 's';
         }
 
-        if ($department !== '') {
+        if ($phongBan !== '') {
             $sql .= " AND u.phongBan = ?";
-            $params[] = $department;
+            $params[] = $phongBan;
             $types .= 's';
         }
 
@@ -1137,7 +1153,7 @@ class ChamCongModel
         return ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
     }
 
-    public function submitMonthlyApproval($monthKey, $hrSenderId, $department = '')
+    public function submitMonthlyApproval($monthKey, $hrSenderId, $phongBan = '')
     {
         $monthKey = trim($monthKey);
         $hrSenderId = (int)$hrSenderId;
@@ -1146,9 +1162,9 @@ class ChamCongModel
         }
 
         $departments = [];
-        $department = trim((string)$department);
-        if ($department !== '') {
-            $departments = [$department];
+        $phongBan = trim((string)$phongBan);
+        if ($phongBan !== '') {
+            $departments = [$phongBan];
         } else {
             $departments = $this->getDistinctDepartments();
         }
@@ -1164,7 +1180,7 @@ class ChamCongModel
                 continue;
             }
 
-            $find = $this->conn->prepare("SELECT id FROM attendance_monthly_approval WHERE month_key = ? AND department = ? ORDER BY id DESC LIMIT 1");
+            $find = $this->conn->prepare("SELECT id FROM duyetCongThang WHERE thangNam = ? AND phongBan = ? ORDER BY id DESC LIMIT 1");
             if (!$find) {
                 $okAll = false;
                 continue;
@@ -1176,8 +1192,8 @@ class ChamCongModel
 
             if (!empty($existing['id'])) {
                 $id = (int)$existing['id'];
-                $update = $this->conn->prepare("UPDATE attendance_monthly_approval
-                                                SET hr_sender_id = ?, status = 'submitted', submitted_at = NOW(), approved_at = NULL, manager_approver_id = NULL, note = NULL
+                $update = $this->conn->prepare("UPDATE duyetCongThang
+                                                SET maNguoiGuiNS = ?, trangThai = 'submitted', ngayGui = NOW(), ngayDuyet = NULL, maNguoiDuyetQL = NULL, ghiChu = NULL
                                                 WHERE id = ?");
                 if (!$update) {
                     $okAll = false;
@@ -1189,7 +1205,7 @@ class ChamCongModel
                 continue;
             }
 
-            $insert = $this->conn->prepare("INSERT INTO attendance_monthly_approval (month_key, department, hr_sender_id, status, submitted_at)
+            $insert = $this->conn->prepare("INSERT INTO duyetCongThang (thangNam, phongBan, maNguoiGuiNS, trangThai, ngayGui)
                                             VALUES (?, ?, ?, 'submitted', NOW())");
             if (!$insert) {
                 $okAll = false;
@@ -1203,38 +1219,38 @@ class ChamCongModel
         return $okAll;
     }
 
-    public function getMonthlyApprovals($status = null, $department = '')
+    public function getMonthlyApprovals($trangThai = null, $phongBan = '')
     {
-        $sql = "SELECT a.id, a.month_key, a.hr_sender_id, a.manager_approver_id, a.status, a.submitted_at, a.approved_at, a.note,
-                       a.department,
+        $sql = "SELECT a.id, a.thangNam, a.maNguoiGuiNS, a.maNguoiDuyetQL, a.trangThai, a.ngayGui, a.ngayDuyet, a.ghiChu,
+                       a.phongBan,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
-                FROM attendance_monthly_approval a
-                LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
-                LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id";
+                FROM duyetCongThang a
+                LEFT JOIN nguoidung u ON u.maND = a.maNguoiGuiNS
+                LEFT JOIN nguoidung u2 ON u2.maND = a.maNguoiDuyetQL";
 
         $conditions = [];
         $types = '';
         $params = [];
 
-        if ($status) {
-            $conditions[] = "a.status = ?";
+        if ($trangThai) {
+            $conditions[] = "a.trangThai = ?";
             $types .= 's';
-            $params[] = $status;
+            $params[] = $trangThai;
         }
 
-        $department = trim((string)$department);
-        if ($department !== '') {
-            $conditions[] = "a.department = ?";
+        $phongBan = trim((string)$phongBan);
+        if ($phongBan !== '') {
+            $conditions[] = "a.phongBan = ?";
             $types .= 's';
-            $params[] = $department;
+            $params[] = $phongBan;
         }
 
         if (!empty($conditions)) {
             $sql .= " WHERE " . implode(' AND ', $conditions);
         }
 
-        $sql .= " ORDER BY COALESCE(a.approved_at, a.submitted_at, a.created_at) DESC, a.id DESC";
+        $sql .= " ORDER BY COALESCE(a.ngayDuyet, a.ngayGui, a.ngayTao) DESC, a.id DESC";
 
         if (!empty($params)) {
             $stmt = $this->conn->prepare($sql);
@@ -1250,34 +1266,34 @@ class ChamCongModel
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
 
-    public function getMonthlyApprovalHistory($year = null, $limit = 50, $department = '')
+    public function getMonthlyApprovalHistory($year = null, $limit = 50, $phongBan = '')
     {
-        $sql = "SELECT a.id, a.month_key, a.hr_sender_id, a.manager_approver_id, a.status, a.submitted_at, a.approved_at, a.note,
-                       a.department,
+        $sql = "SELECT a.id, a.thangNam, a.maNguoiGuiNS, a.maNguoiDuyetQL, a.trangThai, a.ngayGui, a.ngayDuyet, a.ghiChu,
+                       a.phongBan,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
-                FROM attendance_monthly_approval a
-                LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
-                LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id
-                WHERE a.status IN ('approved', 'rejected')";
+                FROM duyetCongThang a
+                LEFT JOIN nguoidung u ON u.maND = a.maNguoiGuiNS
+                LEFT JOIN nguoidung u2 ON u2.maND = a.maNguoiDuyetQL
+                WHERE a.trangThai IN ('approved', 'rejected')";
 
         $params = [];
         $types = '';
 
         if ($year && preg_match('/^\d{4}$/', $year)) {
-            $sql .= " AND a.month_key LIKE ?";
+            $sql .= " AND a.thangNam LIKE ?";
             $params[] = $year . '%';
             $types = 's';
         }
 
-        $department = trim((string)$department);
-        if ($department !== '') {
-            $sql .= " AND a.department = ?";
-            $params[] = $department;
+        $phongBan = trim((string)$phongBan);
+        if ($phongBan !== '') {
+            $sql .= " AND a.phongBan = ?";
+            $params[] = $phongBan;
             $types .= 's';
         }
 
-        $sql .= " ORDER BY a.approved_at DESC, a.id DESC";
+        $sql .= " ORDER BY a.ngayDuyet DESC, a.id DESC";
 
         if ($limit > 0) {
             $sql .= " LIMIT ?";
@@ -1303,31 +1319,31 @@ class ChamCongModel
             return [];
         }
 
-        $sql = "SELECT a.id, a.month_key, a.hr_sender_id, a.manager_approver_id, a.status, a.submitted_at, a.approved_at, a.note,
+        $sql = "SELECT a.id, a.thangNam, a.maNguoiGuiNS, a.maNguoiDuyetQL, a.trangThai, a.ngayGui, a.ngayDuyet, a.ghiChu,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
-                FROM attendance_monthly_approval a
-                LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
-                LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id
-                WHERE a.hr_sender_id = ?";
+                FROM duyetCongThang a
+                LEFT JOIN nguoidung u ON u.maND = a.maNguoiGuiNS
+                LEFT JOIN nguoidung u2 ON u2.maND = a.maNguoiDuyetQL
+                WHERE a.maNguoiGuiNS = ?";
 
         $types = 'i';
         $params = [$hrSenderId];
 
-        $statuses = array_values(array_filter($statuses, function ($status) {
-            return in_array($status, ['draft', 'submitted', 'approved', 'rejected'], true);
+        $statuses = array_values(array_filter($statuses, function ($trangThai) {
+            return in_array($trangThai, ['draft', 'submitted', 'approved', 'rejected'], true);
         }));
 
         if (!empty($statuses)) {
             $placeholders = implode(',', array_fill(0, count($statuses), '?'));
-            $sql .= " AND a.status IN ($placeholders)";
+            $sql .= " AND a.trangThai IN ($placeholders)";
             $types .= str_repeat('s', count($statuses));
-            foreach ($statuses as $status) {
-                $params[] = $status;
+            foreach ($statuses as $trangThai) {
+                $params[] = $trangThai;
             }
         }
 
-        $sql .= " ORDER BY COALESCE(a.approved_at, a.submitted_at, a.created_at) DESC, a.id DESC";
+        $sql .= " ORDER BY COALESCE(a.ngayDuyet, a.ngayGui, a.ngayTao) DESC, a.id DESC";
 
         if ($limit > 0) {
             $sql .= " LIMIT " . (int)$limit;
@@ -1343,18 +1359,18 @@ class ChamCongModel
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getMonthlyApprovalByMonth($monthKey, $department = '')
+    public function getMonthlyApprovalByMonth($monthKey, $phongBan = '')
     {
         $monthKey = trim($monthKey);
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
             return null;
         }
 
-        $department = trim((string)$department);
-        if ($department === '') {
-            $stmt = $this->conn->prepare("SELECT status, submitted_at, approved_at
-                                          FROM attendance_monthly_approval
-                                          WHERE month_key = ?");
+        $phongBan = trim((string)$phongBan);
+        if ($phongBan === '') {
+            $stmt = $this->conn->prepare("SELECT trangThai, ngayGui, ngayDuyet
+                                          FROM duyetCongThang
+                                          WHERE thangNam = ?");
             if (!$stmt) {
                 return null;
             }
@@ -1367,19 +1383,19 @@ class ChamCongModel
                 return null;
             }
 
-            $status = 'approved';
+            $trangThai = 'approved';
             $latestSubmitted = '';
             $latestApproved = '';
             foreach ($rows as $row) {
-                $rowStatus = $row['status'] ?? '';
+                $rowStatus = $row['trangThai'] ?? '';
                 if ($rowStatus === 'submitted') {
-                    $status = 'submitted';
-                } elseif ($rowStatus === 'rejected' && $status !== 'submitted') {
-                    $status = 'rejected';
+                    $trangThai = 'submitted';
+                } elseif ($rowStatus === 'rejected' && $trangThai !== 'submitted') {
+                    $trangThai = 'rejected';
                 }
 
-                $submittedAt = (string)($row['submitted_at'] ?? '');
-                $approvedAt = (string)($row['approved_at'] ?? '');
+                $submittedAt = (string)($row['ngayGui'] ?? '');
+                $approvedAt = (string)($row['ngayDuyet'] ?? '');
                 if ($submittedAt > $latestSubmitted) {
                     $latestSubmitted = $submittedAt;
                 }
@@ -1389,27 +1405,27 @@ class ChamCongModel
             }
 
             return [
-                'month_key' => $monthKey,
-                'status' => $status,
-                'submitted_at' => $latestSubmitted,
-                'approved_at' => $latestApproved,
-                'department' => 'ALL',
+                'thangNam' => $monthKey,
+                'trangThai' => $trangThai,
+                'ngayGui' => $latestSubmitted,
+                'ngayDuyet' => $latestApproved,
+                'phongBan' => 'ALL',
             ];
         }
-        $sql = "SELECT a.id, a.month_key, a.status, a.submitted_at, a.approved_at, a.note,
-                       a.department,
+        $sql = "SELECT a.id, a.thangNam, a.trangThai, a.ngayGui, a.ngayDuyet, a.ghiChu,
+                       a.phongBan,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
-                FROM attendance_monthly_approval a
-                LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
-                LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id
-                WHERE a.month_key = ?";
+                FROM duyetCongThang a
+                LEFT JOIN nguoidung u ON u.maND = a.maNguoiGuiNS
+                LEFT JOIN nguoidung u2 ON u2.maND = a.maNguoiDuyetQL
+                WHERE a.thangNam = ?";
 
         $params = [$monthKey];
         $types = 's';
-        if ($department !== '') {
-            $sql .= " AND a.department = ?";
-            $params[] = $department;
+        if ($phongBan !== '') {
+            $sql .= " AND a.phongBan = ?";
+            $params[] = $phongBan;
             $types .= 's';
         }
         $sql .= " ORDER BY a.id DESC LIMIT 1";
@@ -1426,24 +1442,24 @@ class ChamCongModel
         return $row ?: null;
     }
 
-    public function getMonthlyApprovalDetail($approvalId, $department = '')
+    public function getMonthlyApprovalDetail($approvalId, $phongBan = '')
     {
         $approvalId = (int)$approvalId;
         if ($approvalId <= 0) {
             return null;
         }
 
-        $department = trim((string)$department);
-        $sql = "SELECT a.id, a.month_key, a.status, a.submitted_at, a.approved_at, a.note,
-                       a.department,
+        $phongBan = trim((string)$phongBan);
+        $sql = "SELECT a.id, a.thangNam, a.trangThai, a.ngayGui, a.ngayDuyet, a.ghiChu,
+                       a.phongBan,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
-                FROM attendance_monthly_approval a
-                LEFT JOIN nguoidung u ON u.maND = a.hr_sender_id
-                LEFT JOIN nguoidung u2 ON u2.maND = a.manager_approver_id
+                FROM duyetCongThang a
+                LEFT JOIN nguoidung u ON u.maND = a.maNguoiGuiNS
+                LEFT JOIN nguoidung u2 ON u2.maND = a.maNguoiDuyetQL
                 WHERE a.id = ?";
-        if ($department !== '') {
-            $sql .= " AND a.department = ?";
+        if ($phongBan !== '') {
+            $sql .= " AND a.phongBan = ?";
         }
         $sql .= " LIMIT 1";
 
@@ -1452,8 +1468,8 @@ class ChamCongModel
             return null;
         }
 
-        if ($department !== '') {
-            $stmt->bind_param("is", $approvalId, $department);
+        if ($phongBan !== '') {
+            $stmt->bind_param("is", $approvalId, $phongBan);
         } else {
             $stmt->bind_param("i", $approvalId);
         }
@@ -1465,8 +1481,8 @@ class ChamCongModel
             return null;
         }
 
-        $monthKey = trim($approval['month_key'] ?? '');
-        $rows = $this->getMonthlyWorkSummary($monthKey, $approval['department'] ?? '');
+        $monthKey = trim($approval['thangNam'] ?? '');
+        $rows = $this->getMonthlyWorkSummary($monthKey, $approval['phongBan'] ?? '');
         $summary = [
             'employees' => count($rows),
             'total_work_days' => 0,
@@ -1487,57 +1503,57 @@ class ChamCongModel
         ];
     }
 
-    public function updateMonthlyApproval($approvalId, $status, $managerId, $note = null, $department = '')
+    public function updateMonthlyApproval($approvalId, $trangThai, $managerId, $ghiChu = null, $phongBan = '')
     {
         $approvalId = (int)$approvalId;
         $managerId = (int)$managerId;
-        if (!in_array($status, ['approved', 'rejected'], true) || $approvalId <= 0) {
+        if (!in_array($trangThai, ['approved', 'rejected'], true) || $approvalId <= 0) {
             return false;
         }
 
-        $department = trim((string)$department);
-        $sql = "UPDATE attendance_monthly_approval
-                SET status = ?, manager_approver_id = ?, approved_at = NOW(), note = ?
-                WHERE id = ? AND status = 'submitted'";
-        if ($department !== '') {
-            $sql .= " AND department = ?";
+        $phongBan = trim((string)$phongBan);
+        $sql = "UPDATE duyetCongThang
+                SET trangThai = ?, maNguoiDuyetQL = ?, ngayDuyet = NOW(), ghiChu = ?
+                WHERE id = ? AND trangThai = 'submitted'";
+        if ($phongBan !== '') {
+            $sql .= " AND phongBan = ?";
         }
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
         }
-        if ($department !== '') {
-            $stmt->bind_param("sisis", $status, $managerId, $note, $approvalId, $department);
+        if ($phongBan !== '') {
+            $stmt->bind_param("sisis", $trangThai, $managerId, $ghiChu, $approvalId, $phongBan);
         } else {
-            $stmt->bind_param("sisi", $status, $managerId, $note, $approvalId);
+            $stmt->bind_param("sisi", $trangThai, $managerId, $ghiChu, $approvalId);
         }
         return $stmt->execute();
     }
 
-    public function getCorrectionRequests($status = null, array $filters = [], $limit = 0, $historyOnly = false)
+    public function getCorrectionRequests($trangThai = null, array $filters = [], $limit = 0, $historyOnly = false)
     {
-        $sql = "SELECT c.id, c.maND, c.attendance_date, c.old_time, c.new_time, c.reason, c.status, c.hr_note, c.created_at, c.updated_at, c.evidence_file,
+        $sql = "SELECT c.id, c.maND, c.ngayChamCong, c.gioCu, c.gioMoi, c.lyDo, c.trangThai, c.ghiChuNS, c.ngayTao, c.ngayCapNhat, c.tepMinhChung,
                        n.hoTen, n.chucVu, n.phongBan
-                FROM attendance_corrections c
+                FROM suaChamCong c
                 LEFT JOIN nguoidung n ON n.maND = c.maND";
 
         $conditions = [];
         $types = '';
         $params = [];
 
-        if ($status) {
-            $conditions[] = "c.status = ?";
+        if ($trangThai) {
+            $conditions[] = "c.trangThai = ?";
             $types .= 's';
-            $params[] = $status;
+            $params[] = $trangThai;
         }
 
         if ($historyOnly) {
-            $conditions[] = "c.status <> 'pending'";
+            $conditions[] = "c.trangThai <> 'pending'";
         }
 
         $keyword = trim($filters['q'] ?? '');
         if ($keyword !== '') {
-            $conditions[] = "(n.hoTen LIKE CONCAT('%', ?, '%') OR n.phongBan LIKE CONCAT('%', ?, '%') OR reason LIKE CONCAT('%', ?, '%'))";
+            $conditions[] = "(n.hoTen LIKE CONCAT('%', ?, '%') OR n.phongBan LIKE CONCAT('%', ?, '%') OR lyDo LIKE CONCAT('%', ?, '%'))";
             $types .= 'sss';
             $params[] = $keyword;
             $params[] = $keyword;
@@ -1546,14 +1562,14 @@ class ChamCongModel
 
         $date = trim($filters['date'] ?? '');
         if ($date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-            $conditions[] = "c.attendance_date = ?";
+            $conditions[] = "c.ngayChamCong = ?";
             $types .= 's';
             $params[] = $date;
         }
 
         $type = trim($filters['type'] ?? '');
         if ($type !== '') {
-            $conditions[] = "c.reason LIKE CONCAT('%', ?, '%')";
+            $conditions[] = "c.lyDo LIKE CONCAT('%', ?, '%')";
             $types .= 's';
             $params[] = $type;
         }
@@ -1562,7 +1578,7 @@ class ChamCongModel
             $sql .= " WHERE " . implode(' AND ', $conditions);
         }
 
-        $sql .= " ORDER BY c.created_at DESC";
+        $sql .= " ORDER BY c.ngayTao DESC";
 
         if ((int)$limit > 0) {
             $sql .= " LIMIT " . (int)$limit;
@@ -1581,17 +1597,17 @@ class ChamCongModel
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function processCorrection($correctionId, $action, $note = '')
+    public function processCorrection($correctionId, $hanhDong, $ghiChu = '')
     {
         $correctionId = (int)$correctionId;
         if ($correctionId <= 0) {
             return false;
         }
 
-        $status = $action === 'approve' ? 'approved' : 'rejected';
-        $sql = "UPDATE attendance_corrections SET status = ?, hr_note = ?, updated_at = NOW() WHERE id = ?";
+        $trangThai = $hanhDong === 'approve' ? 'approved' : 'rejected';
+        $sql = "UPDATE suaChamCong SET trangThai = ?, ghiChuNS = ?, ngayCapNhat = NOW() WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ssi", $status, $note, $correctionId);
+        $stmt->bind_param("ssi", $trangThai, $ghiChu, $correctionId);
         return $stmt->execute();
     }
 
@@ -1602,7 +1618,7 @@ class ChamCongModel
     public function checkWifi()
     {
         // Check if there are any active WiFi networks configured
-        $sql = "SELECT COUNT(*) AS count FROM attendance_wifi WHERE is_active = 1";
+        $sql = "SELECT COUNT(*) AS count FROM wifiChamCong WHERE hoatDong = 1";
         $result = $this->conn->query($sql);
         if ($result) {
             $row = $result->fetch_assoc();
@@ -1618,7 +1634,7 @@ class ChamCongModel
      */
     public function isWifiAllowed($wifiName)
     {
-        $sql = "SELECT id FROM attendance_wifi WHERE wifi_name = ? AND is_active = 1 LIMIT 1";
+        $sql = "SELECT id FROM wifiChamCong WHERE tenWifi = ? AND hoatDong = 1 LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
@@ -1637,13 +1653,13 @@ class ChamCongModel
      */
     public function getFirstActiveWifiName()
     {
-        $sql = "SELECT wifi_name FROM attendance_wifi WHERE is_active = 1 ORDER BY id ASC LIMIT 1";
+        $sql = "SELECT tenWifi FROM wifiChamCong WHERE hoatDong = 1 ORDER BY id ASC LIMIT 1";
         $result = $this->conn->query($sql);
         if (!$result) {
             return null;
         }
         $row = $result->fetch_assoc();
-        return $row['wifi_name'] ?? null;
+        return $row['tenWifi'] ?? null;
     }
 
     /**
@@ -1652,7 +1668,7 @@ class ChamCongModel
      */
     public function getActiveWifiConfigurations()
     {
-        $sql = "SELECT wifi_name, ip_range FROM attendance_wifi WHERE is_active = 1";
+        $sql = "SELECT tenWifi, daiIP FROM wifiChamCong WHERE hoatDong = 1";
         $result = $this->conn->query($sql);
         if (!$result) return [];
         return $result->fetch_all(MYSQLI_ASSOC);
@@ -1665,10 +1681,10 @@ class ChamCongModel
      */
     public function getTodayLogs($maND)
     {
-        $sql = "SELECT id, action, method, wifi_name, note, created_at
-                FROM attendance_logs
-                WHERE maND = ? AND DATE(created_at) = CURDATE()
-                ORDER BY created_at ASC";
+        $sql = "SELECT id, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao
+                FROM lichSuChamCong
+                WHERE maND = ? AND DATE(ngayTao) = CURDATE()
+                ORDER BY ngayTao ASC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $maND);
         $stmt->execute();
@@ -1682,16 +1698,16 @@ class ChamCongModel
      */
     public function getTrangThaiHomNay($maND)
     {
-        $sql = "SELECT action FROM attendance_logs
-                WHERE maND = ? AND DATE(created_at) = CURDATE()
-                ORDER BY created_at DESC
+        $sql = "SELECT hanhDong FROM lichSuChamCong
+                WHERE maND = ? AND DATE(ngayTao) = CURDATE()
+                ORDER BY ngayTao DESC
                 LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $maND);
         $stmt->execute();
         $result = $stmt->get_result();
         $row = $result->fetch_assoc();
-        return $row['action'] ?? null;
+        return $row['hanhDong'] ?? null;
     }
 
     /**
@@ -1710,12 +1726,12 @@ class ChamCongModel
             $to = date('Y-m-d'); // Hôm nay
         }
 
-        $sql = "SELECT id, action, method, wifi_name, note, created_at
-                FROM attendance_logs
+        $sql = "SELECT id, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao
+                FROM lichSuChamCong
                 WHERE maND = ? 
-                AND DATE(created_at) >= ? 
-                AND DATE(created_at) <= ?
-                ORDER BY created_at DESC";
+                AND DATE(ngayTao) >= ? 
+                AND DATE(ngayTao) <= ?
+                ORDER BY ngayTao DESC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("iss", $maND, $from, $to);
         $stmt->execute();
@@ -1761,7 +1777,7 @@ class ChamCongModel
      */
     public function getAllowedNetworks()
     {
-        $sql = "SELECT ip_range FROM attendance_wifi WHERE is_active = 1";
+        $sql = "SELECT daiIP FROM wifiChamCong WHERE hoatDong = 1";
         $result = $this->conn->query($sql);
         
         if (!$result) {
@@ -1771,7 +1787,7 @@ class ChamCongModel
 
         $networks = [];
         while ($row = $result->fetch_assoc()) {
-            $range = trim($row['ip_range']);
+            $range = trim($row['daiIP']);
             if (!empty($range)) {
                 $networks[] = $range;
             }
@@ -1855,8 +1871,8 @@ class ChamCongModel
      */
     public function getAllNetworks()
     {
-        $sql = "SELECT id, wifi_name, ip_range, gateway, description, ssid, password, location, is_active, created_at 
-                FROM attendance_wifi ORDER BY id DESC";
+        $sql = "SELECT id, tenWifi, daiIP, congMacDinh, moTa, ssid, matKhau, viTri, hoatDong, ngayTao 
+                FROM wifiChamCong ORDER BY id DESC";
         $result = $this->conn->query($sql);
         
         if (!$result) {
@@ -1867,15 +1883,15 @@ class ChamCongModel
         while ($row = $result->fetch_assoc()) {
             $data[] = [
                 'id' => (int)($row['id'] ?? 0),
-                'wifi_name' => (string)($row['wifi_name'] ?? ''),
-                'ip_range' => (string)($row['ip_range'] ?? ''),
-                'gateway' => (string)($row['gateway'] ?? ''),
-                'description' => (string)($row['description'] ?? ''),
+                'tenWifi' => (string)($row['tenWifi'] ?? ''),
+                'daiIP' => (string)($row['daiIP'] ?? ''),
+                'congMacDinh' => (string)($row['congMacDinh'] ?? ''),
+                'moTa' => (string)($row['moTa'] ?? ''),
                 'ssid' => (string)($row['ssid'] ?? ''),
-                'password' => (string)($row['password'] ?? ''),
-                'location' => (string)($row['location'] ?? ''),
-                'is_active' => (int)($row['is_active'] ?? 0),
-                'created_at' => (string)($row['created_at'] ?? '')
+                'matKhau' => (string)($row['matKhau'] ?? ''),
+                'viTri' => (string)($row['viTri'] ?? ''),
+                'hoatDong' => (int)($row['hoatDong'] ?? 0),
+                'ngayTao' => (string)($row['ngayTao'] ?? '')
             ];
         }
 
@@ -1918,8 +1934,8 @@ class ChamCongModel
     {
         $id = (int)$id;
         if ($id <= 0) return null;
-        $sql = "SELECT id, wifi_name, ip_range, gateway, description, ssid, password, location, is_active, created_at 
-                FROM attendance_wifi WHERE id = ?";
+        $sql = "SELECT id, tenWifi, daiIP, congMacDinh, moTa, ssid, matKhau, viTri, hoatDong, ngayTao 
+                FROM wifiChamCong WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return null;
         $stmt->bind_param("i", $id);
@@ -1930,36 +1946,36 @@ class ChamCongModel
     }
 
     /**
-     * Add new network with IP range and gateway
+     * Add new network with IP range and congMacDinh
      * @param string $wifiName - Network name (SSID or label)
      * @param string $ipRange - IP range prefix (e.g., "192.168.1")
-     * @param string $gateway - Gateway IP (e.g., "192.168.1.1")
-     * @param string $description - Description
+     * @param string $congMacDinh - Gateway IP (e.g., "192.168.1.1")
+     * @param string $moTa - Description
      * @param int $isActive
      * @return bool
      */
-    public function addNetwork($wifiName, $ipRange, $gateway, $description = '', $isActive = 1, $ssid = null, $password = null, $location = null)
+    public function addNetwork($wifiName, $ipRange, $congMacDinh, $moTa = '', $isActive = 1, $ssid = null, $matKhau = null, $viTri = null)
     {
         $wifiName = trim($wifiName);
         $ipRange = trim($ipRange);
-        $gateway = trim($gateway);
-        $description = trim($description);
+        $congMacDinh = trim($congMacDinh);
+        $moTa = trim($moTa);
         $isActive = (int)$isActive;
         $ssid = $ssid !== null ? trim($ssid) : null;
-        $password = $password !== null ? trim($password) : null;
-        $location = $location !== null ? trim($location) : null;
+        $matKhau = $matKhau !== null ? trim($matKhau) : null;
+        $viTri = $viTri !== null ? trim($viTri) : null;
         
-        if (empty($wifiName) || empty($ipRange) || empty($gateway)) {
+        if (empty($wifiName) || empty($ipRange) || empty($congMacDinh)) {
             return false;
         }
         
-        $sql = "INSERT INTO attendance_wifi (wifi_name, ip_range, gateway, description, is_active, ssid, password, location) 
+        $sql = "INSERT INTO wifiChamCong (tenWifi, daiIP, congMacDinh, moTa, hoatDong, ssid, matKhau, viTri) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
         }
-        $stmt->bind_param("ssssisss", $wifiName, $ipRange, $gateway, $description, $isActive, $ssid, $password, $location);
+        $stmt->bind_param("ssssisss", $wifiName, $ipRange, $congMacDinh, $moTa, $isActive, $ssid, $matKhau, $viTri);
         $result = $stmt->execute();
         $stmt->close();
         return $result;
@@ -1973,7 +1989,7 @@ class ChamCongModel
      */
     public function addWifi($wifiName, $isActive = 1)
     {
-        // Legacy method - just insert with wifi_name only
+        // Legacy phuongThuc - just insert with tenWifi only
         $wifiName = trim($wifiName);
         $isActive = (int)$isActive;
         
@@ -1981,7 +1997,7 @@ class ChamCongModel
             return false;
         }
         
-        $sql = "INSERT INTO attendance_wifi (wifi_name, is_active) VALUES (?, ?)";
+        $sql = "INSERT INTO wifiChamCong (tenWifi, hoatDong) VALUES (?, ?)";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
@@ -1997,35 +2013,35 @@ class ChamCongModel
      * @param int $networkId
      * @param string $wifiName
      * @param string $ipRange
-     * @param string $gateway
-     * @param string $description
+     * @param string $congMacDinh
+     * @param string $moTa
      * @param int $isActive
      * @return bool
      */
-    public function updateNetwork($networkId, $wifiName, $ipRange, $gateway, $description = '', $isActive = 1, $ssid = null, $password = null, $location = null)
+    public function updateNetwork($networkId, $wifiName, $ipRange, $congMacDinh, $moTa = '', $isActive = 1, $ssid = null, $matKhau = null, $viTri = null)
     {
         $networkId = (int)$networkId;
         $wifiName = trim($wifiName);
         $ipRange = trim($ipRange);
-        $gateway = trim($gateway);
-        $description = trim($description);
+        $congMacDinh = trim($congMacDinh);
+        $moTa = trim($moTa);
         $isActive = (int)$isActive;
         $ssid = $ssid !== null ? trim($ssid) : null;
-        $password = $password !== null ? trim($password) : null;
-        $location = $location !== null ? trim($location) : null;
+        $matKhau = $matKhau !== null ? trim($matKhau) : null;
+        $viTri = $viTri !== null ? trim($viTri) : null;
         
-        if ($networkId <= 0 || empty($wifiName) || empty($ipRange) || empty($gateway)) {
+        if ($networkId <= 0 || empty($wifiName) || empty($ipRange) || empty($congMacDinh)) {
             return false;
         }
 
-        $sql = "UPDATE attendance_wifi 
-                SET wifi_name = ?, ip_range = ?, gateway = ?, description = ?, is_active = ?, ssid = ?, password = ?, location = ? 
+        $sql = "UPDATE wifiChamCong 
+                SET tenWifi = ?, daiIP = ?, congMacDinh = ?, moTa = ?, hoatDong = ?, ssid = ?, matKhau = ?, viTri = ? 
                 WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
         }
-        $stmt->bind_param("ssssisssi", $wifiName, $ipRange, $gateway, $description, $isActive, $ssid, $password, $location, $networkId);
+        $stmt->bind_param("ssssisssi", $wifiName, $ipRange, $congMacDinh, $moTa, $isActive, $ssid, $matKhau, $viTri, $networkId);
         $result = $stmt->execute();
         $stmt->close();
         return $result;
@@ -2049,11 +2065,11 @@ class ChamCongModel
 
         if ($isActive !== null) {
             $isActive = (int)$isActive;
-            $sql = "UPDATE attendance_wifi SET wifi_name = ?, is_active = ? WHERE id = ?";
+            $sql = "UPDATE wifiChamCong SET tenWifi = ?, hoatDong = ? WHERE id = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("sii", $wifiName, $isActive, $wifiId);
         } else {
-            $sql = "UPDATE attendance_wifi SET wifi_name = ? WHERE id = ?";
+            $sql = "UPDATE wifiChamCong SET tenWifi = ? WHERE id = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("si", $wifiName, $wifiId);
         }
@@ -2076,7 +2092,7 @@ class ChamCongModel
             return false;
         }
 
-        $sql = "SELECT COUNT(*) as count FROM attendance_wifi WHERE wifi_name = ?";
+        $sql = "SELECT COUNT(*) as count FROM wifiChamCong WHERE tenWifi = ?";
         
         if ($excludeId !== null) {
             $sql .= " AND id != ?";
@@ -2102,19 +2118,19 @@ class ChamCongModel
     }
 
     /**
-     * Check if gateway already exists
-     * @param string $gateway
+     * Check if congMacDinh already exists
+     * @param string $congMacDinh
      * @param int|null $excludeId
      * @return bool
      */
-    public function checkGatewayExists($gateway, $excludeId = null)
+    public function checkGatewayExists($congMacDinh, $excludeId = null)
     {
-        $gateway = trim($gateway);
-        if (empty($gateway)) {
+        $congMacDinh = trim($congMacDinh);
+        if (empty($congMacDinh)) {
             return false;
         }
 
-        $sql = "SELECT COUNT(*) as count FROM attendance_wifi WHERE gateway = ?";
+        $sql = "SELECT COUNT(*) as count FROM wifiChamCong WHERE congMacDinh = ?";
         
         if ($excludeId !== null) {
             $sql .= " AND id != ?";
@@ -2123,13 +2139,13 @@ class ChamCongModel
                 return false;
             }
             $excludeId = (int)$excludeId;
-            $stmt->bind_param("si", $gateway, $excludeId);
+            $stmt->bind_param("si", $congMacDinh, $excludeId);
         } else {
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
             }
-            $stmt->bind_param("s", $gateway);
+            $stmt->bind_param("s", $congMacDinh);
         }
 
         $stmt->execute();
@@ -2162,7 +2178,7 @@ class ChamCongModel
             return false;
         }
 
-        $sql = "UPDATE attendance_wifi SET is_active = !is_active WHERE id = ?";
+        $sql = "UPDATE wifiChamCong SET hoatDong = !hoatDong WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $networkId);
         $result = $stmt->execute();
@@ -2192,7 +2208,7 @@ class ChamCongModel
             return false;
         }
 
-        $sql = "DELETE FROM attendance_wifi WHERE id = ?";
+        $sql = "DELETE FROM wifiChamCong WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
@@ -2222,14 +2238,14 @@ class ChamCongModel
      * @param string $monthKey - YYYY-MM
      * @return array
      */
-    public function getMonthlyAttendanceDetailNew($monthKey, $department = '')
+    public function getMonthlyAttendanceDetailNew($monthKey, $phongBan = '')
     {
         require_once 'app/helpers/HolidayCalculator.php';
         require_once 'app/helpers/LeaveCalculator.php';
         require_once 'app/helpers/AttendanceCalculator.php';
 
         $monthKey = trim((string)$monthKey);
-        $department = trim((string)$department);
+        $phongBan = trim((string)$phongBan);
         $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
         
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
@@ -2243,7 +2259,7 @@ class ChamCongModel
         $allEmployees = $this->getEmployees('', true);
         
         // Chỉ lấy nhân viên (filter theo phòng ban nếu có)
-        $employees = array_filter($allEmployees, function($e) use ($monthEnd, $department, $validDepts) {
+        $employees = array_filter($allEmployees, function($e) use ($monthEnd, $phongBan, $validDepts) {
             if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') {
                 return false;
             }
@@ -2255,14 +2271,14 @@ class ChamCongModel
             }
             
             // Filter theo phòng ban cụ thể nếu có
-            if ($department !== '') {
-                if ($empDept !== $department) {
+            if ($phongBan !== '') {
+                if ($empDept !== $phongBan) {
                     return false;
                 }
             }
             
             // Bỏ qua nhân viên được tạo sau tháng đang xem
-            $createdAt = !empty($e['created_at']) ? substr($e['created_at'], 0, 10) : null;
+            $createdAt = !empty($e['ngayTao']) ? substr($e['ngayTao'], 0, 10) : null;
             if ($createdAt && $createdAt > $monthEnd) {
                 return false;
             }
@@ -2342,8 +2358,8 @@ class ChamCongModel
 
         // Fetch shift assignment for this user (most likely fixed for the month)
         $shift = $this->getShiftForUser($maND); 
-        $shiftStart = $shift['start_time'] ?? null;
-        $shiftEnd = $shift['end_time'] ?? null;
+        $shiftStart = $shift['gioBatDau'] ?? null;
+        $shiftEnd = $shift['gioKetThuc'] ?? null;
 
         // Loop through the month
         $daysInMonth = (int)date('t', strtotime($monthStart));
@@ -2352,7 +2368,7 @@ class ChamCongModel
             
             // Check leave
             if (isset($leaves[$dateStr])) {
-                $totalLeaveDays += (isset($leaves[$dateStr]['is_half_day']) && $leaves[$dateStr]['is_half_day']) ? 0.5 : 1.0;
+                $totalLeaveDays += (isset($leaves[$dateStr]['laNuaNgay']) && $leaves[$dateStr]['laNuaNgay']) ? 0.5 : 1.0;
             }
 
             // Check attendance
@@ -2363,9 +2379,9 @@ class ChamCongModel
                     
                     // Calculate late/OT if shift is defined
                     if ($shiftStart && $shiftEnd) {
-                        $status = $this->calculateShiftStatus($att['checkIn'], $att['checkOut'], $shiftStart, $shiftEnd);
-                        $totalLateMinutes += (int)($status['minutes_late'] ?? 0);
-                        $totalOTMinutes += (int)($status['overtime_minutes'] ?? 0);
+                        $trangThai = $this->calculateShiftStatus($att['checkIn'], $att['checkOut'], $shiftStart, $shiftEnd);
+                        $totalLateMinutes += (int)($trangThai['minutes_late'] ?? 0);
+                        $totalOTMinutes += (int)($trangThai['phutTangCa'] ?? 0);
                     }
                 }
             }
@@ -2373,7 +2389,7 @@ class ChamCongModel
 
         return [
             'work_days' => $totalWorkDays,
-            'late_minutes' => $totalLateMinutes,
+            'phutDiTre' => $totalLateMinutes,
             'ot_hours' => round($totalOTMinutes / 60, 1),
             'leave_days' => $totalLeaveDays
         ];
@@ -2392,18 +2408,18 @@ class ChamCongModel
         $fromDate = trim((string)$fromDate);
         $toDate = trim((string)$toDate);
 
-        // 1. Get raw logs from attendance_logs
+        // 1. Get raw logs from lichSuChamCong
         $sql = "
             SELECT
-                DATE(created_at) as attendance_date,
-                MIN(CASE WHEN action = 'IN' THEN created_at END) as checkIn,
-                MAX(CASE WHEN action = 'OUT' THEN created_at END) as checkOut
-            FROM attendance_logs
+                DATE(ngayTao) as ngayChamCong,
+                MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) as checkIn,
+                MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) as checkOut
+            FROM lichSuChamCong
             WHERE maND = ?
-              AND DATE(created_at) >= ?
-              AND DATE(created_at) <= ?
-            GROUP BY DATE(created_at)
-            ORDER BY attendance_date ASC
+              AND DATE(ngayTao) >= ?
+              AND DATE(ngayTao) <= ?
+            GROUP BY DATE(ngayTao)
+            ORDER BY ngayChamCong ASC
         ";
 
         $stmt = $this->conn->prepare($sql);
@@ -2419,7 +2435,7 @@ class ChamCongModel
         // Convert to [date => data] format
         $data = [];
         foreach ($rows as $row) {
-            $date = $row['attendance_date'];
+            $date = $row['ngayChamCong'];
             $data[$date] = [
                 'checkIn' => $row['checkIn'],
                 'checkOut' => $row['checkOut'],
@@ -2427,10 +2443,10 @@ class ChamCongModel
         }
 
         // 2. Fetch approved corrections and OVERRIDE raw logs
-        $sqlCorr = "SELECT attendance_date, proposed_checkin, proposed_checkout 
-                    FROM attendance_corrections 
-                    WHERE maND = ? AND status = 'approved' 
-                    AND attendance_date >= ? AND attendance_date <= ?";
+        $sqlCorr = "SELECT ngayChamCong, gioVaoDeXuat, gioRaDeXuat 
+                    FROM suaChamCong 
+                    WHERE maND = ? AND trangThai = 'approved' 
+                    AND ngayChamCong >= ? AND ngayChamCong <= ?";
         $stmtCorr = $this->conn->prepare($sqlCorr);
         if ($stmtCorr) {
             $stmtCorr->bind_param('iss', $maND, $fromDate, $toDate);
@@ -2439,17 +2455,17 @@ class ChamCongModel
             $stmtCorr->close();
 
             foreach ($corrections as $corr) {
-                $date = $corr['attendance_date'];
+                $date = $corr['ngayChamCong'];
                 if (!isset($data[$date])) {
                     $data[$date] = ['checkIn' => null, 'checkOut' => null];
                 }
                 
                 // Override only if proposed values are provided in the request
-                if (!empty($corr['proposed_checkin'])) {
-                    $data[$date]['checkIn'] = $corr['proposed_checkin'];
+                if (!empty($corr['gioVaoDeXuat'])) {
+                    $data[$date]['checkIn'] = $corr['gioVaoDeXuat'];
                 }
-                if (!empty($corr['proposed_checkout'])) {
-                    $data[$date]['checkOut'] = $corr['proposed_checkout'];
+                if (!empty($corr['gioRaDeXuat'])) {
+                    $data[$date]['checkOut'] = $corr['gioRaDeXuat'];
                 }
             }
         }
@@ -2520,7 +2536,7 @@ class ChamCongModel
      * @param int $maND
      * @param string $fromDate
      * @param string $toDate
-     * @return array - [date => leave_type]
+     * @return array - [date => loaiNghiPhep]
      */
     private function getApprovedLeaveRequests($maND, $fromDate, $toDate)
     {
@@ -2528,21 +2544,21 @@ class ChamCongModel
         $fromDate = trim((string)$fromDate);
         $toDate = trim((string)$toDate);
 
-        // Sử dụng bảng `don_nghi_phep` thay vì `leave_requests` (vì leave_requests không tồn tại hoặc không dùng nữa)
+        // Sử dụng bảng `donNghiPhep` thay vì `yeuCauNghiPhep` (vì yeuCauNghiPhep không tồn tại hoặc không dùng nữa)
         $sql = "
             SELECT
                 id,
-                from_date,
-                to_date,
-                leave_type,
-                reason
-            FROM don_nghi_phep
-            WHERE user_id = ?
-              AND status = 'approved'
+                tuNgay,
+                denNgay,
+                loaiNghiPhep,
+                lyDo
+            FROM donNghiPhep
+            WHERE maND = ?
+              AND trangThai = 'approved'
               AND (
-                  (from_date >= ? AND from_date <= ?) OR 
-                  (to_date >= ? AND to_date <= ?) OR
-                  (from_date <= ? AND to_date >= ?)
+                  (tuNgay >= ? AND tuNgay <= ?) OR 
+                  (denNgay >= ? AND denNgay <= ?) OR
+                  (tuNgay <= ? AND denNgay >= ?)
               )
         ";
 
@@ -2558,21 +2574,21 @@ class ChamCongModel
 
         $data = [];
         foreach ($rows as $row) {
-            $currentDate = new DateTime($row['from_date']);
-            $endDate = new DateTime($row['to_date']);
-            $leaveType = $row['leave_type'] ?? 'annual';
+            $currentDate = new DateTime($row['tuNgay']);
+            $endDate = new DateTime($row['denNgay']);
+            $leaveType = $row['loaiNghiPhep'] ?? 'annual';
             $leaveId = $row['id'] ?? 0;
-            $reason = $row['reason'] ?? '';
+            $lyDo = $row['lyDo'] ?? '';
 
             while ($currentDate <= $endDate) {
                 $dateStr = $currentDate->format('Y-m-d');
                 if ($dateStr >= $fromDate && $dateStr <= $toDate) {
                     $data[$dateStr] = [
                         'type' => $leaveType,
-                        'is_half_day' => false,
+                        'laNuaNgay' => false,
                         'work_value_deduction' => 1.0,
                         'leave_id' => $leaveId,
-                        'reason' => $reason
+                        'lyDo' => $lyDo
                     ];
                 }
                 $currentDate->modify('+1 day');
@@ -2594,11 +2610,11 @@ class ChamCongModel
         
         $sql = "
             SELECT 1
-            FROM don_nghi_phep
-            WHERE user_id = ?
-              AND status = 'approved'
-              AND from_date <= ? 
-              AND to_date >= ?
+            FROM donNghiPhep
+            WHERE maND = ?
+              AND trangThai = 'approved'
+              AND tuNgay <= ? 
+              AND denNgay >= ?
             LIMIT 1
         ";
         
@@ -2648,7 +2664,7 @@ class ChamCongModel
      */
     public function getAllSettings()
     {
-        $sql = "SELECT id, setting_key, setting_value, updated_at FROM system_settings ORDER BY setting_key ASC";
+        $sql = "SELECT id, tenCaiDat, giaTri, ngayCapNhat FROM caiDatHeThong ORDER BY tenCaiDat ASC";
         $result = $this->conn->query($sql);
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
@@ -2659,14 +2675,14 @@ class ChamCongModel
      */
     public function getSettings()
     {
-        $sql = "SELECT setting_key, setting_value FROM system_settings ORDER BY setting_key ASC";
+        $sql = "SELECT tenCaiDat, giaTri FROM caiDatHeThong ORDER BY tenCaiDat ASC";
         $result = $this->conn->query($sql);
         if (!$result) {
             return [];
         }
         $settings = [];
         while ($row = $result->fetch_assoc()) {
-            $settings[$row['setting_key']] = $row['setting_value'];
+            $settings[$row['tenCaiDat']] = $row['giaTri'];
         }
         return $settings;
     }
@@ -2680,7 +2696,7 @@ class ChamCongModel
     public function getSettingValue($key, $default = null)
     {
         $key = trim($key);
-        $sql = "SELECT setting_value FROM system_settings WHERE setting_key = ? LIMIT 1";
+        $sql = "SELECT giaTri FROM caiDatHeThong WHERE tenCaiDat = ? LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return $default;
@@ -2690,7 +2706,7 @@ class ChamCongModel
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         
-        return $row['setting_value'] ?? $default;
+        return $row['giaTri'] ?? $default;
     }
 
     /**
@@ -2709,7 +2725,7 @@ class ChamCongModel
         }
 
         // Check if exists
-        $checkSql = "SELECT id FROM system_settings WHERE setting_key = ? LIMIT 1";
+        $checkSql = "SELECT id FROM caiDatHeThong WHERE tenCaiDat = ? LIMIT 1";
         $checkStmt = $this->conn->prepare($checkSql);
         if (!$checkStmt) {
             return false;
@@ -2721,7 +2737,7 @@ class ChamCongModel
 
         if ($exists) {
             // UPDATE
-            $sql = "UPDATE system_settings SET setting_value = ?, updated_at = CURRENT_TIMESTAMP WHERE setting_key = ?";
+            $sql = "UPDATE caiDatHeThong SET giaTri = ?, ngayCapNhat = CURRENT_TIMESTAMP WHERE tenCaiDat = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
@@ -2729,7 +2745,7 @@ class ChamCongModel
             $stmt->bind_param("ss", $value, $key);
         } else {
             // INSERT
-            $sql = "INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)";
+            $sql = "INSERT INTO caiDatHeThong (tenCaiDat, giaTri) VALUES (?, ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
@@ -2746,51 +2762,51 @@ class ChamCongModel
     // ĐƠN NGHỈ PHÉP (Leave Request)
     // ============================
 
-    public function insertLeaveRequest($user_id, $leave_type, $from_date, $to_date, $reason, $evidence_file = null)
+    public function insertLeaveRequest($maND, $loaiNghiPhep, $tuNgay, $denNgay, $lyDo, $tepMinhChung = null)
     {
-        $user_id = (int)$user_id;
-        $leave_type = trim($leave_type);
-        $from_date = trim($from_date);
-        $to_date = trim($to_date);
-        $reason = trim($reason);
+        $maND = (int)$maND;
+        $loaiNghiPhep = trim($loaiNghiPhep);
+        $tuNgay = trim($tuNgay);
+        $denNgay = trim($denNgay);
+        $lyDo = trim($lyDo);
 
         $allowedTypes = ['sick', 'personal', 'emergency', 'wedding', 'funeral', 'other'];
-        if ($user_id <= 0 || $from_date === '' || $to_date === '' || $reason === '') {
+        if ($maND <= 0 || $tuNgay === '' || $denNgay === '' || $lyDo === '') {
             return false;
         }
-        if (!in_array($leave_type, $allowedTypes, true)) {
-            $leave_type = 'personal';
+        if (!in_array($loaiNghiPhep, $allowedTypes, true)) {
+            $loaiNghiPhep = 'personal';
         }
-        if ($from_date > $to_date) {
+        if ($tuNgay > $denNgay) {
             return false;
         }
 
-        $sql = "INSERT INTO don_nghi_phep (user_id, leave_type, from_date, to_date, reason, evidence_file) VALUES (?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO donNghiPhep (maND, loaiNghiPhep, tuNgay, denNgay, lyDo, tepMinhChung) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
         }
-        $stmt->bind_param("isssss", $user_id, $leave_type, $from_date, $to_date, $reason, $evidence_file);
+        $stmt->bind_param("isssss", $maND, $loaiNghiPhep, $tuNgay, $denNgay, $lyDo, $tepMinhChung);
         $result = $stmt->execute();
         $stmt->close();
         return $result;
     }
 
-    public function getLeaveRequestsByUser($user_id)
+    public function getLeaveRequestsByUser($maND)
     {
-        $user_id = (int)$user_id;
+        $maND = (int)$maND;
         $sql = "SELECT lr.*, nd.hoTen,
                        approver.hoTen AS approver_name
-                FROM don_nghi_phep lr
-                LEFT JOIN nguoidung nd ON nd.maND = lr.user_id
-                LEFT JOIN nguoidung approver ON approver.maND = lr.approved_by
-                WHERE lr.user_id = ?
-                ORDER BY lr.created_at DESC";
+                FROM donNghiPhep lr
+                LEFT JOIN nguoidung nd ON nd.maND = lr.maND
+                LEFT JOIN nguoidung approver ON approver.maND = lr.nguoiDuyet
+                WHERE lr.maND = ?
+                ORDER BY lr.ngayTao DESC";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return [];
         }
-        $stmt->bind_param("i", $user_id);
+        $stmt->bind_param("i", $maND);
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
@@ -2801,32 +2817,32 @@ class ChamCongModel
     {
         $sql = "SELECT lr.*, nd.hoTen, nd.phongBan,
                        approver.hoTen AS approver_name
-                FROM don_nghi_phep lr
-                LEFT JOIN nguoidung nd ON nd.maND = lr.user_id
-                LEFT JOIN nguoidung approver ON approver.maND = lr.approved_by
+                FROM donNghiPhep lr
+                LEFT JOIN nguoidung nd ON nd.maND = lr.maND
+                LEFT JOIN nguoidung approver ON approver.maND = lr.nguoiDuyet
                 ORDER BY
-                    CASE lr.status WHEN 'pending' THEN 0 ELSE 1 END,
-                    lr.created_at DESC";
+                    CASE lr.trangThai WHEN 'pending' THEN 0 ELSE 1 END,
+                    lr.ngayTao DESC";
         $result = $this->conn->query($sql);
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
 
-    public function updateLeaveRequestStatus($id, $status, $approved_by = null)
+    public function updateLeaveRequestStatus($id, $trangThai, $nguoiDuyet = null)
     {
         $id = (int)$id;
-        $status = trim($status);
-        $approved_by = $approved_by !== null ? (int)$approved_by : null;
+        $trangThai = trim($trangThai);
+        $nguoiDuyet = $nguoiDuyet !== null ? (int)$nguoiDuyet : null;
 
-        if ($id <= 0 || !in_array($status, ['approved', 'rejected'], true)) {
+        if ($id <= 0 || !in_array($trangThai, ['approved', 'rejected'], true)) {
             return false;
         }
 
-        $sql = "UPDATE don_nghi_phep SET status = ?, approved_by = ?, approved_at = NOW() WHERE id = ? AND status = 'pending'";
+        $sql = "UPDATE donNghiPhep SET trangThai = ?, nguoiDuyet = ?, ngayDuyet = NOW() WHERE id = ? AND trangThai = 'pending'";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
         }
-        $stmt->bind_param("sii", $status, $approved_by, $id);
+        $stmt->bind_param("sii", $trangThai, $nguoiDuyet, $id);
         $result = $stmt->execute();
         $affected = $stmt->affected_rows > 0;
         $stmt->close();
@@ -2841,8 +2857,8 @@ class ChamCongModel
     public function getLeaveRequestById($id)
     {
         $sql = "SELECT d.*, n.hoTen as approver_name 
-                FROM don_nghi_phep d
-                LEFT JOIN nguoidung n ON d.approved_by = n.maND
+                FROM donNghiPhep d
+                LEFT JOIN nguoidung n ON d.nguoiDuyet = n.maND
                 WHERE d.id = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return null;
@@ -2863,7 +2879,7 @@ class ChamCongModel
      */
     public function getCorrectionById($id)
     {
-        $sql = "SELECT * FROM attendance_corrections WHERE id = ?";
+        $sql = "SELECT * FROM suaChamCong WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return null;
         $stmt->bind_param("i", $id);
@@ -2892,9 +2908,9 @@ class ChamCongModel
 
         $sql = "SELECT DISTINCT n.maND
                 FROM nguoidung n
-                INNER JOIN attendance_daily_summary ads ON ads.maND = n.maND
-                    AND ads.work_date >= ? AND ads.work_date <= ?
-                WHERE n.trangThai = 1 AND n.vaiTro = 'Nhân viên'";
+                INNER JOIN tongHopNgayCong ads ON ads.maND = n.maND
+                    AND ads.ngayLamViec >= ? AND ads.ngayLamViec <= ?
+                WHERE n.trangThai = 1 AND n.chucVu = 'Nhân viên'";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return false;
         $stmt->bind_param('ss', $startDate, $endDate);
@@ -2909,7 +2925,7 @@ class ChamCongModel
             $maND = (int)$emp['maND'];
 
             // Kiểm tra nếu đã tồn tại
-            $find = $this->conn->prepare("SELECT id FROM employee_timesheet_approval WHERE month_key = ? AND maND = ? LIMIT 1");
+            $find = $this->conn->prepare("SELECT id FROM duyetCongNhanVien WHERE thangNam = ? AND maND = ? LIMIT 1");
             if (!$find) { $okAll = false; continue; }
             $find->bind_param('si', $monthKey, $maND);
             $find->execute();
@@ -2918,7 +2934,7 @@ class ChamCongModel
 
             if (!empty($existing['id'])) {
                 // Cập nhật lại (gửi lại)
-                $update = $this->conn->prepare("UPDATE employee_timesheet_approval SET hr_sender_id = ?, status = 'submitted', submitted_at = NOW(), approved_at = NULL, employee_note = NULL WHERE id = ?");
+                $update = $this->conn->prepare("UPDATE duyetCongNhanVien SET maNguoiGuiNS = ?, trangThai = 'submitted', ngayGui = NOW(), ngayDuyet = NULL, ghiChu = NULL WHERE id = ?");
                 if (!$update) { $okAll = false; continue; }
                 $id = (int)$existing['id'];
                 $update->bind_param('ii', $hrSenderId, $id);
@@ -2926,7 +2942,7 @@ class ChamCongModel
                 $update->close();
             } else {
                 // Tạo mới
-                $insert = $this->conn->prepare("INSERT INTO employee_timesheet_approval (month_key, maND, hr_sender_id, status, submitted_at) VALUES (?, ?, ?, 'submitted', NOW())");
+                $insert = $this->conn->prepare("INSERT INTO duyetCongNhanVien (thangNam, maND, maNguoiGuiNS, trangThai, ngayGui) VALUES (?, ?, ?, 'submitted', NOW())");
                 if (!$insert) { $okAll = false; continue; }
                 $insert->bind_param('sii', $monthKey, $maND, $hrSenderId);
                 $okAll = $insert->execute() && $okAll;
@@ -2945,12 +2961,12 @@ class ChamCongModel
         $maND = (int)$maND;
         if ($maND <= 0) return [];
 
-        $sql = "SELECT eta.id, eta.month_key, eta.status, eta.submitted_at, eta.approved_at, eta.employee_note,
+        $sql = "SELECT eta.id, eta.thangNam, eta.trangThai, eta.ngayGui, eta.ngayDuyet, eta.ghiChu,
                        u.hoTen AS hr_name
-                FROM employee_timesheet_approval eta
-                LEFT JOIN nguoidung u ON u.maND = eta.hr_sender_id
+                FROM duyetCongNhanVien eta
+                LEFT JOIN nguoidung u ON u.maND = eta.maNguoiGuiNS
                 WHERE eta.maND = ?
-                ORDER BY eta.month_key DESC, eta.id DESC";
+                ORDER BY eta.thangNam DESC, eta.id DESC";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return [];
         $stmt->bind_param('i', $maND);
@@ -2967,10 +2983,10 @@ class ChamCongModel
         $maND = (int)$maND;
         if ($timesheetId <= 0 || $maND <= 0) return null;
 
-        $sql = "SELECT eta.id, eta.month_key, eta.status, eta.submitted_at, eta.approved_at, eta.employee_note,
+        $sql = "SELECT eta.id, eta.thangNam, eta.trangThai, eta.ngayGui, eta.ngayDuyet, eta.ghiChu,
                        u.hoTen AS hr_name
-                FROM employee_timesheet_approval eta
-                LEFT JOIN nguoidung u ON u.maND = eta.hr_sender_id
+                FROM duyetCongNhanVien eta
+                LEFT JOIN nguoidung u ON u.maND = eta.maNguoiGuiNS
                 WHERE eta.id = ? AND eta.maND = ?
                 LIMIT 1";
         $stmt = $this->conn->prepare($sql);
@@ -2982,7 +2998,7 @@ class ChamCongModel
 
         if (!$approval) return null;
 
-        $monthKey = trim($approval['month_key']);
+        $monthKey = trim($approval['thangNam']);
         $monthStart = $monthKey . '-01';
         $monthEnd = date('Y-m-t', strtotime($monthStart));
 
@@ -2995,8 +3011,8 @@ class ChamCongModel
         
         // Fetch shift assignment
         $shift = $this->getShiftForUser($maND);
-        $shiftStart = $shift['start_time'] ?? null;
-        $shiftEnd = $shift['end_time'] ?? null;
+        $shiftStart = $shift['gioBatDau'] ?? null;
+        $shiftEnd = $shift['gioKetThuc'] ?? null;
 
         $monthlyCalc = AttendanceCalculator::calculateMonthlyAttendance(
             $monthKey,
@@ -3010,19 +3026,19 @@ class ChamCongModel
         foreach ($monthlyCalc['daily_breakdown'] as $date => $day) {
             $lateMinutes = 0;
             if ($day['day_type'] === 'working' && !empty($day['check_in']) && $shiftStart && $shiftEnd) {
-                $status = $this->calculateShiftStatus($day['check_in'], $day['check_out'], $shiftStart, $shiftEnd);
-                $lateMinutes = (int)($status['minutes_late'] ?? 0);
+                $trangThai = $this->calculateShiftStatus($day['check_in'], $day['check_out'], $shiftStart, $shiftEnd);
+                $lateMinutes = (int)($trangThai['minutes_late'] ?? 0);
                 $totalLateMinutes += $lateMinutes;
             }
 
             $dailyRows[] = [
-                'work_date' => $date,
-                'first_in' => $day['check_in'] ?? null,
-                'last_out' => $day['check_out'] ?? null,
-                'work_minutes' => $day['work_minutes'] ?? 0,
-                'overtime_minutes' => ($day['ot_hours'] ?? 0) * 60,
-                'late_minutes' => $lateMinutes,
-                'status' => $day['day_type']
+                'ngayLamViec' => $date,
+                'gioVaoDau' => $day['check_in'] ?? null,
+                'gioRaCuoi' => $day['check_out'] ?? null,
+                'phutLamViec' => $day['phutLamViec'] ?? 0,
+                'phutTangCa' => ($day['ot_hours'] ?? 0) * 60,
+                'phutDiTre' => $lateMinutes,
+                'trangThai' => $day['day_type']
             ];
         }
 
@@ -3041,18 +3057,18 @@ class ChamCongModel
     /**
      * Nhân viên duyệt bảng công
      */
-    public function approveEmployeeTimesheet($timesheetId, $maND, $note = '')
+    public function approveEmployeeTimesheet($timesheetId, $maND, $ghiChu = '')
     {
         $timesheetId = (int)$timesheetId;
         $maND = (int)$maND;
         if ($timesheetId <= 0 || $maND <= 0) return false;
 
-        $sql = "UPDATE employee_timesheet_approval
-                SET status = 'approved', approved_at = NOW(), employee_note = ?
-                WHERE id = ? AND maND = ? AND status = 'submitted'";
+        $sql = "UPDATE duyetCongNhanVien
+                SET trangThai = 'approved', ngayDuyet = NOW(), ghiChu = ?
+                WHERE id = ? AND maND = ? AND trangThai = 'submitted'";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return false;
-        $stmt->bind_param('sii', $note, $timesheetId, $maND);
+        $stmt->bind_param('sii', $ghiChu, $timesheetId, $maND);
         return $stmt->execute() && $stmt->affected_rows > 0;
     }
 
@@ -3063,7 +3079,7 @@ class ChamCongModel
     {
         $maND = (int)$maND;
         if ($maND <= 0) return 0;
-        $sql = "SELECT COUNT(*) AS cnt FROM employee_timesheet_approval WHERE maND = ? AND status = 'submitted'";
+        $sql = "SELECT COUNT(*) AS cnt FROM duyetCongNhanVien WHERE maND = ? AND trangThai = 'submitted'";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return 0;
         $stmt->bind_param('i', $maND);
@@ -3080,12 +3096,12 @@ class ChamCongModel
     {
         $maND = (int)$maND;
         if ($maND <= 0) return [];
-        $sql = "SELECT eta.id, eta.month_key, eta.submitted_at,
+        $sql = "SELECT eta.id, eta.thangNam, eta.ngayGui,
                        u.hoTen AS hr_name
-                FROM employee_timesheet_approval eta
-                LEFT JOIN nguoidung u ON u.maND = eta.hr_sender_id
-                WHERE eta.maND = ? AND eta.status = 'submitted'
-                ORDER BY eta.submitted_at DESC
+                FROM duyetCongNhanVien eta
+                LEFT JOIN nguoidung u ON u.maND = eta.maNguoiGuiNS
+                WHERE eta.maND = ? AND eta.trangThai = 'submitted'
+                ORDER BY eta.ngayGui DESC
                 LIMIT ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return [];
@@ -3099,20 +3115,20 @@ class ChamCongModel
      */
     public function getTimesheetApprovalSummary($monthKey = null)
     {
-        $sql = "SELECT eta.month_key,
+        $sql = "SELECT eta.thangNam,
                        COUNT(*) AS total,
-                       SUM(CASE WHEN eta.status = 'submitted' THEN 1 ELSE 0 END) AS pending,
-                       SUM(CASE WHEN eta.status = 'approved' THEN 1 ELSE 0 END) AS approved,
-                       MAX(eta.submitted_at) AS last_submitted
-                FROM employee_timesheet_approval eta";
+                       SUM(CASE WHEN eta.trangThai = 'submitted' THEN 1 ELSE 0 END) AS pending,
+                       SUM(CASE WHEN eta.trangThai = 'approved' THEN 1 ELSE 0 END) AS approved,
+                       MAX(eta.ngayGui) AS last_submitted
+                FROM duyetCongNhanVien eta";
         $params = [];
         $types = '';
         if ($monthKey) {
-            $sql .= " WHERE eta.month_key = ?";
+            $sql .= " WHERE eta.thangNam = ?";
             $params[] = $monthKey;
             $types = 's';
         }
-        $sql .= " GROUP BY eta.month_key ORDER BY eta.month_key DESC";
+        $sql .= " GROUP BY eta.thangNam ORDER BY eta.thangNam DESC";
 
         if ($types) {
             $stmt = $this->conn->prepare($sql);
@@ -3129,10 +3145,10 @@ class ChamCongModel
      */
     public function getTimesheetApprovalDetails($monthKey)
     {
-        $sql = "SELECT eta.id, eta.maND, u.hoTen, u.phongBan, eta.status, eta.submitted_at, eta.approved_at
-                FROM employee_timesheet_approval eta
+        $sql = "SELECT eta.id, eta.maND, u.hoTen, u.phongBan, eta.trangThai, eta.ngayGui, eta.ngayDuyet
+                FROM duyetCongNhanVien eta
                 JOIN nguoidung u ON u.maND = eta.maND
-                WHERE eta.month_key = ?
+                WHERE eta.thangNam = ?
                 ORDER BY u.phongBan, u.hoTen";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return [];

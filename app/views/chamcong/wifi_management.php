@@ -54,28 +54,28 @@ if (!isset($_SESSION['user'])) {
     
     <form id="addWifiForm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 16px; background: #f0fdf4; border-radius: 8px; margin-top: 10px;">
         <div class="form-group">
-            <label for="wifi_name">Tên hiển thị <span style="color: #ef4444;">*</span></label>
-            <input type="text" id="wifi_name" name="wifi_name" placeholder="VD: Wifi Công ty" maxlength="120" required class="form-input-compact">
+            <label for="tenWifi">Tên hiển thị <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="tenWifi" name="tenWifi" placeholder="VD: Wifi Công ty" maxlength="120" required class="form-input-compact">
         </div>
         <div class="form-group">
             <label for="ssid">SSID</label>
             <input type="text" id="ssid" name="ssid" placeholder="VD: CongTy_5G" maxlength="120" class="form-input-compact">
         </div>
         <div class="form-group">
-            <label for="location">Vị trí</label>
-            <input type="text" id="location" name="location" placeholder="VD: Tầng 1" maxlength="255" class="form-input-compact">
+            <label for="viTri">Vị trí</label>
+            <input type="text" id="viTri" name="viTri" placeholder="VD: Tầng 1" maxlength="255" class="form-input-compact">
         </div>
         <div class="form-group">
-            <label for="ip_range">Dải IP <span style="color: #ef4444;">*</span></label>
-            <input type="text" id="ip_range" name="ip_range" placeholder="VD: 192.168.1" required class="form-input-compact">
+            <label for="daiIP">Dải IP <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="daiIP" name="daiIP" placeholder="VD: 192.168.1" required class="form-input-compact">
         </div>
         <div class="form-group">
-            <label for="gateway">Gateway <span style="color: #ef4444;">*</span></label>
-            <input type="text" id="gateway" name="gateway" placeholder="VD: 192.168.1.1" required class="form-input-compact">
+            <label for="congMacDinh">Gateway <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="congMacDinh" name="congMacDinh" placeholder="VD: 192.168.1.1" required class="form-input-compact">
         </div>
         <div class="form-group" style="display: flex; align-items: center; padding-top: 24px;">
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-                <input type="checkbox" name="is_active" value="1" checked> Bật ngay
+                <input type="checkbox" name="hoatDong" value="1" checked> Bật ngay
             </label>
         </div>
         <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end;">
@@ -114,34 +114,34 @@ if (!isset($_SESSION['user'])) {
                     <?php foreach ($wifiList as $wifi): ?>
                         <tr id="row-<?= (int)($wifi['id'] ?? 0) ?>">
                             <td>
-                                <div style="font-weight: 600; color: #1e293b;"><?= htmlspecialchars($wifi['wifi_name'] ?? '') ?></div>
+                                <div style="font-weight: 600; color: #1e293b;"><?= htmlspecialchars($wifi['tenWifi'] ?? '') ?></div>
                                 <div style="font-size: 11px; color: #64748b;"><?= htmlspecialchars($wifi['ssid'] ?? '-') ?></div>
                             </td>
                             <td style="font-size: 12px; color: #475569;">
-                                <?= htmlspecialchars($wifi['location'] ?? '-') ?>
+                                <?= htmlspecialchars($wifi['viTri'] ?? '-') ?>
                             </td>
                             <td>
                                 <div style="display: flex; gap: 6px; font-family: monospace; font-size: 12px;">
-                                    <span class="ip-badge" title="Dải IP">IP: <?= htmlspecialchars($wifi['ip_range'] ?? '') ?>.*</span>
-                                    <span class="ip-badge" title="Gateway">GW: <?= htmlspecialchars($wifi['gateway'] ?? '') ?></span>
+                                    <span class="ip-badge" title="Dải IP">IP: <?= htmlspecialchars($wifi['daiIP'] ?? '') ?>.*</span>
+                                    <span class="ip-badge" title="Gateway">GW: <?= htmlspecialchars($wifi['congMacDinh'] ?? '') ?></span>
                                 </div>
                             </td>
                             <td style="text-align: center;">
-                                <?php if ((int)($wifi['is_active'] ?? 0)): ?>
+                                <?php if ((int)($wifi['hoatDong'] ?? 0)): ?>
                                     <span class="badge-active">Bật</span>
                                 <?php else: ?>
                                     <span class="badge-inactive">Tắt</span>
                                 <?php endif; ?>
                             </td>
                             <td style="text-align: center;">
-                                <div class="action-group">
-                                    <button onclick="toggleWifi(<?= (int)($wifi['id'] ?? 0) ?>)" class="btn-icon-mini <?= (int)($wifi['is_active'] ?? 0) ? 'btn-warn' : 'btn-success' ?>" title="Bật/Tắt">
+                                <div class="hanhDong-group">
+                                    <button onclick="toggleWifi(<?= (int)($wifi['id'] ?? 0) ?>)" class="btn-icon-mini <?= (int)($wifi['hoatDong'] ?? 0) ? 'btn-warn' : 'btn-success' ?>" title="Bật/Tắt">
                                         <i class="fas fa-power-off"></i>
                                     </button>
                                     <button onclick="showEditForm(<?= (int)($wifi['id'] ?? 0) ?>)" class="btn-icon-mini btn-primary" title="Sửa">
                                         <i class="fas fa-pen"></i>
                                     </button>
-                                    <button onclick="deleteWifi(<?= (int)($wifi['id'] ?? 0) ?>, '<?= htmlspecialchars(addslashes($wifi['wifi_name'] ?? '')) ?>')" class="btn-icon-mini btn-danger" title="Xóa">
+                                    <button onclick="deleteWifi(<?= (int)($wifi['id'] ?? 0) ?>, '<?= htmlspecialchars(addslashes($wifi['tenWifi'] ?? '')) ?>')" class="btn-icon-mini btn-danger" title="Xóa">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -167,7 +167,7 @@ if (!isset($_SESSION['user'])) {
             
             <div class="form-group">
                 <label for="edit_wifi_name">Tên hiển thị <span style="color: #ef4444;">*</span></label>
-                <input type="text" id="edit_wifi_name" name="wifi_name" required class="form-input">
+                <input type="text" id="edit_wifi_name" name="tenWifi" required class="form-input">
             </div>
 
             <div class="form-group">
@@ -179,27 +179,27 @@ if (!isset($_SESSION['user'])) {
 
             <div class="form-group">
                 <label for="edit_location">Vị trí</label>
-                <input type="text" id="edit_location" name="location" class="form-input">
+                <input type="text" id="edit_location" name="viTri" class="form-input">
             </div>
 
             <div class="form-group">
                 <label for="edit_ip_range">Dải IP <span style="color: #ef4444;">*</span></label>
-                <input type="text" id="edit_ip_range" name="ip_range" required class="form-input">
+                <input type="text" id="edit_ip_range" name="daiIP" required class="form-input">
             </div>
 
             <div class="form-group">
                 <label for="edit_gateway">Gateway <span style="color: #ef4444;">*</span></label>
-                <input type="text" id="edit_gateway" name="gateway" required class="form-input">
+                <input type="text" id="edit_gateway" name="congMacDinh" required class="form-input">
             </div>
 
             <div class="form-group" style="grid-column: 1 / -1;">
                 <label for="edit_description">Mô tả</label>
-                <textarea id="edit_description" name="description" rows="2" class="form-input"></textarea>
+                <textarea id="edit_description" name="moTa" rows="2" class="form-input"></textarea>
             </div>
 
             <div class="form-group" style="grid-column: 1 / -1;">
                 <label for="edit_is_active" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="edit_is_active" name="is_active" value="1" style="width: 16px; height: 16px;">
+                    <input type="checkbox" id="edit_is_active" name="hoatDong" value="1" style="width: 16px; height: 16px;">
                     <span>Bật hoạt động</span>
                 </label>
             </div>
@@ -276,19 +276,19 @@ document.getElementById('addWifiForm').addEventListener('submit', function(e) {
 function showEditForm(id) {
     document.getElementById('edit_wifi_id').value = id;
     
-    // Fetch details via API to get password securely without HTML exposure
+    // Fetch details via API to get matKhau securely without HTML exposure
     fetch('index.php?page=tech-get-wifi&id=' + id)
     .then(res => res.json())
     .then(response => {
         if (response.success && response.data) {
             const data = response.data;
-            document.getElementById('edit_wifi_name').value = data.wifi_name || '';
+            document.getElementById('edit_wifi_name').value = data.tenWifi || '';
             document.getElementById('edit_ssid').value = data.ssid || '';
-            document.getElementById('edit_location').value = data.location || '';
-            document.getElementById('edit_ip_range').value = data.ip_range || '';
-            document.getElementById('edit_gateway').value = data.gateway || '';
-            document.getElementById('edit_description').value = data.description || '';
-            document.getElementById('edit_is_active').checked = parseInt(data.is_active) === 1;
+            document.getElementById('edit_location').value = data.viTri || '';
+            document.getElementById('edit_ip_range').value = data.daiIP || '';
+            document.getElementById('edit_gateway').value = data.congMacDinh || '';
+            document.getElementById('edit_description').value = data.moTa || '';
+            document.getElementById('edit_is_active').checked = parseInt(data.hoatDong) === 1;
             
             document.getElementById('editModal').style.display = 'block';
             document.body.style.overflow = 'hidden'; // Prevent background scroll
@@ -399,7 +399,7 @@ document.getElementById('editModal').addEventListener('click', function(e) {
 .ip-badge { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; color: #475569; }
 .badge-active { background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
 .badge-inactive { background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-.action-group { display: flex; gap: 4px; justify-content: center; }
+.hanhDong-group { display: flex; gap: 4px; justify-content: center; }
 .btn-icon-mini { width: 28px; height: 28px; border-radius: 6px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: all 0.2s; }
 .btn-icon-mini:hover { transform: scale(1.1); }
 .btn-success { background: #10b981; }

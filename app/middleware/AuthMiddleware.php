@@ -40,7 +40,7 @@ class AuthMiddleware
             'hr-api-approval-detail',
             'hr-api-timesheet-approval-details',
             'hr-api-corrections',
-            'hr-api-correction-action',
+            'hr-api-correction-hanhDong',
             'lich-su-cham-cong',
             'create-leave-request',
             'store-leave-request',

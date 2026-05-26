@@ -16,11 +16,11 @@ $hoTen = $user['hoTen'] ?? 'User';
         .att-card-mini { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .att-card-mini h3 { margin: 0 0 16px; font-size: 14px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
         
-        .att-status-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        .att-status-label { font-size: 13px; color: #64748b; }
-        .att-status-val { font-size: 14px; font-weight: 600; color: #1e293b; }
+        .att-trangThai-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .att-trangThai-label { font-size: 13px; color: #64748b; }
+        .att-trangThai-val { font-size: 14px; font-weight: 600; color: #1e293b; }
         
-        .badge-status { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .badge-trangThai { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
         .bg-success { background: #dcfce7; color: #166534; }
         .bg-warning { background: #fef3c7; color: #92400e; }
         .bg-danger { background: #fee2e2; color: #991b1b; }
@@ -55,20 +55,20 @@ $hoTen = $user['hoTen'] ?? 'User';
         <!-- Network Info -->
         <div class="att-card-mini">
             <h3><i class="fas fa-network-wired"></i> Kết nối mạng</h3>
-            <div class="att-status-row">
-                <span class="att-status-label">Địa chỉ IP:</span>
-                <span id="ip-display" class="att-status-val">...</span>
+            <div class="att-trangThai-row">
+                <span class="att-trangThai-label">Địa chỉ IP:</span>
+                <span id="ip-display" class="att-trangThai-val">...</span>
             </div>
-            <div class="att-status-row">
-                <span class="att-status-label">Chọn WiFi:</span>
+            <div class="att-trangThai-row">
+                <span class="att-trangThai-label">Chọn WiFi:</span>
                 <select id="wifi-select" class="yc-input" style="height: 30px; font-size: 12px; width: 140px; padding: 2px 8px;">
                     <option value="">Đang tải...</option>
                 </select>
             </div>
-            <div class="att-status-row">
-                <span class="att-status-label">Trạng thái:</span>
+            <div class="att-trangThai-row">
+                <span class="att-trangThai-label">Trạng thái:</span>
                 <span id="network-validation">
-                    <span class="badge-status bg-warning">Đang kiểm tra...</span>
+                    <span class="badge-trangThai bg-warning">Đang kiểm tra...</span>
                 </span>
             </div>
         </div>
@@ -76,17 +76,17 @@ $hoTen = $user['hoTen'] ?? 'User';
         <!-- Today Info -->
         <div class="att-card-mini">
             <h3><i class="fas fa-calendar-day"></i> Trạng thái hôm nay</h3>
-            <div class="att-status-row">
-                <span class="att-status-label">Giờ vào:</span>
-                <span id="checkin-time" class="att-status-val">—</span>
+            <div class="att-trangThai-row">
+                <span class="att-trangThai-label">Giờ vào:</span>
+                <span id="checkin-time" class="att-trangThai-val">—</span>
             </div>
-            <div class="att-status-row">
-                <span class="att-status-label">Giờ ra:</span>
-                <span id="checkout-time" class="att-status-val">—</span>
+            <div class="att-trangThai-row">
+                <span class="att-trangThai-label">Giờ ra:</span>
+                <span id="checkout-time" class="att-trangThai-val">—</span>
             </div>
-            <div class="att-status-row">
-                <span class="att-status-label">Tổng giờ:</span>
-                <span id="total-hours" class="att-status-val">—</span>
+            <div class="att-trangThai-row">
+                <span class="att-trangThai-label">Tổng giờ:</span>
+                <span id="total-soGio" class="att-trangThai-val">—</span>
             </div>
         </div>
     </div>
@@ -112,10 +112,10 @@ $hoTen = $user['hoTen'] ?? 'User';
 document.addEventListener('DOMContentLoaded', function() {
     const apiBase = 'index.php?page=';
 
-    function formatTimeFromHours(hours) {
-        if (!hours || hours <= 0) return '—';
-        const h = Math.floor(hours);
-        const m = Math.round((hours - h) * 60);
+    function formatTimeFromHours(soGio) {
+        if (!soGio || soGio <= 0) return '—';
+        const h = Math.floor(soGio);
+        const m = Math.round((soGio - h) * 60);
         return (h > 0 ? h + 'h ' : '') + m + 'm';
     }
 
@@ -126,16 +126,16 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 document.getElementById('ip-display').textContent = data.ip || 'Unknown';
                 document.getElementById('network-validation').innerHTML = data.is_allowed 
-                    ? '<span class="badge-status bg-success">Hợp lệ</span>'
-                    : '<span class="badge-status bg-danger">Mạng ngoài</span>';
+                    ? '<span class="badge-trangThai bg-success">Hợp lệ</span>'
+                    : '<span class="badge-trangThai bg-danger">Mạng ngoài</span>';
                 
                 const wifiSelect = document.getElementById('wifi-select');
                 if (data.allowed_networks && data.allowed_networks.length > 0) {
                     let options = '';
                     let matched = false;
                     data.allowed_networks.forEach(w => {
-                        const isMatch = data.ip && data.ip.startsWith(w.ip_range);
-                        options += `<option value="${w.wifi_name}" ${isMatch ? 'selected' : ''}>${w.wifi_name}</option>`;
+                        const isMatch = data.ip && data.ip.startsWith(w.daiIP);
+                        options += `<option value="${w.tenWifi}" ${isMatch ? 'selected' : ''}>${w.tenWifi}</option>`;
                         if (isMatch) matched = true;
                     });
                     wifiSelect.innerHTML = options;
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     document.getElementById('checkin-time').textContent = data.checkIn ? data.checkIn.split(' ')[1] : '—';
                     document.getElementById('checkout-time').textContent = data.checkOut ? data.checkOut.split(' ')[1] : '—';
-                    document.getElementById('total-hours').textContent = formatTimeFromHours(data.total_hours);
+                    document.getElementById('total-soGio').textContent = formatTimeFromHours(data.total_hours);
                 }
             });
 
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success && data.data.length > 0) {
                     let html = '<table class="history-table-compact"><thead><tr><th>Ngày</th><th>WiFi</th><th>Vào</th><th>Ra</th></tr></thead><tbody>';
                     data.data.forEach(r => {
-                        const wifiDisplay = r.wifi_name || 'Wifi Công ty';
+                        const wifiDisplay = r.tenWifi || 'Wifi Công ty';
                         html += `<tr><td>${r.date}</td><td><span style="font-size:11px; color:#64748b">${wifiDisplay}</span></td><td>${r.checkIn || '—'}</td><td>${r.checkOut || '—'}</td></tr>`;
                     });
                     html += '</tbody></table>';
@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.disabled = true;
         
         const formData = new FormData();
-        formData.append('wifi_name', wifi);
+        formData.append('tenWifi', wifi);
 
         fetch(apiBase + 'attendance-check-in', { method: 'POST', body: formData })
             .then(res => res.json())
@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.disabled = true;
 
         const formData = new FormData();
-        formData.append('wifi_name', wifi);
+        formData.append('tenWifi', wifi);
 
         fetch(apiBase + 'attendance-check-out', { method: 'POST', body: formData })
             .then(res => res.json())

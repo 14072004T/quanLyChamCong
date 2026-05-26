@@ -13,7 +13,7 @@ $exportFromDate = $selectedMonth . '-01';
 $exportToDate = date('Y-m-t', strtotime($exportFromDate));
 $exportSummary = null;
 foreach ($approvalHistory as $row) {
-    if (($row['month_key'] ?? '') === $selectedMonth) {
+    if (($row['thangNam'] ?? '') === $selectedMonth) {
         $exportSummary = $row;
         break;
     }
@@ -112,33 +112,33 @@ foreach (($salaryRows ?? []) as $summaryRow) {
 .payroll-board-body {
     padding: 18px 24px 24px;
 }
-.payroll-action-panel {
+.payroll-hanhDong-panel {
     padding: 22px 24px;
     border: 1px solid #dbe7f5;
     border-radius: 22px;
     background: linear-gradient(135deg, #f8fbff 0%, #ffffff 65%);
     box-shadow: 0 18px 34px rgba(15,23,42,0.07);
 }
-.payroll-action-row {
+.payroll-hanhDong-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 18px;
 }
-.payroll-action-copy h3 {
+.payroll-hanhDong-copy h3 {
     margin: 0 0 8px;
     color: #0f172a;
 }
-.payroll-action-copy p {
+.payroll-hanhDong-copy p {
     margin: 0;
     color: #64748b;
     max-width: 720px;
 }
-.payroll-action-buttons {
+.payroll-hanhDong-buttons {
     display: flex;
     justify-content: flex-end;
 }
-.payroll-action-buttons .btn {
+.payroll-hanhDong-buttons .btn {
     min-width: 170px;
     justify-content: center;
 }
@@ -261,7 +261,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
     .payroll-filter-actions {
         grid-column: 1 / -1;
     }
-    .payroll-action-row {
+    .payroll-hanhDong-row {
         flex-direction: column;
         align-items: stretch;
     }
@@ -274,7 +274,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
     .payroll-toolbar,
     .payroll-board-head,
     .payroll-board-body,
-    .payroll-action-panel {
+    .payroll-hanhDong-panel {
         padding-left: 18px;
         padding-right: 18px;
     }
@@ -348,9 +348,9 @@ foreach (($salaryRows ?? []) as $summaryRow) {
             </div>
 
             <form id="payroll-export-form" method="POST" action="index.php?page=xuat-bao-cao" style="display:none">
-                <input type="hidden" name="from_date" id="export-from-date" value="<?= htmlspecialchars($exportFromDate) ?>">
-                <input type="hidden" name="to_date" id="export-to-date" value="<?= htmlspecialchars($exportToDate) ?>">
-                <input type="hidden" name="department" value="">
+                <input type="hidden" name="tuNgay" id="export-from-date" value="<?= htmlspecialchars($exportFromDate) ?>">
+                <input type="hidden" name="denNgay" id="export-to-date" value="<?= htmlspecialchars($exportToDate) ?>">
+                <input type="hidden" name="phongBan" value="">
                 <input type="hidden" name="format" value="excel">
                 <input type="hidden" name="export" value="1">
             </form>
@@ -449,19 +449,19 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                             </tbody>
                         </table>
                         
-                        <div class="payroll-action-panel" style="margin-top: 24px;">
-                            <div class="payroll-action-row">
-                                <div class="payroll-action-copy">
+                        <div class="payroll-hanhDong-panel" style="margin-top: 24px;">
+                            <div class="payroll-hanhDong-row">
+                                <div class="payroll-hanhDong-copy">
                                     <h3>Hoàn tất rà soát bảng công</h3>
-                                    <p id="approval-status">
+                                    <p id="approval-trangThai">
                                         <?php if ($monthlyApproval): ?>
-                                            Trạng thái: <span class="status-badge status-<?= strtolower($monthlyApproval['status'] ?? 'draft') ?>"><?= htmlspecialchars($monthlyApproval['status'] ?? 'draft') ?></span>
+                                            Trạng thái: <span class="trangThai-badge trangThai-<?= strtolower($monthlyApproval['trangThai'] ?? 'draft') ?>"><?= htmlspecialchars($monthlyApproval['trangThai'] ?? 'draft') ?></span>
                                         <?php else: ?>
                                             Chưa gửi bảng công cho tháng này. Sau khi xác nhận, bảng công sẽ được gửi đến từng nhân viên để xác nhận.
                                         <?php endif; ?>
                                     </p>
                                 </div>
-                                <div class="payroll-action-buttons">
+                                <div class="payroll-hanhDong-buttons">
                                     <button type="button" class="btn btn-success btn-sm" id="submit-payroll-btn"><i class="fas fa-paper-plane"></i> GỬI BẢNG CÔNG CHO NHÂN VIÊN</button>
                                 </div>
                             </div>
@@ -497,21 +497,21 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                     $allApproved = $pending === 0 && $total > 0;
                                     ?>
                                     <tr>
-                                        <td><strong><?= htmlspecialchars((string)($row['month_key'] ?? '')) ?></strong></td>
+                                        <td><strong><?= htmlspecialchars((string)($row['thangNam'] ?? '')) ?></strong></td>
                                         <td><?= $total ?></td>
                                         <td>
-                                            <div style="cursor:pointer;" onclick="showApprovalDetails('<?= htmlspecialchars((string)($row['month_key'] ?? '')) ?>')">
+                                            <div style="cursor:pointer;" onclick="showApprovalDetails('<?= htmlspecialchars((string)($row['thangNam'] ?? '')) ?>')">
                                                 <?php if ($pending > 0): ?>
-                                                    <span class="status-badge status-pending"><?= $pending ?> chờ</span>
+                                                    <span class="trangThai-badge trangThai-pending"><?= $pending ?> chờ</span>
                                                 <?php else: ?>
                                                     <span style="color:#22c55e">0</span>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
                                         <td>
-                                            <div style="cursor:pointer;" onclick="showApprovalDetails('<?= htmlspecialchars((string)($row['month_key'] ?? '')) ?>')">
+                                            <div style="cursor:pointer;" onclick="showApprovalDetails('<?= htmlspecialchars((string)($row['thangNam'] ?? '')) ?>')">
                                                 <?php if ($allApproved): ?>
-                                                    <span class="status-badge status-approved">✓ Tất cả</span>
+                                                    <span class="trangThai-badge trangThai-approved">✓ Tất cả</span>
                                                 <?php else: ?>
                                                     <span><?= $approved ?>/<?= $total ?></span>
                                                 <?php endif; ?>
@@ -519,7 +519,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                         </td>
                                         <td><?= htmlspecialchars((string)($row['last_submitted'] ?? '')) ?></td>
                                         <td>
-                                            <button type="button" class="btn btn-info btn-xs" onclick="showApprovalDetails('<?= htmlspecialchars((string)($row['month_key'] ?? '')) ?>')">
+                                            <button type="button" class="btn btn-info btn-xs" onclick="showApprovalDetails('<?= htmlspecialchars((string)($row['thangNam'] ?? '')) ?>')">
                                                 <i class="fas fa-eye"></i> Xem danh sách
                                             </button>
                                         </td>
@@ -640,15 +640,15 @@ foreach (($salaryRows ?? []) as $summaryRow) {
         return String(value).replace('T', ' ');
     }
 
-    function getApprovalStatusMeta(status) {
-        var normalized = String(status || 'submitted').toLowerCase();
+    function getApprovalStatusMeta(trangThai) {
+        var normalized = String(trangThai || 'submitted').toLowerCase();
         if (normalized === 'approved') {
-            return { label: 'Đã duyệt', cls: 'status-approved' };
+            return { label: 'Đã duyệt', cls: 'trangThai-approved' };
         }
         if (normalized === 'rejected') {
-            return { label: 'Đã trả về', cls: 'status-rejected' };
+            return { label: 'Đã trả về', cls: 'trangThai-rejected' };
         }
-        return { label: 'Chờ duyệt', cls: 'status-pending' };
+        return { label: 'Chờ duyệt', cls: 'trangThai-pending' };
     }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -672,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var exportToInput = document.getElementById('export-to-date');
     var gridBody = document.getElementById('attendance-grid-body');
     var tableBody = document.getElementById('payroll-table-body');
-    var approvalStatus = document.getElementById('approval-status');
+    var approvalStatus = document.getElementById('approval-trangThai');
     var approvalHistoryBody = document.getElementById('approval-history-body');
     var detailModal = document.getElementById('payrollDetailModal');
     var detailTitle = document.getElementById('payroll-detail-title');
@@ -794,13 +794,13 @@ document.addEventListener('DOMContentLoaded', function () {
             var pending = Number(row.pending || 0);
             var approved = Number(row.approved || 0);
             var allApproved = pending === 0 && total > 0;
-            var monthKey = escapeHtml(row.month_key || '');
+            var monthKey = escapeHtml(row.thangNam || '');
 
             var pendingHtml = pending > 0
-                ? '<span class="status-badge status-pending">' + pending + ' chờ</span>'
+                ? '<span class="trangThai-badge trangThai-pending">' + pending + ' chờ</span>'
                 : '<span style="color:#22c55e">0</span>';
             var approvedHtml = allApproved
-                ? '<span class="status-badge status-approved">✓ Tất cả</span>'
+                ? '<span class="trangThai-badge trangThai-approved">✓ Tất cả</span>'
                 : '<span>' + approved + '/' + total + '</span>';
 
             return '<tr>' +
@@ -827,7 +827,7 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: { 'Accept': 'application/json' }
         })
             .then(function(r) {
-                if (!r.ok) throw new Error('Mã lỗi: ' + r.status);
+                if (!r.ok) throw new Error('Mã lỗi: ' + r.trangThai);
                 return r.text();
             })
             .then(function(text) {
@@ -850,12 +850,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 body.innerHTML = rows.map(function(row) {
-                    var statusMeta = getApprovalStatusMeta(row.status);
+                    var statusMeta = getApprovalStatusMeta(row.trangThai);
                     return '<tr>' +
                         '<td><strong>' + escapeHtml(row.hoTen) + '</strong><br><small>#' + row.maND + '</small></td>' +
                         '<td>' + escapeHtml(row.phongBan || '-') + '</td>' +
-                        '<td><span class="status-badge ' + statusMeta.cls + '">' + statusMeta.label + '</span></td>' +
-                        '<td>' + (row.approved_at ? escapeHtml(formatDateTime(row.approved_at)) : '-') + '</td>' +
+                        '<td><span class="trangThai-badge ' + statusMeta.cls + '">' + statusMeta.label + '</span></td>' +
+                        '<td>' + (row.ngayDuyet ? escapeHtml(formatDateTime(row.ngayDuyet)) : '-') + '</td>' +
                         '</tr>';
                 }).join('');
             })
@@ -905,10 +905,10 @@ document.addEventListener('DOMContentLoaded', function () {
             var approval = detail.approval || {};
             var summary = detail.summary || {};
             var rows = detail.rows || [];
-            var statusMeta = getApprovalStatusMeta(approval.status);
+            var statusMeta = getApprovalStatusMeta(approval.trangThai);
 
-            detailTitle.textContent = 'Chi tiết bảng công kỳ ' + (approval.month_key || '');
-            detailSubtitle.textContent = 'HR gửi: ' + escapeHtml(approval.hr_name || 'Chưa xác định') + ' | Ngày gửi: ' + escapeHtml(formatDateTime(approval.submitted_at));
+            detailTitle.textContent = 'Chi tiết bảng công kỳ ' + (approval.thangNam || '');
+            detailSubtitle.textContent = 'HR gửi: ' + escapeHtml(approval.hr_name || 'Chưa xác định') + ' | Ngày gửi: ' + escapeHtml(formatDateTime(approval.ngayGui));
             detailSummary.innerHTML = [
                 { label: 'Nhân sự', value: Number(summary.employees || 0) },
                 { label: 'Tổng ngày công', value: Number(summary.total_work_days || 0).toLocaleString() },
@@ -921,7 +921,7 @@ document.addEventListener('DOMContentLoaded', function () {
             detailMeta.innerHTML = [
                 { label: 'Trạng thái', value: statusMeta.label },
                 { label: 'Manager', value: approval.approver_name || 'Chưa xử lý' },
-                { label: 'Ghi chú', value: approval.note || 'Không có ghi chú' }
+                { label: 'Ghi chú', value: approval.ghiChu || 'Không có ghi chú' }
             ].map(function (item) {
                 return '<div class="payroll-meta-box"><strong>' + escapeHtml(item.label) + '</strong><div>' + escapeHtml(item.value) + '</div></div>';
             }).join('');
@@ -986,8 +986,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             var approval = json.approval;
             if (approval) {
-                var approvalMeta = getApprovalStatusMeta(approval.status);
-                approvalStatus.innerHTML = 'Trạng thái: <span class="status-badge ' + approvalMeta.cls + '">' + escapeHtml(approvalMeta.label) + '</span>';
+                var approvalMeta = getApprovalStatusMeta(approval.trangThai);
+                approvalStatus.innerHTML = 'Trạng thái: <span class="trangThai-badge ' + approvalMeta.cls + '">' + escapeHtml(approvalMeta.label) + '</span>';
             } else {
                 approvalStatus.textContent = 'Chưa gửi bảng công cho tháng này.';
             }
@@ -1018,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         var form = new FormData();
-        form.append('month_key', currentMonth());
+        form.append('thangNam', currentMonth());
         fetch('index.php?page=hr-api-payroll-submit', {
             method: 'POST',
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },

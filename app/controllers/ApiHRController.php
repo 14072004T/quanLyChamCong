@@ -20,35 +20,35 @@ class ApiHRController
         $this->model = $model;
     }
 
-    public function handle($method, $action, $id, $subAction, $body)
+    public function handle($phuongThuc, $hanhDong, $id, $subAction, $body)
     {
         // Tất cả HR endpoints yêu cầu role HR
         requireRole('hr');
 
-        switch ($action) {
+        switch ($hanhDong) {
             case 'employees':
-                $this->handleEmployees($method, $id, $body);
+                $this->handleEmployees($phuongThuc, $id, $body);
                 break;
             case 'shifts':
-                $this->handleShifts($method, $id, $subAction, $body);
+                $this->handleShifts($phuongThuc, $id, $subAction, $body);
                 break;
             case 'corrections':
-                $this->handleCorrections($method, $id, $body);
+                $this->handleCorrections($phuongThuc, $id, $body);
                 break;
             case 'payroll':
-                $this->handlePayroll($method, $id, $subAction, $body);
+                $this->handlePayroll($phuongThuc, $id, $subAction, $body);
                 break;
             case 'leaves':
-                $this->handleLeaves($method, $id, $body);
+                $this->handleLeaves($phuongThuc, $id, $body);
                 break;
             case 'reports':
-                $this->handleReports($method, $id);
+                $this->handleReports($phuongThuc, $id);
                 break;
             case 'departments':
-                $this->handleDepartments($method);
+                $this->handleDepartments($phuongThuc);
                 break;
             default:
-                respondError('HR endpoint not found: ' . $action, 404);
+                respondError('HR endpoint not found: ' . $hanhDong, 404);
         }
     }
 
@@ -59,9 +59,9 @@ class ApiHRController
     // POST   /hr/employees          — Thêm mới
     // PUT    /hr/employees/{id}     — Cập nhật
     // ========================================================
-    private function handleEmployees($method, $id, $body)
+    private function handleEmployees($phuongThuc, $id, $body)
     {
-        switch ($method) {
+        switch ($phuongThuc) {
             case 'GET':
                 if ($id) {
                     // Chi tiết 1 nhân viên
@@ -146,16 +146,16 @@ class ApiHRController
     // PUT    /hr/shifts/{id}         — Cập nhật ca
     // POST   /hr/shifts/assign       — Gán ca cho NV
     // ========================================================
-    private function handleShifts($method, $id, $subAction, $body)
+    private function handleShifts($phuongThuc, $id, $subAction, $body)
     {
         // POST /hr/shifts/assign — Gán ca cho nhân viên
-        if ($method === 'POST' && $id === 'assign') {
+        if ($phuongThuc === 'POST' && $id === 'assign') {
             $payload = $_POST;
             if (empty($payload)) $payload = $body;
             $ok = $this->model->assignShift(
                 $payload['maND'] ?? 0,
-                $payload['shift_id'] ?? 0,
-                $payload['effective_from'] ?? date('Y-m-d')
+                $payload['maCa'] ?? 0,
+                $payload['hieuLucTu'] ?? date('Y-m-d')
             );
             respond(
                 ['success' => $ok, 'message' => $ok ? 'Gán ca làm thành công' : 'Không thể gán ca làm'],
@@ -164,7 +164,7 @@ class ApiHRController
             return;
         }
 
-        switch ($method) {
+        switch ($phuongThuc) {
             case 'GET':
                 $shifts = $this->model->getShifts();
                 respond(['success' => true, 'data' => $shifts, 'meta' => ['count' => count($shifts)]]);
@@ -202,9 +202,9 @@ class ApiHRController
     // GET    /hr/corrections/{id}     — Chi tiết
     // PUT    /hr/corrections/{id}     — Duyệt/từ chối
     // ========================================================
-    private function handleCorrections($method, $id, $body)
+    private function handleCorrections($phuongThuc, $id, $body)
     {
-        switch ($method) {
+        switch ($phuongThuc) {
             case 'GET':
                 if ($id) {
                     // Chi tiết yêu cầu
@@ -219,11 +219,11 @@ class ApiHRController
                         'type' => trim($_GET['type'] ?? ''),
                     ];
                     $scope = trim($_GET['scope'] ?? 'pending');
-                    $status = $scope === 'history' ? null : 'pending';
+                    $trangThai = $scope === 'history' ? null : 'pending';
                     $historyOnly = $scope === 'history';
                     $limit = max(0, (int)($_GET['limit'] ?? 50));
 
-                    $data = $this->model->getCorrectionRequests($status, $filters, $limit, $historyOnly);
+                    $data = $this->model->getCorrectionRequests($trangThai, $filters, $limit, $historyOnly);
                     respond(['success' => true, 'data' => $data, 'meta' => ['scope' => $scope, 'count' => count($data)]]);
                 }
                 break;
@@ -231,14 +231,14 @@ class ApiHRController
             case 'PUT':
                 // Duyệt hoặc từ chối yêu cầu → cập nhật bảng công
                 if (!$id) respondError('Thiếu ID yêu cầu', 422);
-                $action = $body['action'] ?? '';
-                $note = trim($body['note'] ?? '');
+                $hanhDong = $body['hanhDong'] ?? '';
+                $ghiChu = trim($body['ghiChu'] ?? '');
 
-                if (!in_array($action, ['approve', 'reject'])) {
+                if (!in_array($hanhDong, ['approve', 'reject'])) {
                     respondError('Action phải là "approve" hoặc "reject"', 422);
                 }
 
-                $ok = $this->model->processCorrection((int)$id, $action, $note);
+                $ok = $this->model->processCorrection((int)$id, $hanhDong, $ghiChu);
                 respond(
                     ['success' => $ok, 'message' => $ok ? 'Đã xử lý yêu cầu chỉnh sửa' : 'Không thể xử lý'],
                     $ok ? 200 : 500
@@ -258,22 +258,22 @@ class ApiHRController
     // GET    /hr/payroll/approval/{id} — Chi tiết kỳ phê duyệt
     // GET    /hr/payroll/ot-schedule   — Lịch OT đã duyệt
     // ========================================================
-    private function handlePayroll($method, $id, $subAction, $body)
+    private function handlePayroll($phuongThuc, $id, $subAction, $body)
     {
         // Handle sub-routes: /hr/payroll/detail, /hr/payroll/submit, /hr/payroll/approval/{id}
-        if ($id === 'detail' && $method === 'GET') {
+        if ($id === 'detail' && $phuongThuc === 'GET') {
             $monthKey = trim($_GET['month'] ?? date('Y-m'));
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) respondError('Tháng không hợp lệ', 422);
             $data = $this->model->getMonthlyAttendanceDetailNew($monthKey);
-            respond(['success' => true, 'month_key' => $monthKey, 'data' => $data, 'meta' => ['count' => count($data)]]);
+            respond(['success' => true, 'thangNam' => $monthKey, 'data' => $data, 'meta' => ['count' => count($data)]]);
             return;
         }
 
-        if ($id === 'submit' && $method === 'POST') {
+        if ($id === 'submit' && $phuongThuc === 'POST') {
             $payload = $_POST;
             if (empty($payload)) $payload = $body;
-            $monthKey = trim($payload['month_key'] ?? date('Y-m'));
-            $department = trim($payload['department'] ?? '');
+            $monthKey = trim($payload['thangNam'] ?? date('Y-m'));
+            $phongBan = trim($payload['phongBan'] ?? '');
             $hrSenderId = (int)($_SESSION['user']['maND'] ?? 0);
 
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) respondError('Kỳ chấm công không hợp lệ', 422);
@@ -288,19 +288,19 @@ class ApiHRController
             return;
         }
 
-        if ($id === 'approval' && $subAction && $method === 'GET') {
+        if ($id === 'approval' && $subAction && $phuongThuc === 'GET') {
             $detail = $this->model->getMonthlyApprovalDetail((int)$subAction);
             if (!$detail) respondError('Không tìm thấy chi tiết kỳ công', 404);
 
             $currentHrId = (int)($_SESSION['user']['maND'] ?? 0);
-            if ((int)($detail['approval']['hr_sender_id'] ?? 0) !== $currentHrId) {
+            if ((int)($detail['approval']['maNguoiGuiNS'] ?? 0) !== $currentHrId) {
                 respondError('Bạn không có quyền xem chi tiết kỳ công này', 403);
             }
             respond(['success' => true, 'data' => $detail]);
             return;
         }
 
-        if ($id === 'ot-schedule' && $method === 'GET') {
+        if ($id === 'ot-schedule' && $phuongThuc === 'GET') {
             $monthKey = trim($_GET['month'] ?? date('Y-m'));
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) respondError('Tháng không hợp lệ', 422);
             $data = $this->model->getApprovedOtSchedule($monthKey);
@@ -309,7 +309,7 @@ class ApiHRController
         }
 
         // Default: GET /hr/payroll — Bảng tổng hợp công
-        if ($method === 'GET') {
+        if ($phuongThuc === 'GET') {
             $monthKey = trim($_GET['month'] ?? date('Y-m'));
             $employeeKeyword = trim($_GET['employee_q'] ?? '');
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) respondError('Kỳ chấm công không hợp lệ', 422);
@@ -353,18 +353,18 @@ class ApiHRController
     // GET    /hr/leaves/{id}      — Chi tiết đơn
     // PUT    /hr/leaves/{id}      — Duyệt/từ chối
     // ========================================================
-    private function handleLeaves($method, $id, $body)
+    private function handleLeaves($phuongThuc, $id, $body)
     {
-        switch ($method) {
+        switch ($phuongThuc) {
             case 'GET':
                 if ($id) {
                     $detail = $this->model->getLeaveById((int)$id);
                     if (!$detail) respondError('Không tìm thấy đơn nghỉ phép', 404);
 
                     $types = ['annual' => 'Nghỉ phép năm', 'sick' => 'Nghỉ ốm', 'personal' => 'Việc riêng', 'unpaid' => 'Nghỉ không lương'];
-                    $detail['leave_type_text'] = $types[$detail['leave_type']] ?? $detail['leave_type'];
-                    $detail['from_date_fmt'] = date('d/m/Y', strtotime($detail['from_date']));
-                    $detail['to_date_fmt'] = date('d/m/Y', strtotime($detail['to_date']));
+                    $detail['leave_type_text'] = $types[$detail['loaiNghiPhep']] ?? $detail['loaiNghiPhep'];
+                    $detail['from_date_fmt'] = date('d/m/Y', strtotime($detail['tuNgay']));
+                    $detail['to_date_fmt'] = date('d/m/Y', strtotime($detail['denNgay']));
 
                     respond(['success' => true, 'data' => $detail]);
                 } else {
@@ -375,17 +375,17 @@ class ApiHRController
 
             case 'PUT':
                 if (!$id) respondError('Thiếu ID đơn nghỉ', 422);
-                $status = $body['status'] ?? $body['action'] ?? '';
-                // Normalize action to status
-                if ($status === 'approve') $status = 'approved';
-                if ($status === 'reject') $status = 'rejected';
+                $trangThai = $body['trangThai'] ?? $body['hanhDong'] ?? '';
+                // Normalize hanhDong to trangThai
+                if ($trangThai === 'approve') $trangThai = 'approved';
+                if ($trangThai === 'reject') $trangThai = 'rejected';
 
-                if (!in_array($status, ['approved', 'rejected'])) {
+                if (!in_array($trangThai, ['approved', 'rejected'])) {
                     respondError('Status phải là "approved" hoặc "rejected"', 422);
                 }
                 $approvedBy = (int)($_SESSION['user']['maND'] ?? 0);
-                $ok = $this->model->updateLeaveRequestStatus((int)$id, $status, $approvedBy);
-                $label = $status === 'approved' ? 'phê duyệt' : 'từ chối';
+                $ok = $this->model->updateLeaveRequestStatus((int)$id, $trangThai, $approvedBy);
+                $label = $trangThai === 'approved' ? 'phê duyệt' : 'từ chối';
                 respond(
                     ['success' => $ok, 'message' => $ok ? "Đã $label đơn nghỉ phép" : 'Không thể xử lý'],
                     $ok ? 200 : 500
@@ -402,9 +402,9 @@ class ApiHRController
     // GET    /hr/reports             — Báo cáo chấm công
     // GET    /hr/reports/holidays    — Ngày lễ
     // ========================================================
-    private function handleReports($method, $id)
+    private function handleReports($phuongThuc, $id)
     {
-        if ($method !== 'GET') respondError('Method not allowed', 405);
+        if ($phuongThuc !== 'GET') respondError('Method not allowed', 405);
 
         if ($id === 'holidays') {
             $monthKey = trim($_GET['month'] ?? date('Y-m'));
@@ -415,18 +415,18 @@ class ApiHRController
         }
 
         // Báo cáo chấm công
-        $fromDate = $_GET['from_date'] ?? date('Y-m-01');
-        $toDate = $_GET['to_date'] ?? date('Y-m-d');
-        $department = trim($_GET['department'] ?? '');
+        $fromDate = $_GET['tuNgay'] ?? date('Y-m-01');
+        $toDate = $_GET['denNgay'] ?? date('Y-m-d');
+        $phongBan = trim($_GET['phongBan'] ?? '');
 
-        $data = $this->model->getAttendanceReport($fromDate, $toDate, $department);
+        $data = $this->model->getAttendanceReport($fromDate, $toDate, $phongBan);
         respond([
             'success' => true,
             'data' => $data,
             'meta' => [
-                'from_date' => $fromDate,
-                'to_date' => $toDate,
-                'department' => $department,
+                'tuNgay' => $fromDate,
+                'denNgay' => $toDate,
+                'phongBan' => $phongBan,
                 'count' => count($data),
             ]
         ]);
@@ -436,9 +436,9 @@ class ApiHRController
     // DANH SÁCH PHÒNG BAN
     // GET    /hr/departments
     // ========================================================
-    private function handleDepartments($method)
+    private function handleDepartments($phuongThuc)
     {
-        if ($method !== 'GET') respondError('Method not allowed', 405);
+        if ($phuongThuc !== 'GET') respondError('Method not allowed', 405);
         $data = $this->model->getDistinctDepartments();
         respond(['success' => true, 'data' => $data]);
     }

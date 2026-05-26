@@ -137,13 +137,13 @@ if ($role === 'tech') {
                     <tbody>
                         <?php foreach (array_slice($history, 0, 5) as $row): ?>
                             <tr>
-                                <td><?= htmlspecialchars(substr($row['created_at'] ?? '', 0, 10)) ?></td>
-                                <td><?= ($row['action'] === 'IN') ? htmlspecialchars($row['created_at'] ?? '') : '-' ?></td>
-                                <td><?= ($row['action'] === 'OUT') ? htmlspecialchars($row['created_at'] ?? '') : '-' ?></td>
+                                <td><?= htmlspecialchars(substr($row['ngayTao'] ?? '', 0, 10)) ?></td>
+                                <td><?= ($row['hanhDong'] === 'IN') ? htmlspecialchars($row['ngayTao'] ?? '') : '-' ?></td>
+                                <td><?= ($row['hanhDong'] === 'OUT') ? htmlspecialchars($row['ngayTao'] ?? '') : '-' ?></td>
                                 <td>
                                     <?php 
-                                        $status = ($row['action'] === 'IN') ? 'Đã chấm vào' : 'Đã chấm ra';
-                                        echo '<span class="status-badge status-active">' . $status . '</span>';
+                                        $trangThai = ($row['hanhDong'] === 'IN') ? 'Đã chấm vào' : 'Đã chấm ra';
+                                        echo '<span class="trangThai-badge trangThai-active">' . $trangThai . '</span>';
                                     ?>
                                 </td>
                             </tr>

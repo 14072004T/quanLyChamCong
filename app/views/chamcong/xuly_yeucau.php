@@ -121,15 +121,15 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                 <tbody id="pending-requests-body">
                     <?php if (!empty($pendingCorrections)): ?>
                         <?php foreach ($pendingCorrections as $row):
-                            $reason = strtolower($row['reason'] ?? '');
+                            $lyDo = strtolower($row['lyDo'] ?? '');
                             $typeClass = 'type-other';
                             $typeIcon = 'fa-circle-question';
-                            $typeLabel = $row['reason'] ?? 'Khác';
-                            if (strpos($reason, 'quên') !== false || strpos($reason, 'forget') !== false) {
+                            $typeLabel = $row['lyDo'] ?? 'Khác';
+                            if (strpos($lyDo, 'quên') !== false || strpos($lyDo, 'forget') !== false) {
                                 $typeClass = 'type-forget'; $typeIcon = 'fa-clock'; $typeLabel = 'Quên chấm công';
-                            } elseif (strpos($reason, 'ot') !== false || strpos($reason, 'overtime') !== false) {
+                            } elseif (strpos($lyDo, 'ot') !== false || strpos($lyDo, 'overtime') !== false) {
                                 $typeClass = 'type-ot'; $typeIcon = 'fa-hourglass-half'; $typeLabel = 'Xin OT';
-                            } elseif (strpos($reason, 'trễ') !== false || strpos($reason, 'late') !== false) {
+                            } elseif (strpos($lyDo, 'trễ') !== false || strpos($lyDo, 'late') !== false) {
                                 $typeClass = 'type-late'; $typeIcon = 'fa-triangle-exclamation'; $typeLabel = 'Đi trễ';
                             }
                         ?>
@@ -141,12 +141,12 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                                     </span>
                                 </td>
                                 <td><?= htmlspecialchars($row['hoTen'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($row['attendance_date'] ?? '') ?></td>
-                                <td><?= htmlspecialchars(($row['old_time'] ? substr($row['old_time'], 11, 5) : '--:--') . ' -> ' . substr((string)($row['new_time'] ?? ''), 11, 5)) ?></td>
-                                <td style="max-width:220px;"><?= htmlspecialchars($row['reason'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($row['ngayChamCong'] ?? '') ?></td>
+                                <td><?= htmlspecialchars(($row['gioCu'] ? substr($row['gioCu'], 11, 5) : '--:--') . ' -> ' . substr((string)($row['gioMoi'] ?? ''), 11, 5)) ?></td>
+                                <td style="max-width:220px;"><?= htmlspecialchars($row['lyDo'] ?? '') ?></td>
                                 <td>
-                                    <?php if (!empty($row['evidence_file'])): ?>
-                                        <button type="button" class="btn btn-secondary btn-sm" onclick="previewEvidence('<?= htmlspecialchars($row['evidence_file']) ?>')" title="Xem minh chứng">
+                                    <?php if (!empty($row['tepMinhChung'])): ?>
+                                        <button type="button" class="btn btn-secondary btn-sm" onclick="previewEvidence('<?= htmlspecialchars($row['tepMinhChung']) ?>')" title="Xem minh chứng">
                                             <i class="fas fa-file-image"></i> Xem
                                         </button>
                                     <?php else: ?>
@@ -155,8 +155,8 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                                 </td>
                                 <td>
                                     <div style="display:flex;gap:8px;">
-                                        <button type="button" class="btn-approve js-request-action" data-action="approve" data-id="<?= (int)$row['id'] ?>"><i class="fas fa-check"></i> Duyệt</button>
-                                        <button type="button" class="btn-return js-request-action" data-action="reject" data-id="<?= (int)$row['id'] ?>"><i class="fas fa-times"></i> Từ chối</button>
+                                        <button type="button" class="btn-approve js-request-hanhDong" data-action="approve" data-id="<?= (int)$row['id'] ?>"><i class="fas fa-check"></i> Duyệt</button>
+                                        <button type="button" class="btn-return js-request-hanhDong" data-action="reject" data-id="<?= (int)$row['id'] ?>"><i class="fas fa-times"></i> Từ chối</button>
                                     </div>
                                 </td>
                             </tr>
@@ -188,35 +188,35 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                     <?php if (!empty($processedCorrections)): ?>
                         <?php foreach ($processedCorrections as $row): ?>
                             <tr class="js-history-row" style="cursor:pointer;"
-                                data-status="<?= htmlspecialchars($row['status'] ?? '') ?>"
+                                data-trangThai="<?= htmlspecialchars($row['trangThai'] ?? '') ?>"
                                 data-hoten="<?= htmlspecialchars($row['hoTen'] ?? '') ?>"
-                                data-date="<?= htmlspecialchars($row['attendance_date'] ?? '') ?>"
-                                data-old="<?= htmlspecialchars($row['old_time'] ? substr($row['old_time'], 11, 5) : '--:--') ?>"
-                                data-new="<?= htmlspecialchars(substr((string)($row['new_time'] ?? ''), 11, 5)) ?>"
-                                data-new="<?= htmlspecialchars(substr((string)($row['new_time'] ?? ''), 11, 5)) ?>"
-                                data-reason="<?= htmlspecialchars($row['reason'] ?? '') ?>"
-                                data-hrnote="<?= htmlspecialchars($row['hr_note'] ?? 'Không') ?>"
-                                data-evidence="<?= htmlspecialchars($row['evidence_file'] ?? '') ?>">
+                                data-date="<?= htmlspecialchars($row['ngayChamCong'] ?? '') ?>"
+                                data-old="<?= htmlspecialchars($row['gioCu'] ? substr($row['gioCu'], 11, 5) : '--:--') ?>"
+                                data-new="<?= htmlspecialchars(substr((string)($row['gioMoi'] ?? ''), 11, 5)) ?>"
+                                data-new="<?= htmlspecialchars(substr((string)($row['gioMoi'] ?? ''), 11, 5)) ?>"
+                                data-lyDo="<?= htmlspecialchars($row['lyDo'] ?? '') ?>"
+                                data-hrnote="<?= htmlspecialchars($row['ghiChuNS'] ?? 'Không') ?>"
+                                data-evidence="<?= htmlspecialchars($row['tepMinhChung'] ?? '') ?>">
                                 <td><i class="fas fa-clock" style="color:#94a3b8;"></i></td>
                                 <td><?= htmlspecialchars($row['hoTen'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($row['attendance_date'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($row['old_time'] ? substr($row['old_time'], 11, 5) : '--:--') ?></td>
-                                <td><?= htmlspecialchars(substr((string)($row['new_time'] ?? ''), 11, 5)) ?></td>
+                                <td><?= htmlspecialchars($row['ngayChamCong'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($row['gioCu'] ? substr($row['gioCu'], 11, 5) : '--:--') ?></td>
+                                <td><?= htmlspecialchars(substr((string)($row['gioMoi'] ?? ''), 11, 5)) ?></td>
                                 <td>
-                                    <?php if (!empty($row['evidence_file'])): ?>
+                                    <?php if (!empty($row['tepMinhChung'])): ?>
                                         <span style="color:#2563eb;"><i class="fas fa-paperclip"></i> Có file</span>
                                     <?php else: ?>
                                         <span style="color:#94a3b8;">-</span>
                                     <?php endif; ?>
                                 </td>
-                                <td><?= !empty($row['updated_at']) ? htmlspecialchars(substr($row['updated_at'], 0, 16)) : '-' ?></td>
+                                <td><?= !empty($row['ngayCapNhat']) ? htmlspecialchars(substr($row['ngayCapNhat'], 0, 16)) : '-' ?></td>
                                 <td>
-                                    <?php if(($row['status'] ?? '') === 'approved'): ?>
+                                    <?php if(($row['trangThai'] ?? '') === 'approved'): ?>
                                         <span class="req-type-badge type-ot"><i class="fas fa-check"></i> Đã duyệt</span>
-                                    <?php elseif(($row['status'] ?? '') === 'rejected'): ?>
+                                    <?php elseif(($row['trangThai'] ?? '') === 'rejected'): ?>
                                         <span class="req-type-badge type-late"><i class="fas fa-times"></i> Từ chối</span>
                                     <?php else: ?>
-                                        <?= htmlspecialchars($row['hr_note'] ?? 'Hệ thống') ?>
+                                        <?= htmlspecialchars($row['ghiChuNS'] ?? 'Hệ thống') ?>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -324,12 +324,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function getTypeInfo(reason) {
-        var r = (reason || '').toLowerCase();
+    function getTypeInfo(lyDo) {
+        var r = (lyDo || '').toLowerCase();
         if (r.indexOf('quên') !== -1 || r.indexOf('forget') !== -1) return { cls: 'type-forget', icon: 'fa-clock', label: 'Quên chấm công' };
         if (r.indexOf('ot') !== -1 || r.indexOf('overtime') !== -1) return { cls: 'type-ot', icon: 'fa-hourglass-half', label: 'Xin OT' };
         if (r.indexOf('trễ') !== -1 || r.indexOf('late') !== -1) return { cls: 'type-late', icon: 'fa-triangle-exclamation', label: 'Đi trễ' };
-        return { cls: 'type-other', icon: 'fa-circle-question', label: reason || 'Khác' };
+        return { cls: 'type-other', icon: 'fa-circle-question', label: lyDo || 'Khác' };
     }
 
     function renderPending(rows) {
@@ -338,20 +338,20 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         pendingBody.innerHTML = rows.map(function (row) {
-            var t = getTypeInfo(row.reason);
-            var detail = (row.old_time ? String(row.old_time).slice(11, 16) : '--:--') + ' -> ' + (row.new_time ? String(row.new_time).slice(11, 16) : '--:--');
+            var t = getTypeInfo(row.lyDo);
+            var detail = (row.gioCu ? String(row.gioCu).slice(11, 16) : '--:--') + ' -> ' + (row.gioMoi ? String(row.gioMoi).slice(11, 16) : '--:--');
             var rowId = Number(row.id);
             var rowClass = rowId === activeRequestId ? ' class="request-row-highlight"' : '';
             return '<tr id="request-' + rowId + '" data-id="' + rowId + '"' + rowClass + '>' +
                 '<td><span class="req-type-badge ' + t.cls + '"><span class="req-icon"><i class="fas ' + t.icon + '"></i></span> ' + escapeHtml(t.label) + '</span></td>' +
                 '<td>' + escapeHtml(row.hoTen) + '</td>' +
-                '<td>' + escapeHtml(row.attendance_date) + '</td>' +
+                '<td>' + escapeHtml(row.ngayChamCong) + '</td>' +
                 '<td>' + escapeHtml(detail) + '</td>' +
-                '<td style="max-width:220px;">' + escapeHtml(row.reason) + '</td>' +
-                '<td>' + (row.evidence_file ? '<button type="button" onclick="previewEvidence(\'' + row.evidence_file + '\')" class="btn btn-secondary btn-sm"><i class="fas fa-file-image"></i> Xem</button>' : '<small style="color:#94a3b8">N/A</small>') + '</td>' +
+                '<td style="max-width:220px;">' + escapeHtml(row.lyDo) + '</td>' +
+                '<td>' + (row.tepMinhChung ? '<button type="button" onclick="previewEvidence(\'' + row.tepMinhChung + '\')" class="btn btn-secondary btn-sm"><i class="fas fa-file-image"></i> Xem</button>' : '<small style="color:#94a3b8">N/A</small>') + '</td>' +
                 '<td><div style="display:flex;gap:8px;">' +
-                '<button type="button" class="btn-approve js-request-action" data-action="approve" data-id="' + Number(row.id) + '"><i class="fas fa-check"></i> Duyệt</button>' +
-                '<button type="button" class="btn-return js-request-action" data-action="reject" data-id="' + Number(row.id) + '"><i class="fas fa-times"></i> Từ chối</button>' +
+                '<button type="button" class="btn-approve js-request-hanhDong" data-action="approve" data-id="' + Number(row.id) + '"><i class="fas fa-check"></i> Duyệt</button>' +
+                '<button type="button" class="btn-return js-request-hanhDong" data-action="reject" data-id="' + Number(row.id) + '"><i class="fas fa-times"></i> Từ chối</button>' +
                 '</div></td>' +
                 '</tr>';
         }).join('');
@@ -364,31 +364,31 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         historyBody.innerHTML = rows.map(function (row) {
-            var oldT = row.old_time ? String(row.old_time).slice(11, 16) : '--:--';
-            var newT = row.new_time ? String(row.new_time).slice(11, 16) : '--:--';
-            var approvedAt = row.updated_at ? String(row.updated_at).slice(0, 16) : '-';
-            var st = row.status || '';
+            var oldT = row.gioCu ? String(row.gioCu).slice(11, 16) : '--:--';
+            var newT = row.gioMoi ? String(row.gioMoi).slice(11, 16) : '--:--';
+            var approvedAt = row.ngayCapNhat ? String(row.ngayCapNhat).slice(0, 16) : '-';
+            var st = row.trangThai || '';
             var stBadge = '';
             
             if (st === 'approved') stBadge = '<span class="req-type-badge type-ot"><i class="fas fa-check"></i> Đã duyệt</span>';
             else if (st === 'rejected') stBadge = '<span class="req-type-badge type-late"><i class="fas fa-times"></i> Từ chối</span>';
-            else stBadge = escapeHtml(row.hr_note || 'Hệ thống');
+            else stBadge = escapeHtml(row.ghiChuNS || 'Hệ thống');
 
             return '<tr class="js-history-row" style="cursor:pointer;"' +
-                ' data-status="' + escapeHtml(st) + '"' +
+                ' data-trangThai="' + escapeHtml(st) + '"' +
                 ' data-hoten="' + escapeHtml(row.hoTen) + '"' +
-                ' data-date="' + escapeHtml(row.attendance_date) + '"' +
+                ' data-date="' + escapeHtml(row.ngayChamCong) + '"' +
                 ' data-old="' + escapeHtml(oldT) + '"' +
                 ' data-new="' + escapeHtml(newT) + '"' +
-                ' data-reason="' + escapeHtml(row.reason) + '"' +
-                ' data-hrnote="' + escapeHtml(row.hr_note || 'Không') + '"' +
-                ' data-evidence="' + escapeHtml(row.evidence_file || '') + '">' +
+                ' data-lyDo="' + escapeHtml(row.lyDo) + '"' +
+                ' data-hrnote="' + escapeHtml(row.ghiChuNS || 'Không') + '"' +
+                ' data-evidence="' + escapeHtml(row.tepMinhChung || '') + '">' +
                 '<td><i class="fas fa-clock" style="color:#94a3b8;"></i></td>' +
                 '<td>' + escapeHtml(row.hoTen) + '</td>' +
-                '<td>' + escapeHtml(row.attendance_date) + '</td>' +
+                '<td>' + escapeHtml(row.ngayChamCong) + '</td>' +
                 '<td>' + escapeHtml(oldT) + '</td>' +
                 '<td>' + escapeHtml(newT) + '</td>' +
-                '<td>' + (row.evidence_file ? '<span style="color:#2563eb;"><i class="fas fa-paperclip"></i> Có file</span>' : '<span style="color:#94a3b8">-</span>') + '</td>' +
+                '<td>' + (row.tepMinhChung ? '<span style="color:#2563eb;"><i class="fas fa-paperclip"></i> Có file</span>' : '<span style="color:#94a3b8">-</span>') + '</td>' +
                 '<td>' + escapeHtml(approvedAt) + '</td>' +
                 '<td>' + stBadge + '</td>' +
                 '</tr>';
@@ -447,15 +447,15 @@ document.addEventListener('DOMContentLoaded', function () {
         
         var form = new FormData();
         form.append('correction_id', activeActionData.id);
-        form.append('action', activeActionData.action);
-        form.append('note', modalNoteInput.value);
+        form.append('hanhDong', activeActionData.hanhDong);
+        form.append('ghiChu', modalNoteInput.value);
 
         var btnConfirm = document.getElementById('modalBtnConfirm');
         var oldBtnText = btnConfirm.innerHTML;
         btnConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
         btnConfirm.disabled = true;
 
-        fetch('index.php?page=hr-api-correction-action', {
+        fetch('index.php?page=hr-api-correction-hanhDong', {
             method: 'POST',
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: form
@@ -476,11 +476,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.addEventListener('click', function (e) {
-        var btn = e.target.closest('.js-request-action');
+        var btn = e.target.closest('.js-request-hanhDong');
         if (!btn) return;
 
         var id = Number(btn.getAttribute('data-id'));
-        var action = btn.getAttribute('data-action');
+        var hanhDong = btn.getAttribute('data-hanhDong');
         
         // Find row data for modal details directly from the DOM
         var tr = btn.closest('tr');
@@ -510,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
         btnConfirm.className = 'btn'; // reset class
         
-        if (action === 'approve') {
+        if (hanhDong === 'approve') {
             title.textContent = 'Phê duyệt yêu cầu';
             lbl.textContent = 'Ghi chú phê duyệt (nếu có):';
             btnConfirm.classList.add('btn-success');
@@ -522,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function () {
             btnConfirm.innerHTML = '<i class="fas fa-times"></i> Từ chối';
         }
 
-        activeActionData = { id: id, action: action };
+        activeActionData = { id: id, hanhDong: hanhDong };
         modalNoteInput.value = '';
         modalOverlay.classList.add('show');
         setTimeout(function() { modalNoteInput.focus(); }, 100);
@@ -537,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var tr = e.target.closest('.js-history-row');
         if (!tr) return;
 
-        var st = tr.getAttribute('data-status');
+        var st = tr.getAttribute('data-trangThai');
         var statusHtml = '&nbsp;';
         if (st === 'approved') statusHtml = '<span style="color:#10b981;font-weight:600;"><i class="fas fa-check"></i> Đã phê duyệt</span>';
         else if (st === 'rejected') statusHtml = '<span style="color:#ef4444;font-weight:600;"><i class="fas fa-times"></i> Đã từ chối</span>';
@@ -546,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('histModalEmpName').textContent = tr.getAttribute('data-hoten');
         document.getElementById('histModalDate').textContent = tr.getAttribute('data-date');
         document.getElementById('histModalTimeDetail').textContent = tr.getAttribute('data-old') + ' -> ' + tr.getAttribute('data-new');
-        document.getElementById('histModalReason').textContent = tr.getAttribute('data-reason');
+        document.getElementById('histModalReason').textContent = tr.getAttribute('data-lyDo');
         
         var evidence = tr.getAttribute('data-evidence');
         document.getElementById('histModalEvidence').innerHTML = evidence ? '<button type="button" onclick="previewEvidence(\'' + evidence + '\')" style="background:none;border:none;color:#2563eb;text-decoration:none;cursor:pointer;font-weight:600;padding:0;"><i class="fas fa-file-image"></i> Xem minh chứng</button>' : '<span style="color:#94a3b8">N/A</span>';

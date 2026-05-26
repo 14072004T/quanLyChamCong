@@ -4,7 +4,7 @@ $userName = htmlspecialchars($_SESSION['user']['hoTen'] ?? 'Nhân viên');
 $timesheetList = $timesheetList ?? [];
 $pendingCount = 0;
 foreach ($timesheetList as $ts) {
-    if (($ts['status'] ?? '') === 'submitted') $pendingCount++;
+    if (($ts['trangThai'] ?? '') === 'submitted') $pendingCount++;
 }
 ?>
 <?php include 'app/views/layouts/header.php'; ?>
@@ -227,10 +227,10 @@ foreach ($timesheetList as $ts) {
                     </div>
                 <?php else: ?>
                     <?php foreach ($timesheetList as $ts):
-                        $status = strtolower($ts['status'] ?? 'submitted');
-                        $isPending = $status === 'submitted';
+                        $trangThai = strtolower($ts['trangThai'] ?? 'submitted');
+                        $isPending = $trangThai === 'submitted';
                         $statusLabel = $isPending ? 'Chờ duyệt' : 'Đã duyệt';
-                        $monthDisplay = $ts['month_key'] ?? '';
+                        $monthDisplay = $ts['thangNam'] ?? '';
                         // Convert 2026-05 to "Tháng 05/2026"
                         $parts = explode('-', $monthDisplay);
                         $monthText = count($parts) === 2 ? "Tháng {$parts[1]}/{$parts[0]}" : $monthDisplay;
@@ -244,7 +244,7 @@ foreach ($timesheetList as $ts) {
                                     <div class="ts-card-month"><?= htmlspecialchars($monthText) ?></div>
                                     <div class="ts-card-meta">
                                         HR gửi: <?= htmlspecialchars($ts['hr_name'] ?? 'HR') ?>
-                                        &bull; <?= htmlspecialchars($ts['submitted_at'] ?? '') ?>
+                                        &bull; <?= htmlspecialchars($ts['ngayGui'] ?? '') ?>
                                     </div>
                                 </div>
                             </div>
@@ -291,7 +291,7 @@ foreach ($timesheetList as $ts) {
                     </tbody>
                 </table>
             </div>
-            <div id="ts-action-bar"></div>
+            <div id="ts-hanhDong-bar"></div>
         </div>
     </div>
 </div>
@@ -350,7 +350,7 @@ function loadTimesheetDetail(id) {
     document.getElementById('ts-modal-subtitle').textContent = 'Đang tải dữ liệu...';
     document.getElementById('ts-summary').innerHTML = '';
     document.getElementById('ts-detail-body').innerHTML = '<tr><td colspan="8" class="empty-state">Đang tải...</td></tr>';
-    document.getElementById('ts-action-bar').innerHTML = '';
+    document.getElementById('ts-hanhDong-bar').innerHTML = '';
     openModal();
 
     fetch('index.php?page=nv-api-monthly-timesheet&id=' + id, {
@@ -369,10 +369,10 @@ function loadTimesheetDetail(id) {
         var summary = data.summary || {};
 
         // Title
-        var parts = (approval.month_key || '').split('-');
-        var monthText = parts.length === 2 ? 'Tháng ' + parts[1] + '/' + parts[0] : approval.month_key;
+        var parts = (approval.thangNam || '').split('-');
+        var monthText = parts.length === 2 ? 'Tháng ' + parts[1] + '/' + parts[0] : approval.thangNam;
         document.getElementById('ts-modal-title').textContent = 'Bảng công ' + monthText;
-        document.getElementById('ts-modal-subtitle').textContent = 'HR gửi: ' + escHtml(approval.hr_name || 'HR') + ' | Ngày gửi: ' + escHtml(approval.submitted_at || '');
+        document.getElementById('ts-modal-subtitle').textContent = 'HR gửi: ' + escHtml(approval.hr_name || 'HR') + ' | Ngày gửi: ' + escHtml(approval.ngayGui || '');
 
         // Summary
         document.getElementById('ts-summary').innerHTML = [
@@ -389,25 +389,25 @@ function loadTimesheetDetail(id) {
             document.getElementById('ts-detail-body').innerHTML = '<tr><td colspan="8" class="empty-state">Không có dữ liệu chấm công</td></tr>';
         } else {
             document.getElementById('ts-detail-body').innerHTML = daily.map(function(row) {
-                var dateStr = row.work_date || '';
+                var dateStr = row.ngayLamViec || '';
                 var d = new Date(dateStr + 'T00:00:00');
                 var dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
                 var dayLabel = dateStr.substring(8, 10) + '/' + dateStr.substring(5, 7);
                 var dayName = dayNames[d.getDay()] || '';
-                var isRestricted = ['weekend', 'leave', 'holiday'].includes(row.status);
-                var showEditBtn = approval.status === 'submitted' && !isRestricted;
+                var isRestricted = ['weekend', 'leave', 'holiday'].includes(row.trangThai);
+                var showEditBtn = approval.trangThai === 'submitted' && !isRestricted;
 
-                return '<tr' + (row.status === 'absent' ? ' style="opacity:0.5"' : '') + '>' +
+                return '<tr' + (row.trangThai === 'absent' ? ' style="opacity:0.5"' : '') + '>' +
                     '<td><strong>' + dayLabel + '</strong> <small style="color:#94a3b8">' + dayName + '</small></td>' +
-                    '<td>' + formatTime(row.first_in) + '</td>' +
-                    '<td>' + formatTime(row.last_out) + '</td>' +
-                    '<td>' + formatMinutes(row.work_minutes) + '</td>' +
-                    '<td style="color:#2563eb;font-weight:600">' + formatMinutes(row.overtime_minutes) + '</td>' +
-                    '<td style="color:#f59e0b">' + formatMinutes(row.late_minutes) + '</td>' +
-                    '<td>' + statusBadge(row.late_minutes > 0 ? 'late' : row.status) + '</td>' +
+                    '<td>' + formatTime(row.gioVaoDau) + '</td>' +
+                    '<td>' + formatTime(row.gioRaCuoi) + '</td>' +
+                    '<td>' + formatMinutes(row.phutLamViec) + '</td>' +
+                    '<td style="color:#2563eb;font-weight:600">' + formatMinutes(row.phutTangCa) + '</td>' +
+                    '<td style="color:#f59e0b">' + formatMinutes(row.phutDiTre) + '</td>' +
+                    '<td>' + statusBadge(row.phutDiTre > 0 ? 'late' : row.trangThai) + '</td>' +
                     '<td>' + 
                         (showEditBtn ? 
-                        '<button class="yc-btn-edit" onclick="requestCorrection(\'' + row.work_date + '\', \'' + (row.first_in || '') + '\', \'' + (row.last_out || '') + '\')">' +
+                        '<button class="yc-btn-edit" onclick="requestCorrection(\'' + row.ngayLamViec + '\', \'' + (row.gioVaoDau || '') + '\', \'' + (row.gioRaCuoi || '') + '\')">' +
                             '<i class="fas fa-edit"></i> Sửa' +
                         '</button>' : '') +
                     '</td>' +
@@ -416,18 +416,18 @@ function loadTimesheetDetail(id) {
         }
 
         // Action bar
-        var actionBar = document.getElementById('ts-action-bar');
-        if (approval.status === 'submitted') {
+        var actionBar = document.getElementById('ts-hanhDong-bar');
+        if (approval.trangThai === 'submitted') {
             actionBar.innerHTML =
                 '<div class="ts-approve-bar">' +
                     '<p><i class="fas fa-info-circle"></i> Vui lòng kiểm tra và xác nhận bảng công của bạn.</p>' +
                     '<button class="ts-approve-btn" id="approveBtn" onclick="approveTimesheet(' + approval.id + ')"><i class="fas fa-check"></i> Xác nhận duyệt</button>' +
-                '</div>';
+                    '</div>';
         } else {
             actionBar.innerHTML =
                 '<div class="ts-approved-bar">' +
                     '<i class="fas fa-check-circle" style="font-size:1.3rem"></i>' +
-                    '<span>Bạn đã xác nhận duyệt bảng công này' + (approval.approved_at ? ' vào ' + escHtml(approval.approved_at) : '') + '</span>' +
+                    '<span>Bạn đã xác nhận duyệt bảng công này' + (approval.ngayDuyet ? ' vào ' + escHtml(approval.ngayDuyet) : '') + '</span>' +
                 '</div>';
         }
     })

@@ -92,9 +92,9 @@ $statusIcons = [
 .lr-history-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
 /* Status-specific card styles */
-.lr-history-card.status-approved { background: #f0fdf4; border-left: 4px solid #10b981; }
-.lr-history-card.status-pending  { background: #fffbeb; border-left: 4px solid #f59e0b; }
-.lr-history-card.status-rejected { background: #fef2f2; border-left: 4px solid #ef4444; }
+.lr-history-card.trangThai-approved { background: #f0fdf4; border-left: 4px solid #10b981; }
+.lr-history-card.trangThai-pending  { background: #fffbeb; border-left: 4px solid #f59e0b; }
+.lr-history-card.trangThai-rejected { background: #fef2f2; border-left: 4px solid #ef4444; }
 
 /* Refined Badge Colors */
 .lr-badge-approved { background: #10b981; color: #fff; }
@@ -157,8 +157,8 @@ $statusIcons = [
             <form method="POST" action="index.php?page=store-leave-request" enctype="multipart/form-data" id="leaveForm" class="lr-grid-form">
                 <!-- Row 1 -->
                 <div class="lr-field">
-                    <label for="leave_type">Loại nghỉ phép <span class="req">*</span></label>
-                    <select id="leave_type" name="leave_type" required>
+                    <label for="loaiNghiPhep">Loại nghỉ phép <span class="req">*</span></label>
+                    <select id="loaiNghiPhep" name="loaiNghiPhep" required>
                         <option value="" disabled selected>— Chọn —</option>
                         <?php foreach ($leaveTypeLabels as $val => $lbl): ?>
                             <option value="<?= htmlspecialchars($val) ?>"><?= htmlspecialchars($lbl) ?></option>
@@ -166,18 +166,18 @@ $statusIcons = [
                     </select>
                 </div>
                 <div class="lr-field">
-                    <label for="from_date">Từ ngày <span class="req">*</span></label>
-                    <input type="date" id="from_date" name="from_date" required min="<?= date('Y-m-d') ?>">
+                    <label for="tuNgay">Từ ngày <span class="req">*</span></label>
+                    <input type="date" id="tuNgay" name="tuNgay" required min="<?= date('Y-m-d') ?>">
                 </div>
                 <div class="lr-field">
-                    <label for="to_date">Đến ngày <span class="req">*</span></label>
-                    <input type="date" id="to_date" name="to_date" required min="<?= date('Y-m-d') ?>">
+                    <label for="denNgay">Đến ngày <span class="req">*</span></label>
+                    <input type="date" id="denNgay" name="denNgay" required min="<?= date('Y-m-d') ?>">
                 </div>
 
                 <!-- Row 2 -->
                 <div class="lr-field col-span-3">
-                    <label for="reason">Lý do nghỉ phép <span class="req">*</span></label>
-                    <textarea id="reason" name="reason" placeholder="Nhập lý do ngắn gọn..." required></textarea>
+                    <label for="lyDo">Lý do nghỉ phép <span class="req">*</span></label>
+                    <textarea id="lyDo" name="lyDo" placeholder="Nhập lý do ngắn gọn..." required></textarea>
                 </div>
 
                 <!-- Row 3 -->
@@ -186,7 +186,7 @@ $statusIcons = [
                     <div class="lr-file-zone" id="fileZone">
                         <i class="fas fa-paperclip"></i>
                         <div class="lr-file-text" id="fileText">Chọn file minh chứng...</div>
-                        <input type="file" name="evidence_file" id="evidence_file" accept=".jpg,.jpeg,.png,.pdf">
+                        <input type="file" name="tepMinhChung" id="tepMinhChung" accept=".jpg,.jpeg,.png,.pdf">
                     </div>
                 </div>
                 <div class="btn-submit-wrap">
@@ -208,43 +208,43 @@ $statusIcons = [
                 <div class="lr-history-grid">
                     <?php foreach ($myRequests as $row): ?>
                         <?php
-                            $status = $row['status'] ?? 'pending';
-                            $lt = $row['leave_type'] ?? 'personal';
-                            $badgeClass = 'lr-badge-' . $status;
-                            $iconClass = $statusIcons[$status] ?? 'fa-clock';
-                            $cardClass = 'status-' . $status;
+                            $trangThai = $row['trangThai'] ?? 'pending';
+                            $lt = $row['loaiNghiPhep'] ?? 'personal';
+                            $badgeClass = 'lr-badge-' . $trangThai;
+                            $iconClass = $statusIcons[$trangThai] ?? 'fa-clock';
+                            $cardClass = 'trangThai-' . $trangThai;
                         ?>
                         <div class="lr-history-card <?= $cardClass ?>" data-id="<?= (int)$row['id'] ?>">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                 <div style="font-size: 13px; font-weight: 700; color: #1e293b;">
                                     <?= htmlspecialchars($leaveTypeLabels[$lt] ?? $lt) ?>
                                 </div>
-                                <span class="lr-badge <?= $badgeClass ?>"><i class="fas <?= $iconClass ?>"></i> <?= $statusLabels[$status] ?></span>
+                                <span class="lr-badge <?= $badgeClass ?>"><i class="fas <?= $iconClass ?>"></i> <?= $statusLabels[$trangThai] ?></span>
                             </div>
                             
                             <div style="font-size: 12px; color: #475569; display: flex; gap: 8px;">
                                 <i class="far fa-calendar-alt" style="margin-top: 2px;"></i>
                                 <span style="font-weight: 600;">
-                                    <?= htmlspecialchars(date('d/m/Y', strtotime($row['from_date'] ?? ''))) ?> 
+                                    <?= htmlspecialchars(date('d/m/Y', strtotime($row['tuNgay'] ?? ''))) ?> 
                                     — 
-                                    <?= htmlspecialchars(date('d/m/Y', strtotime($row['to_date'] ?? ''))) ?>
+                                    <?= htmlspecialchars(date('d/m/Y', strtotime($row['denNgay'] ?? ''))) ?>
                                 </span>
                             </div>
 
                             <div style="font-size: 12px; color: #475569; background: rgba(255,255,255,0.6); padding: 6px 10px; border-radius: 4px; border-left: 2px solid rgba(0,0,0,0.05);">
-                                <?= nl2br(htmlspecialchars($row['reason'] ?? '')) ?>
+                                <?= nl2br(htmlspecialchars($row['lyDo'] ?? '')) ?>
                             </div>
 
                             <div style="margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
                                 <div style="display: flex; gap: 10px;">
-                                    <?php if (!empty($row['evidence_file'])): ?>
-                                        <a href="uploads/leave_evidence/<?= htmlspecialchars($row['evidence_file']) ?>" target="_blank" style="font-size: 11px; color: #4f6ef7; text-decoration: none; font-weight: 600;">
+                                    <?php if (!empty($row['tepMinhChung'])): ?>
+                                        <a href="uploads/leave_evidence/<?= htmlspecialchars($row['tepMinhChung']) ?>" target="_blank" style="font-size: 11px; color: #4f6ef7; text-decoration: none; font-weight: 600;">
                                             <i class="fas fa-paperclip"></i> Minh chứng
                                         </a>
                                     <?php endif; ?>
                                 </div>
                                 <div style="font-size: 10px; color: #64748b; font-style: italic;">
-                                    <?= htmlspecialchars(date('d/m/Y H:i', strtotime($row['created_at'] ?? ''))) ?>
+                                    <?= htmlspecialchars(date('d/m/Y H:i', strtotime($row['ngayTao'] ?? ''))) ?>
                                 </div>
                             </div>
                         </div>
@@ -280,14 +280,14 @@ $statusIcons = [
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var form = document.getElementById('leaveForm');
-    var fromDate = document.getElementById('from_date');
-    var toDate = document.getElementById('to_date');
-    var fileInput = document.getElementById('evidence_file');
+    var fromDate = document.getElementById('tuNgay');
+    var toDate = document.getElementById('denNgay');
+    var fileInput = document.getElementById('tepMinhChung');
     var submitBtn = document.getElementById('submitBtn');
     var submitText = document.getElementById('submitText');
     var submitLoading = document.getElementById('submitLoading');
 
-    // Sync min date on from_date change
+    // Sync min date on tuNgay change
     fromDate.addEventListener('change', function() {
         toDate.min = this.value;
         if (toDate.value && toDate.value < this.value) {
@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var valid = true;
 
         // Leave type
-        var leaveType = document.getElementById('leave_type');
+        var leaveType = document.getElementById('loaiNghiPhep');
         if (!leaveType.value) {
             document.getElementById('err-leave-type').style.display = 'block';
             leaveType.style.borderColor = '#ef4444';
@@ -348,14 +348,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Reason
-        var reason = document.getElementById('reason');
-        if (!reason.value.trim()) {
-            document.getElementById('err-reason').style.display = 'block';
-            reason.style.borderColor = '#ef4444';
+        var lyDo = document.getElementById('lyDo');
+        if (!lyDo.value.trim()) {
+            document.getElementById('err-lyDo').style.display = 'block';
+            lyDo.style.borderColor = '#ef4444';
             valid = false;
         } else {
-            document.getElementById('err-reason').style.display = 'none';
-            reason.style.borderColor = '';
+            document.getElementById('err-lyDo').style.display = 'none';
+            lyDo.style.borderColor = '';
         }
 
         if (!valid) {
@@ -387,8 +387,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(res => {
                 if (res.success) {
                     const d = res.data;
-                    const statusClass = `lr-badge-${d.status}`;
-                    const statusText = d.status === 'approved' ? 'Đã duyệt' : (d.status === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
+                    const statusClass = `lr-badge-${d.trangThai}`;
+                    const statusText = d.trangThai === 'approved' ? 'Đã duyệt' : (d.trangThai === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
                     
                     body.innerHTML = `
                         <div class="lr-detail-row">
@@ -401,7 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div class="lr-detail-row">
                             <div class="lr-detail-label">Lý do</div>
-                            <div class="lr-detail-val">${d.reason}</div>
+                            <div class="lr-detail-val">${d.lyDo}</div>
                         </div>
                         <div class="lr-detail-row">
                             <div class="lr-detail-label">Trạng thái</div>
@@ -417,10 +417,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="lr-detail-val">${d.approved_at_fmt}</div>
                         </div>
                         ` : ''}
-                        ${d.hr_note ? `
+                        ${d.ghiChuNS ? `
                         <div class="lr-detail-row">
                             <div class="lr-detail-label">Phản hồi</div>
-                            <div class="lr-detail-val" style="color:#ef4444">${d.hr_note}</div>
+                            <div class="lr-detail-val" style="color:#ef4444">${d.ghiChuNS}</div>
                         </div>
                         ` : ''}
                         <div class="lr-detail-row" style="border:none">

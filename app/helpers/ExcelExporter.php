@@ -8,18 +8,18 @@ class ExcelExporter
      * 
      * @param array $data - Dữ liệu từ ChamCongModel::getMonthlyAttendanceDetailNew
      * @param string $monthKey - Kỳ chấm công (YYYY-MM)
-     * @param string $department - Tên phòng ban
+     * @param string $phongBan - Tên phòng ban
      * @param string $userName - Người xuất báo cáo
      */
-    public function exportAttendanceReport($data, $monthKey, $department = '', $userName = '')
+    public function exportAttendanceReport($data, $monthKey, $phongBan = '', $userName = '')
     {
         $year = (int)substr($monthKey, 0, 4);
         $month = (int)substr($monthKey, 5, 2);
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         $currentDate = date('d/m/Y H:i:s');
-        $deptName = $department ?: 'Tất cả phòng ban';
+        $deptName = $phongBan ?: 'Tất cả phòng ban';
 
-        $fileName = 'Bao_Cao_Cham_Cong_' . ($department ? $department . '_' : '') . $monthKey . '.xls';
+        $fileName = 'Bao_Cao_Cham_Cong_' . ($phongBan ? $phongBan . '_' : '') . $monthKey . '.xls';
 
         header('Content-Type: application/vnd.ms-excel; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $fileName . '"');
@@ -58,7 +58,7 @@ class ExcelExporter
     /* Summary Cells */
     .summary-header { background-color: #D9E1F2; font-weight: bold; text-align: center; }
     .summary-value { font-weight: bold; text-align: center; background-color: #F8FAFC; }
-    .summary-hours { background-color: #FECACA; color: #b91c1c; font-weight: bold; }
+    .summary-soGio { background-color: #FECACA; color: #b91c1c; font-weight: bold; }
     
     /* Signature Styles */
     .sig-container { border: none; margin-top: 30px; }
@@ -112,7 +112,7 @@ class ExcelExporter
         }
 
         $html .= '<th class="summary-header">Công</th>
-            <th class="summary-header summary-hours" style="background-color: #FECACA; color: #b91c1c;">Giờ làm (h)</th>
+            <th class="summary-header summary-soGio" style="background-color: #FECACA; color: #b91c1c;">Giờ làm (h)</th>
                 <th class="summary-header">Phép</th>
                 <th class="summary-header">Lễ</th>
                 <th class="summary-header">Vắng</th>
@@ -167,7 +167,7 @@ class ExcelExporter
             }
 
             $html .= '<td class="summary-value">' . ($row['work_days'] ?? 0) . '</td>
-                <td class="summary-value summary-hours" style="background-color: #FECACA; color: #b91c1c;">' . ($row['work_hours'] ?? 0) . '</td>
+                <td class="summary-value summary-soGio" style="background-color: #FECACA; color: #b91c1c;">' . ($row['work_hours'] ?? 0) . '</td>
                 <td class="summary-value">' . ($row['leave_days_used'] ?? 0) . '</td>
                 <td class="summary-value">' . ($row['holiday_days'] ?? 0) . '</td>
                 <td class="summary-value">' . ($row['absent_days'] ?? 0) . '</td>

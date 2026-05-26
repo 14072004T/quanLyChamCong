@@ -208,8 +208,8 @@ class HolidayCalculator
             if (isset($attendanceData['is_ot']) && $attendanceData['is_ot']) {
                 return 'ot';
             }
-            if (isset($attendanceData['leave_type']) && $attendanceData['leave_type']) {
-                return $attendanceData['leave_type']; // 'annual_leave', 'unpaid_leave', etc.
+            if (isset($attendanceData['loaiNghiPhep']) && $attendanceData['loaiNghiPhep']) {
+                return $attendanceData['loaiNghiPhep']; // 'annual_leave', 'unpaid_leave', etc.
             }
             if (isset($attendanceData['has_attendance']) && $attendanceData['has_attendance']) {
                 return 'working';

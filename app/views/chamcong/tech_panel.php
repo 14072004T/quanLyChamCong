@@ -92,7 +92,7 @@
         <div class="stat-icon icon-green"><i class="fas fa-wifi"></i></div>
         <div class="stat-info">
             <h3>WiFi Hoạt động</h3>
-            <p><?php echo count(array_filter($wifiList ?? [], fn($w) => $w['is_active'])); ?></p>
+            <p><?php echo count(array_filter($wifiList ?? [], fn($w) => $w['hoatDong'])); ?></p>
         </div>
     </div>
     <div class="stat-card" onclick="window.location.href='index.php?page=tech-wifi'">

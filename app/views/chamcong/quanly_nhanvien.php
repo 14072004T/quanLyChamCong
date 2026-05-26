@@ -131,7 +131,7 @@ if (!empty($_GET['edit']) && !empty($employees)) {
             <td><?= htmlspecialchars($emp['phongBan'] ?? '') ?></td>
             <td><?= htmlspecialchars($emp['chucVu'] ?? '') ?></td>
             <td>
-                <span class="status-badge <?= (int)$emp['trangThai'] === 1 ? 'status-approved' : 'status-rejected' ?>">
+                <span class="trangThai-badge <?= (int)$emp['trangThai'] === 1 ? 'trangThai-approved' : 'trangThai-rejected' ?>">
                     <?= (int)$emp['trangThai'] === 1 ? '• Hoạt động' : '• Ngừng' ?>
                 </span>
             </td>

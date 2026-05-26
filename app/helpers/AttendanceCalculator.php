@@ -67,7 +67,7 @@ class AttendanceCalculator
         }
 
         return [
-            'month_key' => $monthKey,
+            'thangNam' => $monthKey,
             'daily_breakdown' => $dailyBreakdown,
             'totals' => $totals,
         ];
@@ -119,16 +119,16 @@ class AttendanceCalculator
             $leaveId = null;
             $leaveReason = null;
             if (is_array($leaveType)) {
-                $isHalfDay = !empty($leaveType['is_half_day']);
+                $isHalfDay = !empty($leaveType['laNuaNgay']);
                 $leaveId = $leaveType['leave_id'] ?? null;
-                $leaveReason = $leaveType['reason'] ?? null;
+                $leaveReason = $leaveType['lyDo'] ?? null;
                 $leaveType = $leaveType['type'] ?? 'annual';
             }
             $leaveType = strtolower(trim((string)$leaveType));
             return [
                 'date' => $date,
                 'day_type' => 'leave',
-                'leave_type' => $leaveType,
+                'loaiNghiPhep' => $leaveType,
                 'leave_id' => $leaveId,
                 'leave_reason' => $leaveReason,
                 'day_type_label' => self::getLeaveTypeLabel($leaveType),
@@ -154,7 +154,7 @@ class AttendanceCalculator
 
                 $workHours = round($workMinutes / 60, 2);
 
-                // Standard work time: 480 minutes (8 hours)
+                // Standard work time: 480 minutes (8 soGio)
                 $standardMinutes = 480;
                 $otHours = $workMinutes > $standardMinutes ? round(($workMinutes - $standardMinutes) / 60, 2) : 0;
 
@@ -167,7 +167,7 @@ class AttendanceCalculator
                     'day_type_label' => 'Ngày làm việc',
                     'check_in' => $checkIn,
                     'check_out' => $checkOut,
-                    'work_minutes' => $workMinutes,
+                    'phutLamViec' => $workMinutes,
                     'work_hours' => $workHours,
                     'work_value' => $workValue,
                     'ot_hours' => $otHours,
@@ -289,7 +289,7 @@ class AttendanceCalculator
             'type' => $dayData['day_type'] ?? 'unknown',
             'label' => $dayData['day_type_label'] ?? '',
             'work' => $dayData['work_value'] ?? 0,
-            'hours' => round($dayData['work_hours'] ?? 0, 2),
+            'soGio' => round($dayData['work_hours'] ?? 0, 2),
             'ot' => round($dayData['ot_hours'] ?? 0, 2),
         ];
     }
@@ -309,7 +309,7 @@ class AttendanceCalculator
     }
 
     /**
-     * Tính average work hours/ngày (bỏ qua lễ, cuối tuần, phép)
+     * Tính average work soGio/ngày (bỏ qua lễ, cuối tuần, phép)
      * @param array $totals - từ calculateMonthlyAttendance
      * @return float
      */
@@ -328,7 +328,7 @@ class AttendanceCalculator
      * So sánh công thực với công tiêu chuẩn của tháng
      * @param float $actualWorkDays
      * @param int $standardWorkDays - từ HolidayCalculator
-     * @return array ['diff' => float, 'percentage' => float, 'status' => string]
+     * @return array ['diff' => float, 'percentage' => float, 'trangThai' => string]
      */
     public static function compareWithStandard($actualWorkDays, $standardWorkDays)
     {
@@ -338,11 +338,11 @@ class AttendanceCalculator
         $diff = $actualWorkDays - $standardWorkDays;
         $percentage = $standardWorkDays > 0 ? round(($actualWorkDays / $standardWorkDays) * 100, 1) : 0;
 
-        $status = 'normal';
+        $trangThai = 'normal';
         if ($diff > 0) {
-            $status = 'over';
+            $trangThai = 'over';
         } elseif ($diff < 0) {
-            $status = 'under';
+            $trangThai = 'under';
         }
 
         return [
@@ -350,7 +350,7 @@ class AttendanceCalculator
             'standard' => $standardWorkDays,
             'diff' => $diff,
             'percentage' => $percentage,
-            'status' => $status,
+            'trangThai' => $trangThai,
         ];
     }
 }

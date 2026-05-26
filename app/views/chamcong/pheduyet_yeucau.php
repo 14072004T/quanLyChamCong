@@ -296,7 +296,7 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
 }
 .mgrreq-person span,
 .mgrreq-type span,
-.mgrreq-time-note {
+.mgrreq-time-ghiChu {
     color: #64748b;
     font-size: .8rem;
     line-height: 1.45;
@@ -311,7 +311,7 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
     height: 28px;
     margin-top: 1px;
 }
-.mgrreq-status {
+.mgrreq-trangThai {
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -321,9 +321,9 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
     font-weight: 800;
     white-space: nowrap;
 }
-.status-pending { color: #b45309; background: #fef3c7; }
-.status-approved { color: #047857; background: #d1fae5; }
-.status-rejected { color: #b91c1c; background: #fee2e2; }
+.trangThai-pending { color: #b45309; background: #fef3c7; }
+.trangThai-approved { color: #047857; background: #d1fae5; }
+.trangThai-rejected { color: #b91c1c; background: #fee2e2; }
 .mgrreq-actions {
     display: flex;
     align-items: center;
@@ -331,7 +331,7 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
     gap: 8px;
     white-space: nowrap;
 }
-.mgrreq-action {
+.mgrreq-hanhDong {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -343,23 +343,23 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
     font-size: .78rem;
     cursor: pointer;
 }
-.mgrreq-action.approve {
+.mgrreq-hanhDong.approve {
     background: #10b981;
     color: #fff;
 }
-.mgrreq-action.reject {
+.mgrreq-hanhDong.reject {
     border-color: #fecaca;
     background: #fff;
     color: #ef4444;
 }
-.mgrreq-action.more {
+.mgrreq-hanhDong.more {
     width: 32px;
     padding: 0;
     justify-content: center;
     background: #fff;
     color: #64748b;
 }
-.mgrreq-action:disabled {
+.mgrreq-hanhDong:disabled {
     opacity: .55;
     cursor: not-allowed;
 }
@@ -592,7 +592,7 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
                 </div>
                 <div class="mgrreq-field">
                     <label>Trạng thái</label>
-                    <select class="mgrreq-select" name="status" id="filter-status">
+                    <select class="mgrreq-select" name="trangThai" id="filter-trangThai">
                         <option value="pending">Chờ phê duyệt</option>
                         <option value="">Tất cả</option>
                         <option value="approved">Đã phê duyệt</option>
@@ -601,7 +601,7 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
                 </div>
                 <div class="mgrreq-field">
                     <label>Phòng ban</label>
-                    <select class="mgrreq-select" name="department" id="filter-department">
+                    <select class="mgrreq-select" name="phongBan" id="filter-phongBan">
                         <option value="">Tất cả</option>
                     </select>
                 </div>
@@ -676,7 +676,7 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
     </div>
 </div>
 
-<div class="mgrreq-modal" id="mgrreq-action-modal" aria-hidden="true">
+<div class="mgrreq-modal" id="mgrreq-hanhDong-modal" aria-hidden="true">
     <div class="mgrreq-modal-card">
         <div class="mgrreq-modal-head">
             <h3 id="mgrreq-modal-title">Xử lý yêu cầu</h3>
@@ -686,14 +686,14 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
             <div class="mgrreq-detail-box">
                 <div><strong>Nhân viên</strong><span id="modal-employee">--</span></div>
                 <div><strong>Thời gian</strong><span id="modal-time">--</span></div>
-                <div><strong>Nội dung</strong><span id="modal-reason">--</span></div>
+                <div><strong>Nội dung</strong><span id="modal-lyDo">--</span></div>
             </div>
-            <label for="mgrreq-note" id="mgrreq-note-label" style="display:block;font-weight:800;color:#334155;margin-bottom:7px">Ghi chú</label>
-            <textarea id="mgrreq-note" placeholder="Nhập ghi chú..."></textarea>
+            <label for="mgrreq-ghiChu" id="mgrreq-ghiChu-label" style="display:block;font-weight:800;color:#334155;margin-bottom:7px">Ghi chú</label>
+            <textarea id="mgrreq-ghiChu" placeholder="Nhập ghi chú..."></textarea>
         </div>
         <div class="mgrreq-modal-foot">
             <button type="button" class="mgrreq-outline-btn" id="mgrreq-modal-cancel">Hủy</button>
-            <button type="button" class="mgrreq-action approve" id="mgrreq-modal-confirm"><i class="fas fa-check"></i> Xác nhận</button>
+            <button type="button" class="mgrreq-hanhDong approve" id="mgrreq-modal-confirm"><i class="fas fa-check"></i> Xác nhận</button>
         </div>
     </div>
 </div>
@@ -711,12 +711,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var filterForm = document.getElementById('mgrreq-filter-form');
     var searchInput = document.getElementById('mgrreq-search-input');
     var typeSelect = document.getElementById('filter-type');
-    var statusSelect = document.getElementById('filter-status');
-    var deptSelect = document.getElementById('filter-department');
+    var statusSelect = document.getElementById('filter-trangThai');
+    var deptSelect = document.getElementById('filter-phongBan');
     var sortSelect = document.getElementById('filter-sort');
     var pageSizeSelect = document.getElementById('mgrreq-page-size');
-    var modal = document.getElementById('mgrreq-action-modal');
-    var noteInput = document.getElementById('mgrreq-note');
+    var modal = document.getElementById('mgrreq-hanhDong-modal');
+    var noteInput = document.getElementById('mgrreq-ghiChu');
     var confirmBtn = document.getElementById('mgrreq-modal-confirm');
 
     function escapeHtml(val) {
@@ -731,7 +731,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var parts = text.split(' ');
         var d = parts[0].split('-');
         if (d.length !== 3) return text;
-        return d[2] + '/' + d[1] + '/' + d[0] + (parts[1] ? '<br><span class="mgrreq-time-note">' + escapeHtml(parts[1].slice(0, 5)) + '</span>' : '');
+        return d[2] + '/' + d[1] + '/' + d[0] + (parts[1] ? '<br><span class="mgrreq-time-ghiChu">' + escapeHtml(parts[1].slice(0, 5)) + '</span>' : '');
     }
 
     function plainDate(date) {
@@ -747,26 +747,26 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function classify(row) {
         if (row.request_type === 'ot') {
-            return { key: 'ot', label: 'Làm thêm giờ (OT)', sub: Number(row.hours || 0) > 0 ? (Number(row.hours || 0) + ' giờ') : 'OT ngày thường', icon: 'far fa-clock', tone: 'tone-blue' };
+            return { key: 'ot', label: 'Làm thêm giờ (OT)', sub: Number(row.soGio || 0) > 0 ? (Number(row.soGio || 0) + ' giờ') : 'OT ngày thường', icon: 'far fa-clock', tone: 'tone-blue' };
         }
         if (row.request_type === 'shift') {
-            return { key: 'shift', label: 'Đổi ca', sub: [row.current_shift_name || 'Ca hiện tại', row.requested_shift_name || 'Ca mới'].join(' → '), icon: 'far fa-calendar-alt', tone: 'tone-purple' };
+            return { key: 'shift', label: 'Đổi ca', sub: [row.tenCaHienTai || 'Ca hiện tại', row.tenCaMoi || 'Ca mới'].join(' → '), icon: 'far fa-calendar-alt', tone: 'tone-purple' };
         }
-        return { key: 'leave', label: 'Nghỉ phép', sub: row.is_half_day == 1 ? 'Nghỉ nửa ngày' : 'Nghỉ cả ngày', icon: 'fas fa-umbrella-beach', tone: 'tone-orange' };
+        return { key: 'leave', label: 'Nghỉ phép', sub: row.laNuaNgay == 1 ? 'Nghỉ nửa ngày' : 'Nghỉ cả ngày', icon: 'fas fa-umbrella-beach', tone: 'tone-orange' };
     }
 
     function normalizeRow(row) {
         var type = classify(row);
-        var dateText = plainDate(row.request_date);
+        var dateText = plainDate(row.ngayYeuCau);
         var timeNote = '';
         if (row.request_type === 'ot') {
-            timeNote = [row.start_time ? String(row.start_time).slice(0, 5) : '', row.end_time ? String(row.end_time).slice(0, 5) : ''].filter(Boolean).join(' - ');
-            if (Number(row.hours || 0) > 0) timeNote += (timeNote ? ' ' : '') + '(' + Number(row.hours || 0) + ' giờ)';
+            timeNote = [row.gioBatDau ? String(row.gioBatDau).slice(0, 5) : '', row.gioKetThuc ? String(row.gioKetThuc).slice(0, 5) : ''].filter(Boolean).join(' - ');
+            if (Number(row.soGio || 0) > 0) timeNote += (timeNote ? ' ' : '') + '(' + Number(row.soGio || 0) + ' giờ)';
         } else if (row.request_type === 'shift') {
-            timeNote = [row.current_shift_name || 'Ca hiện tại', row.requested_shift_name || 'Ca mới'].join(' → ');
+            timeNote = [row.tenCaHienTai || 'Ca hiện tại', row.tenCaMoi || 'Ca mới'].join(' → ');
         } else {
-            timeNote = row.leave_type || 'annual';
-            if (row.is_half_day == 1) timeNote += ' (nửa ngày)';
+            timeNote = row.loaiNghiPhep || 'annual';
+            if (row.laNuaNgay == 1) timeNote += ' (nửa ngày)';
         }
         return Object.assign({}, row, {
             _type: type,
@@ -774,15 +774,15 @@ document.addEventListener('DOMContentLoaded', function () {
             _employee: row.hoTen || 'Nhân viên',
             _department: row.phongBan || 'Phòng ban',
             _position: row.chucVu || 'Nhân viên',
-            _timeHtml: dateText + '<br><span class="mgrreq-time-note">' + escapeHtml(timeNote || '--') + '</span>',
+            _timeHtml: dateText + '<br><span class="mgrreq-time-ghiChu">' + escapeHtml(timeNote || '--') + '</span>',
             _timeText: dateText + ' ' + (timeNote || '')
         });
     }
 
-    function statusInfo(status) {
-        if (status === 'approved') return { label: 'Đã phê duyệt', cls: 'status-approved', icon: 'fas fa-check' };
-        if (status === 'rejected') return { label: 'Đã từ chối', cls: 'status-rejected', icon: 'fas fa-times' };
-        return { label: 'Chờ phê duyệt', cls: 'status-pending', icon: 'far fa-clock' };
+    function statusInfo(trangThai) {
+        if (trangThai === 'approved') return { label: 'Đã phê duyệt', cls: 'trangThai-approved', icon: 'fas fa-check' };
+        if (trangThai === 'rejected') return { label: 'Đã từ chối', cls: 'trangThai-rejected', icon: 'fas fa-times' };
+        return { label: 'Chờ phê duyệt', cls: 'trangThai-pending', icon: 'far fa-clock' };
     }
 
     function percentage(value, total) {
@@ -795,12 +795,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateStats() {
         var total = allRows.length;
-        var pending = allRows.filter(function (r) { return r.status === 'pending'; }).length;
-        var approved = allRows.filter(function (r) { return r.status === 'approved'; }).length;
-        var rejected = allRows.filter(function (r) { return r.status === 'rejected'; }).length;
+        var pending = allRows.filter(function (r) { return r.trangThai === 'pending'; }).length;
+        var approved = allRows.filter(function (r) { return r.trangThai === 'approved'; }).length;
+        var rejected = allRows.filter(function (r) { return r.trangThai === 'rejected'; }).length;
         var due = allRows.filter(function (r) {
-            if (r.status !== 'pending' || !r.created_at) return false;
-            var created = new Date(String(r.created_at).replace(' ', 'T'));
+            if (r.trangThai !== 'pending' || !r.ngayTao) return false;
+            var created = new Date(String(r.ngayTao).replace(' ', 'T'));
             return !isNaN(created.getTime()) && (Date.now() - created.getTime()) >= 24 * 60 * 60 * 1000;
         }).length;
 
@@ -834,19 +834,19 @@ document.addEventListener('DOMContentLoaded', function () {
         var deptValue = deptSelect.value;
 
         filteredRows = allRows.filter(function (row) {
-            var haystack = [row._employee, row._department, row._position, row.reason].join(' ').toLowerCase();
+            var haystack = [row._employee, row._department, row._position, row.lyDo].join(' ').toLowerCase();
             var matchType = !typeValue || row._type.key === typeValue;
-            var matchStatus = !statusValue || row.status === statusValue;
+            var matchStatus = !statusValue || row.trangThai === statusValue;
             var matchDept = !deptValue || row._department === deptValue;
             return (!q || haystack.indexOf(q) !== -1) && matchType && matchStatus && matchDept;
         });
 
         if (sortSelect.value === 'oldest') {
-            filteredRows.sort(function (a, b) { return String(a.created_at || '').localeCompare(String(b.created_at || '')); });
+            filteredRows.sort(function (a, b) { return String(a.ngayTao || '').localeCompare(String(b.ngayTao || '')); });
         } else if (sortSelect.value === 'employee') {
             filteredRows.sort(function (a, b) { return a._employee.localeCompare(b._employee); });
         } else {
-            filteredRows.sort(function (a, b) { return String(b.created_at || '').localeCompare(String(a.created_at || '')); });
+            filteredRows.sort(function (a, b) { return String(b.ngayTao || '').localeCompare(String(a.ngayTao || '')); });
         }
 
         if (resetPage) currentPage = 1;
@@ -865,20 +865,20 @@ document.addEventListener('DOMContentLoaded', function () {
             tbody.innerHTML = '<tr><td colspan="7" class="mgrreq-empty">Không có yêu cầu phù hợp.</td></tr>';
         } else {
             tbody.innerHTML = rows.map(function (row) {
-                var st = statusInfo(row.status);
-                var disabled = row.status !== 'pending' ? ' disabled' : '';
+                var st = statusInfo(row.trangThai);
+                var disabled = row.trangThai !== 'pending' ? ' disabled' : '';
                 var highlight = Number(row.id) === activeRequestId ? ' style="background:#fff7d6"' : '';
                 return '<tr id="request-' + escapeHtml(row._uid.replace(':', '-')) + '"' + highlight + '>' +
                     '<td><div class="mgrreq-person"><span class="mgrreq-person-avatar">' + escapeHtml(initials(row._employee)) + '</span><div><strong>' + escapeHtml(row._employee) + '</strong><span>' + escapeHtml(row._position) + '<br>' + escapeHtml(row._department) + '</span></div></div></td>' +
                     '<td><div class="mgrreq-type"><span class="mgrreq-type-icon ' + row._type.tone + '"><i class="' + row._type.icon + '"></i></span><div><strong>' + escapeHtml(row._type.label) + '</strong><span>' + escapeHtml(row._type.sub) + '</span></div></div></td>' +
                     '<td>' + row._timeHtml + '</td>' +
-                    '<td style="max-width:230px">' + escapeHtml(row.reason || 'Không có nội dung') + '</td>' +
-                    '<td><span class="mgrreq-status ' + st.cls + '"><i class="' + st.icon + '"></i> ' + escapeHtml(st.label) + '</span></td>' +
-                    '<td>' + formatDate(row.created_at) + '</td>' +
+                    '<td style="max-width:230px">' + escapeHtml(row.lyDo || 'Không có nội dung') + '</td>' +
+                    '<td><span class="mgrreq-trangThai ' + st.cls + '"><i class="' + st.icon + '"></i> ' + escapeHtml(st.label) + '</span></td>' +
+                    '<td>' + formatDate(row.ngayTao) + '</td>' +
                     '<td><div class="mgrreq-actions">' +
-                        '<button type="button" class="mgrreq-action approve js-action" data-action="approve" data-uid="' + escapeHtml(row._uid) + '"' + disabled + '><i class="fas fa-check"></i> Phê duyệt</button>' +
-                        '<button type="button" class="mgrreq-action reject js-action" data-action="reject" data-uid="' + escapeHtml(row._uid) + '"' + disabled + '><i class="fas fa-times"></i> Từ chối</button>' +
-                        '<button type="button" class="mgrreq-action more js-detail" data-uid="' + escapeHtml(row._uid) + '"><i class="fas fa-ellipsis-v"></i></button>' +
+                        '<button type="button" class="mgrreq-hanhDong approve js-hanhDong" data-action="approve" data-uid="' + escapeHtml(row._uid) + '"' + disabled + '><i class="fas fa-check"></i> Phê duyệt</button>' +
+                        '<button type="button" class="mgrreq-hanhDong reject js-hanhDong" data-action="reject" data-uid="' + escapeHtml(row._uid) + '"' + disabled + '><i class="fas fa-times"></i> Từ chối</button>' +
+                        '<button type="button" class="mgrreq-hanhDong more js-detail" data-uid="' + escapeHtml(row._uid) + '"><i class="fas fa-ellipsis-v"></i></button>' +
                     '</div></td>' +
                 '</tr>';
             }).join('');
@@ -905,19 +905,19 @@ document.addEventListener('DOMContentLoaded', function () {
         return allRows.find(function (row) { return row._uid === uid; });
     }
 
-    function openActionModal(row, action) {
-        activeAction = { id: Number(row.id), type: row._type.key, action: action };
-        var isApprove = action === 'approve';
-        var readOnly = action === 'detail' || row.status !== 'pending';
+    function openActionModal(row, hanhDong) {
+        activeAction = { id: Number(row.id), type: row._type.key, hanhDong: hanhDong };
+        var isApprove = hanhDong === 'approve';
+        var readOnly = hanhDong === 'detail' || row.trangThai !== 'pending';
         document.getElementById('mgrreq-modal-title').textContent = readOnly ? 'Chi tiết yêu cầu' : (isApprove ? 'Phê duyệt yêu cầu' : 'Từ chối yêu cầu');
-        document.getElementById('mgrreq-note-label').textContent = readOnly ? 'Ghi chú xử lý' : (isApprove ? 'Ghi chú phê duyệt (nếu có)' : 'Lý do từ chối');
+        document.getElementById('mgrreq-ghiChu-label').textContent = readOnly ? 'Ghi chú xử lý' : (isApprove ? 'Ghi chú phê duyệt (nếu có)' : 'Lý do từ chối');
         document.getElementById('modal-employee').textContent = row._employee;
         document.getElementById('modal-time').textContent = row._timeText;
-        document.getElementById('modal-reason').textContent = row.reason || 'Không có nội dung';
-        confirmBtn.className = 'mgrreq-action ' + (isApprove ? 'approve' : 'reject');
+        document.getElementById('modal-lyDo').textContent = row.lyDo || 'Không có nội dung';
+        confirmBtn.className = 'mgrreq-hanhDong ' + (isApprove ? 'approve' : 'reject');
         confirmBtn.innerHTML = '<i class="fas ' + (isApprove ? 'fa-check' : 'fa-times') + '"></i> ' + (isApprove ? 'Phê duyệt' : 'Từ chối');
         confirmBtn.hidden = readOnly;
-        noteInput.value = readOnly ? (row.manager_note || 'Chưa có ghi chú xử lý') : '';
+        noteInput.value = readOnly ? (row.ghiChuQL || 'Chưa có ghi chú xử lý') : '';
         noteInput.readOnly = readOnly;
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
@@ -980,10 +980,10 @@ document.addEventListener('DOMContentLoaded', function () {
         renderTable();
     });
     document.addEventListener('click', function (event) {
-        var actionBtn = event.target.closest('.js-action');
+        var actionBtn = event.target.closest('.js-hanhDong');
         if (actionBtn) {
             var row = findRow(actionBtn.getAttribute('data-uid'));
-            if (row) openActionModal(row, actionBtn.getAttribute('data-action'));
+            if (row) openActionModal(row, actionBtn.getAttribute('data-hanhDong'));
             return;
         }
         var detailBtn = event.target.closest('.js-detail');
@@ -995,7 +995,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     confirmBtn.addEventListener('click', function () {
         if (!activeAction) return;
-        if (activeAction.action === 'reject' && !noteInput.value.trim()) {
+        if (activeAction.hanhDong === 'reject' && !noteInput.value.trim()) {
             alert('Vui lòng nhập lý do từ chối.');
             noteInput.focus();
             return;
@@ -1007,10 +1007,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var form = new FormData();
         form.append('request_id', activeAction.id);
         form.append('type', activeAction.type);
-        form.append('action', activeAction.action);
-        form.append('note', noteInput.value.trim());
+        form.append('hanhDong', activeAction.hanhDong);
+        form.append('ghiChu', noteInput.value.trim());
 
-        fetch('index.php?page=manager-api-request-action', {
+        fetch('index.php?page=manager-api-request-hanhDong', {
             method: 'POST',
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: form
@@ -1042,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('mgrreq-export').addEventListener('click', function () {
         var header = ['Nhan vien', 'Phong ban', 'Loai yeu cau', 'Thoi gian', 'Noi dung', 'Trang thai', 'Thoi gian gui'];
         var csvRows = [header].concat(filteredRows.map(function (row) {
-            return [row._employee, row._department, row._type.label, row._timeText, row.reason || '', statusInfo(row.status).label, row.created_at || ''];
+            return [row._employee, row._department, row._type.label, row._timeText, row.lyDo || '', statusInfo(row.trangThai).label, row.ngayTao || ''];
         }));
         var csv = csvRows.map(function (cols) {
             return cols.map(function (value) { return '"' + String(value).replace(/"/g, '""') + '"'; }).join(',');

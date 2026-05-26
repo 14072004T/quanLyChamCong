@@ -17,34 +17,34 @@ class ApiManagerController
         $this->model = $model;
     }
 
-    public function handle($method, $action, $id, $subAction, $body)
+    public function handle($phuongThuc, $hanhDong, $id, $subAction, $body)
     {
         requireRole('manager');
 
-        switch ($action) {
+        switch ($hanhDong) {
             case 'approvals':
-                $this->handleApprovals($method, $id, $subAction, $body);
+                $this->handleApprovals($phuongThuc, $id, $subAction, $body);
                 break;
             case 'requests':
-                $this->handleRequests($method, $id, $body);
+                $this->handleRequests($phuongThuc, $id, $body);
                 break;
             case 'reports':
-                $this->handleReports($method, $id);
+                $this->handleReports($phuongThuc, $id);
                 break;
             case 'statistics':
-                $this->handleStatistics($method);
+                $this->handleStatistics($phuongThuc);
                 break;
             case 'employees':
-                $this->handleEmployees($method);
+                $this->handleEmployees($phuongThuc);
                 break;
             default:
                 respondError('Resource not found', 404);
         }
     }
 
-    private function handleEmployees($method)
+    private function handleEmployees($phuongThuc)
     {
-        if ($method !== 'GET') respondError('Method not allowed', 405);
+        if ($phuongThuc !== 'GET') respondError('Method not allowed', 405);
 
         $keyword = trim($_GET['q'] ?? '');
         $activeOnly = (int)($_GET['active_only'] ?? 1) === 1;
@@ -53,7 +53,7 @@ class ApiManagerController
         respond([
             'success' => true,
             'data' => $rows,
-            'meta' => ['count' => count($rows), 'department' => $department]
+            'meta' => ['count' => count($rows), 'phongBan' => $phongBan]
         ]);
     }
 
@@ -72,53 +72,53 @@ class ApiManagerController
     // GET    /manager/approvals/{id}         — Chi tiết bảng công
     // PUT    /manager/approvals/{id}         — Duyệt/từ chối
     // ========================================================
-    private function handleApprovals($method, $id, $subAction, $body)
+    private function handleApprovals($phuongThuc, $id, $subAction, $body)
     {
-        $department = $this->getManagerDepartment();
+        $phongBan = $this->getManagerDepartment();
 
         // GET /manager/approvals/history
-        if ($id === 'history' && $method === 'GET') {
+        if ($id === 'history' && $phuongThuc === 'GET') {
             $year = trim($_GET['year'] ?? '');
             $limit = max(1, min(500, (int)($_GET['limit'] ?? 50)));
-            $rows = $this->model->getMonthlyApprovalHistory($year, $limit, $department);
-            $this->enrichApprovalRows($rows, $department);
+            $rows = $this->model->getMonthlyApprovalHistory($year, $limit, $phongBan);
+            $this->enrichApprovalRows($rows, $phongBan);
 
-            respond(['success' => true, 'data' => $rows, 'meta' => ['count' => count($rows), 'department' => $department]]);
+            respond(['success' => true, 'data' => $rows, 'meta' => ['count' => count($rows), 'phongBan' => $phongBan]]);
             return;
         }
 
-        switch ($method) {
+        switch ($phuongThuc) {
             case 'GET':
                 if ($id && $id !== 'history') {
                     // Chi tiết bảng công
-                    $detail = $this->model->getMonthlyApprovalDetail((int)$id, $department);
+                    $detail = $this->model->getMonthlyApprovalDetail((int)$id, $phongBan);
                     if (!$detail) respondError('Không tìm thấy chi tiết kỳ công', 404);
                     respond(['success' => true, 'data' => $detail]);
                 } else {
                     // Danh sách bảng công chờ duyệt
-                    $status = trim($_GET['status'] ?? 'submitted');
+                    $trangThai = trim($_GET['trangThai'] ?? 'submitted');
                     $year = trim($_GET['year'] ?? '');
-                    $filterStatus = in_array($status, ['submitted', 'approved', 'rejected']) ? $status : null;
+                    $filterStatus = in_array($trangThai, ['submitted', 'approved', 'rejected']) ? $trangThai : null;
 
-                    $rows = $this->model->getMonthlyApprovals($filterStatus, $department);
+                    $rows = $this->model->getMonthlyApprovals($filterStatus, $phongBan);
 
-                    // Xử lý lịch sử nếu status=history
-                    if ($status === 'history' || $status === 'processed') {
-                        $rows = $this->model->getMonthlyApprovalHistory($year, 100, $department);
+                    // Xử lý lịch sử nếu trangThai=history
+                    if ($trangThai === 'history' || $trangThai === 'processed') {
+                        $rows = $this->model->getMonthlyApprovalHistory($year, 100, $phongBan);
                     }
 
                     // Filter by year
-                    if ($year !== '' && preg_match('/^\d{4}$/', $year) && !in_array($status, ['history', 'processed'])) {
+                    if ($year !== '' && preg_match('/^\d{4}$/', $year) && !in_array($trangThai, ['history', 'processed'])) {
                         $rows = array_values(array_filter($rows, function ($r) use ($year) {
-                            return strpos($r['month_key'] ?? '', $year) === 0;
+                            return strpos($r['thangNam'] ?? '', $year) === 0;
                         }));
                     }
 
-                    $this->enrichApprovalRows($rows, $department);
+                    $this->enrichApprovalRows($rows, $phongBan);
                     respond([
                         'success' => true,
                         'data' => $rows,
-                        'meta' => ['status' => $status, 'department' => $department, 'count' => count($rows)]
+                        'meta' => ['trangThai' => $trangThai, 'phongBan' => $phongBan, 'count' => count($rows)]
                     ]);
                 }
                 break;
@@ -126,14 +126,14 @@ class ApiManagerController
             case 'PUT':
                 // Duyệt/từ chối bảng công
                 if (!$id) respondError('Thiếu ID phê duyệt', 422);
-                $action = $body['action'] ?? '';
-                $note = trim($body['note'] ?? '');
-                $status = $action === 'approve' ? 'approved' : ($action === 'reject' ? 'rejected' : '');
+                $hanhDong = $body['hanhDong'] ?? '';
+                $ghiChu = trim($body['ghiChu'] ?? '');
+                $trangThai = $hanhDong === 'approve' ? 'approved' : ($hanhDong === 'reject' ? 'rejected' : '');
                 $managerId = (int)($_SESSION['user']['maND'] ?? 0);
 
-                if ($status === '') respondError('Action phải là "approve" hoặc "reject"', 422);
+                if ($trangThai === '') respondError('Action phải là "approve" hoặc "reject"', 422);
 
-                $ok = $this->model->updateMonthlyApproval((int)$id, $status, $managerId, $note, $department);
+                $ok = $this->model->updateMonthlyApproval((int)$id, $trangThai, $managerId, $ghiChu, $phongBan);
                 respond(
                     ['success' => $ok, 'message' => $ok ? 'Đã cập nhật trạng thái bảng công' : 'Không thể cập nhật'],
                     $ok ? 200 : 500
@@ -148,11 +148,11 @@ class ApiManagerController
     /**
      * Bổ sung thông tin tổng hợp cho mỗi bảng công
      */
-    private function enrichApprovalRows(&$rows, $department)
+    private function enrichApprovalRows(&$rows, $phongBan)
     {
         foreach ($rows as &$row) {
-            $monthKey = $row['month_key'] ?? '';
-            $summary = $this->model->getMonthlyWorkSummary($monthKey, $department);
+            $monthKey = $row['thangNam'] ?? '';
+            $summary = $this->model->getMonthlyWorkSummary($monthKey, $phongBan);
             $totalWorkDays = 0;
             $totalOTHours = 0;
             foreach ($summary as $s) {
@@ -171,21 +171,21 @@ class ApiManagerController
     // GET    /manager/requests          — DS yêu cầu NV phòng ban
     // PUT    /manager/requests/{id}     — Duyệt/từ chối
     // ========================================================
-    private function handleRequests($method, $id, $body)
+    private function handleRequests($phuongThuc, $id, $body)
     {
-        switch ($method) {
+        switch ($phuongThuc) {
             case 'GET':
                 $filters = [
                     'q' => trim($_GET['q'] ?? ''),
                     'date' => trim($_GET['date'] ?? ''),
                     'type' => trim($_GET['type'] ?? ''),
-                    'status' => trim($_GET['status'] ?? ''),
-                    'department' => trim($_GET['department'] ?? ''),
+                    'trangThai' => trim($_GET['trangThai'] ?? ''),
+                    'phongBan' => trim($_GET['phongBan'] ?? ''),
                     'date_from' => trim($_GET['date_from'] ?? ''),
                     'date_to' => trim($_GET['date_to'] ?? ''),
                 ];
                 if (!in_array($filters['type'], ['', 'leave', 'ot', 'shift'])) $filters['type'] = '';
-                if (!in_array($filters['status'], ['', 'pending', 'approved', 'rejected'])) $filters['status'] = '';
+                if (!in_array($filters['trangThai'], ['', 'pending', 'approved', 'rejected'])) $filters['trangThai'] = '';
                 $limit = min(500, max(1, (int)($_GET['limit'] ?? 100)));
 
                 $rows = $this->model->getManagerEmployeeRequests($filters, $limit);
@@ -196,14 +196,14 @@ class ApiManagerController
                 // Duyệt/từ chối yêu cầu
                 if (!$id) respondError('Thiếu ID yêu cầu', 422);
                 $type = $body['type'] ?? '';
-                $action = $body['action'] ?? '';
-                $note = trim($body['note'] ?? '');
+                $hanhDong = $body['hanhDong'] ?? '';
+                $ghiChu = trim($body['ghiChu'] ?? '');
 
                 if (!in_array($type, ['leave', 'ot', 'shift'])) respondError('Type phải là "leave", "ot" hoặc "shift"', 422);
-                if (!in_array($action, ['approve', 'reject'])) respondError('Action phải là "approve" hoặc "reject"', 422);
+                if (!in_array($hanhDong, ['approve', 'reject'])) respondError('Action phải là "approve" hoặc "reject"', 422);
 
                 $managerId = (int)($_SESSION['user']['maND'] ?? 0);
-                $ok = $this->model->processManagerEmployeeRequest($type, (int)$id, $action, $managerId, $note);
+                $ok = $this->model->processManagerEmployeeRequest($type, (int)$id, $hanhDong, $managerId, $ghiChu);
                 respond(
                     ['success' => $ok, 'message' => $ok ? 'Đã xử lý yêu cầu' : 'Không thể xử lý'],
                     $ok ? 200 : 500
@@ -219,20 +219,20 @@ class ApiManagerController
     // 2.3 BÁO CÁO TỔNG HỢP PHÒNG BAN
     // GET    /manager/reports       — Báo cáo chấm công phòng ban
     // ========================================================
-    private function handleReports($method, $id)
+    private function handleReports($phuongThuc, $id)
     {
-        if ($method !== 'GET') respondError('Method not allowed', 405);
+        if ($phuongThuc !== 'GET') respondError('Method not allowed', 405);
 
-        $fromDate = $_GET['from_date'] ?? date('Y-m-01');
-        $toDate = $_GET['to_date'] ?? date('Y-m-d');
-        $department = trim($_GET['department'] ?? '');
+        $fromDate = $_GET['tuNgay'] ?? date('Y-m-01');
+        $toDate = $_GET['denNgay'] ?? date('Y-m-d');
+        $phongBan = trim($_GET['phongBan'] ?? '');
         $monthKey = substr($fromDate, 0, 7);
 
-        $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $department);
+        $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $phongBan);
         $payrollRows = $this->model->getMonthlyWorkSummary($monthKey);
-        if ($department !== '') {
-            $payrollRows = array_values(array_filter($payrollRows, function ($row) use ($department) {
-                return (string)($row['phongBan'] ?? '') === $department;
+        if ($phongBan !== '') {
+            $payrollRows = array_values(array_filter($payrollRows, function ($row) use ($phongBan) {
+                return (string)($row['phongBan'] ?? '') === $phongBan;
             }));
         }
 
@@ -243,9 +243,9 @@ class ApiManagerController
                 'payroll_summary' => $payrollRows,
             ],
             'meta' => [
-                'from_date' => $fromDate,
-                'to_date' => $toDate,
-                'department' => $department,
+                'tuNgay' => $fromDate,
+                'denNgay' => $toDate,
+                'phongBan' => $phongBan,
                 'report_count' => count($reportRows),
                 'payroll_count' => count($payrollRows),
             ]
@@ -256,9 +256,9 @@ class ApiManagerController
     // 2.3 THỐNG KÊ BIỂU ĐỒ
     // GET    /manager/statistics    — Thống kê phòng ban
     // ========================================================
-    private function handleStatistics($method)
+    private function handleStatistics($phuongThuc)
     {
-        if ($method !== 'GET') respondError('Method not allowed', 405);
+        if ($phuongThuc !== 'GET') respondError('Method not allowed', 405);
 
         $selectedMonth = $_GET['month'] ?? date('Y-m');
         if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) $selectedMonth = date('Y-m');
@@ -277,10 +277,10 @@ class ApiManagerController
         foreach ($salaryRows as $row) {
             $dept = $row['phongBan'] ?: 'Chưa phân phòng';
             if (!isset($departmentSummary[$dept])) {
-                $departmentSummary[$dept] = ['employees' => 0, 'hours' => 0.0];
+                $departmentSummary[$dept] = ['employees' => 0, 'soGio' => 0.0];
             }
             $departmentSummary[$dept]['employees']++;
-            $departmentSummary[$dept]['hours'] += (float)($row['work_hours'] ?? 0);
+            $departmentSummary[$dept]['soGio'] += (float)($row['work_hours'] ?? 0);
         }
 
         respond([

@@ -20,11 +20,11 @@ unset($_SESSION['edit_request_success'], $_SESSION['edit_request_error']);
 if ($flashSuccess) { $message = $flashSuccess; $messageType = 'success'; }
 if ($flashError) { $message = $flashError; $messageType = 'error'; }
 
-// Shift status data
+// Shift trangThai data
 $shiftInfo = $todayShiftStatus['shift'] ?? null;
-$shiftStatus = $todayShiftStatus['status'] ?? null;
-$todayIn = $todayShiftStatus['first_in'] ?? null;
-$todayOut = $todayShiftStatus['last_out'] ?? null;
+$shiftStatus = $todayShiftStatus['trangThai'] ?? null;
+$todayIn = $todayShiftStatus['gioVaoDau'] ?? null;
+$todayOut = $todayShiftStatus['gioRaCuoi'] ?? null;
 ?>
 <?php include 'app/views/layouts/header.php'; ?>
 <?php include 'app/views/layouts/nav.php'; ?>
@@ -89,9 +89,9 @@ $todayOut = $todayShiftStatus['last_out'] ?? null;
 .yc-history-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
 /* Status-specific card styles */
-.yc-history-card.status-approved { background: #f0fdf4; border-left: 4px solid #10b981; }
-.yc-history-card.status-pending  { background: #fffbeb; border-left: 4px solid #f59e0b; }
-.yc-history-card.status-rejected { background: #fef2f2; border-left: 4px solid #ef4444; }
+.yc-history-card.trangThai-approved { background: #f0fdf4; border-left: 4px solid #10b981; }
+.yc-history-card.trangThai-pending  { background: #fffbeb; border-left: 4px solid #f59e0b; }
+.yc-history-card.trangThai-rejected { background: #fef2f2; border-left: 4px solid #ef4444; }
 
 /* Refined Badge Colors */
 .yc-badge-approved { background: #10b981; color: #fff; }
@@ -144,7 +144,7 @@ $todayOut = $todayShiftStatus['last_out'] ?? null;
                     <!-- Date Selection Row -->
                     <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
                         <label class="yc-label" style="margin-bottom: 0; white-space: nowrap;">Ngày cần điều chỉnh:</label>
-                        <input type="date" id="attendance-date" name="attendance_date" class="yc-input" required max="<?= date('Y-m-d') ?>" style="width: 180px;" value="<?= htmlspecialchars($_GET['date'] ?? '') ?>">
+                        <input type="date" id="attendance-date" name="ngayChamCong" class="yc-input" required max="<?= date('Y-m-d') ?>" style="width: 180px;" value="<?= htmlspecialchars($_GET['date'] ?? '') ?>">
                     </div>
 
                     <!-- Comparison Grid -->
@@ -174,11 +174,11 @@ $todayOut = $todayShiftStatus['last_out'] ?? null;
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <div class="yc-form-group">
                                     <label class="yc-label">Giờ vào mới</label>
-                                    <input type="time" id="proposed-checkin" name="proposed_checkin" class="yc-input" style="height: 32px;">
+                                    <input type="time" id="proposed-checkin" name="gioVaoDeXuat" class="yc-input" style="height: 32px;">
                                 </div>
                                 <div class="yc-form-group">
                                     <label class="yc-label">Giờ ra mới</label>
-                                    <input type="time" id="proposed-checkout" name="proposed_checkout" class="yc-input" style="height: 32px;">
+                                    <input type="time" id="proposed-checkout" name="gioRaDeXuat" class="yc-input" style="height: 32px;">
                                 </div>
                             </div>
                         </div>
@@ -187,15 +187,15 @@ $todayOut = $todayShiftStatus['last_out'] ?? null;
                     <!-- Bottom row: Reason + Evidence -->
                     <div style="display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: end; margin-bottom: 16px;">
                         <div class="yc-form-group">
-                            <label class="yc-label" for="reason">Lý do điều chỉnh <span style="color:var(--yc-danger)">*</span></label>
-                            <input type="text" id="reason" name="reason" class="yc-input" required placeholder="VD: Quên bấm thẻ, Đi công tác..." style="height: 36px;">
+                            <label class="yc-label" for="lyDo">Lý do điều chỉnh <span style="color:var(--yc-danger)">*</span></label>
+                            <input type="text" id="lyDo" name="lyDo" class="yc-input" required placeholder="VD: Quên bấm thẻ, Đi công tác..." style="height: 36px;">
                         </div>
                         <div class="yc-form-group">
                             <label class="yc-label">Minh chứng (Ảnh/PDF)</label>
                             <div class="yc-file-zone" id="fileZone" onclick="document.getElementById('evidenceFile').click()" style="height: 36px;">
                                 <i class="fas fa-paperclip"></i>
                                 <p id="fileText">Chọn file minh chứng...</p>
-                                <input type="file" id="evidenceFile" name="evidence_file" accept=".jpg,.jpeg,.png,.pdf" style="display:none">
+                                <input type="file" id="evidenceFile" name="tepMinhChung" accept=".jpg,.jpeg,.png,.pdf" style="display:none">
                             </div>
                         </div>
                     </div>
@@ -216,39 +216,39 @@ $todayOut = $todayShiftStatus['last_out'] ?? null;
                     <div class="yc-history-grid">
                         <?php foreach ($requests as $row): ?>
                             <?php
-                                $status = $row['status'] ?? 'pending';
-                                $badgeClass = 'yc-badge-' . $status; $statusText = 'Chờ duyệt'; $iconClass = 'fa-clock';
-                                if ($status === 'approved') { $statusText = 'Đã duyệt'; $iconClass = 'fa-check-circle'; }
-                                elseif ($status === 'rejected') { $statusText = 'Từ chối'; $iconClass = 'fa-times-circle'; }
-                                $cardClass = 'status-' . $status;
+                                $trangThai = $row['trangThai'] ?? 'pending';
+                                $badgeClass = 'yc-badge-' . $trangThai; $statusText = 'Chờ duyệt'; $iconClass = 'fa-clock';
+                                if ($trangThai === 'approved') { $statusText = 'Đã duyệt'; $iconClass = 'fa-check-circle'; }
+                                elseif ($trangThai === 'rejected') { $statusText = 'Từ chối'; $iconClass = 'fa-times-circle'; }
+                                $cardClass = 'trangThai-' . $trangThai;
                             ?>
                             <div class="yc-history-card <?= $cardClass ?>" id="request-<?= (int)($row['id'] ?? 0) ?>" data-id="<?= (int)($row['id'] ?? 0) ?>">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                     <div style="font-size: 13px; font-weight: 700; color: var(--yc-dark);">
-                                        <i class="far fa-calendar-alt" style="color:#64748b;margin-right:4px"></i> <?= htmlspecialchars($row['attendance_date'] ?? '') ?>
+                                        <i class="far fa-calendar-alt" style="color:#64748b;margin-right:4px"></i> <?= htmlspecialchars($row['ngayChamCong'] ?? '') ?>
                                     </div>
                                     <span class="yc-badge <?= $badgeClass ?>"><i class="fas <?= $iconClass ?>"></i> <?= $statusText ?></span>
                                 </div>
 
                                 <div style="font-size: 11px; color: #475569; background: rgba(255,255,255,0.6); padding: 4px 8px; border-radius: 4px; display: inline-block;">
                                     Sửa thành: <span style="font-weight: 700; color: var(--yc-dark);">
-                                        <?= !empty($row['proposed_checkin']) ? date('H:i', strtotime($row['proposed_checkin'])) : '--:--' ?> 
+                                        <?= !empty($row['gioVaoDeXuat']) ? date('H:i', strtotime($row['gioVaoDeXuat'])) : '--:--' ?> 
                                         - 
-                                        <?= !empty($row['proposed_checkout']) ? date('H:i', strtotime($row['proposed_checkout'])) : '--:--' ?>
+                                        <?= !empty($row['gioRaDeXuat']) ? date('H:i', strtotime($row['gioRaDeXuat'])) : '--:--' ?>
                                     </span>
                                 </div>
 
                                 <div style="font-size: 12px; color: var(--yc-text); background: rgba(255,255,255,0.4); padding: 6px 10px; border-radius: 6px; border-left: 2px solid rgba(0,0,0,0.05);">
-                                    <?= nl2br(htmlspecialchars($row['reason'] ?? '')) ?>
+                                    <?= nl2br(htmlspecialchars($row['lyDo'] ?? '')) ?>
                                 </div>
 
                                 <div style="margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
                                     <div>
-                                        <?php if (!empty($row['evidence_file'])): ?>
-                                            <button type="button" onclick="event.stopPropagation(); previewEvidence('<?= htmlspecialchars($row['evidence_file']) ?>')" style="background:none; border:none; padding:0; font-size: 11px; color: var(--yc-primary); cursor:pointer; font-weight: 600;"><i class="fas fa-file-alt"></i> Minh chứng</button>
+                                        <?php if (!empty($row['tepMinhChung'])): ?>
+                                            <button type="button" onclick="event.stopPropagation(); previewEvidence('<?= htmlspecialchars($row['tepMinhChung']) ?>')" style="background:none; border:none; padding:0; font-size: 11px; color: var(--yc-primary); cursor:pointer; font-weight: 600;"><i class="fas fa-file-alt"></i> Minh chứng</button>
                                         <?php endif; ?>
                                     </div>
-                                    <div style="font-size: 10px; color: #64748b; font-style: italic;">Gửi: <?= date('d/m/Y H:i', strtotime($row['created_at'] ?? '')) ?></div>
+                                    <div style="font-size: 10px; color: #64748b; font-style: italic;">Gửi: <?= date('d/m/Y H:i', strtotime($row['ngayTao'] ?? '')) ?></div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -294,12 +294,12 @@ document.getElementById('attendance-date').addEventListener('change', function()
     outField.value = '--:--';
 
     for (var i = 0; i < attendanceData.length; i++) {
-        if (attendanceData[i].work_date === selectedDate) {
-            if (attendanceData[i].first_in) {
-                inField.value = attendanceData[i].first_in.substring(11, 16) + ' (' + attendanceData[i].first_in.substring(0, 10) + ')';
+        if (attendanceData[i].ngayLamViec === selectedDate) {
+            if (attendanceData[i].gioVaoDau) {
+                inField.value = attendanceData[i].gioVaoDau.substring(11, 16) + ' (' + attendanceData[i].gioVaoDau.substring(0, 10) + ')';
             }
-            if (attendanceData[i].last_out) {
-                outField.value = attendanceData[i].last_out.substring(11, 16) + ' (' + attendanceData[i].last_out.substring(0, 10) + ')';
+            if (attendanceData[i].gioRaCuoi) {
+                outField.value = attendanceData[i].gioRaCuoi.substring(11, 16) + ' (' + attendanceData[i].gioRaCuoi.substring(0, 10) + ')';
             }
             break;
         }
@@ -399,8 +399,8 @@ window.openModal = function(id) {
         .then(res => {
             if (res.success) {
                 const d = res.data;
-                const statusClass = `yc-badge-${d.status}`;
-                const statusText = d.status === 'approved' ? 'Đã duyệt' : (d.status === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
+                const statusClass = `yc-badge-${d.trangThai}`;
+                const statusText = d.trangThai === 'approved' ? 'Đã duyệt' : (d.trangThai === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
                 
                 body.innerHTML = `
                     <div class="yc-detail-row">
@@ -417,7 +417,7 @@ window.openModal = function(id) {
                     </div>
                     <div class="yc-detail-row">
                         <div class="yc-detail-label">Lý do</div>
-                        <div class="yc-detail-val">${d.reason}</div>
+                        <div class="yc-detail-val">${d.lyDo}</div>
                     </div>
                     <div class="yc-detail-row">
                         <div class="yc-detail-label">Trạng thái</div>
@@ -433,17 +433,17 @@ window.openModal = function(id) {
                         <div class="yc-detail-val">${d.approved_at_fmt}</div>
                     </div>
                     ` : ''}
-                    ${d.hr_note ? `
+                    ${d.ghiChuNS ? `
                     <div class="yc-detail-row">
                         <div class="yc-detail-label">Phản hồi</div>
-                        <div class="yc-detail-val" style="color:var(--yc-danger)">${d.hr_note}</div>
+                        <div class="yc-detail-val" style="color:var(--yc-danger)">${d.ghiChuNS}</div>
                     </div>
                     ` : ''}
-                    ${d.evidence_file ? `
+                    ${d.tepMinhChung ? `
                     <div class="yc-detail-row">
                         <div class="yc-detail-label">Minh chứng</div>
                         <div class="yc-detail-val">
-                            <button type="button" onclick="previewEvidence('${d.evidence_file}')" style="background:none; border:none; padding:0; color:var(--yc-primary); cursor:pointer; font-weight:600;">
+                            <button type="button" onclick="previewEvidence('${d.tepMinhChung}')" style="background:none; border:none; padding:0; color:var(--yc-primary); cursor:pointer; font-weight:600;">
                                 <i class="fas fa-file-alt"></i> Xem minh chứng
                             </button>
                         </div>

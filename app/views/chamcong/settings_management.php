@@ -15,23 +15,23 @@ $settingsMetadata = [
     'ALLOW_QR_CHECKIN' => [
         'name' => 'Chấm công QR',
         'type' => 'boolean',
-        'description' => 'Sử dụng mã QR để chấm công qua di động',
+        'moTa' => 'Sử dụng mã QR để chấm công qua di động',
     ],
     'ALLOW_OFFLINE_CHECKIN' => [
         'name' => 'Chấm công Offline',
         'type' => 'boolean',
-        'description' => 'Cho phép chấm công khi mất kết nối mạng',
+        'moTa' => 'Cho phép chấm công khi mất kết nối mạng',
     ],
     'LATE_THRESHOLD_MINUTES' => [
         'name' => 'Ngưỡng đi trễ',
         'type' => 'number',
-        'description' => 'Số phút tối đa cho phép vào muộn',
+        'moTa' => 'Số phút tối đa cho phép vào muộn',
         'unit' => 'phút',
     ],
     'OVERTIME_THRESHOLD_MINUTES' => [
         'name' => 'Ngưỡng tăng ca',
         'type' => 'number',
-        'description' => 'Số phút tối thiểu để bắt đầu tính OT',
+        'moTa' => 'Số phút tối thiểu để bắt đầu tính OT',
         'unit' => 'phút',
     ]
 ];
@@ -41,8 +41,8 @@ $settingValues = [];
 foreach ($settingsMetadata as $key => $meta) {
     $settingValues[$key] = '';
     foreach ($settings as $setting) {
-        if ($setting['setting_key'] === $key) {
-            $settingValues[$key] = $setting['setting_value'];
+        if ($setting['tenCaiDat'] === $key) {
+            $settingValues[$key] = $setting['giaTri'];
             break;
         }
     }
@@ -73,7 +73,7 @@ foreach ($settingsMetadata as $key => $meta) {
             <div class="setting-card-mini">
                 <div class="setting-header">
                     <label for="setting_<?= htmlspecialchars($key) ?>"><?= htmlspecialchars($meta['name']) ?></label>
-                    <p><?= htmlspecialchars($meta['description']) ?></p>
+                    <p><?= htmlspecialchars($meta['moTa']) ?></p>
                 </div>
                 
                 <div class="setting-body">
@@ -119,8 +119,8 @@ document.querySelectorAll('.save-setting-btn').forEach(btn => {
         this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
         const formData = new FormData();
-        formData.append('setting_key', key);
-        formData.append('setting_value', value);
+        formData.append('tenCaiDat', key);
+        formData.append('giaTri', value);
 
         fetch('index.php?page=tech-update-settings', {
             method: 'POST',

@@ -83,10 +83,10 @@ unset($_SESSION['success'], $_SESSION['error']);
                             <?php if (!empty($shifts)): ?>
                                 <?php foreach ($shifts as $shift): ?>
                                     <tr>
-                                        <td><strong><?= htmlspecialchars($shift['shift_name']) ?></strong></td>
-                                        <td><?= htmlspecialchars(substr($shift['start_time'], 0, 5)) ?></td>
-                                        <td><?= htmlspecialchars(substr($shift['end_time'], 0, 5)) ?></td>
-                                        <td><span class="status-badge <?= (int)$shift['is_active'] ? 'status-approved' : 'status-rejected' ?>"><?= (int)$shift['is_active'] ? 'Đang dùng' : 'Tắt' ?></span></td>
+                                        <td><strong><?= htmlspecialchars($shift['tenCa']) ?></strong></td>
+                                        <td><?= htmlspecialchars(substr($shift['gioBatDau'], 0, 5)) ?></td>
+                                        <td><?= htmlspecialchars(substr($shift['gioKetThuc'], 0, 5)) ?></td>
+                                        <td><span class="trangThai-badge <?= (int)$shift['hoatDong'] ? 'trangThai-approved' : 'trangThai-rejected' ?>"><?= (int)$shift['hoatDong'] ? 'Đang dùng' : 'Tắt' ?></span></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
@@ -102,15 +102,15 @@ unset($_SESSION['success'], $_SESSION['error']);
                         <input type="hidden" name="id" value="0">
                         <div class="form-group">
                             <label>Tên ca *</label>
-                            <input type="text" name="shift_name" placeholder="VD: HC, Ca sáng, OT" required>
+                            <input type="text" name="tenCa" placeholder="VD: HC, Ca sáng, OT" required>
                         </div>
                         <div class="form-group">
                             <label>Giờ bắt đầu *</label>
-                            <input type="time" name="start_time" required>
+                            <input type="time" name="gioBatDau" required>
                         </div>
                         <div class="form-group">
                             <label>Giờ kết thúc *</label>
-                            <input type="time" name="end_time" required>
+                            <input type="time" name="gioKetThuc" required>
                         </div>
                         <button type="submit" class="btn btn-success btn-sm" style="width:100%;">Lưu ca</button>
                     </form>
@@ -165,17 +165,17 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(function(res) {
                 if (res.success) {
                     var d = res.data;
-                    var statusClass = 'lr-badge-' + d.status;
-                    var statusText = d.status === 'approved' ? 'Đã duyệt' : (d.status === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
+                    var statusClass = 'lr-badge-' + d.trangThai;
+                    var statusText = d.trangThai === 'approved' ? 'Đã duyệt' : (d.trangThai === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
                     
                     body.innerHTML = 
                         '<div class="lr-detail-row"><div class="lr-detail-label">Loại nghỉ</div><div class="lr-detail-val">' + d.leave_type_text + '</div></div>' +
                         '<div class="lr-detail-row"><div class="lr-detail-label">Thời gian</div><div class="lr-detail-val">' + d.from_date_fmt + ' đến ' + d.to_date_fmt + '</div></div>' +
-                        '<div class="lr-detail-row"><div class="lr-detail-label">Lý do</div><div class="lr-detail-val">' + d.reason + '</div></div>' +
+                        '<div class="lr-detail-row"><div class="lr-detail-label">Lý do</div><div class="lr-detail-val">' + d.lyDo + '</div></div>' +
                         '<div class="lr-detail-row"><div class="lr-detail-label">Trạng thái</div><div class="lr-detail-val"><span class="lr-badge ' + statusClass + '">' + statusText + '</span></div></div>' +
                         (d.approver_name ? '<div class="lr-detail-row"><div class="lr-detail-label">Người duyệt</div><div class="lr-detail-val">' + d.approver_name + '</div></div>' : '') +
                         (d.approved_at_fmt ? '<div class="lr-detail-row"><div class="lr-detail-label">Ngày duyệt</div><div class="lr-detail-val">' + d.approved_at_fmt + '</div></div>' : '') +
-                        (d.hr_note ? '<div class="lr-detail-row"><div class="lr-detail-label">Phản hồi</div><div class="lr-detail-val" style="color:#ef4444">' + d.hr_note + '</div></div>' : '') +
+                        (d.ghiChuNS ? '<div class="lr-detail-row"><div class="lr-detail-label">Phản hồi</div><div class="lr-detail-val" style="color:#ef4444">' + d.ghiChuNS + '</div></div>' : '') +
                         '<div class="lr-detail-row" style="border:none"><div class="lr-detail-label">Ngày gửi</div><div class="lr-detail-val">' + d.created_at_fmt + '</div></div>';
                 } else {
                     body.innerHTML = '<p style="color:#ef4444; text-align:center;">Lỗi: ' + res.message + '</p>';
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var totalDays = 0;
                 var cells = '<td>' + escapeHtml(emp.hoTen) + '<br><small style="color:#64748b;">' + escapeHtml(emp.phongBan || '') + '</small></td>';
 
-                var empCreatedDate = emp.created_at ? emp.created_at.substring(0, 10) : '';
+                var empCreatedDate = emp.ngayTao ? emp.ngayTao.substring(0, 10) : '';
 
                 for (var d = 1; d <= days; d++) {
                     var dow = getDayOfWeek(month, d);
@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
 
                         if (otInfo) {
-                            cells += '<span class="shift-cell shift-ot" title="' + escapeHtml(otInfo.reason || 'OT đã duyệt') + '">OT</span>';
+                            cells += '<span class="shift-cell shift-ot" title="' + escapeHtml(otInfo.lyDo || 'OT đã duyệt') + '">OT</span>';
                         }
                     }
                     cells += '</td>';

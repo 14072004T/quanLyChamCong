@@ -26,12 +26,12 @@ $statusIcons = [
     'rejected' => 'fa-circle-xmark',
 ];
 
-// Count by status
+// Count by trangThai
 $countPending  = 0;
 $countApproved = 0;
 $countRejected = 0;
 foreach ($leaveRequests as $r) {
-    $s = $r['status'] ?? 'pending';
+    $s = $r['trangThai'] ?? 'pending';
     if ($s === 'pending')  $countPending++;
     if ($s === 'approved') $countApproved++;
     if ($s === 'rejected') $countRejected++;
@@ -114,7 +114,7 @@ $countTotal = count($leaveRequests);
     white-space: nowrap;
 }
 
-.ll-reason {
+.ll-lyDo {
     max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     cursor: help;
 }
@@ -259,8 +259,8 @@ $countTotal = count($leaveRequests);
                     <tbody>
                         <?php foreach ($leaveRequests as $row): ?>
                             <?php
-                                $st = $row['status'] ?? 'pending';
-                                $lt = $row['leave_type'] ?? 'personal';
+                                $st = $row['trangThai'] ?? 'pending';
+                                $lt = $row['loaiNghiPhep'] ?? 'personal';
                                 $rowId = (int)($row['id'] ?? 0);
                                 $empName = htmlspecialchars($row['hoTen'] ?? 'N/A');
                                 $empDept = htmlspecialchars($row['phongBan'] ?? '');
@@ -279,19 +279,19 @@ $countTotal = count($leaveRequests);
                                 </td>
                                 <td>
                                     <div class="ll-date-range">
-                                        <?= htmlspecialchars($row['from_date'] ?? '') ?>
+                                        <?= htmlspecialchars($row['tuNgay'] ?? '') ?>
                                         <i class="fas fa-arrow-right"></i>
-                                        <?= htmlspecialchars($row['to_date'] ?? '') ?>
+                                        <?= htmlspecialchars($row['denNgay'] ?? '') ?>
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="ll-reason" title="<?= htmlspecialchars($row['reason'] ?? '') ?>">
-                                        <?= htmlspecialchars($row['reason'] ?? '') ?>
+                                    <div class="ll-lyDo" title="<?= htmlspecialchars($row['lyDo'] ?? '') ?>">
+                                        <?= htmlspecialchars($row['lyDo'] ?? '') ?>
                                     </div>
                                 </td>
                                 <td>
-                                    <?php if (!empty($row['evidence_file'])): ?>
-                                        <a href="<?= htmlspecialchars($row['evidence_file']) ?>" target="_blank"
+                                    <?php if (!empty($row['tepMinhChung'])): ?>
+                                        <a href="<?= htmlspecialchars($row['tepMinhChung']) ?>" target="_blank"
                                            style="color: #6366f1; font-size: .85em; text-decoration: none;">
                                             <i class="fas fa-paperclip"></i> Tải file
                                         </a>
@@ -308,14 +308,14 @@ $countTotal = count($leaveRequests);
                                         <div class="ll-approver">
                                             <i class="fas fa-user-check"></i>
                                             <?= htmlspecialchars($row['approver_name']) ?>
-                                            <?php if (!empty($row['approved_at'])): ?>
-                                                · <?= htmlspecialchars(substr($row['approved_at'], 0, 16)) ?>
+                                            <?php if (!empty($row['ngayDuyet'])): ?>
+                                                · <?= htmlspecialchars(substr($row['ngayDuyet'], 0, 16)) ?>
                                             <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>
                                 <td style="font-size: .85em; color: #64748b; white-space: nowrap;">
-                                    <?= htmlspecialchars(substr($row['created_at'] ?? '', 0, 16)) ?>
+                                    <?= htmlspecialchars(substr($row['ngayTao'] ?? '', 0, 16)) ?>
                                 </td>
                                 <td style="text-align: center;">
                                     <?php if ($st === 'pending'): ?>
@@ -369,7 +369,7 @@ $countTotal = count($leaveRequests);
         <p id="dialogMsg"></p>
         <form method="POST" action="index.php?page=approve-leave-request" id="confirmForm">
             <input type="hidden" name="id" id="confirmId">
-            <input type="hidden" name="status" id="confirmStatus">
+            <input type="hidden" name="trangThai" id="confirmStatus">
             <div class="ll-dialog-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeConfirm()">Hủy</button>
                 <button type="submit" class="btn" id="confirmBtn">Xác nhận</button>
@@ -379,7 +379,7 @@ $countTotal = count($leaveRequests);
 </div>
 
 <script>
-function confirmAction(id, status, name) {
+function confirmAction(id, trangThai, name) {
     var overlay = document.getElementById('confirmOverlay');
     var icon = document.getElementById('dialogIcon');
     var title = document.getElementById('dialogTitle');
@@ -387,9 +387,9 @@ function confirmAction(id, status, name) {
     var btn = document.getElementById('confirmBtn');
 
     document.getElementById('confirmId').value = id;
-    document.getElementById('confirmStatus').value = status;
+    document.getElementById('confirmStatus').value = trangThai;
 
-    if (status === 'approved') {
+    if (trangThai === 'approved') {
         icon.className = 'll-dialog-icon approve-icon';
         icon.innerHTML = '<i class="fas fa-circle-check"></i>';
         title.textContent = 'Phê duyệt đơn nghỉ phép?';

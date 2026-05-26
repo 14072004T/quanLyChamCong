@@ -45,11 +45,11 @@ if (!isset($_SESSION['user'])) {
     
     <form id="addWifiForm" style="display: grid; gap: 12px; max-width: 500px;">
         <div class="form-group">
-            <label for="wifi_name">Tên WiFi (SSID) <span style="color: #ef4444;">*</span></label>
+            <label for="tenWifi">Tên WiFi (SSID) <span style="color: #ef4444;">*</span></label>
             <input 
                 type="text" 
-                id="wifi_name"
-                name="wifi_name" 
+                id="tenWifi"
+                name="tenWifi" 
                 placeholder="VD: OFFICE_NETWORK"
                 maxlength="120"
                 required
@@ -63,7 +63,7 @@ if (!isset($_SESSION['user'])) {
                 <input 
                     type="checkbox" 
                     id="is_active_add"
-                    name="is_active" 
+                    name="hoatDong" 
                     value="1" 
                     checked
                 > Bật hoạt động
@@ -101,10 +101,10 @@ if (!isset($_SESSION['user'])) {
                     <?php foreach ($wifiList as $wifi): ?>
                         <tr id="row-<?= (int)$wifi['id'] ?>" style="border-bottom: 1px solid #e2e8f0; hover-background: #f8fafc;">
                             <td style="padding: 12px;">
-                                <strong><?= htmlspecialchars($wifi['wifi_name']) ?></strong>
+                                <strong><?= htmlspecialchars($wifi['tenWifi']) ?></strong>
                             </td>
                             <td style="padding: 12px; text-align: center;">
-                                <?php if ($wifi['is_active']): ?>
+                                <?php if ($wifi['hoatDong']): ?>
                                     <span class="badge" style="background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;">
                                         <i class="fas fa-check"></i> Bật
                                     </span>
@@ -115,18 +115,18 @@ if (!isset($_SESSION['user'])) {
                                 <?php endif; ?>
                             </td>
                             <td style="padding: 12px; text-align: center; font-size: 13px; color: #64748b;">
-                                <?= date('d/m/Y H:i', strtotime($wifi['created_at'])) ?>
+                                <?= date('d/m/Y H:i', strtotime($wifi['ngayTao'])) ?>
                             </td>
                             <td style="padding: 12px; text-align: center;">
                                 <!-- Toggle Button -->
                                 <button 
                                     type="button" 
                                     class="btn btn-sm" 
-                                    style="background: <?= $wifi['is_active'] ? '#fbbf24' : '#3b82f6' ?>; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 4px;"
+                                    style="background: <?= $wifi['hoatDong'] ? '#fbbf24' : '#3b82f6' ?>; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 4px;"
                                     onclick="toggleWifi(<?= (int)$wifi['id'] ?>)"
-                                    title="<?= $wifi['is_active'] ? 'Tắt' : 'Bật' ?>"
+                                    title="<?= $wifi['hoatDong'] ? 'Tắt' : 'Bật' ?>"
                                 >
-                                    <i class="fas fa-power-off"></i> <?= $wifi['is_active'] ? 'Tắt' : 'Bật' ?>
+                                    <i class="fas fa-power-off"></i> <?= $wifi['hoatDong'] ? 'Tắt' : 'Bật' ?>
                                 </button>
 
                                 <!-- Edit Button -->
@@ -134,7 +134,7 @@ if (!isset($_SESSION['user'])) {
                                     type="button" 
                                     class="btn btn-sm" 
                                     style="background: #0284c7; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 4px;"
-                                    onclick="showEditForm(<?= (int)$wifi['id'] ?>, '<?= htmlspecialchars(addslashes($wifi['wifi_name'])) ?>')"
+                                    onclick="showEditForm(<?= (int)$wifi['id'] ?>, '<?= htmlspecialchars(addslashes($wifi['tenWifi'])) ?>')"
                                     title="Sửa"
                                 >
                                     <i class="fas fa-edit"></i> Sửa
@@ -145,7 +145,7 @@ if (!isset($_SESSION['user'])) {
                                     type="button" 
                                     class="btn btn-sm" 
                                     style="background: #dc2626; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
-                                    onclick="deleteWifi(<?= (int)$wifi['id'] ?>, '<?= htmlspecialchars(addslashes($wifi['wifi_name'])) ?>')"
+                                    onclick="deleteWifi(<?= (int)$wifi['id'] ?>, '<?= htmlspecialchars(addslashes($wifi['tenWifi'])) ?>')"
                                     title="Xóa"
                                 >
                                     <i class="fas fa-trash"></i> Xóa
@@ -174,7 +174,7 @@ if (!isset($_SESSION['user'])) {
                 <input 
                     type="text" 
                     id="edit_wifi_name"
-                    name="wifi_name" 
+                    name="tenWifi" 
                     placeholder="VD: OFFICE_NETWORK"
                     maxlength="120"
                     required
@@ -187,7 +187,7 @@ if (!isset($_SESSION['user'])) {
                     <input 
                         type="checkbox" 
                         id="edit_is_active"
-                        name="is_active" 
+                        name="hoatDong" 
                         value="1"
                     > Bật hoạt động
                 </label>

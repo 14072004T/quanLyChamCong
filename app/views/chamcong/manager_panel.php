@@ -93,7 +93,7 @@ $totalOtHours = array_sum(array_map(function ($row) { return (float)($row['overt
         </div>
     </div>
 
-    <div class="hrd-panel mgr-approval-status">
+    <div class="hrd-panel mgr-approval-trangThai">
         <div class="hrd-panel-head">
             <span>Thông báo</span>
         </div>
@@ -195,12 +195,12 @@ $totalOtHours = array_sum(array_map(function ($row) { return (float)($row['overt
         options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
     });
 
-    fetch('index.php?page=manager-api-approvals&status=approved', { headers: { Accept: 'application/json' } })
+    fetch('index.php?page=manager-api-approvals&trangThai=approved', { headers: { Accept: 'application/json' } })
         .then(function(r) { return r.json(); })
         .then(function(json) { document.getElementById('mgr-appr-approved').textContent = (json.data || []).length; })
         .catch(function() {});
 
-    fetch('index.php?page=manager-api-approvals&status=rejected', { headers: { Accept: 'application/json' } })
+    fetch('index.php?page=manager-api-approvals&trangThai=rejected', { headers: { Accept: 'application/json' } })
         .then(function(r) { return r.json(); })
         .then(function(json) { document.getElementById('mgr-appr-rejected').textContent = (json.data || []).length; })
         .catch(function() {});

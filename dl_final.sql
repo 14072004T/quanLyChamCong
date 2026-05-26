@@ -24,31 +24,31 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Table structure for table `attendance_corrections`
+-- Table structure for table `suaChamCong`
 --
 
-CREATE TABLE `attendance_corrections` (
+CREATE TABLE `suaChamCong` (
   `id` int(11) NOT NULL,
   `maND` int(11) NOT NULL,
-  `attendance_date` date NOT NULL,
-  `old_time` datetime DEFAULT NULL,
-  `new_time` datetime NOT NULL,
-  `reason` text NOT NULL,
-  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  `hr_note` varchar(255) DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
-  `evidence_image` varchar(255) DEFAULT NULL,
-  `proposed_checkin` datetime DEFAULT NULL,
-  `proposed_checkout` datetime DEFAULT NULL,
-  `evidence_file` varchar(255) DEFAULT NULL
+  `ngayChamCong` date NOT NULL,
+  `gioCu` datetime DEFAULT NULL,
+  `gioMoi` datetime NOT NULL,
+  `lyDo` text NOT NULL,
+  `trangThai` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `ghiChuNS` varchar(255) DEFAULT NULL,
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+  `anhMinhChung` varchar(255) DEFAULT NULL,
+  `gioVaoDeXuat` datetime DEFAULT NULL,
+  `gioRaDeXuat` datetime DEFAULT NULL,
+  `tepMinhChung` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `attendance_corrections`
+-- Dumping data for table `suaChamCong`
 --
 
-INSERT INTO `attendance_corrections` (`id`, `maND`, `attendance_date`, `old_time`, `new_time`, `reason`, `status`, `hr_note`, `created_at`, `updated_at`, `evidence_image`, `proposed_checkin`, `proposed_checkout`, `evidence_file`) VALUES
+INSERT INTO `suaChamCong` (`id`, `maND`, `ngayChamCong`, `gioCu`, `gioMoi`, `lyDo`, `trangThai`, `ghiChuNS`, `ngayTao`, `ngayCapNhat`, `anhMinhChung`, `gioVaoDeXuat`, `gioRaDeXuat`, `tepMinhChung`) VALUES
 (1, 4, '2026-03-20', NULL, '2026-03-21 20:27:00', 'quên', 'rejected', '', '2026-03-21 20:27:17', '2026-03-27 16:32:19', NULL, NULL, NULL, NULL),
 (2, 1, '2026-03-20', '2026-03-21 22:06:00', '2026-03-21 23:06:00', 'out', 'rejected', '', '2026-03-21 22:07:23', '2026-03-22 18:22:57', NULL, NULL, NULL, NULL),
 (3, 1, '2026-03-15', '2026-03-15 08:45:00', '2026-03-15 08:00:00', 'Qu├¬n chß║Ñm c├┤ng - ─æ├ú c├│ mß║Àt ─æ├║ng giß╗Ø', 'rejected', 'kh', '2026-04-01 11:59:11', '2026-04-01 22:32:09', NULL, NULL, NULL, NULL),
@@ -64,28 +64,28 @@ INSERT INTO `attendance_corrections` (`id`, `maND`, `attendance_date`, `old_time
 -- --------------------------------------------------------
 
 --
--- Table structure for table `attendance_daily_summary`
+-- Table structure for table `tongHopNgayCong`
 --
 
-CREATE TABLE `attendance_daily_summary` (
+CREATE TABLE `tongHopNgayCong` (
   `id` int(11) NOT NULL,
   `maND` int(11) NOT NULL,
-  `work_date` date NOT NULL,
-  `first_in` datetime DEFAULT NULL,
-  `last_out` datetime DEFAULT NULL,
-  `work_minutes` int(11) NOT NULL DEFAULT 0,
-  `overtime_minutes` int(11) NOT NULL DEFAULT 0,
-  `late_minutes` int(11) NOT NULL DEFAULT 0,
-  `status` enum('normal','late','absent','leave') NOT NULL DEFAULT 'normal',
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+  `ngayLamViec` date NOT NULL,
+  `gioVaoDau` datetime DEFAULT NULL,
+  `gioRaCuoi` datetime DEFAULT NULL,
+  `phutLamViec` int(11) NOT NULL DEFAULT 0,
+  `phutTangCa` int(11) NOT NULL DEFAULT 0,
+  `phutDiTre` int(11) NOT NULL DEFAULT 0,
+  `trangThai` enum('normal','late','absent','leave') NOT NULL DEFAULT 'normal',
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `attendance_daily_summary`
+-- Dumping data for table `tongHopNgayCong`
 --
 
-INSERT INTO `attendance_daily_summary` (`id`, `maND`, `work_date`, `first_in`, `last_out`, `work_minutes`, `overtime_minutes`, `late_minutes`, `status`, `created_at`, `updated_at`) VALUES
+INSERT INTO `tongHopNgayCong` (`id`, `maND`, `ngayLamViec`, `gioVaoDau`, `gioRaCuoi`, `phutLamViec`, `phutTangCa`, `phutDiTre`, `trangThai`, `ngayTao`, `ngayCapNhat`) VALUES
 (1, 1, '2026-01-01', NULL, NULL, 0, 0, 0, 'absent', '2026-05-05 20:06:06', NULL),
 (5, 5, '2026-01-01', '2026-01-01 08:09:00', '2026-01-01 18:00:00', 591, 60, 9, 'late', '2026-05-05 20:06:06', NULL),
 (6, 6, '2026-01-01', NULL, NULL, 0, 0, 0, 'absent', '2026-05-05 20:06:06', NULL),
@@ -284,7 +284,7 @@ INSERT INTO `attendance_daily_summary` (`id`, `maND`, `work_date`, `first_in`, `
 (430, 1, '2026-02-16', '2026-02-16 07:58:00', '2026-02-16 17:03:00', 545, 3, 0, 'normal', '2026-05-05 20:06:08', NULL),
 (434, 5, '2026-02-16', '2026-02-16 07:57:00', '2026-02-16 17:06:00', 549, 6, 0, 'normal', '2026-05-05 20:06:08', NULL),
 (435, 6, '2026-02-16', '2026-02-16 08:10:00', '2026-02-16 17:58:00', 588, 58, 10, 'late', '2026-05-05 20:06:08', NULL);
-INSERT INTO `attendance_daily_summary` (`id`, `maND`, `work_date`, `first_in`, `last_out`, `work_minutes`, `overtime_minutes`, `late_minutes`, `status`, `created_at`, `updated_at`) VALUES
+INSERT INTO `tongHopNgayCong` (`id`, `maND`, `ngayLamViec`, `gioVaoDau`, `gioRaCuoi`, `phutLamViec`, `phutTangCa`, `phutDiTre`, `trangThai`, `ngayTao`, `ngayCapNhat`) VALUES
 (436, 7, '2026-02-16', '2026-02-16 07:58:00', '2026-02-16 17:08:00', 550, 8, 0, 'normal', '2026-05-05 20:06:08', NULL),
 (437, 8, '2026-02-16', '2026-02-16 08:23:00', '2026-02-16 17:00:00', 517, 0, 23, 'late', '2026-05-05 20:06:08', NULL),
 (441, 1, '2026-02-17', NULL, NULL, 0, 0, 0, 'absent', '2026-05-05 20:06:08', NULL),
@@ -483,7 +483,7 @@ INSERT INTO `attendance_daily_summary` (`id`, `maND`, `work_date`, `first_in`, `
 (865, 7, '2026-04-02', '2026-04-02 07:56:00', '2026-04-02 17:06:00', 550, 6, 0, 'normal', '2026-05-05 20:06:11', NULL),
 (866, 8, '2026-04-02', NULL, NULL, 0, 0, 0, 'absent', '2026-05-05 20:06:11', NULL),
 (870, 1, '2026-04-03', NULL, NULL, 0, 0, 0, 'absent', '2026-05-05 20:06:11', NULL);
-INSERT INTO `attendance_daily_summary` (`id`, `maND`, `work_date`, `first_in`, `last_out`, `work_minutes`, `overtime_minutes`, `late_minutes`, `status`, `created_at`, `updated_at`) VALUES
+INSERT INTO `tongHopNgayCong` (`id`, `maND`, `ngayLamViec`, `gioVaoDau`, `gioRaCuoi`, `phutLamViec`, `phutTangCa`, `phutDiTre`, `trangThai`, `ngayTao`, `ngayCapNhat`) VALUES
 (874, 5, '2026-04-03', '2026-04-03 07:53:00', '2026-04-03 17:08:00', 555, 8, 0, 'normal', '2026-05-05 20:06:11', NULL),
 (875, 6, '2026-04-03', NULL, NULL, 0, 0, 0, 'absent', '2026-05-05 20:06:11', NULL),
 (876, 7, '2026-04-03', '2026-04-03 08:43:00', '2026-04-03 17:06:00', 503, 6, 43, 'late', '2026-05-05 20:06:11', NULL),
@@ -627,23 +627,23 @@ INSERT INTO `attendance_daily_summary` (`id`, `maND`, `work_date`, `first_in`, `
 -- --------------------------------------------------------
 
 --
--- Table structure for table `attendance_employee_shift`
+-- Table structure for table `caNhanVien`
 --
 
-CREATE TABLE `attendance_employee_shift` (
+CREATE TABLE `caNhanVien` (
   `id` int(11) NOT NULL,
   `maND` int(11) NOT NULL,
-  `shift_id` int(11) NOT NULL,
-  `effective_from` date NOT NULL,
-  `effective_to` date DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+  `maCa` int(11) NOT NULL,
+  `hieuLucTu` date NOT NULL,
+  `hieuLucDen` date DEFAULT NULL,
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `attendance_employee_shift`
+-- Dumping data for table `caNhanVien`
 --
 
-INSERT INTO `attendance_employee_shift` (`id`, `maND`, `shift_id`, `effective_from`, `effective_to`, `created_at`) VALUES
+INSERT INTO `caNhanVien` (`id`, `maND`, `maCa`, `hieuLucTu`, `hieuLucDen`, `ngayTao`) VALUES
 (1, 1, 1, '2026-03-21', NULL, '2026-03-21 12:56:34'),
 (5, 6, 1, '2026-03-20', NULL, '2026-03-23 19:27:03'),
 (6, 7, 1, '2026-03-20', NULL, '2026-03-23 19:27:03'),
@@ -662,25 +662,25 @@ INSERT INTO `attendance_employee_shift` (`id`, `maND`, `shift_id`, `effective_fr
 -- --------------------------------------------------------
 
 --
--- Table structure for table `attendance_logs`
+-- Table structure for table `lichSuChamCong`
 --
 
-CREATE TABLE `attendance_logs` (
+CREATE TABLE `lichSuChamCong` (
   `id` int(11) NOT NULL,
   `maND` int(11) NOT NULL,
-  `action` enum('IN','OUT') NOT NULL,
-  `method` enum('LAN','QR') NOT NULL DEFAULT 'LAN',
-  `wifi_name` varchar(120) DEFAULT NULL,
-  `device_info` varchar(255) DEFAULT NULL,
-  `note` varchar(255) DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+  `hanhDong` enum('IN','OUT') NOT NULL,
+  `phuongThuc` enum('LAN','QR') NOT NULL DEFAULT 'LAN',
+  `tenWifi` varchar(120) DEFAULT NULL,
+  `thongTinThietBi` varchar(255) DEFAULT NULL,
+  `ghiChu` varchar(255) DEFAULT NULL,
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `attendance_logs`
+-- Dumping data for table `lichSuChamCong`
 --
 
-INSERT INTO `attendance_logs` (`id`, `maND`, `action`, `method`, `wifi_name`, `device_info`, `note`, `created_at`) VALUES
+INSERT INTO `lichSuChamCong` (`id`, `maND`, `hanhDong`, `phuongThuc`, `tenWifi`, `thongTinThietBi`, `ghiChu`, `ngayTao`) VALUES
 (7, 5, 'IN', 'LAN', NULL, NULL, NULL, '2026-01-01 08:09:00'),
 (8, 5, 'OUT', 'LAN', NULL, NULL, NULL, '2026-01-01 18:00:00'),
 (9, 7, 'IN', 'LAN', NULL, NULL, NULL, '2026-01-01 07:54:00'),
@@ -1051,7 +1051,7 @@ INSERT INTO `attendance_logs` (`id`, `maND`, `action`, `method`, `wifi_name`, `d
 (790, 7, 'OUT', 'LAN', NULL, NULL, NULL, '2026-02-16 17:08:00'),
 (791, 8, 'IN', 'LAN', NULL, NULL, NULL, '2026-02-16 08:23:00'),
 (792, 8, 'OUT', 'LAN', NULL, NULL, NULL, '2026-02-16 17:00:00');
-INSERT INTO `attendance_logs` (`id`, `maND`, `action`, `method`, `wifi_name`, `device_info`, `note`, `created_at`) VALUES
+INSERT INTO `lichSuChamCong` (`id`, `maND`, `hanhDong`, `phuongThuc`, `tenWifi`, `thongTinThietBi`, `ghiChu`, `ngayTao`) VALUES
 (803, 5, 'IN', 'LAN', NULL, NULL, NULL, '2026-02-17 07:56:00'),
 (804, 5, 'OUT', 'LAN', NULL, NULL, NULL, '2026-02-17 17:10:00'),
 (805, 6, 'IN', 'LAN', NULL, NULL, NULL, '2026-02-17 07:50:00'),
@@ -1398,7 +1398,7 @@ INSERT INTO `attendance_logs` (`id`, `maND`, `action`, `method`, `wifi_name`, `d
 (1574, 7, 'OUT', 'LAN', NULL, NULL, NULL, '2026-04-03 17:06:00'),
 (1575, 8, 'IN', 'LAN', NULL, NULL, NULL, '2026-04-03 07:52:00'),
 (1576, 8, 'OUT', 'LAN', NULL, NULL, NULL, '2026-04-03 17:10:00');
-INSERT INTO `attendance_logs` (`id`, `maND`, `action`, `method`, `wifi_name`, `device_info`, `note`, `created_at`) VALUES
+INSERT INTO `lichSuChamCong` (`id`, `maND`, `hanhDong`, `phuongThuc`, `tenWifi`, `thongTinThietBi`, `ghiChu`, `ngayTao`) VALUES
 (1587, 5, 'IN', 'LAN', NULL, NULL, NULL, '2026-04-04 07:48:00'),
 (1588, 5, 'OUT', 'LAN', NULL, NULL, NULL, '2026-04-04 17:07:00'),
 (1589, 6, 'IN', 'LAN', NULL, NULL, NULL, '2026-04-04 07:46:00'),
@@ -1641,51 +1641,51 @@ INSERT INTO `attendance_logs` (`id`, `maND`, `action`, `method`, `wifi_name`, `d
 -- --------------------------------------------------------
 
 --
--- Table structure for table `attendance_monthly_approval`
+-- Table structure for table `duyetCongThang`
 --
 
-CREATE TABLE `attendance_monthly_approval` (
+CREATE TABLE `duyetCongThang` (
   `id` int(11) NOT NULL,
-  `month_key` char(7) NOT NULL COMMENT 'YYYY-MM',
-  `hr_sender_id` int(11) NOT NULL,
-  `manager_approver_id` int(11) DEFAULT NULL,
-  `status` enum('draft','submitted','approved','rejected') NOT NULL DEFAULT 'draft',
-  `submitted_at` datetime DEFAULT NULL,
-  `approved_at` datetime DEFAULT NULL,
-  `note` varchar(255) DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
-  `department` varchar(120) NOT NULL DEFAULT ''
+  `thangNam` char(7) NOT NULL COMMENT 'YYYY-MM',
+  `maNguoiGuiNS` int(11) NOT NULL,
+  `maNguoiDuyetQL` int(11) DEFAULT NULL,
+  `trangThai` enum('draft','submitted','approved','rejected') NOT NULL DEFAULT 'draft',
+  `ngayGui` datetime DEFAULT NULL,
+  `ngayDuyet` datetime DEFAULT NULL,
+  `ghiChu` varchar(255) DEFAULT NULL,
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+  `phongBan` varchar(120) NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `attendance_monthly_approval`
+-- Dumping data for table `duyetCongThang`
 --
 
-INSERT INTO `attendance_monthly_approval` (`id`, `month_key`, `hr_sender_id`, `manager_approver_id`, `status`, `submitted_at`, `approved_at`, `note`, `created_at`, `updated_at`, `department`) VALUES
+INSERT INTO `duyetCongThang` (`id`, `thangNam`, `maNguoiGuiNS`, `maNguoiDuyetQL`, `trangThai`, `ngayGui`, `ngayDuyet`, `ghiChu`, `ngayTao`, `ngayCapNhat`, `phongBan`) VALUES
 (1, '2026-03', 2, 3, 'approved', '2026-04-01 22:24:46', '2026-04-01 23:20:26', '', '2026-03-27 16:30:54', '2026-04-01 23:20:26', ''),
 (3, '2026-04', 2, NULL, 'submitted', '2026-04-01 23:36:08', NULL, NULL, '2026-04-01 22:27:36', '2026-04-01 23:36:08', '');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `attendance_shifts`
+-- Table structure for table `caLamViec`
 --
 
-CREATE TABLE `attendance_shifts` (
+CREATE TABLE `caLamViec` (
   `id` int(11) NOT NULL,
-  `shift_name` varchar(100) NOT NULL,
-  `start_time` time NOT NULL,
-  `end_time` time NOT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+  `tenCa` varchar(100) NOT NULL,
+  `gioBatDau` time NOT NULL,
+  `gioKetThuc` time NOT NULL,
+  `hoatDong` tinyint(1) NOT NULL DEFAULT 1,
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `attendance_shifts`
+-- Dumping data for table `caLamViec`
 --
 
-INSERT INTO `attendance_shifts` (`id`, `shift_name`, `start_time`, `end_time`, `is_active`, `created_at`) VALUES
+INSERT INTO `caLamViec` (`id`, `tenCa`, `gioBatDau`, `gioKetThuc`, `hoatDong`, `ngayTao`) VALUES
 (1, 'Ca hanh chinh', '08:00:00', '17:00:00', 1, '2026-03-21 12:56:34'),
 (2, 'Ca toi', '14:00:00', '22:00:00', 1, '2026-03-21 12:56:34'),
 (3, 'Ca chieu', '14:00:00', '22:00:00', 1, '2026-04-01 11:59:11');
@@ -1693,55 +1693,55 @@ INSERT INTO `attendance_shifts` (`id`, `shift_name`, `start_time`, `end_time`, `
 -- --------------------------------------------------------
 
 --
--- Table structure for table `attendance_wifi`
+-- Table structure for table `wifiChamCong`
 --
 
-CREATE TABLE `attendance_wifi` (
+CREATE TABLE `wifiChamCong` (
   `id` int(11) NOT NULL,
-  `wifi_name` varchar(120) NOT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `ip_range` varchar(50) DEFAULT NULL,
-  `gateway` varchar(50) DEFAULT NULL,
-  `description` varchar(255) DEFAULT NULL,
+  `tenWifi` varchar(120) NOT NULL,
+  `hoatDong` tinyint(1) NOT NULL DEFAULT 1,
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  `daiIP` varchar(50) DEFAULT NULL,
+  `congMacDinh` varchar(50) DEFAULT NULL,
+  `moTa` varchar(255) DEFAULT NULL,
   `ssid` varchar(120) DEFAULT NULL,
-  `password` varchar(120) DEFAULT NULL,
-  `location` varchar(255) DEFAULT NULL
+  `matKhau` varchar(120) DEFAULT NULL,
+  `viTri` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `attendance_wifi`
+-- Dumping data for table `wifiChamCong`
 --
 
-INSERT INTO `attendance_wifi` (`id`, `wifi_name`, `is_active`, `created_at`, `ip_range`, `gateway`, `description`, `ssid`, `password`, `location`) VALUES
+INSERT INTO `wifiChamCong` (`id`, `tenWifi`, `hoatDong`, `ngayTao`, `daiIP`, `congMacDinh`, `moTa`, `ssid`, `matKhau`, `viTri`) VALUES
 (4, 'Wifi Công ty', 1, '2026-03-23 17:58:32', '192.168.1', '192.168.1.1', 'Mạng nội bộ công ty - Dải IP 192.168.1.x', NULL, NULL, NULL),
 (12, 'wifi-free', 0, '2026-05-05 10:14:38', '172.20.10', '172.20.10.1', '', '', '123456', 'tầng 1');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `don_nghi_phep`
+-- Table structure for table `donNghiPhep`
 --
 
-CREATE TABLE `don_nghi_phep` (
+CREATE TABLE `donNghiPhep` (
   `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `from_date` date NOT NULL,
-  `to_date` date NOT NULL,
-  `reason` text NOT NULL,
-  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `leave_type` varchar(50) NOT NULL DEFAULT 'personal',
-  `evidence_file` varchar(255) DEFAULT NULL,
-  `approved_by` int(11) DEFAULT NULL,
-  `approved_at` datetime DEFAULT NULL
+  `maND` int(11) NOT NULL,
+  `tuNgay` date NOT NULL,
+  `denNgay` date NOT NULL,
+  `lyDo` text NOT NULL,
+  `trangThai` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  `loaiNghiPhep` varchar(50) NOT NULL DEFAULT 'personal',
+  `tepMinhChung` varchar(255) DEFAULT NULL,
+  `nguoiDuyet` int(11) DEFAULT NULL,
+  `ngayDuyet` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `don_nghi_phep`
+-- Dumping data for table `donNghiPhep`
 --
 
-INSERT INTO `don_nghi_phep` (`id`, `user_id`, `from_date`, `to_date`, `reason`, `status`, `created_at`, `leave_type`, `evidence_file`, `approved_by`, `approved_at`) VALUES
+INSERT INTO `donNghiPhep` (`id`, `maND`, `tuNgay`, `denNgay`, `lyDo`, `trangThai`, `ngayTao`, `loaiNghiPhep`, `tepMinhChung`, `nguoiDuyet`, `ngayDuyet`) VALUES
 (1, 1, '2026-05-04', '2026-05-05', 'việc đột xuất', 'rejected', '2026-05-04 20:32:10', 'personal', NULL, NULL, NULL),
 (2, 1, '2026-05-04', '2026-05-05', 'có việc gia đình', 'approved', '2026-05-04 20:52:39', 'emergency', NULL, 2, '2026-05-04 20:53:06'),
 (3, 6, '2026-05-07', '2026-05-09', 'nghỉ phép', 'rejected', '2026-05-05 19:07:55', 'personal', NULL, 2, '2026-05-05 19:08:28'),
@@ -1750,24 +1750,24 @@ INSERT INTO `don_nghi_phep` (`id`, `user_id`, `from_date`, `to_date`, `reason`, 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `leave_requests`
+-- Table structure for table `yeuCauNghiPhep`
 --
 
-CREATE TABLE `leave_requests` (
+CREATE TABLE `yeuCauNghiPhep` (
   `id` int(11) NOT NULL,
   `maND` int(11) NOT NULL,
-  `leave_date` date NOT NULL,
-  `leave_type` varchar(50) NOT NULL DEFAULT 'annual',
-  `is_half_day` tinyint(1) NOT NULL DEFAULT 0,
-  `reason` text DEFAULT NULL,
-  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  `manager_note` varchar(255) DEFAULT NULL,
-  `manager_approver_id` int(11) DEFAULT NULL,
-  `approved_at` datetime DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
-  `from_date` date NOT NULL DEFAULT '2000-01-01',
-  `to_date` date NOT NULL DEFAULT '2000-01-01'
+  `ngayNghi` date NOT NULL,
+  `loaiNghiPhep` varchar(50) NOT NULL DEFAULT 'annual',
+  `laNuaNgay` tinyint(1) NOT NULL DEFAULT 0,
+  `lyDo` text DEFAULT NULL,
+  `trangThai` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `ghiChuQL` varchar(255) DEFAULT NULL,
+  `maNguoiDuyetQL` int(11) DEFAULT NULL,
+  `ngayDuyet` datetime DEFAULT NULL,
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+  `tuNgay` date NOT NULL DEFAULT '2000-01-01',
+  `denNgay` date NOT NULL DEFAULT '2000-01-01'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -1785,15 +1785,15 @@ CREATE TABLE `nguoidung` (
   `chucVu` enum('Nhân viên','Bộ phận Nhân sự','Quản lý / Ban lãnh đạo','Bộ phận Kỹ thuật') NOT NULL DEFAULT 'Nhân viên',
   `phongBan` varchar(100) DEFAULT NULL,
   `trangThai` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `nguoidung`
 --
 
-INSERT INTO `nguoidung` (`maND`, `maTK`, `hoTen`, `email`, `soDienThoai`, `chucVu`, `phongBan`, `trangThai`, `created_at`, `updated_at`) VALUES
+INSERT INTO `nguoidung` (`maND`, `maTK`, `hoTen`, `email`, `soDienThoai`, `chucVu`, `phongBan`, `trangThai`, `ngayTao`, `ngayCapNhat`) VALUES
 (1, 1, 'Nguyen Van Nhan Vien', 'nhanvien01@company.local', '0901000001', 'Nhân viên', 'Sản xuất', 1, '2026-03-21 12:56:34', NULL),
 (2, 2, 'Tran Thi HR', 'hr01@company.local', '0901000002', 'Bộ phận Nhân sự', 'Nhân sự', 1, '2026-03-21 12:56:34', NULL),
 (3, 3, 'Le Van Quan Ly', 'manager01@company.local', '0901000003', 'Quản lý / Ban lãnh đạo', 'Điều hành', 1, '2026-03-21 12:56:34', NULL),
@@ -1809,68 +1809,68 @@ INSERT INTO `nguoidung` (`maND`, `maTK`, `hoTen`, `email`, `soDienThoai`, `chucV
 -- --------------------------------------------------------
 
 --
--- Table structure for table `ot_requests`
+-- Table structure for table `yeuCauTangCa`
 --
 
-CREATE TABLE `ot_requests` (
+CREATE TABLE `yeuCauTangCa` (
   `id` int(11) NOT NULL,
   `maND` int(11) NOT NULL,
-  `ot_date` date NOT NULL,
-  `start_time` time DEFAULT NULL,
-  `end_time` time DEFAULT NULL,
-  `hours` decimal(5,2) NOT NULL DEFAULT 0.00,
-  `reason` text DEFAULT NULL,
-  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  `manager_note` varchar(255) DEFAULT NULL,
-  `manager_approver_id` int(11) DEFAULT NULL,
-  `approved_at` datetime DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+  `ngayTangCa` date NOT NULL,
+  `gioBatDau` time DEFAULT NULL,
+  `gioKetThuc` time DEFAULT NULL,
+  `soGio` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `lyDo` text DEFAULT NULL,
+  `trangThai` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `ghiChuQL` varchar(255) DEFAULT NULL,
+  `maNguoiDuyetQL` int(11) DEFAULT NULL,
+  `ngayDuyet` datetime DEFAULT NULL,
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `shift_change_requests`
+-- Table structure for table `yeuCauDoiCa`
 --
 
-CREATE TABLE `shift_change_requests` (
+CREATE TABLE `yeuCauDoiCa` (
   `id` int(11) NOT NULL,
   `maND` int(11) NOT NULL,
-  `request_date` date NOT NULL,
-  `current_shift_id` int(11) DEFAULT NULL,
-  `requested_shift_id` int(11) DEFAULT NULL,
-  `current_shift_name` varchar(100) DEFAULT NULL,
-  `requested_shift_name` varchar(100) DEFAULT NULL,
-  `reason` text DEFAULT NULL,
-  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  `manager_note` varchar(255) DEFAULT NULL,
-  `manager_approver_id` int(11) DEFAULT NULL,
-  `approved_at` datetime DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+  `ngayYeuCau` date NOT NULL,
+  `maCaHienTai` int(11) DEFAULT NULL,
+  `maCaMoi` int(11) DEFAULT NULL,
+  `tenCaHienTai` varchar(100) DEFAULT NULL,
+  `tenCaMoi` varchar(100) DEFAULT NULL,
+  `lyDo` text DEFAULT NULL,
+  `trangThai` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `ghiChuQL` varchar(255) DEFAULT NULL,
+  `maNguoiDuyetQL` int(11) DEFAULT NULL,
+  `ngayDuyet` datetime DEFAULT NULL,
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `system_settings`
+-- Table structure for table `caiDatHeThong`
 --
 
-CREATE TABLE `system_settings` (
+CREATE TABLE `caiDatHeThong` (
   `id` int(11) NOT NULL,
-  `setting_key` varchar(120) NOT NULL,
-  `setting_value` text DEFAULT NULL,
-  `description` varchar(255) DEFAULT NULL,
-  `updated_by` int(11) DEFAULT NULL,
-  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `tenCaiDat` varchar(120) NOT NULL,
+  `giaTri` text DEFAULT NULL,
+  `moTa` varchar(255) DEFAULT NULL,
+  `nguoiCapNhat` int(11) DEFAULT NULL,
+  `ngayCapNhat` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `system_settings`
+-- Dumping data for table `caiDatHeThong`
 --
 
-INSERT INTO `system_settings` (`id`, `setting_key`, `setting_value`, `description`, `updated_by`, `updated_at`) VALUES
+INSERT INTO `caiDatHeThong` (`id`, `tenCaiDat`, `giaTri`, `moTa`, `nguoiCapNhat`, `ngayCapNhat`) VALUES
 (1, 'ALLOW_QR_CHECKIN', '0', 'Cho phep cham cong QR du phong', NULL, '2026-05-05 18:58:17'),
 (2, 'MAX_CORRECTION_DAYS', '7', 'So ngay toi da cho phep gui yeu cau chinh sua', NULL, '2026-05-05 18:58:14'),
 (3, 'DEFAULT_WORK_MINUTES', '480', 'So phut cong chuan moi ngay', NULL, '2026-03-21 12:56:34'),
@@ -1890,15 +1890,15 @@ CREATE TABLE `taikhoan` (
   `matKhau` varchar(255) NOT NULL,
   `trangThai` enum('Hoạt động','Ngừng hoạt động') NOT NULL DEFAULT 'Hoạt động',
   `lanDangNhapCuoi` datetime DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `taikhoan`
 --
 
-INSERT INTO `taikhoan` (`maTK`, `tenDangNhap`, `matKhau`, `trangThai`, `lanDangNhapCuoi`, `created_at`, `updated_at`) VALUES
+INSERT INTO `taikhoan` (`maTK`, `tenDangNhap`, `matKhau`, `trangThai`, `lanDangNhapCuoi`, `ngayTao`, `ngayCapNhat`) VALUES
 (1, 'nhanvien01', 'e10adc3949ba59abbe56e057f20f883e', 'Hoạt động', NULL, '2026-03-21 12:56:34', NULL),
 (2, 'hr01', 'e10adc3949ba59abbe56e057f20f883e', 'Hoạt động', NULL, '2026-03-21 12:56:34', NULL),
 (3, 'manager01', 'e10adc3949ba59abbe56e057f20f883e', 'Hoạt động', NULL, '2026-03-21 12:56:34', NULL),
@@ -1916,70 +1916,70 @@ INSERT INTO `taikhoan` (`maTK`, `tenDangNhap`, `matKhau`, `trangThai`, `lanDangN
 --
 
 --
--- Indexes for table `attendance_corrections`
+-- Indexes for table `suaChamCong`
 --
-ALTER TABLE `attendance_corrections`
+ALTER TABLE `suaChamCong`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_correction_mand_status` (`maND`,`status`),
-  ADD KEY `idx_correction_date` (`attendance_date`);
+  ADD KEY `idx_correction_mand_status` (`maND`,`trangThai`),
+  ADD KEY `idx_correction_date` (`ngayChamCong`);
 
 --
--- Indexes for table `attendance_daily_summary`
+-- Indexes for table `tongHopNgayCong`
 --
-ALTER TABLE `attendance_daily_summary`
+ALTER TABLE `tongHopNgayCong`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_summary_user_date` (`maND`,`work_date`),
-  ADD KEY `idx_summary_date` (`work_date`);
+  ADD UNIQUE KEY `uk_summary_user_date` (`maND`,`ngayLamViec`),
+  ADD KEY `idx_summary_date` (`ngayLamViec`);
 
 --
--- Indexes for table `attendance_employee_shift`
+-- Indexes for table `caNhanVien`
 --
-ALTER TABLE `attendance_employee_shift`
+ALTER TABLE `caNhanVien`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_emp_shift_mand` (`maND`),
-  ADD KEY `idx_emp_shift_shift` (`shift_id`);
+  ADD KEY `idx_emp_shift_shift` (`maCa`);
 
 --
--- Indexes for table `attendance_logs`
+-- Indexes for table `lichSuChamCong`
 --
-ALTER TABLE `attendance_logs`
+ALTER TABLE `lichSuChamCong`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_logs_mand_created` (`maND`,`created_at`),
-  ADD KEY `idx_logs_created` (`created_at`);
+  ADD KEY `idx_logs_mand_created` (`maND`,`ngayTao`),
+  ADD KEY `idx_logs_created` (`ngayTao`);
 
 --
--- Indexes for table `attendance_monthly_approval`
+-- Indexes for table `duyetCongThang`
 --
-ALTER TABLE `attendance_monthly_approval`
+ALTER TABLE `duyetCongThang`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_month_dept` (`month_key`,`department`),
-  ADD KEY `idx_monthly_status` (`status`),
-  ADD KEY `fk_monthly_hr_sender` (`hr_sender_id`),
-  ADD KEY `fk_monthly_manager` (`manager_approver_id`);
+  ADD UNIQUE KEY `uk_month_dept` (`thangNam`,`phongBan`),
+  ADD KEY `idx_monthly_status` (`trangThai`),
+  ADD KEY `fk_monthly_hr_sender` (`maNguoiGuiNS`),
+  ADD KEY `fk_monthly_manager` (`maNguoiDuyetQL`);
 
 --
--- Indexes for table `attendance_shifts`
+-- Indexes for table `caLamViec`
 --
-ALTER TABLE `attendance_shifts`
+ALTER TABLE `caLamViec`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `attendance_wifi`
+-- Indexes for table `wifiChamCong`
 --
-ALTER TABLE `attendance_wifi`
+ALTER TABLE `wifiChamCong`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_wifi_name` (`wifi_name`);
+  ADD UNIQUE KEY `uk_wifi_name` (`tenWifi`);
 
 --
--- Indexes for table `don_nghi_phep`
+-- Indexes for table `donNghiPhep`
 --
-ALTER TABLE `don_nghi_phep`
+ALTER TABLE `donNghiPhep`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `leave_requests`
+-- Indexes for table `yeuCauNghiPhep`
 --
-ALTER TABLE `leave_requests`
+ALTER TABLE `yeuCauNghiPhep`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -1990,24 +1990,24 @@ ALTER TABLE `nguoidung`
   ADD KEY `idx_nguoidung_matk` (`maTK`);
 
 --
--- Indexes for table `ot_requests`
+-- Indexes for table `yeuCauTangCa`
 --
-ALTER TABLE `ot_requests`
+ALTER TABLE `yeuCauTangCa`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `shift_change_requests`
+-- Indexes for table `yeuCauDoiCa`
 --
-ALTER TABLE `shift_change_requests`
+ALTER TABLE `yeuCauDoiCa`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `system_settings`
+-- Indexes for table `caiDatHeThong`
 --
-ALTER TABLE `system_settings`
+ALTER TABLE `caiDatHeThong`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_setting_key` (`setting_key`),
-  ADD KEY `fk_settings_user` (`updated_by`);
+  ADD UNIQUE KEY `uk_setting_key` (`tenCaiDat`),
+  ADD KEY `fk_settings_user` (`nguoiCapNhat`);
 
 --
 -- Indexes for table `taikhoan`
@@ -2021,57 +2021,57 @@ ALTER TABLE `taikhoan`
 --
 
 --
--- AUTO_INCREMENT for table `attendance_corrections`
+-- AUTO_INCREMENT for table `suaChamCong`
 --
-ALTER TABLE `attendance_corrections`
+ALTER TABLE `suaChamCong`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
--- AUTO_INCREMENT for table `attendance_daily_summary`
+-- AUTO_INCREMENT for table `tongHopNgayCong`
 --
-ALTER TABLE `attendance_daily_summary`
+ALTER TABLE `tongHopNgayCong`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1178;
 
 --
--- AUTO_INCREMENT for table `attendance_employee_shift`
+-- AUTO_INCREMENT for table `caNhanVien`
 --
-ALTER TABLE `attendance_employee_shift`
+ALTER TABLE `caNhanVien`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
--- AUTO_INCREMENT for table `attendance_logs`
+-- AUTO_INCREMENT for table `lichSuChamCong`
 --
-ALTER TABLE `attendance_logs`
+ALTER TABLE `lichSuChamCong`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2119;
 
 --
--- AUTO_INCREMENT for table `attendance_monthly_approval`
+-- AUTO_INCREMENT for table `duyetCongThang`
 --
-ALTER TABLE `attendance_monthly_approval`
+ALTER TABLE `duyetCongThang`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `attendance_shifts`
+-- AUTO_INCREMENT for table `caLamViec`
 --
-ALTER TABLE `attendance_shifts`
+ALTER TABLE `caLamViec`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `attendance_wifi`
+-- AUTO_INCREMENT for table `wifiChamCong`
 --
-ALTER TABLE `attendance_wifi`
+ALTER TABLE `wifiChamCong`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
--- AUTO_INCREMENT for table `don_nghi_phep`
+-- AUTO_INCREMENT for table `donNghiPhep`
 --
-ALTER TABLE `don_nghi_phep`
+ALTER TABLE `donNghiPhep`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT for table `leave_requests`
+-- AUTO_INCREMENT for table `yeuCauNghiPhep`
 --
-ALTER TABLE `leave_requests`
+ALTER TABLE `yeuCauNghiPhep`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -2081,21 +2081,21 @@ ALTER TABLE `nguoidung`
   MODIFY `maND` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
--- AUTO_INCREMENT for table `ot_requests`
+-- AUTO_INCREMENT for table `yeuCauTangCa`
 --
-ALTER TABLE `ot_requests`
+ALTER TABLE `yeuCauTangCa`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `shift_change_requests`
+-- AUTO_INCREMENT for table `yeuCauDoiCa`
 --
-ALTER TABLE `shift_change_requests`
+ALTER TABLE `yeuCauDoiCa`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `system_settings`
+-- AUTO_INCREMENT for table `caiDatHeThong`
 --
-ALTER TABLE `system_settings`
+ALTER TABLE `caiDatHeThong`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
@@ -2109,36 +2109,36 @@ ALTER TABLE `taikhoan`
 --
 
 --
--- Constraints for table `attendance_corrections`
+-- Constraints for table `suaChamCong`
 --
-ALTER TABLE `attendance_corrections`
+ALTER TABLE `suaChamCong`
   ADD CONSTRAINT `fk_correction_user` FOREIGN KEY (`maND`) REFERENCES `nguoidung` (`maND`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Constraints for table `attendance_daily_summary`
+-- Constraints for table `tongHopNgayCong`
 --
-ALTER TABLE `attendance_daily_summary`
+ALTER TABLE `tongHopNgayCong`
   ADD CONSTRAINT `fk_summary_user` FOREIGN KEY (`maND`) REFERENCES `nguoidung` (`maND`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Constraints for table `attendance_employee_shift`
+-- Constraints for table `caNhanVien`
 --
-ALTER TABLE `attendance_employee_shift`
-  ADD CONSTRAINT `fk_emp_shift_shift` FOREIGN KEY (`shift_id`) REFERENCES `attendance_shifts` (`id`) ON UPDATE CASCADE,
+ALTER TABLE `caNhanVien`
+  ADD CONSTRAINT `fk_emp_shift_shift` FOREIGN KEY (`maCa`) REFERENCES `caLamViec` (`id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_emp_shift_user` FOREIGN KEY (`maND`) REFERENCES `nguoidung` (`maND`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Constraints for table `attendance_logs`
+-- Constraints for table `lichSuChamCong`
 --
-ALTER TABLE `attendance_logs`
+ALTER TABLE `lichSuChamCong`
   ADD CONSTRAINT `fk_logs_user` FOREIGN KEY (`maND`) REFERENCES `nguoidung` (`maND`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Constraints for table `attendance_monthly_approval`
+-- Constraints for table `duyetCongThang`
 --
-ALTER TABLE `attendance_monthly_approval`
-  ADD CONSTRAINT `fk_monthly_hr_sender` FOREIGN KEY (`hr_sender_id`) REFERENCES `nguoidung` (`maND`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_monthly_manager` FOREIGN KEY (`manager_approver_id`) REFERENCES `nguoidung` (`maND`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `duyetCongThang`
+  ADD CONSTRAINT `fk_monthly_hr_sender` FOREIGN KEY (`maNguoiGuiNS`) REFERENCES `nguoidung` (`maND`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_monthly_manager` FOREIGN KEY (`maNguoiDuyetQL`) REFERENCES `nguoidung` (`maND`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `nguoidung`
@@ -2147,10 +2147,10 @@ ALTER TABLE `nguoidung`
   ADD CONSTRAINT `fk_nguoidung_taikhoan` FOREIGN KEY (`maTK`) REFERENCES `taikhoan` (`maTK`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Constraints for table `system_settings`
+-- Constraints for table `caiDatHeThong`
 --
-ALTER TABLE `system_settings`
-  ADD CONSTRAINT `fk_settings_user` FOREIGN KEY (`updated_by`) REFERENCES `nguoidung` (`maND`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `caiDatHeThong`
+  ADD CONSTRAINT `fk_settings_user` FOREIGN KEY (`nguoiCapNhat`) REFERENCES `nguoidung` (`maND`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

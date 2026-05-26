@@ -16,19 +16,19 @@ class ApiAdminController
         $this->model = $model;
     }
 
-    public function handle($method, $action, $id, $subAction, $body)
+    public function handle($phuongThuc, $hanhDong, $id, $subAction, $body)
     {
         requireRole('tech');
 
-        switch ($action) {
+        switch ($hanhDong) {
             case 'wifi':
-                $this->handleWifi($method, $id, $subAction, $body);
+                $this->handleWifi($phuongThuc, $id, $subAction, $body);
                 break;
             case 'settings':
-                $this->handleSettings($method, $id, $body);
+                $this->handleSettings($phuongThuc, $id, $body);
                 break;
             default:
-                respondError('Admin endpoint not found: ' . $action, 404);
+                respondError('Admin endpoint not found: ' . $hanhDong, 404);
         }
     }
 
@@ -41,10 +41,10 @@ class ApiAdminController
     // DELETE  /admin/wifi/{id}         — Xóa mạng
     // PUT     /admin/wifi/{id}/toggle  — Bật/tắt mạng
     // ========================================================
-    private function handleWifi($method, $id, $subAction, $body)
+    private function handleWifi($phuongThuc, $id, $subAction, $body)
     {
         // PUT /admin/wifi/{id}/toggle — Bật/tắt mạng
-        if ($method === 'PUT' && $subAction === 'toggle' && $id) {
+        if ($phuongThuc === 'PUT' && $subAction === 'toggle' && $id) {
             $ok = $this->model->toggleNetwork((int)$id);
             respond(
                 ['success' => $ok, 'message' => $ok ? 'Đã cập nhật trạng thái mạng' : 'Lỗi cập nhật'],
@@ -53,7 +53,7 @@ class ApiAdminController
             return;
         }
 
-        switch ($method) {
+        switch ($phuongThuc) {
             case 'GET':
                 if ($id) {
                     $network = $this->model->getNetworkById((int)$id);
@@ -69,21 +69,21 @@ class ApiAdminController
                 $payload = $_POST;
                 if (empty($payload)) $payload = $body;
 
-                $wifiName = trim($payload['wifi_name'] ?? '');
-                $ipRange = trim($payload['ip_range'] ?? '');
-                $gateway = trim($payload['gateway'] ?? '');
-                $description = trim($payload['description'] ?? '');
-                $isActive = (int)($payload['is_active'] ?? 1);
+                $wifiName = trim($payload['tenWifi'] ?? '');
+                $ipRange = trim($payload['daiIP'] ?? '');
+                $congMacDinh = trim($payload['congMacDinh'] ?? '');
+                $moTa = trim($payload['moTa'] ?? '');
+                $isActive = (int)($payload['hoatDong'] ?? 1);
                 $ssid = trim($payload['ssid'] ?? '');
-                $location = trim($payload['location'] ?? '');
+                $viTri = trim($payload['viTri'] ?? '');
 
                 // Validate
-                $errors = $this->validateNetwork($wifiName, $ipRange, $gateway);
+                $errors = $this->validateNetwork($wifiName, $ipRange, $congMacDinh);
                 if ($this->model->checkNetworkExists($wifiName)) {
                     $errors[] = 'Tên mạng "' . $wifiName . '" đã tồn tại';
                 }
-                if ($this->model->checkGatewayExists($gateway)) {
-                    $errors[] = 'Gateway "' . $gateway . '" đã được sử dụng';
+                if ($this->model->checkGatewayExists($congMacDinh)) {
+                    $errors[] = 'Gateway "' . $congMacDinh . '" đã được sử dụng';
                 }
 
                 if (!empty($errors)) {
@@ -91,7 +91,7 @@ class ApiAdminController
                     return;
                 }
 
-                $ok = $this->model->addNetwork($wifiName, $ipRange, $gateway, $description, $isActive, $ssid, '', $location);
+                $ok = $this->model->addNetwork($wifiName, $ipRange, $congMacDinh, $moTa, $isActive, $ssid, '', $viTri);
                 respond(
                     ['success' => $ok, 'message' => $ok ? 'Thêm mạng thành công' : 'Lỗi thêm mạng'],
                     $ok ? 201 : 500
@@ -101,20 +101,20 @@ class ApiAdminController
             case 'PUT':
                 if (!$id) respondError('Thiếu ID mạng', 422);
 
-                $wifiName = trim($body['wifi_name'] ?? '');
-                $ipRange = trim($body['ip_range'] ?? '');
-                $gateway = trim($body['gateway'] ?? '');
-                $description = trim($body['description'] ?? '');
-                $isActive = (int)($body['is_active'] ?? 1);
+                $wifiName = trim($body['tenWifi'] ?? '');
+                $ipRange = trim($body['daiIP'] ?? '');
+                $congMacDinh = trim($body['congMacDinh'] ?? '');
+                $moTa = trim($body['moTa'] ?? '');
+                $isActive = (int)($body['hoatDong'] ?? 1);
                 $ssid = trim($body['ssid'] ?? '');
-                $location = trim($body['location'] ?? '');
+                $viTri = trim($body['viTri'] ?? '');
 
-                $errors = $this->validateNetwork($wifiName, $ipRange, $gateway);
+                $errors = $this->validateNetwork($wifiName, $ipRange, $congMacDinh);
                 if ($this->model->checkNetworkExists($wifiName, (int)$id)) {
                     $errors[] = 'Tên mạng "' . $wifiName . '" đã tồn tại';
                 }
-                if ($this->model->checkGatewayExists($gateway, (int)$id)) {
-                    $errors[] = 'Gateway "' . $gateway . '" đã được sử dụng';
+                if ($this->model->checkGatewayExists($congMacDinh, (int)$id)) {
+                    $errors[] = 'Gateway "' . $congMacDinh . '" đã được sử dụng';
                 }
 
                 if (!empty($errors)) {
@@ -122,11 +122,11 @@ class ApiAdminController
                     return;
                 }
 
-                // Preserve existing password
+                // Preserve existing matKhau
                 $existing = $this->model->getNetworkById((int)$id);
-                $password = $existing['password'] ?? '';
+                $matKhau = $existing['matKhau'] ?? '';
 
-                $ok = $this->model->updateNetwork((int)$id, $wifiName, $ipRange, $gateway, $description, $isActive, $ssid, $password, $location);
+                $ok = $this->model->updateNetwork((int)$id, $wifiName, $ipRange, $congMacDinh, $moTa, $isActive, $ssid, $matKhau, $viTri);
                 respond(
                     ['success' => $ok, 'message' => $ok ? 'Cập nhật mạng thành công' : 'Lỗi cập nhật'],
                     $ok ? 200 : 500
@@ -152,9 +152,9 @@ class ApiAdminController
     // GET    /admin/settings           — Danh sách cài đặt
     // PUT    /admin/settings/{key}     — Cập nhật cài đặt
     // ========================================================
-    private function handleSettings($method, $key, $body)
+    private function handleSettings($phuongThuc, $key, $body)
     {
-        switch ($method) {
+        switch ($phuongThuc) {
             case 'GET':
                 $settings = $this->model->getAllSettings();
                 respond(['success' => true, 'data' => $settings, 'meta' => ['count' => count($settings)]]);
@@ -162,7 +162,7 @@ class ApiAdminController
 
             case 'PUT':
                 if (!$key) respondError('Thiếu tên cài đặt (setting key)', 422);
-                $value = $body['value'] ?? $body['setting_value'] ?? '';
+                $value = $body['value'] ?? $body['giaTri'] ?? '';
 
                 if ($value === '') respondError('Giá trị cài đặt không được để trống', 422);
 
@@ -189,15 +189,15 @@ class ApiAdminController
     // VALIDATION HELPERS
     // ========================================================
 
-    private function validateNetwork($wifiName, $ipRange, $gateway)
+    private function validateNetwork($wifiName, $ipRange, $congMacDinh)
     {
         $errors = [];
         if (empty($wifiName)) $errors[] = 'Tên mạng không được để trống';
         if (strlen($wifiName) > 120) $errors[] = 'Tên mạng không quá 120 ký tự';
         if (empty($ipRange)) $errors[] = 'Dải IP không được để trống';
         if (!$this->isValidIpRange($ipRange)) $errors[] = 'Dải IP không hợp lệ (VD: 192.168.1)';
-        if (empty($gateway)) $errors[] = 'Gateway không được để trống';
-        if (!filter_var($gateway, FILTER_VALIDATE_IP)) $errors[] = 'Gateway IP không hợp lệ';
+        if (empty($congMacDinh)) $errors[] = 'Gateway không được để trống';
+        if (!filter_var($congMacDinh, FILTER_VALIDATE_IP)) $errors[] = 'Gateway IP không hợp lệ';
         return $errors;
     }
 

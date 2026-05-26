@@ -30,8 +30,8 @@ class HomeController
             'out' => null
         ];
         foreach ($todayLogs as $log) {
-            if ($log['action'] === 'IN') $todayStatus['in'] = $log['created_at'];
-            if ($log['action'] === 'OUT') $todayStatus['out'] = $log['created_at'];
+            if ($log['hanhDong'] === 'IN') $todayStatus['in'] = $log['ngayTao'];
+            if ($log['hanhDong'] === 'OUT') $todayStatus['out'] = $log['ngayTao'];
         }
 
         require_once 'app/middleware/AuthMiddleware.php';

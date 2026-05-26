@@ -3,7 +3,7 @@
  * RESTful API Router — Hệ Thống Quản Lý Chấm Công
  * 
  * Base URL: /quanlychamcong/api.php
- * Format:   /api.php/{resource}/{action}/{id}
+ * Format:   /api.php/{resource}/{hanhDong}/{id}
  * 
  * Nghiệp vụ:
  *  1. HR setup lịch → NV chấm công WiFi → NV gửi yêu cầu chỉnh sửa → HR duyệt → HR tổng hợp → Manager duyệt bảng công
@@ -48,11 +48,11 @@ $path = trim($path, '/');
 
 // Split path into segments
 $segments = $path !== '' ? explode('/', $path) : [];
-$method = $_SERVER['REQUEST_METHOD'];
+$phuongThuc = $_SERVER['REQUEST_METHOD'];
 
 // Parse PUT/DELETE body
 $inputBody = [];
-if (in_array($method, ['PUT', 'DELETE'])) {
+if (in_array($phuongThuc, ['PUT', 'DELETE'])) {
     $raw = file_get_contents('php://input');
     $inputBody = json_decode($raw, true) ?? [];
     // Also try form-urlencoded
@@ -102,20 +102,20 @@ switch ($resource) {
     case 'hr':
         require_once __DIR__ . '/app/controllers/ApiHRController.php';
         $controller = new ApiHRController(new ChamCongModel());
-        $action = getSegment($segments, 1, '');
+        $hanhDong = getSegment($segments, 1, '');
         $id = getSegment($segments, 2);
         $subAction = getSegment($segments, 3);
-        $controller->handle($method, $action, $id, $subAction, $inputBody);
+        $controller->handle($phuongThuc, $hanhDong, $id, $subAction, $inputBody);
         break;
 
     // ========== MANAGER ENDPOINTS ==========
     case 'manager':
         require_once __DIR__ . '/app/controllers/ApiManagerController.php';
         $controller = new ApiManagerController(new ChamCongModel());
-        $action = getSegment($segments, 1, '');
+        $hanhDong = getSegment($segments, 1, '');
         $id = getSegment($segments, 2);
         $subAction = getSegment($segments, 3);
-        $controller->handle($method, $action, $id, $subAction, $inputBody);
+        $controller->handle($phuongThuc, $hanhDong, $id, $subAction, $inputBody);
         break;
 
     // ========== EMPLOYEE/ATTENDANCE ENDPOINTS ==========
@@ -123,25 +123,25 @@ switch ($resource) {
     case 'leaves':
         require_once __DIR__ . '/app/controllers/ApiEmployeeController.php';
         $controller = new ApiEmployeeController(new ChamCongModel());
-        $action = getSegment($segments, 1, '');
+        $hanhDong = getSegment($segments, 1, '');
         $id = getSegment($segments, 2);
-        $controller->handle($method, $resource, $action, $id, $inputBody);
+        $controller->handle($phuongThuc, $resource, $hanhDong, $id, $inputBody);
         break;
 
     // ========== ADMIN/TECH ENDPOINTS ==========
     case 'admin':
         require_once __DIR__ . '/app/controllers/ApiAdminController.php';
         $controller = new ApiAdminController(new ChamCongModel());
-        $action = getSegment($segments, 1, '');
+        $hanhDong = getSegment($segments, 1, '');
         $id = getSegment($segments, 2);
         $subAction = getSegment($segments, 3);
-        $controller->handle($method, $action, $id, $subAction, $inputBody);
+        $controller->handle($phuongThuc, $hanhDong, $id, $subAction, $inputBody);
         break;
 
     // ========== AUTH ENDPOINTS ==========
     case 'auth':
-        $action = getSegment($segments, 1, '');
-        handleAuth($method, $action);
+        $hanhDong = getSegment($segments, 1, '');
+        handleAuth($phuongThuc, $hanhDong);
         break;
 
     default:
@@ -163,15 +163,15 @@ switch ($resource) {
 }
 
 // === Auth handler ===
-function handleAuth($method, $action) {
-    switch ($action) {
+function handleAuth($phuongThuc, $hanhDong) {
+    switch ($hanhDong) {
         case 'login':
-            if ($method !== 'POST') respondError('Method not allowed', 405);
+            if ($phuongThuc !== 'POST') respondError('Method not allowed', 405);
 
             $username = trim($_POST['username'] ?? '');
-            $password = trim($_POST['password'] ?? '');
+            $matKhau = trim($_POST['matKhau'] ?? '');
 
-            if (empty($username) || empty($password)) {
+            if (empty($username) || empty($matKhau)) {
                 respondError('Vui lòng nhập tên đăng nhập và mật khẩu', 422);
             }
 
@@ -193,7 +193,7 @@ function handleAuth($method, $action) {
             }
 
             $user = $result->fetch_assoc();
-            if (md5($password) !== $user['matKhau']) {
+            if (md5($matKhau) !== $user['matKhau']) {
                 respondError('Sai tên đăng nhập hoặc mật khẩu', 401);
             }
 
@@ -234,14 +234,14 @@ function handleAuth($method, $action) {
             break;
 
         case 'logout':
-            if ($method !== 'POST') respondError('Method not allowed', 405);
+            if ($phuongThuc !== 'POST') respondError('Method not allowed', 405);
             session_unset();
             session_destroy();
             respond(['success' => true, 'message' => 'Đăng xuất thành công']);
             break;
 
         case 'me':
-            if ($method !== 'GET') respondError('Method not allowed', 405);
+            if ($phuongThuc !== 'GET') respondError('Method not allowed', 405);
             $user = requireAuth();
             respond([
                 'success' => true,

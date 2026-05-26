@@ -68,16 +68,16 @@ if (!isset($view) || is_null($view)) {
                 .emp-main-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
                 .emp-card { background: white; border-radius: 10px; padding: 20px; border: 1px solid #e2e8f0; }
                 
-                .status-container { text-align: center; padding: 10px 0; }
-                .status-badge-big { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 13px; margin-bottom: 16px; }
-                .status-in { background: #dcfce7; color: #15803d; }
-                .status-out { background: #fee2e2; color: #b91c1c; }
-                .status-none { background: #f1f5f9; color: #475569; }
+                .trangThai-container { text-align: center; padding: 10px 0; }
+                .trangThai-badge-big { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 13px; margin-bottom: 16px; }
+                .trangThai-in { background: #dcfce7; color: #15803d; }
+                .trangThai-out { background: #fee2e2; color: #b91c1c; }
+                .trangThai-none { background: #f1f5f9; color: #475569; }
 
                 .clock-big { font-size: 42px; font-weight: 700; color: #1e293b; letter-spacing: -1px; margin: 0; }
                 .date-sub { font-size: 14px; color: #64748b; margin-bottom: 24px; }
                 
-                .btn-action-mid { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; text-decoration: none; transition: all 0.2s; border: none; cursor: pointer; }
+                .btn-hanhDong-mid { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; text-decoration: none; transition: all 0.2s; border: none; cursor: pointer; }
                 .btn-in { background: #10b981; color: white; box-shadow: 0 4px 6px -1px rgba(16,185,129,0.2); }
                 .btn-in:hover { background: #059669; transform: scale(1.02); }
                 .btn-out { background: #ef4444; color: white; box-shadow: 0 4px 6px -1px rgba(239,68,68,0.2); }
@@ -127,13 +127,13 @@ if (!isset($view) || is_null($view)) {
                 <div class="emp-main-grid">
                     <!-- Khu vực chấm công -->
                     <div class="emp-card">
-                        <div class="status-container">
+                        <div class="trangThai-container">
                             <?php if ($trangThaiHomNay === 'IN'): ?>
-                                <span class="status-badge-big status-in"><i class="fas fa-check-circle"></i> Đang trong ca làm việc</span>
+                                <span class="trangThai-badge-big trangThai-in"><i class="fas fa-check-circle"></i> Đang trong ca làm việc</span>
                             <?php elseif ($trangThaiHomNay === 'OUT'): ?>
-                                <span class="status-badge-big status-none"><i class="fas fa-flag-checkered"></i> Đã hoàn thành công việc</span>
+                                <span class="trangThai-badge-big trangThai-none"><i class="fas fa-flag-checkered"></i> Đã hoàn thành công việc</span>
                             <?php else: ?>
-                                <span class="status-badge-big status-out"><i class="fas fa-exclamation-circle"></i> Chưa chấm công</span>
+                                <span class="trangThai-badge-big trangThai-out"><i class="fas fa-exclamation-circle"></i> Chưa chấm công</span>
                             <?php endif; ?>
 
                             <h1 class="clock-big" id="realtime-clock">--:--:--</h1>
@@ -141,11 +141,11 @@ if (!isset($view) || is_null($view)) {
 
                             <div style="margin-top: 10px;">
                                 <?php if ($trangThaiHomNay === null || $trangThaiHomNay === 'OUT'): ?>
-                                    <a href="index.php?page=cham-cong-vao" class="btn-action-mid btn-in" <?= ($trangThaiHomNay === 'OUT') ? 'style="opacity:0.5; pointer-events:none;"' : '' ?>>
+                                    <a href="index.php?page=cham-cong-vao" class="btn-hanhDong-mid btn-in" <?= ($trangThaiHomNay === 'OUT') ? 'style="opacity:0.5; pointer-events:none;"' : '' ?>>
                                         <i class="fas fa-fingerprint"></i> CHẤM CÔNG VÀO
                                     </a>
                                 <?php else: ?>
-                                    <a href="index.php?page=cham-cong-ra" class="btn-action-mid btn-out">
+                                    <a href="index.php?page=cham-cong-ra" class="btn-hanhDong-mid btn-out">
                                         <i class="fas fa-sign-out-alt"></i> CHẤM CÔNG RA
                                     </a>
                                 <?php endif; ?>
@@ -159,9 +159,9 @@ if (!isset($view) || is_null($view)) {
                         <?php 
                             $inTime = '--:--'; $outTime = '--:--';
                             foreach ($history ?? [] as $h) {
-                                if (substr($h['created_at'], 0, 10) === date('Y-m-d')) {
-                                    if ($h['action'] === 'IN') $inTime = substr($h['created_at'], 11, 5);
-                                    if ($h['action'] === 'OUT') $outTime = substr($h['created_at'], 11, 5);
+                                if (substr($h['ngayTao'], 0, 10) === date('Y-m-d')) {
+                                    if ($h['hanhDong'] === 'IN') $inTime = substr($h['ngayTao'], 11, 5);
+                                    if ($h['hanhDong'] === 'OUT') $outTime = substr($h['ngayTao'], 11, 5);
                                 }
                             }
                         ?>
@@ -175,7 +175,7 @@ if (!isset($view) || is_null($view)) {
                         </div>
                         <div class="detail-row" style="margin-top: 8px;">
                             <span class="detail-label">Ca làm việc</span>
-                            <span class="detail-val" style="color: #3b82f6;"><?= htmlspecialchars($todayShiftStatus['shift']['shift_name'] ?? 'Chưa gán') ?></span>
+                            <span class="detail-val" style="color: #3b82f6;"><?= htmlspecialchars($todayShiftStatus['shift']['tenCa'] ?? 'Chưa gán') ?></span>
                         </div>
                         
                         <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">

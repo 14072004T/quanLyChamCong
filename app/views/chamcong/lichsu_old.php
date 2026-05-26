@@ -28,12 +28,12 @@ $to = $to ?? date('Y-m-d');
             <form method="GET" action="index.php?page=lich-su-cham-cong" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="from-date">Từ ngày</label>
-                    <input type="date" id="from-date" name="from_date" value="<?= htmlspecialchars($from ?? date('Y-m-01')) ?>">
+                    <input type="date" id="from-date" name="tuNgay" value="<?= htmlspecialchars($from ?? date('Y-m-01')) ?>">
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="to-date">Đến ngày</label>
-                    <input type="date" id="to-date" name="to_date" value="<?= htmlspecialchars($to ?? date('Y-m-d')) ?>">
+                    <input type="date" id="to-date" name="denNgay" value="<?= htmlspecialchars($to ?? date('Y-m-d')) ?>">
                 </div>
                 
                 <div style="display: flex; align-items: flex-end; gap: 10px;">
@@ -72,24 +72,24 @@ $to = $to ?? date('Y-m-d');
                         ?>
                             <tr>
                                 <td style="font-family: 'Inter', sans-serif;">
-                                    <?= htmlspecialchars($row['created_at'] ?? '') ?>
+                                    <?= htmlspecialchars($row['ngayTao'] ?? '') ?>
                                 </td>
                                 <td>
                                     <?php 
-                                        $action = $row['action'] === 'IN' ? 'Chấm vào' : 'Chấm ra';
-                                        $icon = $row['action'] === 'IN' ? '📥' : '📤';
-                                        echo $icon . ' ' . $action;
+                                        $hanhDong = $row['hanhDong'] === 'IN' ? 'Chấm vào' : 'Chấm ra';
+                                        $icon = $row['hanhDong'] === 'IN' ? '📥' : '📤';
+                                        echo $icon . ' ' . $hanhDong;
                                     ?>
                                 </td>
                                 <td>
-                                    <span class="status-badge status-active">
-                                        <?= htmlspecialchars($row['method'] ?? 'LAN') ?>
+                                    <span class="trangThai-badge trangThai-active">
+                                        <?= htmlspecialchars($row['phuongThuc'] ?? 'LAN') ?>
                                     </span>
                                 </td>
-                                <td><?= htmlspecialchars($row['wifi_name'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($row['note'] ?? '-') ?></td>
+                                <td><?= htmlspecialchars($row['tenWifi'] ?? '-') ?></td>
+                                <td><?= htmlspecialchars($row['ghiChu'] ?? '-') ?></td>
                                 <td>
-                                    <span class="status-badge status-approved">
+                                    <span class="trangThai-badge trangThai-approved">
                                         <i class="fas fa-check-circle"></i> Đã ghi nhận
                                     </span>
                                 </td>
@@ -135,7 +135,7 @@ $to = $to ?? date('Y-m-d');
                             $in_count = 0;
                             if (is_array($history)) {
                                 foreach ($history as $row) {
-                                    if ($row['action'] === 'IN') $in_count++;
+                                    if ($row['hanhDong'] === 'IN') $in_count++;
                                 }
                             }
                             echo $in_count;
@@ -150,7 +150,7 @@ $to = $to ?? date('Y-m-d');
                             $out_count = 0;
                             if (is_array($history)) {
                                 foreach ($history as $row) {
-                                    if ($row['action'] === 'OUT') $out_count++;
+                                    if ($row['hanhDong'] === 'OUT') $out_count++;
                                 }
                             }
                             echo $out_count;

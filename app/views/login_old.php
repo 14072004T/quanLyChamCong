@@ -37,8 +37,8 @@ require_once 'app/views/layouts/nav.php';
                     </div>
 
                     <div style="margin-bottom:15px;">
-                        <label for="password" style="display:block; text-align:left; font-weight:bold;">Mật Khẩu</label>
-                        <input type="password" id="password" name="password" placeholder="Nhập mật khẩu" required
+                        <label for="matKhau" style="display:block; text-align:left; font-weight:bold;">Mật Khẩu</label>
+                        <input type="password" id="matKhau" name="matKhau" placeholder="Nhập mật khẩu" required
                             style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px;">
                     </div>
 

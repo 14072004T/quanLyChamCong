@@ -18,15 +18,15 @@ class ApiEmployeeController
         $this->model = $model;
     }
 
-    public function handle($method, $resource, $action, $id, $body)
+    public function handle($phuongThuc, $resource, $hanhDong, $id, $body)
     {
         // Tất cả endpoints yêu cầu đăng nhập (bất kỳ role nào)
         requireAuth();
 
         if ($resource === 'attendance') {
-            $this->handleAttendance($method, $action, $id, $body);
+            $this->handleAttendance($phuongThuc, $hanhDong, $id, $body);
         } elseif ($resource === 'leaves') {
-            $this->handleLeaves($method, $action, $id, $body);
+            $this->handleLeaves($phuongThuc, $hanhDong, $id, $body);
         } else {
             respondError('Resource not found', 404);
         }
@@ -35,29 +35,29 @@ class ApiEmployeeController
     // ========================================================
     // ATTENDANCE ENDPOINTS
     // ========================================================
-    private function handleAttendance($method, $action, $id, $body)
+    private function handleAttendance($phuongThuc, $hanhDong, $id, $body)
     {
-        switch ($action) {
+        switch ($hanhDong) {
             case 'check-in':
-                $this->handleCheckIn($method);
+                $this->handleCheckIn($phuongThuc);
                 break;
             case 'check-out':
-                $this->handleCheckOut($method);
+                $this->handleCheckOut($phuongThuc);
                 break;
             case 'today':
-                $this->handleToday($method);
+                $this->handleToday($phuongThuc);
                 break;
             case 'validate-network':
-                $this->handleValidateNetwork($method);
+                $this->handleValidateNetwork($phuongThuc);
                 break;
             case 'history':
-                $this->handleHistory($method);
+                $this->handleHistory($phuongThuc);
                 break;
             case 'corrections':
-                $this->handleCorrections($method, $id, $body);
+                $this->handleCorrections($phuongThuc, $id, $body);
                 break;
             default:
-                respondError('Attendance endpoint not found: ' . $action, 404);
+                respondError('Attendance endpoint not found: ' . $hanhDong, 404);
         }
     }
 
@@ -69,9 +69,9 @@ class ApiEmployeeController
     // GET    /attendance/validate-network
     // ========================================================
 
-    private function handleCheckIn($method)
+    private function handleCheckIn($phuongThuc)
     {
-        if ($method !== 'POST') respondError('Method not allowed', 405);
+        if ($phuongThuc !== 'POST') respondError('Method not allowed', 405);
 
         $maND = $_SESSION['user']['maND'] ?? null;
         $serverIP = $this->model->getServerIP();
@@ -87,7 +87,7 @@ class ApiEmployeeController
         // Kiểm tra đã chấm công chưa
         $logs = $this->model->getTodayLogs($maND);
         foreach ($logs as $log) {
-            if ($log['action'] === 'IN') {
+            if ($log['hanhDong'] === 'IN') {
                 respondError('Bạn đã chấm công vào hôm nay rồi. Chỉ được 1 lần/ngày.');
                 return;
             }
@@ -117,9 +117,9 @@ class ApiEmployeeController
         ], $ok ? 200 : 500);
     }
 
-    private function handleCheckOut($method)
+    private function handleCheckOut($phuongThuc)
     {
-        if ($method !== 'POST') respondError('Method not allowed', 405);
+        if ($phuongThuc !== 'POST') respondError('Method not allowed', 405);
 
         $maND = $_SESSION['user']['maND'] ?? null;
         $serverIP = $this->model->getServerIP();
@@ -134,8 +134,8 @@ class ApiEmployeeController
         $hasIn = false;
         $hasOut = false;
         foreach ($logs as $log) {
-            if ($log['action'] === 'IN') $hasIn = true;
-            if ($log['action'] === 'OUT') $hasOut = true;
+            if ($log['hanhDong'] === 'IN') $hasIn = true;
+            if ($log['hanhDong'] === 'OUT') $hasOut = true;
         }
 
         if (!$hasIn) respondError('Bạn chưa chấm công vào hôm nay');
@@ -152,9 +152,9 @@ class ApiEmployeeController
         ], $ok ? 200 : 500);
     }
 
-    private function handleToday($method)
+    private function handleToday($phuongThuc)
     {
-        if ($method !== 'GET') respondError('Method not allowed', 405);
+        if ($phuongThuc !== 'GET') respondError('Method not allowed', 405);
 
         $maND = $_SESSION['user']['maND'] ?? null;
         $logs = $this->model->getTodayLogs($maND);
@@ -162,8 +162,8 @@ class ApiEmployeeController
         $checkIn = null;
         $checkOut = null;
         foreach ($logs as $log) {
-            if ($log['action'] === 'IN') $checkIn = $log['created_at'];
-            if ($log['action'] === 'OUT') $checkOut = $log['created_at'];
+            if ($log['hanhDong'] === 'IN') $checkIn = $log['ngayTao'];
+            if ($log['hanhDong'] === 'OUT') $checkOut = $log['ngayTao'];
         }
 
         $totalHours = 0;
@@ -186,9 +186,9 @@ class ApiEmployeeController
         ]);
     }
 
-    private function handleValidateNetwork($method)
+    private function handleValidateNetwork($phuongThuc)
     {
-        if ($method !== 'GET') respondError('Method not allowed', 405);
+        if ($phuongThuc !== 'GET') respondError('Method not allowed', 405);
 
         $serverIP = $this->model->getServerIP();
         $allowedNetworks = $this->model->getActiveWifiConfigurations();
@@ -209,13 +209,13 @@ class ApiEmployeeController
     // 3.2 LỊCH SỬ CHẤM CÔNG
     // GET    /attendance/history
     // ========================================================
-    private function handleHistory($method)
+    private function handleHistory($phuongThuc)
     {
-        if ($method !== 'GET') respondError('Method not allowed', 405);
+        if ($phuongThuc !== 'GET') respondError('Method not allowed', 405);
 
         $maND = $_SESSION['user']['maND'] ?? null;
-        $from = trim($_GET['from_date'] ?? date('Y-m-01'));
-        $to = trim($_GET['to_date'] ?? date('Y-m-d'));
+        $from = trim($_GET['tuNgay'] ?? date('Y-m-01'));
+        $to = trim($_GET['denNgay'] ?? date('Y-m-d'));
         $limit = max(1, (int)($_GET['limit'] ?? 30));
 
         // Validation date format
@@ -228,8 +228,8 @@ class ApiEmployeeController
             'success' => true,
             'data' => $history,
             'meta' => [
-                'from_date' => $from,
-                'to_date' => $to,
+                'tuNgay' => $from,
+                'denNgay' => $to,
                 'count' => count($history),
             ]
         ]);
@@ -241,19 +241,19 @@ class ApiEmployeeController
     // POST   /attendance/corrections         — Gửi yêu cầu mới
     // GET    /attendance/corrections/{id}    — Chi tiết
     // ========================================================
-    private function handleCorrections($method, $id, $body)
+    private function handleCorrections($phuongThuc, $id, $body)
     {
         $maND = $_SESSION['user']['maND'] ?? null;
 
-        switch ($method) {
+        switch ($phuongThuc) {
             case 'GET':
                 if ($id) {
                     $detail = $this->model->getCorrectionById((int)$id);
                     if (!$detail) respondError('Không tìm thấy yêu cầu', 404);
 
                     // Format dates
-                    $detail['attendance_date_fmt'] = date('d/m/Y', strtotime($detail['attendance_date']));
-                    $detail['created_at_fmt'] = date('d/m/Y H:i', strtotime($detail['created_at']));
+                    $detail['attendance_date_fmt'] = date('d/m/Y', strtotime($detail['ngayChamCong']));
+                    $detail['created_at_fmt'] = date('d/m/Y H:i', strtotime($detail['ngayTao']));
 
                     respond(['success' => true, 'data' => $detail]);
                 } else {
@@ -267,12 +267,12 @@ class ApiEmployeeController
                 $payload = $_POST;
                 if (empty($payload)) $payload = $body;
 
-                $attendanceDate = trim($payload['attendance_date'] ?? '');
-                $reason = trim($payload['reason'] ?? '');
-                $proposedCheckin = trim($payload['proposed_checkin'] ?? '');
-                $proposedCheckout = trim($payload['proposed_checkout'] ?? '');
+                $attendanceDate = trim($payload['ngayChamCong'] ?? '');
+                $lyDo = trim($payload['lyDo'] ?? '');
+                $proposedCheckin = trim($payload['gioVaoDeXuat'] ?? '');
+                $proposedCheckout = trim($payload['gioRaDeXuat'] ?? '');
 
-                if ($attendanceDate === '' || $reason === '') {
+                if ($attendanceDate === '' || $lyDo === '') {
                     respondError('Vui lòng nhập đầy đủ ngày và lý do', 422);
                 }
                 if ($proposedCheckin === '' && $proposedCheckout === '') {
@@ -283,26 +283,26 @@ class ApiEmployeeController
                 $attendanceRecords = $this->model->getAttendanceByUser($maND, 60);
                 $originalIn = null;
                 foreach ($attendanceRecords as $rec) {
-                    if (($rec['work_date'] ?? '') === $attendanceDate) {
-                        $originalIn = $rec['first_in'] ?? null;
+                    if (($rec['ngayLamViec'] ?? '') === $attendanceDate) {
+                        $originalIn = $rec['gioVaoDau'] ?? null;
                         break;
                     }
                 }
 
                 $data = [
                     'maND' => $maND,
-                    'attendance_date' => $attendanceDate,
-                    'old_time' => $originalIn,
-                    'new_time' => $proposedCheckin ?: $proposedCheckout ?: date('Y-m-d H:i:s'),
-                    'reason' => $reason,
-                    'proposed_checkin' => $proposedCheckin ?: null,
-                    'proposed_checkout' => $proposedCheckout ?: null,
-                    'evidence_file' => null,
+                    'ngayChamCong' => $attendanceDate,
+                    'gioCu' => $originalIn,
+                    'gioMoi' => $proposedCheckin ?: $proposedCheckout ?: date('Y-m-d H:i:s'),
+                    'lyDo' => $lyDo,
+                    'gioVaoDeXuat' => $proposedCheckin ?: null,
+                    'gioRaDeXuat' => $proposedCheckout ?: null,
+                    'tepMinhChung' => null,
                 ];
 
                 // Handle file upload if present
-                if (isset($_FILES['evidence_file']) && $_FILES['evidence_file']['error'] === UPLOAD_ERR_OK) {
-                    $file = $_FILES['evidence_file'];
+                if (isset($_FILES['tepMinhChung']) && $_FILES['tepMinhChung']['error'] === UPLOAD_ERR_OK) {
+                    $file = $_FILES['tepMinhChung'];
                     $finfo = new finfo(FILEINFO_MIME_TYPE);
                     $mimeType = $finfo->file($file['tmp_name']);
                     $allowedMimes = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'application/pdf' => 'pdf'];
@@ -320,7 +320,7 @@ class ApiEmployeeController
                     $ext = $allowedMimes[$mimeType];
                     $uniqueName = $maND . '_' . time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
                     if (move_uploaded_file($file['tmp_name'], $uploadDir . $uniqueName)) {
-                        $data['evidence_file'] = $uniqueName;
+                        $data['tepMinhChung'] = $uniqueName;
                     }
                 }
 
@@ -342,27 +342,27 @@ class ApiEmployeeController
     // POST   /leaves          — Tạo đơn mới
     // GET    /leaves/{id}     — Chi tiết
     // ========================================================
-    private function handleLeaves($method, $action, $id, $body)
+    private function handleLeaves($phuongThuc, $hanhDong, $id, $body)
     {
         $maND = (int)($_SESSION['user']['maND'] ?? 0);
 
-        // If action is a number, treat as ID
-        if (is_numeric($action)) {
-            $id = $action;
-            $action = '';
+        // If hanhDong is a number, treat as ID
+        if (is_numeric($hanhDong)) {
+            $id = $hanhDong;
+            $hanhDong = '';
         }
 
-        switch ($method) {
+        switch ($phuongThuc) {
             case 'GET':
                 if ($id) {
                     $detail = $this->model->getLeaveById((int)$id);
                     if (!$detail) respondError('Không tìm thấy đơn nghỉ phép', 404);
 
                     $types = ['annual' => 'Nghỉ phép năm', 'sick' => 'Nghỉ ốm', 'personal' => 'Việc riêng', 'unpaid' => 'Nghỉ không lương'];
-                    $detail['leave_type_text'] = $types[$detail['leave_type']] ?? $detail['leave_type'];
-                    $detail['from_date_fmt'] = date('d/m/Y', strtotime($detail['from_date']));
-                    $detail['to_date_fmt'] = date('d/m/Y', strtotime($detail['to_date']));
-                    $detail['created_at_fmt'] = date('d/m/Y H:i', strtotime($detail['created_at']));
+                    $detail['leave_type_text'] = $types[$detail['loaiNghiPhep']] ?? $detail['loaiNghiPhep'];
+                    $detail['from_date_fmt'] = date('d/m/Y', strtotime($detail['tuNgay']));
+                    $detail['to_date_fmt'] = date('d/m/Y', strtotime($detail['denNgay']));
+                    $detail['created_at_fmt'] = date('d/m/Y H:i', strtotime($detail['ngayTao']));
 
                     respond(['success' => true, 'data' => $detail]);
                 } else {
@@ -375,22 +375,22 @@ class ApiEmployeeController
                 $payload = $_POST;
                 if (empty($payload)) $payload = $body;
 
-                $leave_type = trim($payload['leave_type'] ?? 'personal');
-                $from_date = trim($payload['from_date'] ?? '');
-                $to_date = trim($payload['to_date'] ?? '');
-                $reason = trim($payload['reason'] ?? '');
+                $loaiNghiPhep = trim($payload['loaiNghiPhep'] ?? 'personal');
+                $tuNgay = trim($payload['tuNgay'] ?? '');
+                $denNgay = trim($payload['denNgay'] ?? '');
+                $lyDo = trim($payload['lyDo'] ?? '');
 
-                if ($from_date === '' || $to_date === '' || $reason === '') {
+                if ($tuNgay === '' || $denNgay === '' || $lyDo === '') {
                     respondError('Vui lòng điền đầy đủ: ngày bắt đầu, ngày kết thúc, lý do', 422);
                 }
-                if ($from_date > $to_date) {
+                if ($tuNgay > $denNgay) {
                     respondError('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc', 422);
                 }
 
                 // Handle evidence file
-                $evidence_file = null;
-                if (isset($_FILES['evidence_file']) && $_FILES['evidence_file']['error'] === UPLOAD_ERR_OK) {
-                    $file = $_FILES['evidence_file'];
+                $tepMinhChung = null;
+                if (isset($_FILES['tepMinhChung']) && $_FILES['tepMinhChung']['error'] === UPLOAD_ERR_OK) {
+                    $file = $_FILES['tepMinhChung'];
                     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
                     if (!in_array($ext, ['jpg', 'jpeg', 'png', 'pdf'])) {
                         respondError('Chỉ chấp nhận file JPG, PNG hoặc PDF', 422);
@@ -404,11 +404,11 @@ class ApiEmployeeController
 
                     $fileName = 'leave_' . $maND . '_' . date('YmdHis') . '_' . mt_rand(100, 999) . '.' . $ext;
                     if (move_uploaded_file($file['tmp_name'], $uploadDir . $fileName)) {
-                        $evidence_file = $uploadDir . $fileName;
+                        $tepMinhChung = $uploadDir . $fileName;
                     }
                 }
 
-                $ok = $this->model->insertLeaveRequest($maND, $leave_type, $from_date, $to_date, $reason, $evidence_file);
+                $ok = $this->model->insertLeaveRequest($maND, $loaiNghiPhep, $tuNgay, $denNgay, $lyDo, $tepMinhChung);
                 respond(
                     ['success' => $ok, 'message' => $ok ? 'Gửi đơn nghỉ phép thành công' : 'Không thể gửi đơn'],
                     $ok ? 201 : 500
@@ -429,8 +429,8 @@ class ApiEmployeeController
         $wifiName = '';
         $configs = $this->model->getActiveWifiConfigurations();
         foreach ($configs as $cfg) {
-            if (strpos($serverIP, $cfg['ip_range']) === 0) {
-                $wifiName = $cfg['wifi_name'];
+            if (strpos($serverIP, $cfg['daiIP']) === 0) {
+                $wifiName = $cfg['tenWifi'];
                 break;
             }
         }
@@ -443,8 +443,8 @@ class ApiEmployeeController
     private function checkShiftTime($shift)
     {
         $now = date('H:i:s');
-        $start = $shift['start_time'];
-        $end = $shift['end_time'];
+        $start = $shift['gioBatDau'];
+        $end = $shift['gioKetThuc'];
 
         if ($start < $end) {
             if ($now < $start) return 'Ca làm việc chưa bắt đầu. Ca bắt đầu lúc ' . substr($start, 0, 5);

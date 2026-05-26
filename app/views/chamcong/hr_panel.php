@@ -244,7 +244,7 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
         .then(function(r) { return r.json(); })
         .then(function(json) {
             var tbody = document.getElementById('hrd-shifts-body');
-            var rows = (json.data || []).filter(function(s) { return s.is_active == 1; });
+            var rows = (json.data || []).filter(function(s) { return s.hoatDong == 1; });
             document.getElementById('task-shifts').textContent = rows.length;
             if (!rows.length) {
                 tbody.innerHTML = '<tr><td colspan="4" class="empty-state" style="padding:16px">Chưa có ca làm việc nào</td></tr>';
@@ -254,8 +254,8 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
             tbody.innerHTML = rows.map(function(s) {
                 var count = parseInt(s.assigned_count || 0, 10);
                 var rate = totalAssigned > 0 ? Math.round(count / totalAssigned * 100) : 0;
-                return '<tr><td style="font-weight:600">' + escHtml(s.shift_name) + '</td>'
-                    + '<td>' + escHtml(String(s.start_time || '').slice(0,5)) + ' - ' + escHtml(String(s.end_time || '').slice(0,5)) + '</td>'
+                return '<tr><td style="font-weight:600">' + escHtml(s.tenCa) + '</td>'
+                    + '<td>' + escHtml(String(s.gioBatDau || '').slice(0,5)) + ' - ' + escHtml(String(s.gioKetThuc || '').slice(0,5)) + '</td>'
                     + '<td style="text-align:center;font-weight:700">' + count + '</td>'
                     + '<td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:#f1f5f9;border-radius:99px"><div style="width:' + rate + '%;height:100%;background:#22c55e;border-radius:99px"></div></div><span style="font-size:.8em;color:#64748b">' + rate + '%</span></div></td></tr>';
             }).join('');
@@ -277,7 +277,7 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
             }
             list.innerHTML = rows.map(function(row) {
                 return '<div class="hrd-abnormal-item"><div class="hrd-av">' + escHtml((row.hoTen || 'NV').slice(0, 2).toUpperCase()) + '</div>'
-                    + '<div class="hrd-abnormal-info"><div class="hrd-abnormal-name">' + escHtml(row.hoTen || 'Nhân viên') + '</div><div class="hrd-abnormal-dept">' + escHtml(row.attendance_date || '') + '</div></div>'
+                    + '<div class="hrd-abnormal-info"><div class="hrd-abnormal-name">' + escHtml(row.hoTen || 'Nhân viên') + '</div><div class="hrd-abnormal-dept">' + escHtml(row.ngayChamCong || '') + '</div></div>'
                     + '<span class="hrd-abnormal-tag" style="background:#fef3c7;color:#d97706">Chờ HR xử lý</span>'
                     + '<a href="index.php?page=xuly-yeucau&request_id=' + encodeURIComponent(row.id) + '" style="color:#94a3b8;margin-left:4px"><i class="fas fa-chevron-right"></i></a></div>';
             }).join('');
@@ -296,14 +296,14 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
                 return;
             }
             list.innerHTML = rows.map(function(row) {
-                var approved = row.status === 'approved';
-                var rejected = row.status === 'rejected';
+                var approved = row.trangThai === 'approved';
+                var rejected = row.trangThai === 'rejected';
                 var icon = approved ? 'fa-check-circle' : (rejected ? 'fa-times-circle' : 'fa-clock');
                 var color = approved ? '#22c55e' : (rejected ? '#ef4444' : '#94a3b8');
-                var action = approved ? 'đã được duyệt' : (rejected ? 'đã bị từ chối' : 'đang chờ xử lý');
+                var hanhDong = approved ? 'đã được duyệt' : (rejected ? 'đã bị từ chối' : 'đang chờ xử lý');
                 return '<div class="hrd-activity-item"><div class="hrd-activity-icon" style="color:' + color + '"><i class="fas ' + icon + '"></i></div>'
-                    + '<div class="hrd-activity-body"><div class="hrd-activity-text"><strong>' + escHtml(row.hoTen || 'Nhân viên') + '</strong> ' + action + '</div>'
-                    + '<div class="hrd-activity-time">' + escHtml(String(row.created_at || '').slice(0, 16)) + '</div></div></div>';
+                    + '<div class="hrd-activity-body"><div class="hrd-activity-text"><strong>' + escHtml(row.hoTen || 'Nhân viên') + '</strong> ' + hanhDong + '</div>'
+                    + '<div class="hrd-activity-time">' + escHtml(String(row.ngayTao || '').slice(0, 16)) + '</div></div></div>';
             }).join('');
         })
         .catch(function() {

@@ -123,7 +123,7 @@ $managerDepartment = trim($_SESSION['user']['phongBan'] ?? '');
     gap: 8px;
     flex-wrap: wrap;
 }
-.status-pill {
+.trangThai-pill {
     display: inline-flex;
     align-items: center;
     padding: 4px 10px;
@@ -131,19 +131,19 @@ $managerDepartment = trim($_SESSION['user']['phongBan'] ?? '');
     font-size: 0.78rem;
     font-weight: 700;
 }
-.status-pill.pending {
+.trangThai-pill.pending {
     background: #fff7ed;
     color: #c2410c;
 }
-.status-pill.approved {
+.trangThai-pill.approved {
     background: #ecfdf3;
     color: #16a34a;
 }
-.status-pill.rejected {
+.trangThai-pill.rejected {
     background: #fef2f2;
     color: #dc2626;
 }
-.status-pill.processing {
+.trangThai-pill.processing {
     background: #eef2ff;
     color: #4338ca;
 }
@@ -157,7 +157,7 @@ $managerDepartment = trim($_SESSION['user']['phongBan'] ?? '');
 .approval-table-head h3 {
     margin: 0;
 }
-.approval-table-note {
+.approval-table-ghiChu {
     color: #64748b;
     margin: 0;
 }
@@ -451,7 +451,7 @@ $managerDepartment = trim($_SESSION['user']['phongBan'] ?? '');
                 </div>
                 <div class="form-group">
                     <label>Trạng thái</label>
-                    <select name="status" id="approval-status">
+                    <select name="trangThai" id="approval-trangThai">
                         <option value="submitted" selected>Chờ phê duyệt</option>
                         <option value="approved">Đã phê duyệt</option>
                         <option value="rejected">Đã từ chối</option>
@@ -468,10 +468,10 @@ $managerDepartment = trim($_SESSION['user']['phongBan'] ?? '');
                 </div>
                 <div class="form-group">
                     <label>Phòng ban</label>
-                    <select name="department" id="approval-department">
+                    <select name="phongBan" id="approval-phongBan">
                         <option value="">Tất cả phòng ban</option>
                         <?php foreach ($departments as $dept): ?>
-                            <option value="<?= htmlspecialchars($dept) ?>" <?= $department === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
+                            <option value="<?= htmlspecialchars($dept) ?>" <?= $phongBan === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -488,7 +488,7 @@ $managerDepartment = trim($_SESSION['user']['phongBan'] ?? '');
         <div class="panel">
             <div class="approval-table-head">
                 <h3 id="approval-pending-title">Danh sách bảng công chờ phê duyệt</h3>
-                <p class="approval-table-note">Dữ liệu hiển thị theo phòng ban bạn quản lý.</p>
+                <p class="approval-table-ghiChu">Dữ liệu hiển thị theo phòng ban bạn quản lý.</p>
             </div>
             <table class="table" id="approval-pending-table">
                 <thead>
@@ -513,7 +513,7 @@ $managerDepartment = trim($_SESSION['user']['phongBan'] ?? '');
         <div class="panel">
             <div class="approval-table-head">
                 <h3>Lịch sử phê duyệt gần đây</h3>
-                <p class="approval-table-note">Theo dõi lại các kỳ công đã xử lý.</p>
+                <p class="approval-table-ghiChu">Theo dõi lại các kỳ công đã xử lý.</p>
             </div>
             <table class="table" id="approval-history-table">
                 <thead>
@@ -568,7 +568,7 @@ $managerDepartment = trim($_SESSION['user']['phongBan'] ?? '');
                 </table>
             </div>
             <div class="approval-detail-actions">
-                <div id="approval-detail-status" style="color:#64748b;font-weight:600;">Xem kỹ bảng tính công trước khi ra quyết định.</div>
+                <div id="approval-detail-trangThai" style="color:#64748b;font-weight:600;">Xem kỹ bảng tính công trước khi ra quyết định.</div>
                 <div class="btn-group">
                     <button type="button" class="btn btn-secondary btn-sm" id="approval-detail-cancel">Đóng</button>
                     <button type="button" class="btn btn-warning btn-sm" id="approval-detail-reject"><i class="fas fa-arrow-left"></i> Trả về HR</button>
@@ -586,8 +586,8 @@ $managerDepartment = trim($_SESSION['user']['phongBan'] ?? '');
         </div>
         <form id="approval-input-form">
             <div class="approval-input-body">
-                <label for="approval-input-note" id="approval-input-label">Ghi chú:</label>
-                <textarea id="approval-input-note" name="note" placeholder="Nhập thông tin..." required title="Vui lòng nhập lý do không bỏ trống"></textarea>
+                <label for="approval-input-ghiChu" id="approval-input-label">Ghi chú:</label>
+                <textarea id="approval-input-ghiChu" name="ghiChu" placeholder="Nhập thông tin..." required title="Vui lòng nhập lý do không bỏ trống"></textarea>
             </div>
             <div class="approval-input-footer">
                 <button type="button" class="btn btn-secondary btn-sm" id="approval-input-cancel">Hủy</button>
@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var autoOpenApprovalId = <?= (int)$activeApprovalId ?>;
     var filterForm = document.getElementById('approval-filter-form');
     var searchInput = document.getElementById('approval-search');
-    var statusSelect = document.getElementById('approval-status');
+    var statusSelect = document.getElementById('approval-trangThai');
     var yearSelect = document.getElementById('approval-year');
     var sortSelect = document.getElementById('approval-sort');
     var pendingBody = document.getElementById('approval-pending-body');
@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var detailSummary = document.getElementById('approval-detail-summary');
     var detailMeta = document.getElementById('approval-detail-meta');
     var detailBody = document.getElementById('approval-detail-body');
-    var detailStatus = document.getElementById('approval-detail-status');
+    var detailStatus = document.getElementById('approval-detail-trangThai');
     var detailActions = document.querySelector('.approval-detail-actions');
     var detailBtnGroup = document.querySelector('.approval-detail-actions .btn-group');
     var closeDetailBtn = document.getElementById('approval-detail-close');
@@ -633,7 +633,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var inputForm = document.getElementById('approval-input-form');
     var inputTitle = document.getElementById('approval-input-title');
     var inputLabel = document.getElementById('approval-input-label');
-    var inputNote = document.getElementById('approval-input-note');
+    var inputNote = document.getElementById('approval-input-ghiChu');
     var inputCancelBtn = document.getElementById('approval-input-cancel');
 
     var activeApprovalId = 0;
@@ -650,11 +650,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function getFormValues() {
         var data = new FormData(filterForm);
         return {
-            status: data.get('status') || 'submitted',
+            trangThai: data.get('trangThai') || 'submitted',
             year: data.get('year') || '',
             q: (data.get('q') || '').trim(),
             sort: data.get('sort') || 'newest',
-            department: data.get('department') || ''
+            phongBan: data.get('phongBan') || ''
         };
     }
 
@@ -687,11 +687,11 @@ document.addEventListener('DOMContentLoaded', function () {
             ' - ' + pad(last.getDate()) + '/' + pad(last.getMonth() + 1) + '/' + last.getFullYear();
     }
 
-    function getStatusMeta(status) {
-        if (status === 'approved') {
+    function getStatusMeta(trangThai) {
+        if (trangThai === 'approved') {
             return { label: 'Đã phê duyệt', cls: 'approved' };
         }
-        if (status === 'rejected') {
+        if (trangThai === 'rejected') {
             return { label: 'Đã từ chối', cls: 'rejected' };
         }
         return { label: 'Chờ phê duyệt', cls: 'pending' };
@@ -702,7 +702,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (params.q) {
             var keyword = params.q.toLowerCase();
             filtered = filtered.filter(function (row) {
-                return [row.month_key, row.department, row.hr_name]
+                return [row.thangNam, row.phongBan, row.hr_name]
                     .filter(Boolean)
                     .join(' ')
                     .toLowerCase()
@@ -711,15 +711,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         filtered.sort(function (a, b) {
-            var aTime = String(a.approved_at || a.submitted_at || '').localeCompare(String(b.approved_at || b.submitted_at || ''));
+            var aTime = String(a.ngayDuyet || a.ngayGui || '').localeCompare(String(b.ngayDuyet || b.ngayGui || ''));
             return params.sort === 'oldest' ? aTime : -aTime;
         });
         return filtered;
     }
 
     function isDueSoon(row) {
-        if (!row || row.status !== 'submitted') return false;
-        var monthKey = row.month_key || '';
+        if (!row || row.trangThai !== 'submitted') return false;
+        var monthKey = row.thangNam || '';
         var parts = monthKey.split('-');
         if (parts.length !== 2) return false;
         var year = parseInt(parts[0], 10);
@@ -764,8 +764,8 @@ document.addEventListener('DOMContentLoaded', function () {
         inputNote.value = '';
     }
 
-    function updateDetailActionState(status) {
-        var isSubmitted = status === 'submitted';
+    function updateDetailActionState(trangThai) {
+        var isSubmitted = trangThai === 'submitted';
         approveDetailBtn.hidden = !isSubmitted;
         rejectDetailBtn.hidden = !isSubmitted;
         detailStatus.textContent = isSubmitted
@@ -780,11 +780,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         pendingBody.innerHTML = rows.map(function (row) {
-            var monthLabel = formatMonthLabel(row.month_key);
+            var monthLabel = formatMonthLabel(row.thangNam);
             var otDisplay = '<span class="ot-warning"><i class="fas fa-triangle-exclamation"></i></span> ' + Number(row.total_ot_hours || 0).toLocaleString();
-            var dateDisplay = formatDate(row.submitted_at);
-            var deptLabel = row.department || 'Chưa phân phòng';
-            var statusMeta = getStatusMeta(row.status);
+            var dateDisplay = formatDate(row.ngayGui);
+            var deptLabel = row.phongBan || 'Chưa phân phòng';
+            var statusMeta = getStatusMeta(row.trangThai);
 
             var approvalId = Number(row.id || 0);
             var rowClass = approvalId === autoOpenApprovalId ? ' class="approval-row-highlight"' : '';
@@ -796,11 +796,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td>' + otDisplay + '</td>' +
                 '<td>' + Number(row.violation_rate || 0) + '%</td>' +
                 '<td>' + escapeHtml(dateDisplay) + '</td>' +
-                '<td><span class="status-pill ' + statusMeta.cls + '">' + escapeHtml(statusMeta.label) + '</span></td>' +
+                '<td><span class="trangThai-pill ' + statusMeta.cls + '">' + escapeHtml(statusMeta.label) + '</span></td>' +
                 '<td><div class="approval-table-actions">' +
                     '<button type="button" class="btn btn-primary btn-sm js-view-approval-detail" data-id="' + approvalId + '"><i class="fas fa-eye"></i> Xem chi tiết</button>' +
-                    '<button type="button" class="btn btn-success btn-sm js-approval-action" data-action="approve" data-id="' + approvalId + '"><i class="fas fa-check"></i> Phê duyệt</button>' +
-                    '<button type="button" class="btn btn-warning btn-sm js-approval-action" data-action="reject" data-id="' + approvalId + '"><i class="fas fa-times"></i> Từ chối</button>' +
+                    '<button type="button" class="btn btn-success btn-sm js-approval-hanhDong" data-action="approve" data-id="' + approvalId + '"><i class="fas fa-check"></i> Phê duyệt</button>' +
+                    '<button type="button" class="btn btn-warning btn-sm js-approval-hanhDong" data-action="reject" data-id="' + approvalId + '"><i class="fas fa-times"></i> Từ chối</button>' +
                 '</div></td>' +
                 '</tr>';
         }).join('');
@@ -820,11 +820,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         historyBody.innerHTML = rows.map(function (row) {
-            var monthLabel = formatMonthLabel(row.month_key);
+            var monthLabel = formatMonthLabel(row.thangNam);
             var otDisplay = '<span class="ot-warning"><i class="fas fa-triangle-exclamation"></i></span> ' + Number(row.total_ot_hours || 0).toLocaleString();
-            var dateDisplay = row.approved_at ? formatDate(row.approved_at) : formatDate(row.submitted_at);
-            var statusMeta = getStatusMeta(row.status);
-            var deptLabel = row.department || 'Chưa phân phòng';
+            var dateDisplay = row.ngayDuyet ? formatDate(row.ngayDuyet) : formatDate(row.ngayGui);
+            var statusMeta = getStatusMeta(row.trangThai);
+            var deptLabel = row.phongBan || 'Chưa phân phòng';
 
             return '<tr>' +
                 '<td>' + escapeHtml(monthLabel) + '</td>' +
@@ -834,7 +834,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td>' + otDisplay + '</td>' +
                 '<td>' + Number(row.violation_rate || 0) + '%</td>' +
                 '<td>' + escapeHtml(dateDisplay) + '</td>' +
-                '<td><span class="status-pill ' + statusMeta.cls + '">' + escapeHtml(statusMeta.label) + '</span></td>' +
+                '<td><span class="trangThai-pill ' + statusMeta.cls + '">' + escapeHtml(statusMeta.label) + '</span></td>' +
                 '<td><div class="approval-table-actions"><button type="button" class="btn btn-primary btn-sm js-view-approval-detail" data-id="' + approvalId + '" data-source="history"><i class="fas fa-eye"></i> Xem</button></div></td>' +
                 '</tr>';
         }).join('');
@@ -848,9 +848,9 @@ document.addEventListener('DOMContentLoaded', function () {
             'approved': 'Danh sách bảng công đã phê duyệt',
             'rejected': 'Danh sách bảng công đã từ chối'
         };
-        pendingTitle.textContent = statusTitles[params.status] || 'DANH SÁCH BẢNG CÔNG';
+        pendingTitle.textContent = statusTitles[params.trangThai] || 'DANH SÁCH BẢNG CÔNG';
 
-        fetch('index.php?page=manager-api-approvals&status=' + encodeURIComponent(params.status) + '&year=' + encodeURIComponent(params.year) + '&department=' + encodeURIComponent(params.department), {
+        fetch('index.php?page=manager-api-approvals&trangThai=' + encodeURIComponent(params.trangThai) + '&year=' + encodeURIComponent(params.year) + '&phongBan=' + encodeURIComponent(params.phongBan), {
             headers: { 'Accept': 'application/json' }
         })
         .then(function (r) { return r.json(); })
@@ -866,7 +866,7 @@ document.addEventListener('DOMContentLoaded', function () {
             pendingBody.innerHTML = '<tr><td colspan="9" class="empty-state">Lỗi tải dữ liệu.</td></tr>';
         });
 
-        fetch('index.php?page=manager-api-approvals&status=history&year=' + encodeURIComponent(params.year) + '&department=' + encodeURIComponent(params.department), {
+        fetch('index.php?page=manager-api-approvals&trangThai=history&year=' + encodeURIComponent(params.year) + '&phongBan=' + encodeURIComponent(params.phongBan), {
             headers: { 'Accept': 'application/json' }
         })
         .then(function (r) { return r.json(); })
@@ -887,9 +887,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         Promise.all([
-            fetch('index.php?page=manager-api-approvals&status=submitted&year=' + encodeURIComponent(params.year) + '&department=' + encodeURIComponent(params.department), { headers: { 'Accept': 'application/json' } }),
-            fetch('index.php?page=manager-api-approvals&status=approved&year=' + encodeURIComponent(params.year) + '&department=' + encodeURIComponent(params.department), { headers: { 'Accept': 'application/json' } }),
-            fetch('index.php?page=manager-api-approvals&status=rejected&year=' + encodeURIComponent(params.year) + '&department=' + encodeURIComponent(params.department), { headers: { 'Accept': 'application/json' } })
+            fetch('index.php?page=manager-api-approvals&trangThai=submitted&year=' + encodeURIComponent(params.year) + '&phongBan=' + encodeURIComponent(params.phongBan), { headers: { 'Accept': 'application/json' } }),
+            fetch('index.php?page=manager-api-approvals&trangThai=approved&year=' + encodeURIComponent(params.year) + '&phongBan=' + encodeURIComponent(params.phongBan), { headers: { 'Accept': 'application/json' } }),
+            fetch('index.php?page=manager-api-approvals&trangThai=rejected&year=' + encodeURIComponent(params.year) + '&phongBan=' + encodeURIComponent(params.phongBan), { headers: { 'Accept': 'application/json' } })
         ])
         .then(function (responses) { return Promise.all(responses.map(function (r) { return r.json(); })); })
         .then(function (payloads) {
@@ -953,10 +953,10 @@ document.addEventListener('DOMContentLoaded', function () {
             var approval = detail.approval || {};
             var summary = detail.summary || {};
             var rows = detail.rows || [];
-            activeApprovalStatus = approval.status || '';
+            activeApprovalStatus = approval.trangThai || '';
 
-            detailTitle.textContent = 'Chi tiết bảng tính công kỳ ' + (approval.month_key || '');
-            detailSubtitle.textContent = 'HR gửi: ' + escapeHtml(approval.hr_name || 'Chưa xác định') + ' | Ngày gửi: ' + escapeHtml(formatDate(approval.submitted_at));
+            detailTitle.textContent = 'Chi tiết bảng tính công kỳ ' + (approval.thangNam || '');
+            detailSubtitle.textContent = 'HR gửi: ' + escapeHtml(approval.hr_name || 'Chưa xác định') + ' | Ngày gửi: ' + escapeHtml(formatDate(approval.ngayGui));
             detailSummary.innerHTML = [
                 { label: 'Nhân sự', value: Number(summary.employees || 0) },
                 { label: 'Tổng ngày công', value: Number(summary.total_work_days || 0).toLocaleString() },
@@ -967,11 +967,11 @@ document.addEventListener('DOMContentLoaded', function () {
             }).join('');
 
             detailMeta.innerHTML = [
-                { label: 'Kỳ công', value: formatMonthLabel(approval.month_key || '') },
-                { label: 'Phòng ban', value: approval.department || managerDepartment || 'Chưa phân phòng' },
+                { label: 'Kỳ công', value: formatMonthLabel(approval.thangNam || '') },
+                { label: 'Phòng ban', value: approval.phongBan || managerDepartment || 'Chưa phân phòng' },
                 { label: 'Người gửi HR', value: approval.hr_name || 'Chưa xác định' },
-                { label: 'Trạng thái', value: getStatusMeta(approval.status || 'submitted').label },
-                { label: 'Ghi chú', value: approval.note || 'Chưa có ghi chú' }
+                { label: 'Trạng thái', value: getStatusMeta(approval.trangThai || 'submitted').label },
+                { label: 'Ghi chú', value: approval.ghiChu || 'Chưa có ghi chú' }
             ].map(function (item) {
                 return '<div class="approval-meta-box"><strong>' + escapeHtml(item.label) + '</strong><div>' + escapeHtml(item.value) + '</div></div>';
             }).join('');
@@ -991,7 +991,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }).join('');
             }
 
-            // Chỉ update action state nếu là pending, không phải history
+            // Chỉ update hanhDong state nếu là pending, không phải history
             if (activeApprovalSource !== 'history') {
                 updateDetailActionState(activeApprovalStatus);
             }
@@ -1004,13 +1004,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function processApprovalWithNote(note) {
+    function processApprovalWithNote(ghiChu) {
         if (!activeApprovalId || !pendingApprovalAction) return;
 
         var form = new FormData();
         form.append('approval_id', activeApprovalId);
-        form.append('action', pendingApprovalAction);
-        form.append('note', note);
+        form.append('hanhDong', pendingApprovalAction);
+        form.append('ghiChu', ghiChu);
 
         fetch('index.php?page=manager-api-approve', {
             method: 'POST',
@@ -1029,13 +1029,13 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(function () { alert('Lỗi xử lý phê duyệt.'); });
     }
 
-    function showApprovalInputModal(action) {
+    function showApprovalInputModal(hanhDong) {
         if (!activeApprovalId) return;
-        pendingApprovalAction = action;
+        pendingApprovalAction = hanhDong;
 
-        if (action === 'approve') {
+        if (hanhDong === 'approve') {
             openInputModal('Phê duyệt kỳ công', 'Ghi chú phê duyệt (nếu có):');
-        } else if (action === 'reject') {
+        } else if (hanhDong === 'reject') {
             openInputModal('Trả về HR', 'Lý do trả về:');
         }
     }
@@ -1070,13 +1070,13 @@ document.addEventListener('DOMContentLoaded', function () {
             loadApprovalDetail(approvalId, source);
         }
 
-        var actionBtn = e.target.closest('.js-approval-action');
+        var actionBtn = e.target.closest('.js-approval-hanhDong');
         if (actionBtn) {
             var actionApprovalId = Number(actionBtn.getAttribute('data-id'));
-            var action = actionBtn.getAttribute('data-action');
-            if (actionApprovalId && (action === 'approve' || action === 'reject')) {
+            var hanhDong = actionBtn.getAttribute('data-hanhDong');
+            if (actionApprovalId && (hanhDong === 'approve' || hanhDong === 'reject')) {
                 activeApprovalId = actionApprovalId;
-                showApprovalInputModal(action);
+                showApprovalInputModal(hanhDong);
             }
         }
     });
@@ -1097,8 +1097,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     inputForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        var note = inputNote.value.trim();
-        processApprovalWithNote(note);
+        var ghiChu = inputNote.value.trim();
+        processApprovalWithNote(ghiChu);
     });
 
     inputModal.addEventListener('click', function (e) {

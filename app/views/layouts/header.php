@@ -30,14 +30,14 @@
             function formatMinutes($minutes) {
                 $minutes = (int)$minutes;
                 if ($minutes <= 0) return '0 phút';
-                $hours = floor($minutes / 60);
+                $soGio = floor($minutes / 60);
                 $remMinutes = $minutes % 60;
                 
                 $result = '';
-                if ($hours > 0) {
-                    $result .= $hours . ' giờ ';
+                if ($soGio > 0) {
+                    $result .= $soGio . ' giờ ';
                 }
-                if ($remMinutes > 0 || $hours == 0) {
+                if ($remMinutes > 0 || $soGio == 0) {
                     $result .= $remMinutes . ' phút';
                 }
                 return trim($result);
@@ -57,28 +57,28 @@
                     break;
                 }
 
-                $status = $req['status'] ?? 'pending';
-                $updatedTimeStr = $req['updated_at'] ?? $req['created_at'] ?? date('Y-m-d H:i:s');
+                $trangThai = $req['trangThai'] ?? 'pending';
+                $updatedTimeStr = $req['ngayCapNhat'] ?? $req['ngayTao'] ?? date('Y-m-d H:i:s');
                 $updatedTime = strtotime($updatedTimeStr);
                 $daysAgo = (time() - $updatedTime) / 86400;
 
                 // Stop populating older handled requests (e.g., > 3 days old)
-                if ($status !== 'pending' && $daysAgo > 3) {
+                if ($trangThai !== 'pending' && $daysAgo > 3) {
                     continue;
                 }
 
                 $notificationCount++;
                 
                 $titleMsg = 'Yêu cầu đang chờ duyệt';
-                if ($status === 'approved') {
+                if ($trangThai === 'approved') {
                     $titleMsg = 'Yêu cầu đã ĐƯỢC DUYỆT';
-                } elseif ($status === 'rejected') {
+                } elseif ($trangThai === 'rejected') {
                     $titleMsg = 'Yêu cầu BỊ TỪ CHỐI';
                 }
 
-                $meta = 'Ngày: ' . ($req['attendance_date'] ?? '');
-                if ($status !== 'pending') {
-                    $meta .= ' - ' . htmlspecialchars($req['hr_note'] ?: 'Không có ghi chú');
+                $meta = 'Ngày: ' . ($req['ngayChamCong'] ?? '');
+                if ($trangThai !== 'pending') {
+                    $meta .= ' - ' . htmlspecialchars($req['ghiChuNS'] ?: 'Không có ghi chú');
                 }
 
                 $notificationItems[] = [
@@ -93,12 +93,12 @@
             $pendingTimesheets = $notificationModel->getPendingTimesheets($maND, 4);
             $notificationCount += count($pendingTimesheets);
             foreach ($pendingTimesheets as $ts) {
-                $parts = explode('-', $ts['month_key'] ?? '');
-                $monthText = count($parts) === 2 ? "Tháng {$parts[1]}/{$parts[0]}" : ($ts['month_key'] ?? '');
+                $parts = explode('-', $ts['thangNam'] ?? '');
+                $monthText = count($parts) === 2 ? "Tháng {$parts[1]}/{$parts[0]}" : ($ts['thangNam'] ?? '');
                 $notificationItems[] = [
                     'title' => 'Bảng công ' . $monthText . ' chờ xác nhận',
                     'meta' => 'HR gửi: ' . ($ts['hr_name'] ?? 'HR'),
-                    'time' => $ts['submitted_at'] ?? '',
+                    'time' => $ts['ngayGui'] ?? '',
                     'link' => 'index.php?page=bang-cong-thang',
                 ];
             }
@@ -110,8 +110,8 @@
             foreach (array_slice($pendingCorrections, 0, 3) as $row) {
                 $notificationItems[] = [
                     'title' => 'Có yêu cầu chỉnh sửa chờ xử lý',
-                    'meta' => ($row['hoTen'] ?? 'Nhân viên') . ' - ' . ($row['attendance_date'] ?? ''),
-                    'time' => $row['created_at'] ?? '',
+                    'meta' => ($row['hoTen'] ?? 'Nhân viên') . ' - ' . ($row['ngayChamCong'] ?? ''),
+                    'time' => $row['ngayTao'] ?? '',
                     'link' => 'index.php?page=xuly-yeucau&request_id=' . (int)($row['id'] ?? 0) . '#request-' . (int)($row['id'] ?? 0),
                 ];
             }
@@ -122,10 +122,10 @@
                 if ($total > 0) {
                     $notificationCount++;
                     $notificationItems[] = [
-                        'title' => 'Bảng công kỳ ' . ($row['month_key'] ?? '') . ': ' . $approved . '/' . $total . ' NV đã duyệt',
+                        'title' => 'Bảng công kỳ ' . ($row['thangNam'] ?? '') . ': ' . $approved . '/' . $total . ' NV đã duyệt',
                         'meta' => $pending > 0 ? 'Còn ' . $pending . ' nhân viên chưa duyệt' : 'Tất cả nhân viên đã duyệt ✓',
                         'time' => $row['last_submitted'] ?? '',
-                        'link' => 'index.php?page=tinh-cong&month=' . urlencode((string)($row['month_key'] ?? '')),
+                        'link' => 'index.php?page=tinh-cong&month=' . urlencode((string)($row['thangNam'] ?? '')),
                     ];
                 }
             }

@@ -60,9 +60,9 @@ if ($page === 'get-menu-by-role') {
     require_once 'app/controllers/HomeController.php';
     $homeController = new HomeController();
     $reflection = new ReflectionClass($homeController);
-    $method = $reflection->getMethod('getMenuItemsByRole');
-    $method->setAccessible(true);
-    $menuItems = $method->invoke($homeController);
+    $phuongThuc = $reflection->getMethod('getMenuItemsByRole');
+    $phuongThuc->setAccessible(true);
+    $menuItems = $phuongThuc->invoke($homeController);
 
     echo json_encode([
         'success' => true,
@@ -107,7 +107,7 @@ $allowedPages = [
     'hr-api-approval-detail',
     'hr-api-timesheet-approval-details',
     'hr-api-corrections',
-    'hr-api-correction-action',
+    'hr-api-correction-hanhDong',
     // Manager
     'bao-cao-tong-hop',
     'thong-ke-bieu-do',
@@ -325,7 +325,7 @@ switch ($page) {
         (new HRController())->correctionsApi();
         break;
 
-    case 'hr-api-correction-action':
+    case 'hr-api-correction-hanhDong':
         require_once 'app/controllers/HRController.php';
         (new HRController())->processCorrection();
         break;

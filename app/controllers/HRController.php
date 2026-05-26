@@ -70,9 +70,9 @@ class HRController
         AuthMiddleware::requirePermission('quan-ly-ca-lam');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $action = $_POST['form_action'] ?? 'save_shift';
-            if ($action === 'assign_shift') {
-                $ok = $this->model->assignShift($_POST['maND'] ?? 0, $_POST['shift_id'] ?? 0, $_POST['effective_from'] ?? date('Y-m-d'));
+            $hanhDong = $_POST['form_action'] ?? 'save_shift';
+            if ($hanhDong === 'assign_shift') {
+                $ok = $this->model->assignShift($_POST['maND'] ?? 0, $_POST['maCa'] ?? 0, $_POST['hieuLucTu'] ?? date('Y-m-d'));
                 $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Gán ca làm thành công' : 'Không thể gán ca làm';
             } else {
                 $ok = $this->model->saveShift($_POST);
@@ -101,10 +101,10 @@ class HRController
         $this->jsonOnly(['POST']);
         $payload = [
             'id' => $_POST['id'] ?? 0,
-            'shift_name' => $_POST['shift_name'] ?? '',
-            'start_time' => $_POST['start_time'] ?? '',
-            'end_time' => $_POST['end_time'] ?? '',
-            'is_active' => $_POST['is_active'] ?? 1,
+            'tenCa' => $_POST['tenCa'] ?? '',
+            'gioBatDau' => $_POST['gioBatDau'] ?? '',
+            'gioKetThuc' => $_POST['gioKetThuc'] ?? '',
+            'hoatDong' => $_POST['hoatDong'] ?? 1,
         ];
         $ok = $this->model->saveShift($payload);
 
@@ -121,8 +121,8 @@ class HRController
 
         $ok = $this->model->assignShift(
             $_POST['maND'] ?? 0,
-            $_POST['shift_id'] ?? 0,
-            $_POST['effective_from'] ?? date('Y-m-d')
+            $_POST['maCa'] ?? 0,
+            $_POST['hieuLucTu'] ?? date('Y-m-d')
         );
 
         $this->respond([
@@ -202,14 +202,14 @@ class HRController
     {
         AuthMiddleware::requirePermission('xuat-bao-cao');
 
-        $fromDate = $_POST['from_date'] ?? $_GET['from_date'] ?? date('Y-m-01');
-        $toDate = $_POST['to_date'] ?? $_GET['to_date'] ?? date('Y-m-d');
-        $department = trim($_POST['department'] ?? $_GET['department'] ?? '');
+        $fromDate = $_POST['tuNgay'] ?? $_GET['tuNgay'] ?? date('Y-m-01');
+        $toDate = $_POST['denNgay'] ?? $_GET['denNgay'] ?? date('Y-m-d');
+        $phongBan = trim($_POST['phongBan'] ?? $_GET['phongBan'] ?? '');
         $format = strtolower($_POST['format'] ?? 'html');
         $export = (int)($_POST['export'] ?? 0);
         $monthKey = substr($fromDate, 0, 7);
 
-        $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $department);
+        $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $phongBan);
         $departments = $this->model->getDistinctDepartments();
 
         $summaryRows = $this->model->getTimesheetApprovalSummary($monthKey);
@@ -228,14 +228,14 @@ class HRController
                 
                 // Sử dụng dữ liệu chi tiết mới cho báo cáo Excel
                 $detailedReportRows = $this->model->getMonthlyAttendanceDetailNew($monthKey);
-                if ($department !== '') {
-                    $detailedReportRows = array_values(array_filter($detailedReportRows, function($r) use ($department) {
-                        return (string)($r['phongBan'] ?? '') === $department;
+                if ($phongBan !== '') {
+                    $detailedReportRows = array_values(array_filter($detailedReportRows, function($r) use ($phongBan) {
+                        return (string)($r['phongBan'] ?? '') === $phongBan;
                     }));
                 }
                 
                 $userName = $_SESSION['user']['hoTen'] ?? 'Không xác định';
-                $exporter->exportAttendanceReport($detailedReportRows, $monthKey, $department, $userName);
+                $exporter->exportAttendanceReport($detailedReportRows, $monthKey, $phongBan, $userName);
                 exit;
             } else {
                 // CSV export
@@ -266,7 +266,7 @@ class HRController
         AuthMiddleware::requirePermission('gui-bang-cong-phe-duyet');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $monthKey = trim($_POST['month_key'] ?? date('Y-m'));
+            $monthKey = trim($_POST['thangNam'] ?? date('Y-m'));
             $hrSenderId = (int)($_SESSION['user']['maND'] ?? 0);
 
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
@@ -286,7 +286,7 @@ class HRController
         AuthMiddleware::requirePermission('hr-api-payroll-submit');
         $this->jsonOnly(['POST']);
 
-        $monthKey = trim($_POST['month_key'] ?? date('Y-m'));
+        $monthKey = trim($_POST['thangNam'] ?? date('Y-m'));
         $hrSenderId = (int)($_SESSION['user']['maND'] ?? 0);
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
             $this->respond([
@@ -326,7 +326,7 @@ class HRController
 
         $approval = $detail['approval'] ?? [];
         $currentHrId = (int)($_SESSION['user']['maND'] ?? 0);
-        if ((int)($approval['hr_sender_id'] ?? 0) !== $currentHrId) {
+        if ((int)($approval['maNguoiGuiNS'] ?? 0) !== $currentHrId) {
             $this->respond([
                 'success' => false,
                 'message' => 'Bạn không có quyền xem chi tiết kỳ công này',
@@ -364,33 +364,33 @@ class HRController
             'type' => trim($_GET['type'] ?? ''),
         ];
         $scope = trim($_GET['scope'] ?? 'pending');
-        $status = $scope === 'history' ? null : 'pending';
+        $trangThai = $scope === 'history' ? null : 'pending';
         $historyOnly = $scope === 'history';
 
         $this->respond([
             'success' => true,
-            'data' => $this->model->getCorrectionRequests($status, $filters, 50, $historyOnly),
+            'data' => $this->model->getCorrectionRequests($trangThai, $filters, 50, $historyOnly),
         ]);
     }
 
     public function processCorrection()
     {
-        AuthMiddleware::requirePermission('hr-api-correction-action');
+        AuthMiddleware::requirePermission('hr-api-correction-hanhDong');
 
         if ($this->expectsJson()) {
             $this->jsonOnly(['POST']);
             $correctionId = (int)($_POST['correction_id'] ?? 0);
-            $action = trim($_POST['action'] ?? '');
-            $note = trim($_POST['note'] ?? '');
+            $hanhDong = trim($_POST['hanhDong'] ?? '');
+            $ghiChu = trim($_POST['ghiChu'] ?? '');
 
-            if ($correctionId <= 0 || !in_array($action, ['approve', 'reject'], true)) {
+            if ($correctionId <= 0 || !in_array($hanhDong, ['approve', 'reject'], true)) {
                 $this->respond([
                     'success' => false,
                     'message' => 'Dữ liệu xử lý yêu cầu không hợp lệ',
                 ], 422);
             }
 
-            $ok = $this->model->processCorrection($correctionId, $action, $note);
+            $ok = $this->model->processCorrection($correctionId, $hanhDong, $ghiChu);
             $this->respond([
                 'success' => $ok,
                 'message' => $ok ? 'Đã xử lý yêu cầu chỉnh sửa' : 'Không thể xử lý yêu cầu chỉnh sửa',
@@ -400,16 +400,16 @@ class HRController
         $redirectPage = 'xuly-yeucau';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $correctionId = (int)($_POST['correction_id'] ?? $_GET['id'] ?? 0);
-            $action = $_POST['action'] ?? (isset($_POST['approve']) ? 'approve' : 'reject');
-            $note = trim($_POST['note'] ?? '');
+            $hanhDong = $_POST['hanhDong'] ?? (isset($_POST['approve']) ? 'approve' : 'reject');
+            $ghiChu = trim($_POST['ghiChu'] ?? '');
 
-            if ($correctionId <= 0 || !in_array($action, ['approve', 'reject'], true)) {
+            if ($correctionId <= 0 || !in_array($hanhDong, ['approve', 'reject'], true)) {
                 $_SESSION['error'] = 'Dữ liệu xử lý yêu cầu không hợp lệ';
                 header('Location: index.php?page=' . $redirectPage);
                 exit;
             }
 
-            $ok = $this->model->processCorrection($correctionId, $action, $note);
+            $ok = $this->model->processCorrection($correctionId, $hanhDong, $ghiChu);
             $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đã xử lý yêu cầu chỉnh sửa' : 'Không thể xử lý yêu cầu chỉnh sửa';
         }
 
@@ -484,7 +484,7 @@ class HRController
 
         $this->respond([
             'success' => true,
-            'month_key' => $monthKey,
+            'thangNam' => $monthKey,
             'data' => $detailedData,
             'count' => count($detailedData),
         ]);
@@ -531,10 +531,10 @@ class HRController
         ]);
     }
 
-    private function respond(array $payload, int $status = 200)
+    private function respond(array $payload, int $trangThai = 200)
     {
         if (ob_get_length()) ob_clean();
-        http_response_code($status);
+        http_response_code($trangThai);
         header('Content-Type: application/json; charset=utf-8');
         $json = json_encode($payload, JSON_UNESCAPED_UNICODE);
         if ($json === false) {

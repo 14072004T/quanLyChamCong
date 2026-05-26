@@ -201,7 +201,7 @@
             position: relative;
         }
         
-        /* Custom styled calendar with location pin for Check-in pin */
+        /* Custom styled calendar with viTri pin for Check-in pin */
         .icon-checkin-wrapper {
             position: relative;
             display: inline-block;
@@ -560,10 +560,10 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="password">MẬT KHẨU</label>
+                        <label for="matKhau">MẬT KHẨU</label>
                         <div class="input-group">
                             <i class="fas fa-lock"></i>
-                            <input type="password" id="password" name="password" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+                            <input type="password" id="matKhau" name="matKhau" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
                         </div>
                     </div>
 

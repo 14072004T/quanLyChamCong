@@ -124,10 +124,10 @@ $user = $_SESSION['user'] ?? [];
             <?php
             $maND = $_SESSION['user']['maND'] ?? 0;
             $history = $chamCongModel->getLichSu($maND, date('Y-m-01'), date('Y-m-d')) ?? [];
-            $workedDays = count(array_unique(array_map(fn($h) => date('Y-m-d', strtotime($h['created_at'])), $history)));
+            $workedDays = count(array_unique(array_map(fn($h) => date('Y-m-d', strtotime($h['ngayTao'])), $history)));
             $lateCount = 0;
             foreach($history as $h) {
-                if($h['action'] === 'IN' && date('H:i:s', strtotime($h['created_at'])) > '08:15:00') $lateCount++;
+                if($h['hanhDong'] === 'IN' && date('H:i:s', strtotime($h['ngayTao'])) > '08:15:00') $lateCount++;
             }
             $inTime = $todayStatus['in'] ? date('H:i', strtotime($todayStatus['in'])) : null;
             ?>

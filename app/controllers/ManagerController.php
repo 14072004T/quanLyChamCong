@@ -33,21 +33,21 @@ class ManagerController
     {
         AuthMiddleware::requirePermission('pheduyet-bang-cong');
         // Mặc định quản lý có thể xem tất cả phòng ban
-        $department = trim($_GET['department'] ?? '');
+        $phongBan = trim($_GET['phongBan'] ?? '');
         $departments = $this->model->getDistinctDepartments();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $approvalId = (int)($_POST['approval_id'] ?? 0);
-            $action = $_POST['action'] ?? '';
-            $note = trim($_POST['note'] ?? '');
+            $hanhDong = $_POST['hanhDong'] ?? '';
+            $ghiChu = trim($_POST['ghiChu'] ?? '');
 
-            $status = $action === 'approve' ? 'approved' : ($action === 'reject' ? 'rejected' : '');
+            $trangThai = $hanhDong === 'approve' ? 'approved' : ($hanhDong === 'reject' ? 'rejected' : '');
             $managerId = (int)($_SESSION['user']['maND'] ?? 0);
 
-            if ($approvalId <= 0 || $status === '') {
+            if ($approvalId <= 0 || $trangThai === '') {
                 $_SESSION['error'] = 'Dữ liệu phê duyệt bảng công không hợp lệ';
             } else {
-                $ok = $this->model->updateMonthlyApproval($approvalId, $status, $managerId, $note, $department);
+                $ok = $this->model->updateMonthlyApproval($approvalId, $trangThai, $managerId, $ghiChu, $phongBan);
                 $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đã cập nhật trạng thái bảng công' : 'Không thể cập nhật trạng thái';
             }
 
@@ -55,7 +55,7 @@ class ManagerController
             exit;
         }
 
-        $approvalRows = $this->model->getMonthlyApprovals('submitted', $department);
+        $approvalRows = $this->model->getMonthlyApprovals('submitted', $phongBan);
         require __DIR__ . '/../views/chamcong/pheduyet.php';
     }
 
@@ -66,32 +66,44 @@ class ManagerController
     {
         AuthMiddleware::requirePermission('bao-cao-tong-hop');
 
-        $fromDate = $_POST['from_date'] ?? $_GET['from_date'] ?? date('Y-m-01');
-        $toDate = $_POST['to_date'] ?? $_GET['to_date'] ?? date('Y-m-d');
+        $fromDate = $_POST['tuNgay'] ?? $_GET['tuNgay'] ?? date('Y-m-01');
+        $toDate = $_POST['denNgay'] ?? $_GET['denNgay'] ?? date('Y-m-d');
         // Manager có thể lọc theo phòng ban hoặc xem tất cả
-        $department = trim($_POST['department'] ?? $_GET['department'] ?? '');
+        $phongBan = trim($_POST['phongBan'] ?? $_GET['phongBan'] ?? '');
         $format = strtolower($_POST['format'] ?? 'html');
         $export = (int)($_POST['export'] ?? 0);
 
-        $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $department);
+        $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $phongBan);
         $departments = $this->model->getValidDepartments();
         $monthKey = substr($fromDate, 0, 7);
         
         // Sử dụng dữ liệu tính toán chính xác mới (có khấu trừ nghỉ trưa, bù công)
-        $payrollRows = $this->model->getMonthlyAttendanceDetailNew($monthKey, $department);
+        $payrollRows = $this->model->getMonthlyAttendanceDetailNew($monthKey, $phongBan);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $export && in_array($format, ['excel', 'csv'], true)) {
             if ($format === 'excel') {
-                require_once __DIR__ . '/../helpers/ExcelExporter.php';
-                $exporter = new ExcelExporter();
-                $monthKey = substr($fromDate, 0, 7);
+                // Tắt output buffering để tránh lỗi header
+                if (ob_get_level()) {
+                    ob_end_clean();
+                }
+                
+                try {
+                    require_once __DIR__ . '/../helpers/ExcelExporter.php';
+                    $exporter = new ExcelExporter();
+                    $monthKey = substr($fromDate, 0, 7);
 
-                // Sử dụng dữ liệu chi tiết mới cho báo cáo Excel
-                $detailedReportRows = $this->model->getMonthlyAttendanceDetailNew($monthKey, $department);
+                    // Sử dụng dữ liệu chi tiết mới cho báo cáo Excel
+                    $detailedReportRows = $this->model->getMonthlyAttendanceDetailNew($monthKey, $phongBan);
 
-                $userName = $_SESSION['user']['hoTen'] ?? 'Không xác định';
-                $exporter->exportAttendanceReport($detailedReportRows, $monthKey, $department, $userName);
-                exit;
+                    $userName = $_SESSION['user']['hoTen'] ?? 'Không xác định';
+                    $exporter->exportAttendanceReport($detailedReportRows, $monthKey, $phongBan, $userName);
+                    exit;
+                } catch (Exception $e) {
+                    error_log('Excel Export Error: ' . $e->getMessage());
+                    $_SESSION['error'] = 'Lỗi xuất Excel: ' . $e->getMessage();
+                    header('Location: index.php?page=' . $reportActionPage);
+                    exit;
+                }
             } else {
                 // CSV export
                 header('Content-Type: text/csv; charset=utf-8');
@@ -183,12 +195,12 @@ class ManagerController
 
         $departmentSummary = [];
         foreach ($salaryRows as $row) {
-            $department = $row['phongBan'] ?: 'Chưa phân phòng';
-            if (!isset($departmentSummary[$department])) {
-                $departmentSummary[$department] = ['employees' => 0, 'hours' => 0.0];
+            $phongBan = $row['phongBan'] ?: 'Chưa phân phòng';
+            if (!isset($departmentSummary[$phongBan])) {
+                $departmentSummary[$phongBan] = ['employees' => 0, 'soGio' => 0.0];
             }
-            $departmentSummary[$department]['employees']++;
-            $departmentSummary[$department]['hours'] += (float)($row['work_hours'] ?? 0);
+            $departmentSummary[$phongBan]['employees']++;
+            $departmentSummary[$phongBan]['soGio'] += (float)($row['work_hours'] ?? 0);
         }
 
         require __DIR__ . '/../views/chamcong/thongke.php';
@@ -201,8 +213,8 @@ class ManagerController
     {
         AuthMiddleware::requirePermission('chi-tiet-bang-cong');
 
-        $department = trim($_SESSION['user']['phongBan'] ?? '');
-        $approvalRows = $this->model->getMonthlyApprovals(null, $department);
+        $phongBan = trim($_SESSION['user']['phongBan'] ?? '');
+        $approvalRows = $this->model->getMonthlyApprovals(null, $phongBan);
         require __DIR__ . '/../views/chamcong/pheduyet.php';
     }
 
@@ -214,31 +226,31 @@ class ManagerController
         AuthMiddleware::requirePermission('manager-api-approvals');
         $this->jsonOnly(['GET']);
 
-        $status = trim($_GET['status'] ?? '');
+        $trangThai = trim($_GET['trangThai'] ?? '');
         $year = trim($_GET['year'] ?? '');
-        $department = trim($_GET['department'] ?? '');
+        $phongBan = trim($_GET['phongBan'] ?? '');
         $filterStatus = null;
-        if ($status === 'submitted') $filterStatus = 'submitted';
-        elseif ($status === 'approved') $filterStatus = 'approved';
-        elseif ($status === 'rejected') $filterStatus = 'rejected';
+        if ($trangThai === 'submitted') $filterStatus = 'submitted';
+        elseif ($trangThai === 'approved') $filterStatus = 'approved';
+        elseif ($trangThai === 'rejected') $filterStatus = 'rejected';
 
-        $rows = $this->model->getMonthlyApprovals($filterStatus, $department);
+        $rows = $this->model->getMonthlyApprovals($filterStatus, $phongBan);
 
-        if ($status === 'history' || $status === 'processed') {
-            $rows = $this->model->getMonthlyApprovalHistory($year, 100, $department);
+        if ($trangThai === 'history' || $trangThai === 'processed') {
+            $rows = $this->model->getMonthlyApprovalHistory($year, 100, $phongBan);
         }
 
         // filter by year if provided
-        if ($year !== '' && preg_match('/^\d{4}$/', $year) && $status !== 'history' && $status !== 'processed') {
+        if ($year !== '' && preg_match('/^\d{4}$/', $year) && $trangThai !== 'history' && $trangThai !== 'processed') {
             $rows = array_values(array_filter($rows, function ($r) use ($year) {
-                return strpos($r['month_key'] ?? '', $year) === 0;
+                return strpos($r['thangNam'] ?? '', $year) === 0;
             }));
         }
 
         // enrich each row with summary
         foreach ($rows as &$row) {
-            $monthKey = $row['month_key'] ?? '';
-            $summary = $this->model->getMonthlyAttendanceDetailNew($monthKey, $department);
+            $monthKey = $row['thangNam'] ?? '';
+            $summary = $this->model->getMonthlyAttendanceDetailNew($monthKey, $phongBan);
 
             $totalEmployees = count($summary);
             $totalWorkDays = 0;
@@ -268,7 +280,7 @@ class ManagerController
         $this->jsonOnly(['GET']);
 
         $approvalId = (int)($_GET['approval_id'] ?? 0);
-        $department = trim($_SESSION['user']['phongBan'] ?? '');
+        $phongBan = trim($_SESSION['user']['phongBan'] ?? '');
         if ($approvalId <= 0) {
             $this->respond([
                 'success' => false,
@@ -276,7 +288,7 @@ class ManagerController
             ], 422);
         }
 
-        $detail = $this->model->getMonthlyApprovalDetail($approvalId, $department);
+        $detail = $this->model->getMonthlyApprovalDetail($approvalId, $phongBan);
         if (!$detail) {
             $this->respond([
                 'success' => false,
@@ -291,7 +303,7 @@ class ManagerController
     }
 
     /**
-     * API: Process approval action (approve/reject) as JSON
+     * API: Process approval hanhDong (approve/reject) as JSON
      */
     public function processApprovalApi()
     {
@@ -299,21 +311,21 @@ class ManagerController
         $this->jsonOnly(['POST']);
 
         $approvalId = (int)($_POST['approval_id'] ?? 0);
-        $action = trim($_POST['action'] ?? '');
-        $note = trim($_POST['note'] ?? '');
-        $department = trim($_SESSION['user']['phongBan'] ?? '');
+        $hanhDong = trim($_POST['hanhDong'] ?? '');
+        $ghiChu = trim($_POST['ghiChu'] ?? '');
+        $phongBan = trim($_SESSION['user']['phongBan'] ?? '');
 
-        $status = $action === 'approve' ? 'approved' : ($action === 'reject' ? 'rejected' : '');
+        $trangThai = $hanhDong === 'approve' ? 'approved' : ($hanhDong === 'reject' ? 'rejected' : '');
         $managerId = (int)($_SESSION['user']['maND'] ?? 0);
 
-        if ($approvalId <= 0 || $status === '') {
+        if ($approvalId <= 0 || $trangThai === '') {
             $this->respond([
                 'success' => false,
                 'message' => 'Dữ liệu phê duyệt không hợp lệ',
             ], 422);
         }
 
-        $ok = $this->model->updateMonthlyApproval($approvalId, $status, $managerId, $note, $department);
+        $ok = $this->model->updateMonthlyApproval($approvalId, $trangThai, $managerId, $ghiChu, $phongBan);
         $this->respond([
             'success' => $ok,
             'message' => $ok ? 'Đã cập nhật trạng thái bảng công' : 'Không thể cập nhật trạng thái',
@@ -330,18 +342,18 @@ class ManagerController
 
         $year = trim($_GET['year'] ?? '');
         $limit = (int)($_GET['limit'] ?? 50);
-        $department = trim($_SESSION['user']['phongBan'] ?? '');
+        $phongBan = trim($_SESSION['user']['phongBan'] ?? '');
 
         if ($limit <= 0 || $limit > 500) {
             $limit = 50;
         }
 
-        $rows = $this->model->getMonthlyApprovalHistory($year, $limit, $department);
+        $rows = $this->model->getMonthlyApprovalHistory($year, $limit, $phongBan);
 
         // enrich each row with summary
         foreach ($rows as &$row) {
-            $monthKey = $row['month_key'] ?? '';
-            $summary = $this->model->getMonthlyAttendanceDetailNew($monthKey, $department);
+            $monthKey = $row['thangNam'] ?? '';
+            $summary = $this->model->getMonthlyAttendanceDetailNew($monthKey, $phongBan);
 
             $totalEmployees = count($summary);
             $totalWorkDays = 0;
@@ -396,17 +408,17 @@ class ManagerController
         }
 
         $id          = (int)($_POST['id'] ?? 0);
-        $status      = trim($_POST['status'] ?? '');
+        $trangThai      = trim($_POST['trangThai'] ?? '');
         $approvedBy  = (int)($_SESSION['user']['maND'] ?? 0);
 
-        if ($id <= 0 || !in_array($status, ['approved', 'rejected'], true)) {
+        if ($id <= 0 || !in_array($trangThai, ['approved', 'rejected'], true)) {
             $_SESSION['leave_error'] = 'Dữ liệu không hợp lệ';
             header('Location: index.php?page=list-leave-requests');
             exit;
         }
 
-        $ok    = $this->model->updateLeaveRequestStatus($id, $status, $approvedBy);
-        $label = $status === 'approved' ? 'phê duyệt' : 'từ chối';
+        $ok    = $this->model->updateLeaveRequestStatus($id, $trangThai, $approvedBy);
+        $label = $trangThai === 'approved' ? 'phê duyệt' : 'từ chối';
         $_SESSION[$ok ? 'leave_success' : 'leave_error'] = $ok
             ? "Đã $label đơn nghỉ phép thành công"
             : "Không thể $label đơn nghỉ phép (có thể đã được xử lý)";
@@ -434,9 +446,9 @@ class ManagerController
         }
     }
 
-    private function respond(array $payload, int $status = 200)
+    private function respond(array $payload, int $trangThai = 200)
     {
-        http_response_code($status);
+        http_response_code($trangThai);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($payload, JSON_UNESCAPED_UNICODE);
         exit;

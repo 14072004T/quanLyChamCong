@@ -33,8 +33,8 @@ class TechController
     }
 
     /**
-     * Add new network with IP range and gateway
-     * POST: wifi_name, ip_range, gateway, description, is_active
+     * Add new network with IP range and congMacDinh
+     * POST: tenWifi, daiIP, congMacDinh, moTa, hoatDong
      */
     public function addWifi()
     {
@@ -46,45 +46,45 @@ class TechController
             exit;
         }
 
-        $wifiName = trim($_POST['wifi_name'] ?? '');
-        $ipRange = trim($_POST['ip_range'] ?? '');
-        $gateway = trim($_POST['gateway'] ?? '');
-        $description = trim($_POST['description'] ?? '');
-        $isActive = (int)($_POST['is_active'] ?? 1);
+        $wifiName = trim($_POST['tenWifi'] ?? '');
+        $ipRange = trim($_POST['daiIP'] ?? '');
+        $congMacDinh = trim($_POST['congMacDinh'] ?? '');
+        $moTa = trim($_POST['moTa'] ?? '');
+        $isActive = (int)($_POST['hoatDong'] ?? 1);
         $ssid = trim($_POST['ssid'] ?? '');
-        $password = ''; // Ignore password as per requirement
-        $location = trim($_POST['location'] ?? '');
+        $matKhau = ''; // Ignore matKhau as per requirement
+        $viTri = trim($_POST['viTri'] ?? '');
         $errors = [];
 
-        // Validate wifi_name
+        // Validate tenWifi
         if (empty($wifiName)) {
             $errors[] = 'Tên mạng (WiFi Name) không được để trống';
         } elseif (strlen($wifiName) > 120) {
             $errors[] = 'Tên mạng không được vượt quá 120 ký tự';
         }
 
-        // Validate ip_range
+        // Validate daiIP
         if (empty($ipRange)) {
             $errors[] = 'Dải IP (IP Range) không được để trống';
         } elseif (!$this->isValidIpRange($ipRange)) {
             $errors[] = 'Dải IP không hợp lệ (ví dụ: 192.168.1)';
         }
 
-        // Validate gateway
-        if (empty($gateway)) {
+        // Validate congMacDinh
+        if (empty($congMacDinh)) {
             $errors[] = 'Gateway không được để trống';
-        } elseif (!filter_var($gateway, FILTER_VALIDATE_IP)) {
+        } elseif (!filter_var($congMacDinh, FILTER_VALIDATE_IP)) {
             $errors[] = 'Gateway IP không hợp lệ';
         }
 
-        // Check duplicate wifi_name
+        // Check duplicate tenWifi
         if (empty($errors) && $this->model->checkNetworkExists($wifiName)) {
             $errors[] = 'Tên mạng "' . htmlspecialchars($wifiName) . '" đã tồn tại';
         }
 
-        // Check duplicate gateway
-        if (empty($errors) && $this->model->checkGatewayExists($gateway)) {
-            $errors[] = 'Gateway "' . htmlspecialchars($gateway) . '" đã được sử dụng';
+        // Check duplicate congMacDinh
+        if (empty($errors) && $this->model->checkGatewayExists($congMacDinh)) {
+            $errors[] = 'Gateway "' . htmlspecialchars($congMacDinh) . '" đã được sử dụng';
         }
 
         if (!empty($errors)) {
@@ -94,7 +94,7 @@ class TechController
         }
 
         // Insert
-        $result = $this->model->addNetwork($wifiName, $ipRange, $gateway, $description, $isActive, $ssid, $password, $location);
+        $result = $this->model->addNetwork($wifiName, $ipRange, $congMacDinh, $moTa, $isActive, $ssid, $matKhau, $viTri);
         if ($result) {
             $_SESSION['success'] = 'Thêm mạng thành công';
             echo json_encode(['success' => true, 'message' => 'Thêm mạng thành công']);
@@ -105,7 +105,7 @@ class TechController
     }
 
     /**
-     * Get WiFi details by ID for editing (includes password securely)
+     * Get WiFi details by ID for editing (includes matKhau securely)
      */
     public function getWifiDetails()
     {
@@ -127,8 +127,8 @@ class TechController
     }
 
     /**
-     * Update network with IP range and gateway
-     * POST: id, wifi_name, ip_range, gateway, description, is_active
+     * Update network with IP range and congMacDinh
+     * POST: id, tenWifi, daiIP, congMacDinh, moTa, hoatDong
      */
     public function updateWifi()
     {
@@ -141,17 +141,17 @@ class TechController
         }
 
         $wifiId = (int)($_POST['id'] ?? 0);
-        $wifiName = trim($_POST['wifi_name'] ?? '');
-        $ipRange = trim($_POST['ip_range'] ?? '');
-        $gateway = trim($_POST['gateway'] ?? '');
-        $description = trim($_POST['description'] ?? '');
-        $isActive = (int)($_POST['is_active'] ?? 1);
+        $wifiName = trim($_POST['tenWifi'] ?? '');
+        $ipRange = trim($_POST['daiIP'] ?? '');
+        $congMacDinh = trim($_POST['congMacDinh'] ?? '');
+        $moTa = trim($_POST['moTa'] ?? '');
+        $isActive = (int)($_POST['hoatDong'] ?? 1);
         $ssid = trim($_POST['ssid'] ?? '');
-        $location = trim($_POST['location'] ?? '');
+        $viTri = trim($_POST['viTri'] ?? '');
         
-        // Preserve existing password as per requirement
+        // Preserve existing matKhau as per requirement
         $existingNetwork = $this->model->getNetworkById($wifiId);
-        $password = $existingNetwork['password'] ?? '';
+        $matKhau = $existingNetwork['matKhau'] ?? '';
         $errors = [];
 
         // Validate ID
@@ -159,35 +159,35 @@ class TechController
             $errors[] = 'ID mạng không hợp lệ';
         }
 
-        // Validate wifi_name
+        // Validate tenWifi
         if (empty($wifiName)) {
             $errors[] = 'Tên mạng (WiFi Name) không được để trống';
         } elseif (strlen($wifiName) > 120) {
             $errors[] = 'Tên mạng không được vượt quá 120 ký tự';
         }
 
-        // Validate ip_range
+        // Validate daiIP
         if (empty($ipRange)) {
             $errors[] = 'Dải IP (IP Range) không được để trống';
         } elseif (!$this->isValidIpRange($ipRange)) {
             $errors[] = 'Dải IP không hợp lệ (ví dụ: 192.168.1)';
         }
 
-        // Validate gateway
-        if (empty($gateway)) {
+        // Validate congMacDinh
+        if (empty($congMacDinh)) {
             $errors[] = 'Gateway không được để trống';
-        } elseif (!filter_var($gateway, FILTER_VALIDATE_IP)) {
+        } elseif (!filter_var($congMacDinh, FILTER_VALIDATE_IP)) {
             $errors[] = 'Gateway IP không hợp lệ';
         }
 
-        // Check duplicate wifi_name (khác ID hiện tại)
+        // Check duplicate tenWifi (khác ID hiện tại)
         if (empty($errors) && $this->model->checkNetworkExists($wifiName, $wifiId)) {
             $errors[] = 'Tên mạng "' . htmlspecialchars($wifiName) . '" đã tồn tại';
         }
 
-        // Check duplicate gateway (khác ID hiện tại)
-        if (empty($errors) && $this->model->checkGatewayExists($gateway, $wifiId)) {
-            $errors[] = 'Gateway "' . htmlspecialchars($gateway) . '" đã được sử dụng';
+        // Check duplicate congMacDinh (khác ID hiện tại)
+        if (empty($errors) && $this->model->checkGatewayExists($congMacDinh, $wifiId)) {
+            $errors[] = 'Gateway "' . htmlspecialchars($congMacDinh) . '" đã được sử dụng';
         }
 
         if (!empty($errors)) {
@@ -197,7 +197,7 @@ class TechController
         }
 
         // Update
-        $result = $this->model->updateNetwork($wifiId, $wifiName, $ipRange, $gateway, $description, $isActive, $ssid, $password, $location);
+        $result = $this->model->updateNetwork($wifiId, $wifiName, $ipRange, $congMacDinh, $moTa, $isActive, $ssid, $matKhau, $viTri);
         if ($result) {
             $_SESSION['success'] = 'Cập nhật mạng thành công';
             echo json_encode(['success' => true, 'message' => 'Cập nhật mạng thành công']);
@@ -208,7 +208,7 @@ class TechController
     }
 
     /**
-     * Toggle network active status
+     * Toggle network active trangThai
      * POST: id
      */
     public function toggleWifi()
@@ -287,7 +287,7 @@ class TechController
 
     /**
      * Update system settings
-     * POST: setting_key, setting_value
+     * POST: tenCaiDat, giaTri
      */
     public function updateSettings()
     {
@@ -299,8 +299,8 @@ class TechController
             exit;
         }
 
-        $settingKey = trim($_POST['setting_key'] ?? '');
-        $settingValue = trim($_POST['setting_value'] ?? '');
+        $settingKey = trim($_POST['tenCaiDat'] ?? '');
+        $settingValue = trim($_POST['giaTri'] ?? '');
         $errors = [];
 
         // Validate
@@ -310,7 +310,7 @@ class TechController
             $errors[] = 'Tên cài đặt không được vượt quá 100 ký tự';
         }
 
-        if (!isset($_POST['setting_value']) || $settingValue === '') {
+        if (!isset($_POST['giaTri']) || $settingValue === '') {
             $errors[] = 'Giá trị cài đặt không được để trống';
         }
 

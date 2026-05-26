@@ -17,7 +17,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 $reportActionPage = $isHr ? 'xuat-bao-cao' : 'bao-cao-tong-hop';
 $fromDate = $fromDate ?? date('Y-m-01');
 $toDate = $toDate ?? date('Y-m-d');
-$department = $department ?? '';
+$phongBan = $phongBan ?? '';
 $reportRows = $reportRows ?? [];
 $payrollRows = $payrollRows ?? [];
 $departments = $departments ?? [];
@@ -27,7 +27,7 @@ $departments = $departments ?? [];
 
 <?php if ($isHr): ?>
 <?php
-// Group report rows by department
+// Group report rows by phongBan
 $reportByDept = [];
 if (!empty($reportRows)) {
     foreach ($reportRows as $row) {
@@ -219,21 +219,22 @@ if (!empty($reportRows)) {
             <form method="POST" action="index.php?page=<?= htmlspecialchars($reportActionPage) ?>" class="hrr-filter-grid">
                 <div class="hrr-form-group">
                     <label>Từ ngày</label>
-                    <input type="date" class="hrr-input" name="from_date" value="<?= htmlspecialchars($fromDate) ?>" required>
+                    <input type="date" class="hrr-input" name="tuNgay" value="<?= htmlspecialchars($fromDate) ?>" required>
                 </div>
                 <div class="hrr-form-group">
                     <label>Đến ngày</label>
-                    <input type="date" class="hrr-input" name="to_date" value="<?= htmlspecialchars($toDate) ?>" required>
+                    <input type="date" class="hrr-input" name="denNgay" value="<?= htmlspecialchars($toDate) ?>" required>
                 </div>
                 <div class="hrr-form-group">
                     <label>Phòng ban</label>
-                    <select class="hrr-select" name="department">
+                    <select class="hrr-select" name="phongBan">
                         <option value="">Tất cả phòng ban</option>
                         <?php foreach ($departments as $dept): ?>
-                            <option value="<?= htmlspecialchars($dept) ?>" <?= $department === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
+                            <option value="<?= htmlspecialchars($dept) ?>" <?= $phongBan === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <input type="hidden" name="format" value="excel">
                 <div style="display: flex; gap: 10px;">
                     <button type="submit" class="hrr-btn hrr-btn-primary" style="flex: 1;"><i class="fas fa-filter"></i> Lọc dữ liệu</button>
                     <button type="submit" class="hrr-btn hrr-btn-success" name="export" value="1" title="Xuất Excel"><i class="fas fa-file-excel"></i> Xuất</button>
@@ -251,7 +252,7 @@ if (!empty($reportRows)) {
             <form method="POST" action="index.php?page=gui-bang-cong-phe-duyet" style="margin-bottom: 24px; display: flex; justify-content: flex-end; gap: 15px; align-items: center; background: #fff; padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
                 <div class="hrr-form-group" style="flex-direction: row; align-items: center; margin-bottom: 0;">
                     <label style="margin-bottom: 0;">Kỳ chấm công:</label>
-                    <input type="month" class="hrr-input" style="padding: 6px 12px; margin-left: 10px;" name="month_key" value="<?= htmlspecialchars(substr($toDate, 0, 7)) ?>" required>
+                    <input type="month" class="hrr-input" style="padding: 6px 12px; margin-left: 10px;" name="thangNam" value="<?= htmlspecialchars(substr($toDate, 0, 7)) ?>" required>
                 </div>
                 <button type="submit" class="hrr-btn hrr-btn-warning" onclick="return confirm('Bạn có chắc chắn muốn gửi TẤT CẢ bảng công cho các trưởng phòng phê duyệt?');">
                     <i class="fas fa-paper-plane"></i> Gửi duyệt toàn bộ
@@ -266,8 +267,8 @@ if (!empty($reportRows)) {
                             <span class="hrr-dept-badge"><?= count($employees) ?> nhân viên</span>
                         </div>
                         <form method="POST" action="index.php?page=gui-bang-cong-phe-duyet" style="margin: 0;">
-                            <input type="hidden" name="department" value="<?= htmlspecialchars($deptName) ?>">
-                            <input type="hidden" name="month_key" value="<?= htmlspecialchars(substr($toDate, 0, 7)) ?>">
+                            <input type="hidden" name="phongBan" value="<?= htmlspecialchars($deptName) ?>">
+                            <input type="hidden" name="thangNam" value="<?= htmlspecialchars(substr($toDate, 0, 7)) ?>">
                             <button type="submit" class="hrr-btn hrr-btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="return confirm('Gửi bảng công phòng <?= htmlspecialchars($deptName) ?> cho Manager duyệt?');">
                                 <i class="fas fa-paper-plane"></i> Gửi duyệt phòng này
                             </button>
@@ -317,7 +318,7 @@ if (!empty($reportRows)) {
 <?php
 $managerName = $_SESSION['user']['hoTen'] ?? 'Quản lý';
 $managerDept = $_SESSION['user']['phongBan'] ?? '';
-$selectedDept = $department !== '' ? $department : ($managerDept ?: ($departments[0] ?? 'Tất cả'));
+$selectedDept = $phongBan !== '' ? $phongBan : ($managerDept ?: ($departments[0] ?? 'Tất cả'));
 $fromTs = strtotime($fromDate) ?: strtotime(date('Y-m-01'));
 $toTs = strtotime($toDate) ?: strtotime(date('Y-m-d'));
 $dayCount = max(1, (int)floor(($toTs - $fromTs) / 86400) + 1);
@@ -639,7 +640,7 @@ $updatedAt = date('H:i, d/m/Y');
     height: 28px;
     font-size: .68rem;
 }
-.mgrr-note {
+.mgrr-ghiChu {
     margin-top: 14px;
     display: flex;
     gap: 10px;
@@ -686,18 +687,18 @@ $updatedAt = date('H:i, d/m/Y');
             <input type="hidden" name="page" value="bao-cao-tong-hop">
             <div class="mgrr-field">
                 <label>Phòng ban của tôi</label>
-                <select class="mgrr-select" name="department">
+                <select class="mgrr-select" name="phongBan">
                     <option value="">Tất cả phòng ban</option>
                     <?php foreach ($departments as $dept): ?>
-                        <option value="<?= htmlspecialchars($dept) ?>" <?= $department === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
+                        <option value="<?= htmlspecialchars($dept) ?>" <?= $phongBan === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="mgrr-field">
                 <label>Khoảng thời gian</label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                    <input class="mgrr-input" type="date" name="from_date" value="<?= htmlspecialchars($fromDate) ?>">
-                    <input class="mgrr-input" type="date" name="to_date" value="<?= htmlspecialchars($toDate) ?>">
+                    <input class="mgrr-input" type="date" name="tuNgay" value="<?= htmlspecialchars($fromDate) ?>">
+                    <input class="mgrr-input" type="date" name="denNgay" value="<?= htmlspecialchars($toDate) ?>">
                 </div>
             </div>
             <div class="mgrr-field">
@@ -907,8 +908,8 @@ document.addEventListener('DOMContentLoaded', function () {
         };
         rows.forEach(function (row) {
             var type = row.request_type || 'leave';
-            var status = row.status || 'pending';
-            if (map[type] && map[type][status] !== undefined) map[type][status]++;
+            var trangThai = row.trangThai || 'pending';
+            if (map[type] && map[type][trangThai] !== undefined) map[type][trangThai]++;
         });
         var total = { approved: 0, rejected: 0, pending: 0 };
         var html = ['leave', 'ot', 'shift'].map(function (type) {

@@ -51,7 +51,7 @@ class ChamCongController
             $settings = $this->model->getAllSettings() ?? [];
         }
         
-        // Lấy trạng thái ca làm hôm nay (shift-based status)
+        // Lấy trạng thái ca làm hôm nay (shift-based trangThai)
         $todayShiftStatus = $this->model->getTodayShiftStatus($maND);
 
         // Fetch employee monthly stats for dashboard cards
@@ -60,7 +60,7 @@ class ChamCongController
         
         $stats['employee'] = [
             'work_days' => $empStatsRaw['work_days'],
-            'late_times' => $this->formatMinutes($empStatsRaw['late_minutes']),
+            'late_times' => $this->formatMinutes($empStatsRaw['phutDiTre']),
             'ot_hours' => $empStatsRaw['ot_hours'],
             'leave_days' => $empStatsRaw['leave_days']
         ];
@@ -73,11 +73,11 @@ class ChamCongController
         $totalMinutes = (int)$totalMinutes;
         if ($totalMinutes <= 0) return '0';
         
-        $hours = floor($totalMinutes / 60);
+        $soGio = floor($totalMinutes / 60);
         $minutes = $totalMinutes % 60;
         
-        if ($hours > 0) {
-            return $hours . 'h' . ($minutes > 0 ? ' ' . $minutes . 'p' : '');
+        if ($soGio > 0) {
+            return $soGio . 'h' . ($minutes > 0 ? ' ' . $minutes . 'p' : '');
         }
         return $totalMinutes . 'p';
     }
@@ -98,8 +98,8 @@ class ChamCongController
         $maND = $_SESSION['user']['maND'] ?? $_SESSION['user']['maTK'] ?? '';
         
         // Lấy khoảng ngày từ GET hoặc mặc định là tháng hiện tại
-        $from = trim($_GET['from_date'] ?? date('Y-m-01'));
-        $to = trim($_GET['to_date'] ?? date('Y-m-d'));
+        $from = trim($_GET['tuNgay'] ?? date('Y-m-01'));
+        $to = trim($_GET['denNgay'] ?? date('Y-m-d'));
         
         // Validation
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
@@ -112,9 +112,9 @@ class ChamCongController
         require 'app/views/chamcong/lichsu.php';
     }
 
-    public function chamCong($action)
+    public function chamCong($hanhDong)
     {
-        $this->thucHienChamCong($action);
+        $this->thucHienChamCong($hanhDong);
     }
 
     public function yeuCauChinhSua()
@@ -126,13 +126,13 @@ class ChamCongController
 
         // Existing POST handler (kept intact for backward compat)
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $attendanceDate = trim($_POST['attendance_date'] ?? '');
-            $oldTime = trim($_POST['old_time'] ?? '');
-            $newTime = trim($_POST['new_time'] ?? '');
-            $reason = trim($_POST['reason'] ?? '');
+            $attendanceDate = trim($_POST['ngayChamCong'] ?? '');
+            $oldTime = trim($_POST['gioCu'] ?? '');
+            $newTime = trim($_POST['gioMoi'] ?? '');
+            $lyDo = trim($_POST['lyDo'] ?? '');
 
-            if ($attendanceDate !== '' && $newTime !== '' && $reason !== '') {
-                $ok = $this->model->taoYeuCauChinhSua($maND, $attendanceDate, $oldTime ?: null, $newTime, $reason);
+            if ($attendanceDate !== '' && $newTime !== '' && $lyDo !== '') {
+                $ok = $this->model->taoYeuCauChinhSua($maND, $attendanceDate, $oldTime ?: null, $newTime, $lyDo);
                 $message = $ok ? 'Gửi yêu cầu chỉnh sửa thành công.' : 'Không thể gửi yêu cầu, vui lòng thử lại.';
                 $messageType = $ok ? 'success' : 'error';
             } else {
@@ -164,10 +164,10 @@ class ChamCongController
         }
 
         $maND = $_SESSION['user']['maND'] ?? $_SESSION['user']['maTK'] ?? '';
-        $attendanceDate = trim($_POST['attendance_date'] ?? '');
-        $reason = trim($_POST['reason'] ?? '');
-        $proposedCheckin = trim($_POST['proposed_checkin'] ?? '');
-        $proposedCheckout = trim($_POST['proposed_checkout'] ?? '');
+        $attendanceDate = trim($_POST['ngayChamCong'] ?? '');
+        $lyDo = trim($_POST['lyDo'] ?? '');
+        $proposedCheckin = trim($_POST['gioVaoDeXuat'] ?? '');
+        $proposedCheckout = trim($_POST['gioRaDeXuat'] ?? '');
 
         // Combine date and time if inputs are time-only (HH:mm)
         if ($proposedCheckin && strlen($proposedCheckin) === 5) {
@@ -178,7 +178,7 @@ class ChamCongController
         }
 
         // Validation
-        if ($attendanceDate === '' || $reason === '') {
+        if ($attendanceDate === '' || $lyDo === '') {
             $_SESSION['edit_request_error'] = 'Vui lòng nhập đầy đủ ngày và lý do.';
             header('Location: index.php?page=yeu-cau-chinh-sua-cham-cong');
             exit;
@@ -192,14 +192,14 @@ class ChamCongController
 
         // Handle file upload with MIME type validation
         $evidenceFile = null;
-        if (!isset($_FILES['evidence_file']) || $_FILES['evidence_file']['error'] !== UPLOAD_ERR_OK) {
+        if (!isset($_FILES['tepMinhChung']) || $_FILES['tepMinhChung']['error'] !== UPLOAD_ERR_OK) {
             $_SESSION['edit_request_error'] = 'Vui lòng đính kèm file minh chứng (bắt buộc).';
             header('Location: index.php?page=yeu-cau-chinh-sua-cham-cong');
             exit;
         }
 
-        $tmpName = $_FILES['evidence_file']['tmp_name'];
-        $fileSize = $_FILES['evidence_file']['size'];
+        $tmpName = $_FILES['tepMinhChung']['tmp_name'];
+        $fileSize = $_FILES['tepMinhChung']['size'];
 
             // Validate file size (max 5MB)
             if ($fileSize > 5 * 1024 * 1024) {
@@ -247,9 +247,9 @@ class ChamCongController
         $originalIn = null;
         $originalOut = null;
         foreach ($attendanceRecords as $rec) {
-            if (($rec['work_date'] ?? '') === $attendanceDate) {
-                $originalIn = $rec['first_in'] ?? null;
-                $originalOut = $rec['last_out'] ?? null;
+            if (($rec['ngayLamViec'] ?? '') === $attendanceDate) {
+                $originalIn = $rec['gioVaoDau'] ?? null;
+                $originalOut = $rec['gioRaCuoi'] ?? null;
                 break;
             }
         }
@@ -257,13 +257,13 @@ class ChamCongController
         // Insert via model
         $data = [
             'maND' => $maND,
-            'attendance_date' => $attendanceDate,
-            'old_time' => $originalIn,
-            'new_time' => $proposedCheckin ?: $proposedCheckout ?: date('Y-m-d H:i:s'),
-            'reason' => $reason,
-            'proposed_checkin' => $proposedCheckin ?: null,
-            'proposed_checkout' => $proposedCheckout ?: null,
-            'evidence_file' => $evidenceFile,
+            'ngayChamCong' => $attendanceDate,
+            'gioCu' => $originalIn,
+            'gioMoi' => $proposedCheckin ?: $proposedCheckout ?: date('Y-m-d H:i:s'),
+            'lyDo' => $lyDo,
+            'gioVaoDeXuat' => $proposedCheckin ?: null,
+            'gioRaDeXuat' => $proposedCheckout ?: null,
+            'tepMinhChung' => $evidenceFile,
         ];
 
         $ok = $this->model->insertEditRequest($data);
@@ -302,18 +302,18 @@ class ChamCongController
         require 'app/views/chamcong/tech_panel.php';
     }
 
-    private function thucHienChamCong($action)
+    private function thucHienChamCong($hanhDong)
     {
         $this->requireLogin();
         $maND = $_SESSION['user']['maND'] ?? $_SESSION['user']['maTK'] ?? '';
 
         // Xác định phương thức chấm công trước khi kiểm tra WiFi.
-        $method = ($_POST['method'] ?? 'LAN') === 'QR' ? 'QR' : 'LAN';
+        $phuongThuc = ($_POST['phuongThuc'] ?? 'LAN') === 'QR' ? 'QR' : 'LAN';
 
         // Lấy WiFi name từ POST hoặc GET
-        $wifiName = trim($_POST['wifi_name'] ?? $_GET['wifi_name'] ?? 'INTERNAL_NETWORK');
+        $wifiName = trim($_POST['tenWifi'] ?? $_GET['tenWifi'] ?? 'INTERNAL_NETWORK');
 
-        if ($method === 'LAN') {
+        if ($phuongThuc === 'LAN') {
             // ===== NETWORK VALIDATION (SERVER-SIDE ONLY) =====
             // Get server-side client IP (cannot be spoofed from frontend)
             $clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
@@ -361,34 +361,34 @@ class ChamCongController
         $todayAttendance = $this->model->getAttendanceByUser($maND, 1);
         $hasIn = false;
         $hasOut = false;
-        if (!empty($todayAttendance) && $todayAttendance[0]['work_date'] === date('Y-m-d')) {
-            $hasIn = !empty($todayAttendance[0]['first_in']);
-            $hasOut = !empty($todayAttendance[0]['last_out']);
+        if (!empty($todayAttendance) && $todayAttendance[0]['ngayLamViec'] === date('Y-m-d')) {
+            $hasIn = !empty($todayAttendance[0]['gioVaoDau']);
+            $hasOut = !empty($todayAttendance[0]['gioRaCuoi']);
         }
         
         // Logic: Nếu chưa IN thì không thể OUT
-        if ($action === 'OUT' && !$hasIn) {
+        if ($hanhDong === 'OUT' && !$hasIn) {
             $_SESSION['error'] = 'Bạn chưa chấm công vào. Vui lòng chấm vào trước.';
             header('Location: index.php?page=cham-cong');
             exit;
         }
         
         // Logic: Nếu đã OUT thì không thể chấm OUT lại
-        if ($action === 'OUT' && $hasOut) {
+        if ($hanhDong === 'OUT' && $hasOut) {
             $_SESSION['error'] = 'Bạn đã chấm công ra hôm nay rồi. Chỉ được phép 1 lần/ngày.';
             header('Location: index.php?page=cham-cong');
             exit;
         }
         
         // Logic: Nếu đã IN thì không thể chấm IN lại
-        if ($action === 'IN' && $hasIn) {
+        if ($hanhDong === 'IN' && $hasIn) {
             $_SESSION['error'] = 'Bạn đã chấm công vào hôm nay rồi. Chỉ được phép 1 lần/ngày.';
             header('Location: index.php?page=cham-cong');
             exit;
         }
 
         // Kiểm tra khung giờ ca làm: chỉ cho phép IN trong giờ ca chính thức
-        if ($action === 'IN') {
+        if ($hanhDong === 'IN') {
             $shift = $this->model->getShiftForUser($maND);
             if (!$shift) {
                 $_SESSION['error'] = 'Bạn chưa được phân ca làm việc. Vui lòng liên hệ HR để được gán ca.';
@@ -397,8 +397,8 @@ class ChamCongController
             }
             if ($shift) {
                 $now   = date('H:i:s');
-                $start = $shift['start_time'];
-                $end   = $shift['end_time'];
+                $start = $shift['gioBatDau'];
+                $end   = $shift['gioKetThuc'];
 
                 $isOutsideShift = false;
                 $isTooEarly     = false;
@@ -434,12 +434,12 @@ class ChamCongController
         }
         
         // Lưu chấm công
-        $note = trim($_POST['note'] ?? '');
+        $ghiChu = trim($_POST['ghiChu'] ?? '');
         
-        $ok = $this->model->chamCong($maND, $action, $method, $wifiName, $note);
+        $ok = $this->model->chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu);
         
         if ($ok) {
-            $actionText = ($action === 'IN') ? 'vào' : 'ra';
+            $actionText = ($hanhDong === 'IN') ? 'vào' : 'ra';
             $_SESSION['success'] = 'Chấm công ' . $actionText . ' thành công!';
         } else {
             $_SESSION['error'] = 'Chấm công thất bại. Vui lòng thử lại.';
@@ -468,7 +468,7 @@ class ChamCongController
      */
     /**
      * Validate Company Network - FOR DISPLAY ONLY
-     * Returns current IP and network status (informational, not blocking)
+     * Returns current IP and network trangThai (informational, not blocking)
      * GET/POST /attendance/validate-network
      * Returns: { ip, allowed_networks, message }
      * 
@@ -531,13 +531,13 @@ class ChamCongController
         }
 
         // Handle WiFi Name
-        $wifiName = trim($_POST['wifi_name'] ?? '');
+        $wifiName = trim($_POST['tenWifi'] ?? '');
         if (empty($wifiName)) {
             // Auto-detect by IP or use first active
             $configs = $this->model->getActiveWifiConfigurations();
             foreach ($configs as $cfg) {
-                if (strpos($serverIP, $cfg['ip_range']) === 0) {
-                    $wifiName = $cfg['wifi_name'];
+                if (strpos($serverIP, $cfg['daiIP']) === 0) {
+                    $wifiName = $cfg['tenWifi'];
                     break;
                 }
             }
@@ -549,7 +549,7 @@ class ChamCongController
         // Check already checked in
         $logs = $this->model->getTodayLogs($maND);
         foreach ($logs as $log) {
-            if ($log['action'] === 'IN') {
+            if ($log['hanhDong'] === 'IN') {
                 echo json_encode(['success' => false, 'message' => 'Bạn đã chấm công vào hôm nay rồi']);
                 exit;
             }
@@ -563,8 +563,8 @@ class ChamCongController
         }
         if ($shift) {
             $now   = date('H:i:s');
-            $start = $shift['start_time'];
-            $end   = $shift['end_time'];
+            $start = $shift['gioBatDau'];
+            $end   = $shift['gioKetThuc'];
 
             $isOutsideShift = false;
             $isTooEarly     = false;
@@ -637,12 +637,12 @@ class ChamCongController
         }
 
         // Handle WiFi Name
-        $wifiName = trim($_POST['wifi_name'] ?? '');
+        $wifiName = trim($_POST['tenWifi'] ?? '');
         if (empty($wifiName)) {
             $configs = $this->model->getActiveWifiConfigurations();
             foreach ($configs as $cfg) {
-                if (strpos($serverIP, $cfg['ip_range']) === 0) {
-                    $wifiName = $cfg['wifi_name'];
+                if (strpos($serverIP, $cfg['daiIP']) === 0) {
+                    $wifiName = $cfg['tenWifi'];
                     break;
                 }
             }
@@ -652,8 +652,8 @@ class ChamCongController
         $logs = $this->model->getTodayLogs($maND);
         $hasIn = false; $hasOut = false;
         foreach ($logs as $log) {
-            if ($log['action'] === 'IN') $hasIn = true;
-            if ($log['action'] === 'OUT') $hasOut = true;
+            if ($log['hanhDong'] === 'IN') $hasIn = true;
+            if ($log['hanhDong'] === 'OUT') $hasOut = true;
         }
 
         if (!$hasIn) {
@@ -695,8 +695,8 @@ class ChamCongController
         
         $checkIn = null; $checkOut = null;
         foreach ($logs as $log) {
-            if ($log['action'] === 'IN') $checkIn = $log['created_at'];
-            if ($log['action'] === 'OUT') $checkOut = $log['created_at'];
+            if ($log['hanhDong'] === 'IN') $checkIn = $log['ngayTao'];
+            if ($log['hanhDong'] === 'OUT') $checkOut = $log['ngayTao'];
         }
 
         $totalHours = 0;
@@ -716,7 +716,7 @@ class ChamCongController
     /**
      * Get Attendance History (JSON API)
      * GET /attendance/history?limit=10
-     * Returns: { success, data: [{date, checkIn, checkOut, hours}, ...] }
+     * Returns: { success, data: [{date, checkIn, checkOut, soGio}, ...] }
      */
     public function getAttendanceHistory()
     {
@@ -736,19 +736,19 @@ class ChamCongController
         // Group by date to match front-end expectation
         $grouped = [];
         foreach ($history as $h) {
-            $date = date('Y-m-d', strtotime($h['created_at']));
+            $date = date('Y-m-d', strtotime($h['ngayTao']));
             if (!isset($grouped[$date])) {
-                // Ensure fallback for wifi_name
-                $wifiDisplay = !empty($h['wifi_name']) ? $h['wifi_name'] : 'Wifi Công ty';
+                // Ensure fallback for tenWifi
+                $wifiDisplay = !empty($h['tenWifi']) ? $h['tenWifi'] : 'Wifi Công ty';
                 $grouped[$date] = [
                     'date' => $date, 
                     'checkIn' => null, 
                     'checkOut' => null, 
-                    'wifi_name' => $wifiDisplay
+                    'tenWifi' => $wifiDisplay
                 ];
             }
-            if ($h['action'] === 'IN') $grouped[$date]['checkIn'] = date('H:i:s', strtotime($h['created_at']));
-            if ($h['action'] === 'OUT') $grouped[$date]['checkOut'] = date('H:i:s', strtotime($h['created_at']));
+            if ($h['hanhDong'] === 'IN') $grouped[$date]['checkIn'] = date('H:i:s', strtotime($h['ngayTao']));
+            if ($h['hanhDong'] === 'OUT') $grouped[$date]['checkOut'] = date('H:i:s', strtotime($h['ngayTao']));
         }
 
         echo json_encode([
@@ -778,13 +778,13 @@ class ChamCongController
         if ($detail) {
             // Translate leave type
             $types = ['annual' => 'Nghỉ phép năm', 'sick' => 'Nghỉ ốm', 'personal' => 'Việc riêng', 'unpaid' => 'Nghỉ không lương'];
-            $detail['leave_type_text'] = $types[$detail['leave_type']] ?? $detail['leave_type'];
+            $detail['leave_type_text'] = $types[$detail['loaiNghiPhep']] ?? $detail['loaiNghiPhep'];
             
             // Format dates
-            $detail['from_date_fmt'] = date('d/m/Y', strtotime($detail['from_date']));
-            $detail['to_date_fmt'] = date('d/m/Y', strtotime($detail['to_date']));
-            $detail['created_at_fmt'] = date('d/m/Y H:i', strtotime($detail['created_at']));
-            $detail['approved_at_fmt'] = $detail['approved_at'] ? date('d/m/Y H:i', strtotime($detail['approved_at'])) : null;
+            $detail['from_date_fmt'] = date('d/m/Y', strtotime($detail['tuNgay']));
+            $detail['to_date_fmt'] = date('d/m/Y', strtotime($detail['denNgay']));
+            $detail['created_at_fmt'] = date('d/m/Y H:i', strtotime($detail['ngayTao']));
+            $detail['approved_at_fmt'] = $detail['ngayDuyet'] ? date('d/m/Y H:i', strtotime($detail['ngayDuyet'])) : null;
 
             echo json_encode(['success' => true, 'data' => $detail]);
         } else {
@@ -812,13 +812,13 @@ class ChamCongController
         $detail = $this->model->getCorrectionById($id);
         if ($detail) {
             // Format dates
-            $detail['attendance_date_fmt'] = date('d/m/Y', strtotime($detail['attendance_date']));
-            $detail['old_time_fmt'] = $detail['old_time'] ? date('H:i', strtotime($detail['old_time'])) : '--:--';
-            $detail['new_time_fmt'] = date('H:i', strtotime($detail['new_time']));
-            $detail['proposed_checkin_fmt'] = $detail['proposed_checkin'] ? date('H:i', strtotime($detail['proposed_checkin'])) : '--:--';
-            $detail['proposed_checkout_fmt'] = $detail['proposed_checkout'] ? date('H:i', strtotime($detail['proposed_checkout'])) : '--:--';
-            $detail['created_at_fmt'] = date('d/m/Y H:i', strtotime($detail['created_at']));
-            $detail['approved_at_fmt'] = ($detail['status'] !== 'pending' && $detail['updated_at']) ? date('d/m/Y H:i', strtotime($detail['updated_at'])) : null;
+            $detail['attendance_date_fmt'] = date('d/m/Y', strtotime($detail['ngayChamCong']));
+            $detail['old_time_fmt'] = $detail['gioCu'] ? date('H:i', strtotime($detail['gioCu'])) : '--:--';
+            $detail['new_time_fmt'] = date('H:i', strtotime($detail['gioMoi']));
+            $detail['proposed_checkin_fmt'] = $detail['gioVaoDeXuat'] ? date('H:i', strtotime($detail['gioVaoDeXuat'])) : '--:--';
+            $detail['proposed_checkout_fmt'] = $detail['gioRaDeXuat'] ? date('H:i', strtotime($detail['gioRaDeXuat'])) : '--:--';
+            $detail['created_at_fmt'] = date('d/m/Y H:i', strtotime($detail['ngayTao']));
+            $detail['approved_at_fmt'] = ($detail['trangThai'] !== 'pending' && $detail['ngayCapNhat']) ? date('d/m/Y H:i', strtotime($detail['ngayCapNhat'])) : null;
             $detail['approver_name'] = null; // Table doesn't track this yet
 
             echo json_encode(['success' => true, 'data' => $detail]);
@@ -877,7 +877,7 @@ class ChamCongController
 
     /**
      * API: Nhân viên duyệt bảng công
-     * POST: { timesheet_id, note }
+     * POST: { timesheet_id, ghiChu }
      */
     public function approveTimesheetApi()
     {
@@ -892,7 +892,7 @@ class ChamCongController
 
         $maND = (int)($_SESSION['user']['maND'] ?? 0);
         $timesheetId = (int)($_POST['timesheet_id'] ?? 0);
-        $note = trim($_POST['note'] ?? '');
+        $ghiChu = trim($_POST['ghiChu'] ?? '');
 
         if ($timesheetId <= 0) {
             http_response_code(422);
@@ -900,7 +900,7 @@ class ChamCongController
             exit;
         }
 
-        $ok = $this->model->approveEmployeeTimesheet($timesheetId, $maND, $note);
+        $ok = $this->model->approveEmployeeTimesheet($timesheetId, $maND, $ghiChu);
         echo json_encode([
             'success' => $ok,
             'message' => $ok ? 'Đã xác nhận duyệt bảng công thành công' : 'Không thể duyệt bảng công'
@@ -940,27 +940,27 @@ class ChamCongController
         }
 
         $maND       = (int)($_SESSION['user']['maND'] ?? 0);
-        $leave_type = trim($_POST['leave_type'] ?? 'personal');
-        $from_date  = trim($_POST['from_date'] ?? '');
-        $to_date    = trim($_POST['to_date'] ?? '');
-        $reason     = trim($_POST['reason'] ?? '');
+        $loaiNghiPhep = trim($_POST['loaiNghiPhep'] ?? 'personal');
+        $tuNgay  = trim($_POST['tuNgay'] ?? '');
+        $denNgay    = trim($_POST['denNgay'] ?? '');
+        $lyDo     = trim($_POST['lyDo'] ?? '');
 
-        if ($from_date === '' || $to_date === '' || $reason === '') {
+        if ($tuNgay === '' || $denNgay === '' || $lyDo === '') {
             $_SESSION['leave_error'] = 'Vui lòng điền đầy đủ các trường bắt buộc (*)';
             header('Location: index.php?page=create-leave-request');
             exit;
         }
 
-        if ($from_date > $to_date) {
+        if ($tuNgay > $denNgay) {
             $_SESSION['leave_error'] = 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc';
             header('Location: index.php?page=create-leave-request');
             exit;
         }
 
         // Handle file upload
-        $evidence_file = null;
-        if (isset($_FILES['evidence_file']) && $_FILES['evidence_file']['error'] === UPLOAD_ERR_OK) {
-            $file        = $_FILES['evidence_file'];
+        $tepMinhChung = null;
+        if (isset($_FILES['tepMinhChung']) && $_FILES['tepMinhChung']['error'] === UPLOAD_ERR_OK) {
+            $file        = $_FILES['tepMinhChung'];
             $allowedExts = ['jpg', 'jpeg', 'png', 'pdf'];
             $maxSize     = 5 * 1024 * 1024; // 5MB
 
@@ -984,11 +984,11 @@ class ChamCongController
             $fileName = 'leave_' . $maND . '_' . date('YmdHis') . '_' . mt_rand(100, 999) . '.' . $ext;
             $filePath = $uploadDir . $fileName;
             if (move_uploaded_file($file['tmp_name'], $filePath)) {
-                $evidence_file = $filePath;
+                $tepMinhChung = $filePath;
             }
         }
 
-        $ok = $this->model->insertLeaveRequest($maND, $leave_type, $from_date, $to_date, $reason, $evidence_file);
+        $ok = $this->model->insertLeaveRequest($maND, $loaiNghiPhep, $tuNgay, $denNgay, $lyDo, $tepMinhChung);
         $_SESSION[$ok ? 'leave_success' : 'leave_error'] = $ok
             ? 'Gửi đơn nghỉ phép thành công!'
             : 'Không thể gửi đơn nghỉ phép. Vui lòng thử lại.';

@@ -16,16 +16,16 @@ $totalLateMinutes = 0;
 
 if (is_array($history)) {
     foreach ($history as $row) {
-        if (($row['action'] ?? '') === 'IN') {
+        if (($row['hanhDong'] ?? '') === 'IN') {
             $inCount++;
             // Calculate late info
-            $time = date('H:i:s', strtotime($row['created_at']));
+            $time = date('H:i:s', strtotime($row['ngayTao']));
             if ($time > '08:15:00') {
                 $lateCount++;
                 $diff = strtotime($time) - strtotime('08:00:00');
                 $totalLateMinutes += floor($diff / 60);
             }
-        } elseif (($row['action'] ?? '') === 'OUT') {
+        } elseif (($row['hanhDong'] ?? '') === 'OUT') {
             $outCount++;
         }
     }
@@ -73,7 +73,7 @@ $days = ($fromTs && $toTs) ? (int)max(1, floor(abs($toTs - $fromTs) / 86400) + 1
 .ls-badge { display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; white-space:nowrap; }
 .ls-badge-in { background:#dcfce7; color:#166534; }
 .ls-badge-out { background:#fef3c7; color:#b45309; }
-.ls-badge-method { background:#dbeafe; color:#1e40af; }
+.ls-badge-phuongThuc { background:#dbeafe; color:#1e40af; }
 .ls-badge-ok { background:#dcfce7; color:#166534; }
 
 /* Stats */
@@ -121,11 +121,11 @@ $days = ($fromTs && $toTs) ? (int)max(1, floor(abs($toTs - $fromTs) / 86400) + 1
                     <input type="hidden" name="page" value="lich-su-cham-cong">
                     <div class="ls-form-group">
                         <label for="from-date">Từ ngày</label>
-                        <input type="date" id="from-date" name="from_date" value="<?= htmlspecialchars($from) ?>">
+                        <input type="date" id="from-date" name="tuNgay" value="<?= htmlspecialchars($from) ?>">
                     </div>
                     <div class="ls-form-group">
                         <label for="to-date">Đến ngày</label>
-                        <input type="date" id="to-date" name="to_date" value="<?= htmlspecialchars($to) ?>">
+                        <input type="date" id="to-date" name="denNgay" value="<?= htmlspecialchars($to) ?>">
                     </div>
                     <div style="display:flex;gap:8px;align-items:flex-end;">
                         <button type="submit" class="ls-btn ls-btn-primary" style="flex:1"><i class="fas fa-filter"></i> Lọc</button>
@@ -155,20 +155,20 @@ $days = ($fromTs && $toTs) ? (int)max(1, floor(abs($toTs - $fromTs) / 86400) + 1
                                 <?php if ($count >= 100) break; ?>
                                 <?php $count++; ?>
                                 <tr>
-                                    <td style="font-size:11px; padding: 4px 10px;"><?= htmlspecialchars($row['created_at'] ?? '') ?></td>
+                                    <td style="font-size:11px; padding: 4px 10px;"><?= htmlspecialchars($row['ngayTao'] ?? '') ?></td>
                                     <td style="padding: 4px 10px;">
-                                        <?php if (($row['action'] ?? '') === 'IN'): ?>
+                                        <?php if (($row['hanhDong'] ?? '') === 'IN'): ?>
                                             <span class="ls-badge ls-badge-in" style="padding: 2px 6px; font-size: 10px;">VÀO</span>
                                         <?php else: ?>
                                             <span class="ls-badge ls-badge-out" style="padding: 2px 6px; font-size: 10px;">RA</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="padding: 4px 10px;"><span class="ls-badge ls-badge-method" style="padding: 2px 6px; font-size: 10px;"><?= htmlspecialchars($row['method'] ?? 'LAN') ?></span></td>
-                                    <td style="font-size:11px; padding: 4px 10px;"><?= htmlspecialchars(!empty($row['wifi_name']) ? $row['wifi_name'] : 'Wifi Công ty') ?></td>
+                                    <td style="padding: 4px 10px;"><span class="ls-badge ls-badge-phuongThuc" style="padding: 2px 6px; font-size: 10px;"><?= htmlspecialchars($row['phuongThuc'] ?? 'LAN') ?></span></td>
+                                    <td style="font-size:11px; padding: 4px 10px;"><?= htmlspecialchars(!empty($row['tenWifi']) ? $row['tenWifi'] : 'Wifi Công ty') ?></td>
                                     <td style="padding: 4px 10px;">
                                         <?php 
-                                        if (($row['action'] ?? '') === 'IN') {
-                                            $time = date('H:i:s', strtotime($row['created_at']));
+                                        if (($row['hanhDong'] ?? '') === 'IN') {
+                                            $time = date('H:i:s', strtotime($row['ngayTao']));
                                             if ($time > '08:15:00') {
                                                 $diff = strtotime($time) - strtotime('08:00:00');
                                                 $mins = floor($diff / 60);

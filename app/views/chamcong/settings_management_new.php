@@ -15,37 +15,37 @@ $settingsMetadata = [
     'ALLOW_QR_CHECKIN' => [
         'name' => 'Cho phép chấm công bằng QR',
         'type' => 'boolean',
-        'description' => 'Bật/tắt tính năng chấm công qua mã QR',
+        'moTa' => 'Bật/tắt tính năng chấm công qua mã QR',
         'values' => [true => 'Bật', false => 'Tắt']
     ],
     'ALLOW_OFFLINE_CHECKIN' => [
         'name' => 'Cho phép chấm công ngoài tuyến',
         'type' => 'boolean',
-        'description' => 'Cho phép chấm công khi không có kết nối internet',
+        'moTa' => 'Cho phép chấm công khi không có kết nối internet',
         'values' => [true => 'Bật', false => 'Tắt']
     ],
     'MAX_CORRECTION_DAYS' => [
         'name' => 'Tối đa ngày chỉnh sửa',
         'type' => 'number',
-        'description' => 'Số ngày tối đa được phép chỉnh sửa bản ghi chấm công (phải > 0)',
+        'moTa' => 'Số ngày tối đa được phép chỉnh sửa bản ghi chấm công (phải > 0)',
         'unit' => 'ngày'
     ],
     'DEFAULT_WORK_MINUTES' => [
         'name' => 'Phút làm việc mặc định',
         'type' => 'number',
-        'description' => 'Số phút làm việc mặc định mỗi ngày (phải > 0)',
+        'moTa' => 'Số phút làm việc mặc định mỗi ngày (phải > 0)',
         'unit' => 'phút'
     ],
     'TIMEZONE' => [
         'name' => 'Múi giờ',
         'type' => 'text',
-        'description' => 'Múi giờ hệ thống (VD: Asia/Ho_Chi_Minh)',
+        'moTa' => 'Múi giờ hệ thống (VD: Asia/Ho_Chi_Minh)',
         'maxlength' => 50
     ],
     'COMPANY_NAME' => [
         'name' => 'Tên công ty',
         'type' => 'text',
-        'description' => 'Tên công ty hiển thị trong báo cáo',
+        'moTa' => 'Tên công ty hiển thị trong báo cáo',
         'maxlength' => 255
     ]
 ];
@@ -55,8 +55,8 @@ $settingValues = [];
 foreach ($settingsMetadata as $key => $meta) {
     $settingValues[$key] = '';
     foreach ($settings as $setting) {
-        if ($setting['setting_key'] === $key) {
-            $settingValues[$key] = $setting['setting_value'];
+        if ($setting['tenCaiDat'] === $key) {
+            $settingValues[$key] = $setting['giaTri'];
             break;
         }
     }
@@ -107,7 +107,7 @@ foreach ($settingsMetadata as $key => $meta) {
                             <?= htmlspecialchars($meta['name']) ?>
                         </label>
                         <p style="color: #64748b; font-size: 13px; margin: 0 0 12px 0;">
-                            <?= htmlspecialchars($meta['description']) ?>
+                            <?= htmlspecialchars($meta['moTa']) ?>
                         </p>
 
                         <!-- Input Field -->

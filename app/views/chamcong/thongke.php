@@ -18,7 +18,7 @@ $deptEmployees = [];
 if (!empty($departmentSummary)) {
     foreach ($departmentSummary as $dept => $summary) {
         $deptLabels[] = $dept;
-        $deptHours[] = round((float)($summary['hours'] ?? 0), 2);
+        $deptHours[] = round((float)($summary['soGio'] ?? 0), 2);
         $deptEmployees[] = (int)($summary['employees'] ?? 0);
     }
 }
@@ -84,7 +84,7 @@ $attendanceChart = [
                             <tr>
                                 <td><?= htmlspecialchars($dept) ?></td>
                                 <td><?= (int)$summary['employees'] ?></td>
-                                <td><?= round((float)$summary['hours'], 2) ?></td>
+                                <td><?= round((float)$summary['soGio'], 2) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
