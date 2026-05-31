@@ -221,6 +221,24 @@ class ChamCongModel
         $this->conn->query("ALTER TABLE attendance_corrections ADD COLUMN IF NOT EXISTS proposed_checkin DATETIME DEFAULT NULL");
         $this->conn->query("ALTER TABLE attendance_corrections ADD COLUMN IF NOT EXISTS proposed_checkout DATETIME DEFAULT NULL");
         $this->conn->query("ALTER TABLE attendance_corrections ADD COLUMN IF NOT EXISTS evidence_file VARCHAR(255) DEFAULT NULL");
+
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS employee_timesheet_approval (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                month_key CHAR(7) NOT NULL,
+                maND INT NOT NULL,
+                hr_sender_id INT NOT NULL,
+                status ENUM('submitted','approved','rejected') NOT NULL DEFAULT 'submitted',
+                submitted_at DATETIME NOT NULL,
+                approved_at DATETIME DEFAULT NULL,
+                employee_note VARCHAR(255) DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uk_emp_month (month_key, maND),
+                KEY idx_emp_status (maND, status),
+                KEY idx_month_status (month_key, status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
     }
 
     public function chamCong($maND, $action, $method, $wifiName, $note, $clientIP = null)
@@ -1086,9 +1104,6 @@ class ChamCongModel
 
     public function getAttendanceReport($fromDate, $toDate, $department = '')
     {
-        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
-        $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
-        
         $sql = "SELECT u.maND, u.hoTen, u.phongBan,
                        COUNT(DISTINCT DATE(l.created_at)) AS work_days,
                        SUM(CASE WHEN l.action = 'IN' THEN 1 ELSE 0 END) AS checkin_count,
@@ -1098,16 +1113,10 @@ class ChamCongModel
                     AND DATE(l.created_at) >= ?
                     AND DATE(l.created_at) <= ?
                 WHERE u.trangThai = 1
-                  AND u.chucVu = 'Nhân viên'
-                  AND u.phongBan IN ($placeholders)";
+                  AND u.chucVu = 'Nhân viên'";
 
         $params = [$fromDate, $toDate];
         $types = 'ss';
-        
-        foreach ($validDepts as $dept) {
-            $params[] = $dept;
-            $types .= 's';
-        }
 
         if ($department !== '') {
             $sql .= " AND u.phongBan = ?";
@@ -1118,6 +1127,9 @@ class ChamCongModel
         $sql .= " GROUP BY u.maND, u.hoTen, u.phongBan ORDER BY u.hoTen";
 
         $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -2248,9 +2260,9 @@ class ChamCongModel
                 return false;
             }
             
-            // Filter theo phòng ban hợp lệ
+            // Filter theo phòng ban hợp lệ (nếu có cấu hình danh sách)
             $empDept = (string)($e['phongBan'] ?? '');
-            if (!in_array($empDept, $validDepts, true)) {
+            if (!empty($validDepts) && !in_array($empDept, $validDepts, true)) {
                 return false;
             }
             
@@ -2302,15 +2314,25 @@ class ChamCongModel
                 $standardWorkDays
             );
 
+            // Calculate according to formula: Valid Days = Work Days + Leave Days + OT/8
+            $workDays = (float)($monthlyCalc['totals']['total_work_days'] ?? 0);
+            $leaveDays = (float)($monthlyCalc['totals']['total_leave_days'] ?? 0);
+            $otHours = (float)($monthlyCalc['totals']['total_ot_hours'] ?? 0);
+            
+            $validWorkDays = $workDays + $leaveDays + ($otHours / 8);
+            $validWorkHours = ($workDays + $leaveDays) * 8 + $otHours;
+
             $result[] = [
                 'maND' => $maND,
                 'hoTen' => $hoTen,
                 'phongBan' => $employee['phongBan'] ?? '',
                 'daily_breakdown' => $monthlyCalc['daily_breakdown'] ?? [],
-                'work_days' => round((float)($monthlyCalc['totals']['total_work_days'] ?? 0), 1),
-                'work_hours' => round((float)($monthlyCalc['totals']['working_hours'] ?? 0), 2),
-                'overtime_hours' => round((float)($monthlyCalc['totals']['total_ot_hours'] ?? 0), 2),
-                'leave_days_used' => $monthlyCalc['totals']['total_leave_days'] ?? 0,
+                'work_days' => round($workDays, 1),
+                'leave_days_with_pay' => round($leaveDays, 1),
+                'overtime_hours' => round($otHours, 2),
+                'valid_work_days' => round($validWorkDays, 1),
+                'work_hours' => round($validWorkHours, 2),
+                'leave_days_used' => round($leaveDays, 1),
                 'holiday_days' => $monthlyCalc['totals']['total_holiday_days'] ?? 0,
                 'weekend_days' => $monthlyCalc['totals']['total_weekend_days'] ?? 0,
                 'absent_days' => $monthlyCalc['totals']['total_absent_days'] ?? 0,
@@ -2894,7 +2916,7 @@ class ChamCongModel
                 FROM nguoidung n
                 INNER JOIN attendance_daily_summary ads ON ads.maND = n.maND
                     AND ads.work_date >= ? AND ads.work_date <= ?
-                WHERE n.trangThai = 1 AND n.vaiTro = 'Nhân viên'";
+                WHERE n.trangThai = 1 AND n.chucVu = 'Nhân viên'";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return false;
         $stmt->bind_param('ss', $startDate, $endDate);
@@ -3102,6 +3124,7 @@ class ChamCongModel
         $sql = "SELECT eta.month_key,
                        COUNT(*) AS total,
                        SUM(CASE WHEN eta.status = 'submitted' THEN 1 ELSE 0 END) AS pending,
+                       SUM(CASE WHEN eta.status = 'submitted' THEN 1 ELSE 0 END) AS submitted,
                        SUM(CASE WHEN eta.status = 'approved' THEN 1 ELSE 0 END) AS approved,
                        MAX(eta.submitted_at) AS last_submitted
                 FROM employee_timesheet_approval eta";

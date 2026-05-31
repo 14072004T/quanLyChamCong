@@ -214,7 +214,12 @@ class HRController
 
         $summaryRows = $this->model->getTimesheetApprovalSummary($monthKey);
         $summaryRow = $summaryRows[0] ?? null;
-        $canExport = $summaryRow && (int)($summaryRow['total'] ?? 0) > 0 && (int)($summaryRow['pending'] ?? 0) === 0;
+        // Allow export if: has data AND (all approved OR has been submitted)
+        $canExport = $summaryRow && (int)($summaryRow['total'] ?? 0) > 0 && 
+                     (
+                         (int)($summaryRow['pending'] ?? 0) === 0 ||  // All approved
+                         (int)($summaryRow['submitted'] ?? 0) > 0      // At least submitted
+                     );
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $export && in_array($format, ['excel', 'csv'], true)) {
             if (!$canExport) {

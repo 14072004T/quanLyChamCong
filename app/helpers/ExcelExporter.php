@@ -98,7 +98,7 @@ class ExcelExporter
                 <th rowspan="2" class="header-cell">Họ và Tên</th>
                 <th rowspan="2" class="header-cell">Phòng ban</th>
                 <th colspan="' . $daysInMonth . '" class="header-cell">Ngày trong tháng</th>
-                <th colspan="6" class="header-cell">Tổng cộng</th>
+                <th colspan="7" class="header-cell">Tổng cộng</th>
             </tr>
             <tr>';
         
@@ -112,8 +112,9 @@ class ExcelExporter
         }
 
         $html .= '<th class="summary-header">Công</th>
-            <th class="summary-header summary-hours" style="background-color: #FECACA; color: #b91c1c;">Giờ làm (h)</th>
-                <th class="summary-header">Phép</th>
+            <th class="summary-header">Phép</th>
+            <th class="summary-header summary-hours" style="background-color: #FECACA; color: #b91c1c;">Tổng Công Hợp Lệ (ngày)</th>
+            <th class="summary-header summary-hours" style="background-color: #FECACA; color: #b91c1c;">Tổng Giờ Làm (h)</th>
                 <th class="summary-header">Lễ</th>
                 <th class="summary-header">Vắng</th>
                 <th class="summary-header">OT (h)</th>
@@ -167,8 +168,9 @@ class ExcelExporter
             }
 
             $html .= '<td class="summary-value">' . ($row['work_days'] ?? 0) . '</td>
-                <td class="summary-value summary-hours" style="background-color: #FECACA; color: #b91c1c;">' . ($row['work_hours'] ?? 0) . '</td>
                 <td class="summary-value">' . ($row['leave_days_used'] ?? 0) . '</td>
+                <td class="summary-value summary-hours" style="background-color: #FECACA; color: #b91c1c;">' . ($row['valid_work_days'] ?? 0) . '</td>
+                <td class="summary-value summary-hours" style="background-color: #FECACA; color: #b91c1c;">' . ($row['work_hours'] ?? 0) . '</td>
                 <td class="summary-value">' . ($row['holiday_days'] ?? 0) . '</td>
                 <td class="summary-value">' . ($row['absent_days'] ?? 0) . '</td>
                 <td class="summary-value">' . ($row['overtime_hours'] ?? 0) . '</td>

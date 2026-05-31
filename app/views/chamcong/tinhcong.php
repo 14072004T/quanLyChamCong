@@ -18,7 +18,12 @@ foreach ($approvalHistory as $row) {
         break;
     }
 }
-$canExport = $exportSummary && (int)($exportSummary['pending'] ?? 0) === 0 && (int)($exportSummary['total'] ?? 0) > 0;
+// Allow export if: has data AND (all approved OR has been submitted)
+$canExport = $exportSummary && (int)($exportSummary['total'] ?? 0) > 0 && 
+             (
+                 (int)($exportSummary['pending'] ?? 0) === 0 ||  // All approved
+                 (int)($exportSummary['submitted'] ?? 0) > 0      // At least submitted
+             );
 $summaryEmployees = count($salaryRows ?? []);
 $summaryWorkDays = 0;
 $summaryWorkHours = 0;
@@ -414,7 +419,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                     <div class="tab-content" id="tab-bangchamcong">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                             <h3 style="margin:0;">Tổng toán tháng <span id="list-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
-                            <button class="btn btn-success btn-sm" type="submit" form="payroll-export-form" id="payroll-export-btn" title="<?= $canExport ? 'Tất cả nhân viên đã duyệt, có thể xuất.' : 'Chỉ xuất khi tất cả nhân viên đã duyệt bảng công.' ?>" <?= $canExport ? '' : 'disabled' ?>>
+                            <button class="btn btn-success btn-sm" type="submit" form="payroll-export-form" id="payroll-export-btn" title="<?= $canExport ? 'Bảng công đã sẵn sàng, có thể xuất.' : 'Chỉ xuất khi bảng công đã được gửi hoặc tất cả nhân viên đã duyệt.' ?>" <?= $canExport ? '' : 'disabled' ?>>
                                 Xuất Excel
                             </button>
                         </div>
@@ -426,7 +431,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                     <th>Họ và Tên</th>
                                     <th>Phòng ban</th>
                                     <th>Ngày Công</th>
-                                    <th>Giờ Làm</th>
+                                    <th>Tổng giờ Làm</th>
                                     <th>Giờ OT</th>
                                 </tr>
                             </thead>
@@ -712,11 +717,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var row = Array.isArray(summary) ? summary[0] : summary;
         var total = row ? Number(row.total || 0) : 0;
         var pending = row ? Number(row.pending || 0) : total;
-        var canExport = total > 0 && pending === 0;
+        var submitted = row ? Number(row.submitted || 0) : 0;
+        var canExport = total > 0 && (pending === 0 || submitted > 0);
         exportBtn.disabled = !canExport;
         exportBtn.title = canExport
-            ? 'Tất cả nhân viên đã duyệt, có thể xuất.'
-            : 'Chỉ xuất khi tất cả nhân viên đã duyệt bảng công.';
+            ? (pending === 0 ? 'Tất cả nhân viên đã duyệt, có thể xuất.' : 'Bảng công đã gửi, có thể xuất.')
+            : 'Chỉ xuất khi bảng công đã gửi hoặc tất cả nhân viên đã duyệt.';
     }
 
     function openDetailModal() {
@@ -992,8 +998,56 @@ document.addEventListener('DOMContentLoaded', function () {
                 approvalStatus.textContent = 'Chưa gửi bảng công cho tháng này.';
             }
             renderApprovalHistory(json.approvalHistory || []);
+            
+            // Update button state based on today's date and submission status
+            updateSubmitButtonState();
         })
         .catch(function () { alert('Có lỗi khi tải dữ liệu bảng công.'); });
+    }
+
+    function updateSubmitButtonState() {
+        if (!submitBtn) return;
+        
+        var today = new Date();
+        var todayStr = pad(today.getFullYear(), 4) + '-' + pad(today.getMonth() + 1, 2) + '-' + pad(today.getDate(), 2);
+        var monthKey = currentMonth();
+        
+        // Tính ngày cuối tháng
+        var parts = monthKey.split('-');
+        var year = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10);
+        var lastDate = new Date(year, month, 0);
+        var lastDayStr = pad(year, 4) + '-' + pad(month, 2) + '-' + pad(lastDate.getDate(), 2);
+        
+        var isLastDayOfMonth = todayStr === lastDayStr;
+        var isCurrentMonth = monthKey === (pad(today.getFullYear(), 4) + '-' + pad(today.getMonth() + 1, 2));
+        
+        // Check if already submitted
+        var alreadySubmitted = approvalStatus.innerHTML.includes('status-pending') || 
+                               approvalStatus.innerHTML.includes('status-approved') || 
+                               approvalStatus.innerHTML.includes('status-rejected');
+        
+        if (!isCurrentMonth) {
+            submitBtn.disabled = true;
+            submitBtn.title = 'Chỉ có thể gửi bảng công của tháng hiện tại';
+        } else if (!isLastDayOfMonth) {
+            submitBtn.disabled = true;
+            submitBtn.title = 'Chỉ có thể gửi bảng công vào ngày ' + lastDayStr + '. Hôm nay là ' + todayStr;
+        } else if (alreadySubmitted) {
+            submitBtn.disabled = true;
+            submitBtn.title = 'Bảng công tháng này đã được gửi. Không thể gửi lại.';
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.title = 'Gửi bảng công đến từng nhân viên';
+        }
+    }
+
+    function pad(num, length) {
+        var numStr = String(num);
+        while (numStr.length < length) {
+            numStr = '0' + numStr;
+        }
+        return numStr;
     }
 
     filterForm.addEventListener('submit', function (e) {
@@ -1014,7 +1068,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     submitBtn.addEventListener('click', function () {
-        if (!window.confirm('Bạn có chắc muốn gửi bảng công đến từng nhân viên không?')) {
+        if (submitBtn.disabled) {
+            alert(submitBtn.title || 'Không thể gửi bảng công lúc này.');
+            return;
+        }
+        
+        if (!window.confirm('Bạn có chắc muốn gửi bảng công đến từng nhân viên không?\n\nLưu ý: Chỉ có thể gửi một lần duy nhất vào ngày cuối tháng.')) {
             return;
         }
         var form = new FormData();
@@ -1027,7 +1086,9 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function (r) { return r.json(); })
         .then(function (json) {
             alert(json.message || 'Hoàn tất');
-            if (json.success) loadPayroll();
+            if (json.success) {
+                loadPayroll();
+            }
         })
         .catch(function () { alert('Lỗi gửi bảng công.'); });
     });

@@ -278,6 +278,28 @@ class ApiHRController
 
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) respondError('Kỳ chấm công không hợp lệ', 422);
 
+            // Validation 1: Chỉ cho phép gửi vào ngày cuối tháng
+            $today = date('Y-m-d');
+            $lastDayOfMonth = date('Y-m-t', strtotime($monthKey . '-01'));
+            if ($today !== $lastDayOfMonth) {
+                respondError('Chỉ có thể gửi bảng công vào ngày cuối tháng (' . $lastDayOfMonth . '). Hôm nay là ' . $today, 400);
+                return;
+            }
+
+            // Validation 2: Kiểm tra bảng công tháng này đã gửi chưa
+            $stmt = $this->model->conn->prepare("SELECT COUNT(*) as cnt FROM employee_timesheet_approval WHERE month_key = ? AND status = 'submitted'");
+            if ($stmt) {
+                $stmt->bind_param('s', $monthKey);
+                $stmt->execute();
+                $result = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+                
+                if ((int)($result['cnt'] ?? 0) > 0) {
+                    respondError('Bảng công tháng ' . $monthKey . ' đã được gửi trước đó. Không thể gửi lại.', 400);
+                    return;
+                }
+            }
+
             $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
             $msg = $ok ? 'Đã gửi bảng công đến từng nhân viên thành công' : 'Không thể gửi bảng công. Kiểm tra dữ liệu chấm công.';
 
