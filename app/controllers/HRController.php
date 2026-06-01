@@ -277,8 +277,23 @@ class HRController
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
                 $_SESSION['error'] = 'Kỳ chấm công không hợp lệ';
             } else {
-                $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
-                $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đã gửi bảng công đến từng nhân viên thành công' : 'Không thể gửi bảng công. Có thể chưa có dữ liệu chấm công trong tháng này.';
+                // Kiểm tra bảng công tháng này đã gửi chưa
+                $stmt = $this->model->conn->prepare("SELECT COUNT(*) as cnt FROM employee_timesheet_approval WHERE month_key = ? AND status = 'submitted'");
+                $alreadySent = false;
+                if ($stmt) {
+                    $stmt->bind_param('s', $monthKey);
+                    $stmt->execute();
+                    $result = $stmt->get_result()->fetch_assoc();
+                    $stmt->close();
+                    $alreadySent = (int)($result['cnt'] ?? 0) > 0;
+                }
+
+                if ($alreadySent) {
+                    $_SESSION['error'] = 'Bảng công tháng ' . $monthKey . ' đã được gửi trước đó. Không thể gửi lại.';
+                } else {
+                    $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
+                    $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đã gửi bảng công đến từng nhân viên thành công' : 'Không thể gửi bảng công. Có thể chưa có dữ liệu chấm công trong tháng này.';
+                }
             }
         }
 
@@ -298,6 +313,23 @@ class HRController
                 'success' => false,
                 'message' => 'Kỳ chấm công không hợp lệ',
             ], 422);
+        }
+
+        // Kiểm tra bảng công tháng này đã gửi chưa
+        $stmt = $this->model->conn->prepare("SELECT COUNT(*) as cnt FROM employee_timesheet_approval WHERE month_key = ? AND status = 'submitted'");
+        if ($stmt) {
+            $stmt->bind_param('s', $monthKey);
+            $stmt->execute();
+            $result = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ((int)($result['cnt'] ?? 0) > 0) {
+                $this->respond([
+                    'success' => false,
+                    'message' => 'Bảng công tháng ' . $monthKey . ' đã được gửi trước đó. Không thể gửi lại.',
+                    'approvalSummary' => $this->model->getTimesheetApprovalSummary($monthKey),
+                ], 400);
+            }
         }
 
         $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);

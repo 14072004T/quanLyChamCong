@@ -2826,9 +2826,7 @@ class ChamCongModel
                 FROM don_nghi_phep lr
                 LEFT JOIN nguoidung nd ON nd.maND = lr.user_id
                 LEFT JOIN nguoidung approver ON approver.maND = lr.approved_by
-                ORDER BY
-                    CASE lr.status WHEN 'pending' THEN 0 ELSE 1 END,
-                    lr.created_at DESC";
+                ORDER BY lr.created_at DESC";
         $result = $this->conn->query($sql);
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
