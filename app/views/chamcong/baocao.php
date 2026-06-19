@@ -820,8 +820,6 @@ $updatedAt = date('H:i, d/m/Y');
                     <thead><tr><th>Loại yêu cầu</th><th>Đã duyệt</th><th>Từ chối</th><th>Đang chờ</th></tr></thead>
                     <tbody id="mgrr-request-summary">
                         <tr><td>Nghỉ phép</td><td>0</td><td>0</td><td>0</td></tr>
-                        <tr><td>Làm thêm giờ (OT)</td><td>0</td><td>0</td><td>0</td></tr>
-                        <tr><td>Đổi ca</td><td>0</td><td>0</td><td>0</td></tr>
                         <tr><td><strong>Tổng</strong></td><td><strong>0</strong></td><td><strong>0</strong></td><td><strong>0</strong></td></tr>
                     </tbody>
                 </table>
@@ -902,9 +900,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderRequestSummary(rows) {
         var map = {
-            leave: { label: 'Nghỉ phép', approved: 0, rejected: 0, pending: 0 },
-            ot: { label: 'Làm thêm giờ (OT)', approved: 0, rejected: 0, pending: 0 },
-            shift: { label: 'Đổi ca', approved: 0, rejected: 0, pending: 0 }
+            leave: { label: 'Nghỉ phép', approved: 0, rejected: 0, pending: 0 }
         };
         rows.forEach(function (row) {
             var type = row.request_type || 'leave';
@@ -912,7 +908,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (map[type] && map[type][trangThai] !== undefined) map[type][trangThai]++;
         });
         var total = { approved: 0, rejected: 0, pending: 0 };
-        var html = ['leave', 'ot', 'shift'].map(function (type) {
+        var html = ['leave'].map(function (type) {
             total.approved += map[type].approved;
             total.rejected += map[type].rejected;
             total.pending += map[type].pending;

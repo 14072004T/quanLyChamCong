@@ -194,7 +194,6 @@ class HRController
             'approval' => $this->model->getMonthlyApprovalByMonth($monthKey),
             'approvalSummary' => $this->model->getTimesheetApprovalSummary($monthKey),
             'approvalHistory' => $this->model->getTimesheetApprovalSummary(),
-            'otSchedule' => $this->model->getApprovedOtSchedule($monthKey),
         ]);
     }
 

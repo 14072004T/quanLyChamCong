@@ -548,8 +548,6 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
         <div class="mgrreq-tabs" role="tablist">
             <button type="button" class="mgrreq-tab active" data-type="">Tất cả yêu cầu <span class="mgrreq-badge" id="count-all">0</span></button>
             <button type="button" class="mgrreq-tab" data-type="leave"><i  style="color:#f59e0b"></i> Nghỉ phép <span class="mgrreq-badge" id="count-leave">0</span></button>
-            <button type="button" class="mgrreq-tab" data-type="ot"><i  style="color:#2563eb"></i> Làm thêm giờ <span class="mgrreq-badge" id="count-ot">0</span></button>
-            <button type="button" class="mgrreq-tab" data-type="shift"><i style="color:#8b5cf6"></i> Đổi ca <span class="mgrreq-badge" id="count-shift">0</span></button>
         </div>
 
         <div class="mgrreq-grid">
@@ -586,8 +584,6 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
                     <select class="mgrreq-select" name="type" id="filter-type">
                         <option value="">Tất cả</option>
                         <option value="leave">Nghỉ phép</option>
-                        <option value="ot">Làm thêm giờ</option>
-                        <option value="shift">Đổi ca</option>
                     </select>
                 </div>
                 <div class="mgrreq-field">
@@ -746,12 +742,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function classify(row) {
-        if (row.request_type === 'ot') {
-            return { key: 'ot', label: 'Làm thêm giờ (OT)', sub: Number(row.soGio || 0) > 0 ? (Number(row.soGio || 0) + ' giờ') : 'OT ngày thường', icon: 'far fa-clock', tone: 'tone-blue' };
-        }
-        if (row.request_type === 'shift') {
-            return { key: 'shift', label: 'Đổi ca', sub: [row.tenCaHienTai || 'Ca hiện tại', row.tenCaMoi || 'Ca mới'].join(' → '), icon: 'far fa-calendar-alt', tone: 'tone-purple' };
-        }
         return { key: 'leave', label: 'Nghỉ phép', sub: row.laNuaNgay == 1 ? 'Nghỉ nửa ngày' : 'Nghỉ cả ngày', icon: 'fas fa-umbrella-beach', tone: 'tone-orange' };
     }
 
@@ -759,15 +749,9 @@ document.addEventListener('DOMContentLoaded', function () {
         var type = classify(row);
         var dateText = plainDate(row.ngayYeuCau);
         var timeNote = '';
-        if (row.request_type === 'ot') {
-            timeNote = [row.gioBatDau ? String(row.gioBatDau).slice(0, 5) : '', row.gioKetThuc ? String(row.gioKetThuc).slice(0, 5) : ''].filter(Boolean).join(' - ');
-            if (Number(row.soGio || 0) > 0) timeNote += (timeNote ? ' ' : '') + '(' + Number(row.soGio || 0) + ' giờ)';
-        } else if (row.request_type === 'shift') {
-            timeNote = [row.tenCaHienTai || 'Ca hiện tại', row.tenCaMoi || 'Ca mới'].join(' → ');
-        } else {
-            timeNote = row.loaiNghiPhep || 'annual';
-            if (row.laNuaNgay == 1) timeNote += ' (nửa ngày)';
-        }
+        timeNote = row.loaiNghiPhep || 'annual';
+        if (row.laNuaNgay == 1) timeNote += ' (nửa ngày)';
+        
         return Object.assign({}, row, {
             _type: type,
             _uid: row.uid || (String(row.request_type || 'request') + ':' + String(row.id || '0')),
@@ -806,8 +790,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         setText('count-all', total);
         setText('count-leave', allRows.filter(function (r) { return r._type.key === 'leave'; }).length);
-        setText('count-ot', allRows.filter(function (r) { return r._type.key === 'ot'; }).length);
-        setText('count-shift', allRows.filter(function (r) { return r._type.key === 'shift'; }).length);
+
         setText('stat-total', total);
         setText('stat-pending', pending);
         setText('stat-approved', approved);

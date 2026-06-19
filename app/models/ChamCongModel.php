@@ -130,77 +130,28 @@ class ChamCongModel
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
-        $this->conn->query("
-            CREATE TABLE IF NOT EXISTS yeuCauNghiPhep (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                maND INT NOT NULL,
-                ngayNghi DATE NOT NULL,
-                loaiNghiPhep VARCHAR(50) NOT NULL DEFAULT 'annual',
-                laNuaNgay TINYINT(1) NOT NULL DEFAULT 0,
-                lyDo TEXT DEFAULT NULL,
-                trangThai ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-                ghiChuQL VARCHAR(255) DEFAULT NULL,
-                maNguoiDuyetQL INT DEFAULT NULL,
-                ngayDuyet DATETIME DEFAULT NULL,
-                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ");
-        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS loaiNghiPhep VARCHAR(50) NOT NULL DEFAULT 'annual'");
-        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS laNuaNgay TINYINT(1) NOT NULL DEFAULT 0");
-        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS ghiChuQL VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS maNguoiDuyetQL INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS ngayDuyet DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauNghiPhep ADD COLUMN IF NOT EXISTS ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS yeuCauTangCa (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                maND INT NOT NULL,
-                ngayTangCa DATE NOT NULL,
-                gioBatDau TIME DEFAULT NULL,
-                gioKetThuc TIME DEFAULT NULL,
-                soGio DECIMAL(5,2) NOT NULL DEFAULT 0,
-                lyDo TEXT DEFAULT NULL,
-                trangThai ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-                ghiChuQL VARCHAR(255) DEFAULT NULL,
-                maNguoiDuyetQL INT DEFAULT NULL,
-                ngayDuyet DATETIME DEFAULT NULL,
-                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+            CREATE TABLE IF NOT EXISTS nhanvien (
+                maND INT NOT NULL PRIMARY KEY
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-        $this->conn->query("ALTER TABLE yeuCauTangCa ADD COLUMN IF NOT EXISTS ghiChuQL VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauTangCa ADD COLUMN IF NOT EXISTS maNguoiDuyetQL INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauTangCa ADD COLUMN IF NOT EXISTS ngayDuyet DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauTangCa ADD COLUMN IF NOT EXISTS ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
-
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS yeuCauDoiCa (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                maND INT NOT NULL,
-                ngayYeuCau DATE NOT NULL,
-                maCaHienTai INT DEFAULT NULL,
-                maCaMoi INT DEFAULT NULL,
-                tenCaHienTai VARCHAR(100) DEFAULT NULL,
-                tenCaMoi VARCHAR(100) DEFAULT NULL,
-                lyDo TEXT DEFAULT NULL,
-                trangThai ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-                ghiChuQL VARCHAR(255) DEFAULT NULL,
-                maNguoiDuyetQL INT DEFAULT NULL,
-                ngayDuyet DATETIME DEFAULT NULL,
-                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+            CREATE TABLE IF NOT EXISTS nhansu (
+                maND INT NOT NULL PRIMARY KEY
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS maCaHienTai INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS maCaMoi INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS tenCaHienTai VARCHAR(100) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS tenCaMoi VARCHAR(100) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS ghiChuQL VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS maNguoiDuyetQL INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS ngayDuyet DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE yeuCauDoiCa ADD COLUMN IF NOT EXISTS ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP");
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS kythuat (
+                maND INT NOT NULL PRIMARY KEY
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS quanly (
+                maND INT NOT NULL PRIMARY KEY
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
 
         $this->conn->query("
             CREATE TABLE IF NOT EXISTS caiDatHeThong (
@@ -702,10 +653,36 @@ class ChamCongModel
         }
 
         if ($maND > 0) {
-            $sql = "UPDATE nguoidung SET hoTen = ?, email = ?, soDienThoai = ?, chucVu = ?, phongBan = ?, trangThai = ? WHERE maND = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("sssssii", $hoTen, $email, $soDienThoai, $chucVu, $phongBan, $trangThai, $maND);
-            return $stmt->execute();
+            $this->conn->begin_transaction();
+            try {
+                $sql = "UPDATE nguoidung SET hoTen = ?, email = ?, soDienThoai = ?, chucVu = ?, phongBan = ?, trangThai = ? WHERE maND = ?";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->bind_param("sssssii", $hoTen, $email, $soDienThoai, $chucVu, $phongBan, $trangThai, $maND);
+                if (!$stmt->execute()) {
+                    $this->conn->rollback();
+                    return false;
+                }
+
+                // Delete from all child tables
+                $this->conn->query("DELETE FROM nhanvien WHERE maND = $maND");
+                $this->conn->query("DELETE FROM nhansu WHERE maND = $maND");
+                $this->conn->query("DELETE FROM kythuat WHERE maND = $maND");
+                $this->conn->query("DELETE FROM quanly WHERE maND = $maND");
+
+                // Insert into correct child table
+                $childTable = 'nhanvien';
+                if ($chucVu === 'Bộ phận Nhân sự') $childTable = 'nhansu';
+                elseif ($chucVu === 'Bộ phận Kỹ thuật') $childTable = 'kythuat';
+                elseif ($chucVu === 'Quản lý / Ban lãnh đạo') $childTable = 'quanly';
+
+                $this->conn->query("INSERT INTO $childTable (maND) VALUES ($maND)");
+
+                $this->conn->commit();
+                return true;
+            } catch (Throwable $e) {
+                $this->conn->rollback();
+                return false;
+            }
         }
 
         $this->conn->begin_transaction();
@@ -731,6 +708,19 @@ class ChamCongModel
             if (!$insertEmployee->execute()) {
                 $this->conn->rollback();
                 return false;
+            }
+            $newMaND = (int)$this->conn->insert_id;
+
+            // Insert into role-specific child table
+            $childTable = 'nhanvien';
+            if ($chucVu === 'Bộ phận Nhân sự') $childTable = 'nhansu';
+            elseif ($chucVu === 'Bộ phận Kỹ thuật') $childTable = 'kythuat';
+            elseif ($chucVu === 'Quản lý / Ban lãnh đạo') $childTable = 'quanly';
+
+            $insertChild = $this->conn->prepare("INSERT INTO $childTable (maND) VALUES (?)");
+            if ($insertChild) {
+                $insertChild->bind_param("i", $newMaND);
+                $insertChild->execute();
             }
 
             $this->conn->commit();
@@ -839,160 +829,26 @@ class ChamCongModel
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getApprovedOtSchedule($monthKey)
-    {
-        $monthKey = trim($monthKey);
-        if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
-            return [];
-        }
-
-        $monthStart = $monthKey . '-01';
-        $sql = "SELECT maND, ngayTangCa, gioBatDau, gioKetThuc, soGio, lyDo
-                FROM yeuCauTangCa
-                WHERE trangThai = 'approved'
-                  AND ngayTangCa >= ?
-                  AND ngayTangCa < DATE_ADD(?, INTERVAL 1 MONTH)
-                ORDER BY ngayTangCa ASC, ngayTao ASC";
-
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            return [];
-        }
-
-        $stmt->bind_param("ss", $monthStart, $monthStart);
-        $stmt->execute();
-        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        $stmt->close();
-
-        $schedule = [];
-        foreach ($rows as $row) {
-            $maND = (int)($row['maND'] ?? 0);
-            $date = $row['ngayTangCa'] ?? '';
-            if ($maND <= 0 || $date === '') {
-                continue;
-            }
-
-            if (!isset($schedule[$maND])) {
-                $schedule[$maND] = [];
-            }
-
-            $schedule[$maND][$date] = [
-                'label' => 'OT',
-                'time' => trim(($row['gioBatDau'] ? substr((string)$row['gioBatDau'], 0, 5) : '') . ' - ' . ($row['gioKetThuc'] ? substr((string)$row['gioKetThuc'], 0, 5) : ''), ' -'),
-                'soGio' => (float)($row['soGio'] ?? 0),
-                'lyDo' => $row['lyDo'] ?? '',
-            ];
-        }
-
-        return $schedule;
-    }
 
     public function getManagerEmployeeRequests(array $filters = [], $limit = 300)
     {
         $limit = max(1, min((int)$limit, 500));
         $trangThai = trim($filters['trangThai'] ?? '');
-        $type = trim($filters['type'] ?? '');
         $keyword = trim($filters['q'] ?? '');
         $date = trim($filters['date'] ?? '');
         $dateFrom = trim($filters['date_from'] ?? '');
         $dateTo = trim($filters['date_to'] ?? '');
         $phongBan = trim($filters['phongBan'] ?? '');
 
-        $rows = [];
-        if ($type === '' || $type === 'leave') {
-            $rows = array_merge($rows, $this->getLeaveApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit));
-        }
-        if ($type === '' || $type === 'ot') {
-            $rows = array_merge($rows, $this->getOtApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit));
-        }
-        if ($type === '' || $type === 'shift') {
-            $rows = array_merge($rows, $this->getShiftChangeApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit));
-        }
-
-        usort($rows, function ($a, $b) {
-            return strcmp((string)($b['ngayTao'] ?? ''), (string)($a['ngayTao'] ?? ''));
-        });
-
-        return array_slice($rows, 0, $limit);
-    }
-
-    public function processManagerEmployeeRequest($type, $requestId, $hanhDong, $managerId, $ghiChu = '')
-    {
-        $type = trim((string)$type);
-        $requestId = (int)$requestId;
-        $managerId = (int)$managerId;
-        if ($requestId <= 0 || !in_array($type, ['leave', 'ot', 'shift'], true) || !in_array($hanhDong, ['approve', 'reject'], true)) {
-            return false;
-        }
-
-        $trangThai = $hanhDong === 'approve' ? 'approved' : 'rejected';
-        if ($type === 'leave') {
-            $sql = "UPDATE yeuCauNghiPhep
-                    SET trangThai = ?, ghiChuQL = ?, maNguoiDuyetQL = ?, ngayDuyet = NOW(), ngayCapNhat = NOW()
-                    WHERE id = ? AND trangThai = 'pending'";
-            $stmt = $this->conn->prepare($sql);
-            if (!$stmt) return false;
-            $stmt->bind_param('ssii', $trangThai, $ghiChu, $managerId, $requestId);
-            return $stmt->execute();
-        }
-
-        if ($type === 'ot') {
-            $sql = "UPDATE yeuCauTangCa
-                    SET trangThai = ?, ghiChuQL = ?, maNguoiDuyetQL = ?, ngayDuyet = NOW(), ngayCapNhat = NOW()
-                    WHERE id = ? AND trangThai = 'pending'";
-            $stmt = $this->conn->prepare($sql);
-            if (!$stmt) return false;
-            $stmt->bind_param('ssii', $trangThai, $ghiChu, $managerId, $requestId);
-            return $stmt->execute();
-        }
-
-        return $this->processShiftChangeRequest($requestId, $trangThai, $managerId, $ghiChu);
-    }
-
-    private function getLeaveApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit)
-    {
         $sql = "SELECT CONCAT('leave:', r.id) AS uid, r.id, 'leave' AS request_type,
-                       r.maND, r.ngayNghi AS ngayYeuCau, r.loaiNghiPhep, r.laNuaNgay,
+                       r.maND, r.tuNgay AS ngayYeuCau, r.loaiNghiPhep, 0 AS laNuaNgay,
                        NULL AS gioBatDau, NULL AS gioKetThuc, NULL AS soGio,
                        NULL AS tenCaHienTai, NULL AS tenCaMoi,
-                       r.lyDo, r.trangThai, r.ghiChuQL, r.ngayTao, r.ngayCapNhat,
+                       r.lyDo, r.trangThai, NULL AS ghiChuQL, r.ngayTao, r.ngayDuyet AS ngayCapNhat,
                        n.hoTen, n.chucVu, n.phongBan
-                FROM yeuCauNghiPhep r
+                FROM donNghiPhep r
                 LEFT JOIN nguoidung n ON n.maND = r.maND";
-        return $this->fetchApprovalRequestRows($sql, 'r.ngayNghi', $trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit);
-    }
 
-    private function getOtApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit)
-    {
-        $sql = "SELECT CONCAT('ot:', r.id) AS uid, r.id, 'ot' AS request_type,
-                       r.maND, r.ngayTangCa AS ngayYeuCau, NULL AS loaiNghiPhep, 0 AS laNuaNgay,
-                       r.gioBatDau, r.gioKetThuc, r.soGio,
-                       NULL AS tenCaHienTai, NULL AS tenCaMoi,
-                       r.lyDo, r.trangThai, r.ghiChuQL, r.ngayTao, r.ngayCapNhat,
-                       n.hoTen, n.chucVu, n.phongBan
-                FROM yeuCauTangCa r
-                LEFT JOIN nguoidung n ON n.maND = r.maND";
-        return $this->fetchApprovalRequestRows($sql, 'r.ngayTangCa', $trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit);
-    }
-
-    private function getShiftChangeApprovalRequests($trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit)
-    {
-        $sql = "SELECT CONCAT('shift:', r.id) AS uid, r.id, 'shift' AS request_type,
-                       r.maND, r.ngayYeuCau, NULL AS loaiNghiPhep, 0 AS laNuaNgay,
-                       NULL AS gioBatDau, NULL AS gioKetThuc, NULL AS soGio,
-                       COALESCE(r.tenCaHienTai, cs.tenCa) AS tenCaHienTai,
-                       COALESCE(r.tenCaMoi, ns.tenCa) AS tenCaMoi,
-                       r.lyDo, r.trangThai, r.ghiChuQL, r.ngayTao, r.ngayCapNhat,
-                       n.hoTen, n.chucVu, n.phongBan
-                FROM yeuCauDoiCa r
-                LEFT JOIN nguoidung n ON n.maND = r.maND
-                LEFT JOIN caLamViec cs ON cs.id = r.maCaHienTai
-                LEFT JOIN caLamViec ns ON ns.id = r.maCaMoi";
-        return $this->fetchApprovalRequestRows($sql, 'r.ngayYeuCau', $trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit);
-    }
-
-    private function fetchApprovalRequestRows($baseSql, $dateColumn, $trangThai, $keyword, $date, $dateFrom, $dateTo, $phongBan, $limit)
-    {
         $conditions = [];
         $types = '';
         $params = [];
@@ -1018,24 +874,23 @@ class ChamCongModel
         }
 
         if ($date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-            $conditions[] = $dateColumn . " = ?";
+            $conditions[] = "r.tuNgay = ?";
             $types .= 's';
             $params[] = $date;
         }
 
         if ($dateFrom !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) {
-            $conditions[] = $dateColumn . " >= ?";
+            $conditions[] = "r.tuNgay >= ?";
             $types .= 's';
             $params[] = $dateFrom;
         }
 
         if ($dateTo !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
-            $conditions[] = $dateColumn . " <= ?";
+            $conditions[] = "r.tuNgay <= ?";
             $types .= 's';
             $params[] = $dateTo;
         }
 
-        $sql = $baseSql;
         if ($conditions) {
             $sql .= " WHERE " . implode(' AND ', $conditions);
         }
@@ -1054,50 +909,27 @@ class ChamCongModel
         return $rows;
     }
 
-    private function processShiftChangeRequest($requestId, $trangThai, $managerId, $ghiChu)
+    public function processManagerEmployeeRequest($type, $requestId, $hanhDong, $managerId, $ghiChu = '')
     {
-        $this->conn->begin_transaction();
-        try {
-            $stmt = $this->conn->prepare("SELECT maND, ngayYeuCau, maCaMoi FROM yeuCauDoiCa WHERE id = ? AND trangThai = 'pending' FOR UPDATE");
-            if (!$stmt) {
-                $this->conn->rollback();
-                return false;
-            }
-            $stmt->bind_param('i', $requestId);
-            $stmt->execute();
-            $row = $stmt->get_result()->fetch_assoc();
-            $stmt->close();
-            if (!$row) {
-                $this->conn->rollback();
-                return false;
-            }
-
-            $stmt = $this->conn->prepare("UPDATE yeuCauDoiCa
-                    SET trangThai = ?, ghiChuQL = ?, maNguoiDuyetQL = ?, ngayDuyet = NOW(), ngayCapNhat = NOW()
-                    WHERE id = ? AND trangThai = 'pending'");
-            if (!$stmt) {
-                $this->conn->rollback();
-                return false;
-            }
-            $stmt->bind_param('ssii', $trangThai, $ghiChu, $managerId, $requestId);
-            $ok = $stmt->execute();
-            $stmt->close();
-
-            if ($ok && $trangThai === 'approved' && (int)($row['maCaMoi'] ?? 0) > 0) {
-                $ok = $this->assignShift((int)$row['maND'], (int)$row['maCaMoi'], $row['ngayYeuCau']);
-            }
-
-            if (!$ok) {
-                $this->conn->rollback();
-                return false;
-            }
-
-            $this->conn->commit();
-            return true;
-        } catch (Throwable $e) {
-            $this->conn->rollback();
+        $type = trim((string)$type);
+        $requestId = (int)$requestId;
+        $managerId = (int)$managerId;
+        if ($requestId <= 0 || !in_array($type, ['leave'], true) || !in_array($hanhDong, ['approve', 'reject'], true)) {
             return false;
         }
+
+        $trangThai = $hanhDong === 'approve' ? 'approved' : 'rejected';
+        if ($type === 'leave') {
+            $sql = "UPDATE donNghiPhep
+                    SET trangThai = ?, nguoiDuyet = ?, ngayDuyet = NOW()
+                    WHERE id = ? AND trangThai = 'pending'";
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) return false;
+            $stmt->bind_param('sii', $trangThai, $managerId, $requestId);
+            return $stmt->execute();
+        }
+
+        return false;
     }
 
     public function getAttendanceReport($fromDate, $toDate, $phongBan = '')

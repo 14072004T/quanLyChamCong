@@ -300,13 +300,7 @@ class ApiHRController
             return;
         }
 
-        if ($id === 'ot-schedule' && $phuongThuc === 'GET') {
-            $monthKey = trim($_GET['month'] ?? date('Y-m'));
-            if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) respondError('Tháng không hợp lệ', 422);
-            $data = $this->model->getApprovedOtSchedule($monthKey);
-            respond(['success' => true, 'data' => $data]);
-            return;
-        }
+
 
         // Default: GET /hr/payroll — Bảng tổng hợp công
         if ($phuongThuc === 'GET') {
@@ -339,7 +333,6 @@ class ApiHRController
                 'data' => $salaryRows,
                 'summary' => $summary,
                 'approval' => $this->model->getMonthlyApprovalByMonth($monthKey),
-                'otSchedule' => $this->model->getApprovedOtSchedule($monthKey),
             ]);
             return;
         }
