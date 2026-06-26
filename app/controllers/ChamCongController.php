@@ -65,6 +65,10 @@ class ChamCongController
             'leave_days' => $empStatsRaw['leave_days']
         ];
         
+        require_once 'app/models/FaceModel.php';
+        $faceModel = new FaceModel();
+        $hasFaceRegistered = $faceModel->getFaceProfile($maND) !== null;
+        
         require 'app/views/chamcong/dashboard.php';
     }
 
@@ -98,8 +102,19 @@ class ChamCongController
         $maND = $_SESSION['user']['maND'] ?? $_SESSION['user']['maTK'] ?? '';
         
         // Lấy khoảng ngày từ GET hoặc mặc định là tháng hiện tại
-        $from = trim($_GET['tuNgay'] ?? date('Y-m-01'));
-        $to = trim($_GET['denNgay'] ?? date('Y-m-d'));
+        $from = trim($_GET['tuNgay'] ?? '');
+        $to = trim($_GET['denNgay'] ?? '');
+        $range = $_GET['range'] ?? 'month';
+        
+        if (empty($from) || empty($to)) {
+            if ($range === 'week') {
+                $from = date('Y-m-d', strtotime('monday this week'));
+                $to = date('Y-m-d');
+            } else {
+                $from = date('Y-m-01');
+                $to = date('Y-m-d');
+            }
+        }
         
         // Validation
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {

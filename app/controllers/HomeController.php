@@ -24,6 +24,32 @@ class HomeController
         $thongKe = $chamCongModel->getThongKeTongQuan();
         
         $maND = $_SESSION['user']['maND'] ?? 0;
+        
+        require_once 'app/models/FaceModel.php';
+        $faceModel = new FaceModel();
+        $hasFaceRegistered = $faceModel->getFaceProfile($maND) !== null;
+        
+        $role = $_SESSION['role'] ?? 'nhanvien';
+        $isHR = in_array($role, ['hr', 'manager']);
+        $showFaceRegisterOption = true;
+        if ($hasFaceRegistered) {
+            if (!$isHR) {
+                $showFaceRegisterOption = false;
+            } else {
+                $rawList = $chamCongModel->getEmployees('', true) ?? [];
+                $hasUnregisteredEmp = false;
+                foreach ($rawList as $emp) {
+                    if ($emp['maND'] != $maND && !$faceModel->getFaceProfile($emp['maND'])) {
+                        $hasUnregisteredEmp = true;
+                        break;
+                    }
+                }
+                if (!$hasUnregisteredEmp) {
+                    $showFaceRegisterOption = false;
+                }
+            }
+        }
+        
         $todayLogs = $chamCongModel->getTodayLogs($maND) ?? [];
         $todayStatus = [
             'in' => null,
@@ -35,7 +61,7 @@ class HomeController
         }
 
         require_once 'app/middleware/AuthMiddleware.php';
-        $menuItems = $this->getMenuItemsByRole();
+        $menuItems = $this->getMenuItemsByRole($showFaceRegisterOption);
 
         require_once 'app/views/home.php';
     }
@@ -43,7 +69,7 @@ class HomeController
     /**
      * ✅ Lấy danh sách menu items theo role của user
      */
-    private function getMenuItemsByRole()
+    private function getMenuItemsByRole($showFaceRegisterOption = true)
     {
         // Định nghĩa tất cả chức năng theo danh mục
         $allCategories = [
@@ -51,6 +77,7 @@ class HomeController
                 ['link' => 'cham-cong-dashboard', 'icon' => 'fa-fingerprint', 'text' => 'Dashboard chấm công'],
                 ['link' => 'lich-su-cham-cong', 'icon' => 'fa-clock-rotate-left', 'text' => 'Lịch sử chấm công'],
                 ['link' => 'yeu-cau-chinh-sua-cham-cong', 'icon' => 'fa-pen-to-square', 'text' => 'Yêu cầu chỉnh sửa'],
+                ['link' => 'face-register', 'icon' => 'fa-portrait', 'text' => 'Đăng ký khuôn mặt'],
             ],
             'Điều hành chấm công' => [
                 ['link' => 'hr-cham-cong', 'icon' => 'fa-users', 'text' => 'Điều hành HR'],
@@ -71,6 +98,9 @@ class HomeController
             $filteredItems = [];
             foreach ($items as $item) {
                 if (in_array($item['link'], $permissions)) {
+                    if ($item['link'] === 'face-register' && !$showFaceRegisterOption) {
+                        continue;
+                    }
                     $filteredItems[] = $item;
                 }
             }

@@ -188,19 +188,32 @@ class ChamCongModel
         $this->conn->query("ALTER TABLE suaChamCong ADD COLUMN IF NOT EXISTS gioVaoDeXuat DATETIME DEFAULT NULL");
         $this->conn->query("ALTER TABLE suaChamCong ADD COLUMN IF NOT EXISTS gioRaDeXuat DATETIME DEFAULT NULL");
         $this->conn->query("ALTER TABLE suaChamCong ADD COLUMN IF NOT EXISTS tepMinhChung VARCHAR(255) DEFAULT NULL");
+
+        // Migration: face_profiles and lichSuChamCong modification
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS face_profiles (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                maND INT NOT NULL UNIQUE,
+                embedding TEXT NOT NULL,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (maND) REFERENCES nguoidung(maND) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $this->conn->query("ALTER TABLE lichSuChamCong ADD COLUMN IF NOT EXISTS anhMinhChung VARCHAR(255) DEFAULT NULL");
     }
 
-    public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null)
+    public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
     {
         // Get client IP if not provided (server-side only, cannot be spoofed)
         if ($clientIP === null) {
             $clientIP = $this->getServerIP();
         }
 
-        $sql = "INSERT INTO lichSuChamCong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) 
-                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
+        $sql = "INSERT INTO lichSuChamCong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, anhMinhChung, ngayTao) 
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("issss", $maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu);
+        $stmt->bind_param("isssss", $maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $anhMinhChung);
         return $stmt->execute();
     }
 

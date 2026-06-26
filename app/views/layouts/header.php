@@ -15,9 +15,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="public/css/style.css?v=<?= (int)$styleVersion ?>">
     <link rel="stylesheet" href="public/css/dashboard.css?v=<?= (int)$dashboardStyleVersion ?>">
+    <?php
+    require_once 'app/middleware/AuthMiddleware.php';
+    if (AuthMiddleware::isMobile()):
+    ?>
+    <link rel="stylesheet" href="public/css/mobile.css?v=<?= time() ?>">
+    <?php endif; ?>
 </head>
 
-<body>
+<body class="<?= AuthMiddleware::isMobile() ? 'mobile-view' : '' ?>">
     <?php
     $notificationItems = [];
     $notificationCount = 0;
@@ -135,70 +141,150 @@
         }
     }
     ?>
-    <header class="header">
-        <div class="brand-logo" title="RFT Hệ thống Chấm công">
-            <span class="logo-r">R</span>
-            <span class="logo-f">F</span>
-            <span class="logo-t">T</span>
-        </div>
-        <h1>HỆ THỐNG QUẢN LÝ CHẤM CÔNG</h1>
-        <div class="user-controls">
-            <div class="notif-wrapper" id="notifWrapper">
-                <button type="button" id="notifBellBtn" class="icon-btn" title="Thông báo" style="cursor:pointer;position:relative">
+    <?php if (AuthMiddleware::isMobile()): ?>
+        <header class="mobile-header">
+            <button type="button" class="menu-trigger" onclick="toggleMobileMenu()" title="Menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="header-logo">RFT</div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <button type="button" class="header-notif" id="mobileNotifBtn" onclick="toggleMobileNotif()" style="cursor:pointer;position:relative;" title="Thông báo">
                     <i class="fa-regular fa-bell"></i>
                     <?php if ($notificationCount > 0): ?>
                         <span class="notif-count"><?= (int)$notificationCount ?></span>
                     <?php endif; ?>
                 </button>
+                <a href="index.php?page=logout" style="color: #ff4d4f; font-size: 19px; display: flex; align-items: center; text-decoration: none;" title="Đăng xuất" onclick="return confirm('Bạn có chắc chắn muốn đăng xuất tài khoản?')">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </a>
+            </div>
 
-                <div id="notifPanel" class="notif-panel" aria-hidden="true" hidden>
-                    <div class="notif-panel-head">
-                        <strong>Thông báo</strong>
-                        <span><?= (int)$notificationCount ?> thông báo</span>
-                    </div>
-                    <div class="notif-panel-list">
-                        <?php if (!empty($notificationItems)): ?>
-                            <?php foreach ($notificationItems as $item): ?>
-                                <a class="notif-item" href="<?= htmlspecialchars($item['link']) ?>">
-                                    <div class="notif-item-title"><?= htmlspecialchars($item['title']) ?></div>
-                                    <div class="notif-item-meta"><?= htmlspecialchars($item['meta']) ?></div>
-                                    <div class="notif-item-time"><?= htmlspecialchars($item['time']) ?></div>
-                                </a>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="notif-empty">Không có thông báo mới.</div>
-                        <?php endif; ?>
-                    </div>
+            <!-- Mobile Notifications Panel -->
+            <div id="mobileNotifPanel" class="notif-panel" aria-hidden="true" style="display:none; position:absolute; top:56px; right:16px; width:300px;" hidden>
+                <div class="notif-panel-head">
+                    <strong>Thông báo</strong>
+                    <span><?= (int)$notificationCount ?> thông báo</span>
+                </div>
+                <div class="notif-panel-list">
+                    <?php if (!empty($notificationItems)): ?>
+                        <?php foreach ($notificationItems as $item): ?>
+                            <a class="notif-item" href="<?= htmlspecialchars($item['link']) ?>">
+                                <div class="notif-item-title"><?= htmlspecialchars($item['title']) ?></div>
+                                <div class="notif-item-meta"><?= htmlspecialchars($item['meta']) ?></div>
+                                <div class="notif-item-time"><?= htmlspecialchars($item['time']) ?></div>
+                            </a>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="notif-empty">Không có thông báo mới.</div>
+                    <?php endif; ?>
                 </div>
             </div>
-            <a href="<?php echo isset($_SESSION['user']) ? 'index.php?page=cham-cong-dashboard' : 'index.php?page=login'; ?>"
-                class="user-link">
-                <?php
-                if (isset($_SESSION['user'])) {
-                    $tenHienThi = htmlspecialchars($_SESSION['user']['hoTen'] ?? 'Người dùng');
-                    $initials = '';
-                    $parts = explode(' ', trim($_SESSION['user']['hoTen'] ?? 'ND'));
-                    if (count($parts) >= 2) {
-                        $initials = mb_substr($parts[0], 0, 1) . mb_substr(end($parts), 0, 1);
-                    } else {
-                        $initials = mb_substr($parts[0], 0, 2);
-                    }
-                    echo '<div class="user-avatar">' . htmlspecialchars(mb_strtoupper($initials)) . '</div>';
-                    echo '<span class="welcome-text">' . $tenHienThi . '</span>';
-                } else {
-                    echo '<div class="user-avatar"><i class="fa-regular fa-user" style="font-size:13px"></i></div>';
-                    echo '<span class="welcome-text">Đăng nhập</span>';
-                }
-                ?>
+        </header>
+
+        <!-- Bottom Navigation Bar for Mobile -->
+        <nav class="bottom-nav">
+            <?php $page = $_GET['page'] ?? 'home'; ?>
+            <a href="index.php?page=home" class="bottom-nav-item <?= in_array($page, ['home', 'cham-cong-dashboard']) ? 'active' : '' ?>">
+                <i class="fa-solid fa-house"></i>
+                <span>Home</span>
             </a>
-            <?php if (isset($_SESSION['user'])): ?>
-                <a href="index.php?page=logout" class="icon-btn" title="Đăng xuất" style="margin-left: 6px; color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
-                    <i class="fa-solid fa-right-from-bracket" style="color: #ef4444;"></i>
+            <a href="index.php?page=lich-su-cham-cong" class="bottom-nav-item <?= ($page === 'lich-su-cham-cong') ? 'active' : '' ?>">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>History</span>
+            </a>
+            <a href="index.php?page=bang-cong-thang" class="bottom-nav-item <?= ($page === 'bang-cong-thang') ? 'active' : '' ?>">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>Calendar</span>
+            </a>
+            <a href="index.php?page=profile" class="bottom-nav-item <?= ($page === 'profile') ? 'active' : '' ?>">
+                <i class="fa-solid fa-user"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+
+        <script>
+            function toggleMobileNotif() {
+                const panel = document.getElementById('mobileNotifPanel');
+                if (panel.style.display === 'none' || !panel.style.display) {
+                    panel.style.display = 'block';
+                    panel.removeAttribute('hidden');
+                    panel.setAttribute('aria-hidden', 'false');
+                } else {
+                    panel.style.display = 'none';
+                    panel.setAttribute('hidden', 'true');
+                    panel.setAttribute('aria-hidden', 'true');
+                }
+            }
+            function toggleMobileMenu() {
+                window.location.href = 'index.php?page=profile';
+            }
+        </script>
+    <?php else: ?>
+        <header class="header">
+            <div class="brand-logo" title="RFT Hệ thống Chấm công">
+                <span class="logo-r">R</span>
+                <span class="logo-f">F</span>
+                <span class="logo-t">T</span>
+            </div>
+            <h1>HỆ THỐNG QUẢN LÝ CHẤM CÔNG</h1>
+            <div class="user-controls">
+                <div class="notif-wrapper" id="notifWrapper">
+                    <button type="button" id="notifBellBtn" class="icon-btn" title="Thông báo" style="cursor:pointer;position:relative">
+                        <i class="fa-regular fa-bell"></i>
+                        <?php if ($notificationCount > 0): ?>
+                            <span class="notif-count"><?= (int)$notificationCount ?></span>
+                        <?php endif; ?>
+                    </button>
+
+                    <div id="notifPanel" class="notif-panel" aria-hidden="true" hidden>
+                        <div class="notif-panel-head">
+                            <strong>Thông báo</strong>
+                            <span><?= (int)$notificationCount ?> thông báo</span>
+                        </div>
+                        <div class="notif-panel-list">
+                            <?php if (!empty($notificationItems)): ?>
+                                <?php foreach ($notificationItems as $item): ?>
+                                    <a class="notif-item" href="<?= htmlspecialchars($item['link']) ?>">
+                                        <div class="notif-item-title"><?= htmlspecialchars($item['title']) ?></div>
+                                        <div class="notif-item-meta"><?= htmlspecialchars($item['meta']) ?></div>
+                                        <div class="notif-item-time"><?= htmlspecialchars($item['time']) ?></div>
+                                    </a>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="notif-empty">Không có thông báo mới.</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+                <a href="<?php echo isset($_SESSION['user']) ? 'index.php?page=cham-cong-dashboard' : 'index.php?page=login'; ?>"
+                    class="user-link">
+                    <?php
+                    if (isset($_SESSION['user'])) {
+                        $tenHienThi = htmlspecialchars($_SESSION['user']['hoTen'] ?? 'Người dùng');
+                        $initials = '';
+                        $parts = explode(' ', trim($_SESSION['user']['hoTen'] ?? 'ND'));
+                        if (count($parts) >= 2) {
+                            $initials = mb_substr($parts[0], 0, 1) . mb_substr(end($parts), 0, 1);
+                        } else {
+                            $initials = mb_substr($parts[0], 0, 2);
+                        }
+                        echo '<div class="user-avatar">' . htmlspecialchars(mb_strtoupper($initials)) . '</div>';
+                        echo '<span class="welcome-text">' . $tenHienThi . '</span>';
+                    } else {
+                        echo '<div class="user-avatar"><i class="fa-regular fa-user" style="font-size:13px"></i></div>';
+                        echo '<span class="welcome-text">Đăng nhập</span>';
+                    }
+                    ?>
                 </a>
-            <?php else: ?>
-                <a href="index.php?page=login" class="icon-btn" title="Đăng nhập" style="margin-left: 6px; color: #10b981; border-color: rgba(16, 185, 129, 0.2);">
-                    <i class="fa-solid fa-right-to-bracket" style="color: #10b981;"></i>
-                </a>
-            <?php endif; ?>
-        </div>
-    </header>
+                <?php if (isset($_SESSION['user'])): ?>
+                    <a href="index.php?page=logout" class="icon-btn" title="Đăng xuất" style="margin-left: 6px; color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+                        <i class="fa-solid fa-right-from-bracket" style="color: #ef4444;"></i>
+                    </a>
+                <?php else: ?>
+                    <a href="index.php?page=login" class="icon-btn" title="Đăng nhập" style="margin-left: 6px; color: #10b981; border-color: rgba(16, 185, 129, 0.2);">
+                        <i class="fa-solid fa-right-to-bracket" style="color: #10b981;"></i>
+                    </a>
+                <?php endif; ?>
+            </div>
+        </header>
+    <?php endif; ?>

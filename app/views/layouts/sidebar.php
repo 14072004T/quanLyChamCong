@@ -9,24 +9,64 @@ $menus = [
         ['page' => 'bang-cong-thang', 'label' => 'Bảng công tháng', 'icon' => 'fa-file-invoice'],
         ['page' => 'yeu-cau-chinh-sua-cham-cong', 'label' => 'Gửi yêu cầu chỉnh sửa', 'icon' => 'fa-pen-to-square'],
         ['page' => 'create-leave-request', 'label' => 'Đơn nghỉ phép', 'icon' => 'fa-calendar-check'],
+        ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
     ],
     'hr' => [
         ['page' => 'quan-ly-nhanvien', 'label' => 'Quản lý Nhân viên', 'icon' => 'fa-users'],
         ['page' => 'quan-ly-ca-lam', 'label' => 'Quản lý Ca làm việc', 'icon' => 'fa-business-time'],
         ['page' => 'xuly-yeucau', 'label' => 'Xử lý Yêu cầu', 'icon' => 'fa-clipboard-check'],
         ['page' => 'tinh-cong', 'label' => 'Tính công & Báo cáo', 'icon' => 'fa-calculator'],
+        ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
     ],
     'manager' => [
         ['page' => 'bao-cao-tong-hop', 'label' => 'Báo cáo tổng hợp', 'icon' => 'fa-file-lines'],
         ['page' => 'list-leave-requests', 'label' => 'Quản lý Đơn phép', 'icon' => 'fa-calendar-check'],
+        ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
     ],
     'tech' => [
         ['page' => 'tech-wifi', 'label' => 'Mạng & WiFi', 'icon' => 'fa-wifi'],
         ['page' => 'tech-settings', 'label' => 'Cấu hình Hệ thống', 'icon' => 'fa-server'],
+        ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
     ],
 ];
 
 $roleMenus = $menus[$role] ?? $menus['nhanvien'];
+
+// Check if face is registered to hide the menu
+require_once 'app/models/FaceModel.php';
+require_once 'app/models/ChamCongModel.php';
+$faceModel = new FaceModel();
+$chamCongModel = new ChamCongModel();
+$maND = $_SESSION['user']['maND'] ?? null;
+$hasFace = $faceModel->getFaceProfile($maND) !== null;
+$isHR = in_array($role, ['hr', 'manager']);
+$showFaceRegisterMenu = true;
+
+if ($hasFace) {
+    if (!$isHR) {
+        $showFaceRegisterMenu = false;
+    } else {
+        $rawList = $chamCongModel->getEmployees('', true) ?? [];
+        $hasUnregisteredEmp = false;
+        foreach ($rawList as $emp) {
+            if ($emp['maND'] != $maND && !$faceModel->getFaceProfile($emp['maND'])) {
+                $hasUnregisteredEmp = true;
+                break;
+            }
+        }
+        if (!$hasUnregisteredEmp) {
+            $showFaceRegisterMenu = false;
+        }
+    }
+}
+
+$filteredMenus = [];
+foreach ($roleMenus as $menu) {
+    if ($menu['page'] === 'face-register' && !$showFaceRegisterMenu) {
+        continue;
+    }
+    $filteredMenus[] = $menu;
+}
 
 $roleLabels = [
     'nhanvien' => 'Nhân viên',
@@ -44,7 +84,7 @@ $roleLabels = [
 
     <h3><?= htmlspecialchars($roleLabels[$role] ?? 'Menu') ?></h3>
     <ul id="sidebarList">
-        <?php foreach ($roleMenus as $menu): ?>
+        <?php foreach ($filteredMenus as $menu): ?>
             <li>
                 <a href="index.php?page=<?= htmlspecialchars($menu['page']) ?>"
                    class="menu-item <?= ($menu['page'] === $currentPage) ? 'active' : '' ?>">

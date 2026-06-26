@@ -121,8 +121,137 @@ $statusIcons = [
 <div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
     <div class="dashboard-container">
-    <div class="lr-container">
+        <div class="lr-container">
+        <?php if (AuthMiddleware::isMobile()): ?>
+            <!-- Mobile UI -->
+            <div class="main-content" style="padding: 0 !important; min-height: auto !important;">
+                <div class="mb-request-title">Tạo yêu cầu</div>
+                <p class="mb-request-subtitle">Gửi yêu cầu nghỉ phép hoặc chỉnh sửa ngày công tới quản lý.</p>
 
+                <!-- Selector tabs -->
+                <div class="mb-request-selector-row">
+                    <a href="index.php?page=create-leave-request" class="mb-request-selector-btn active">
+                        <i class="fa-solid fa-calendar-minus"></i>
+                        <span>Nghỉ phép</span>
+                    </a>
+                    <a href="index.php?page=yeu-cau-chinh-sua-cham-cong" class="mb-request-selector-btn">
+                        <i class="fa-solid fa-clock"></i>
+                        <span>Chỉnh sửa công</span>
+                    </a>
+                </div>
+
+                <span class="mb-request-section-title">Thông tin nghỉ phép</span>
+                <div class="mb-request-card">
+                    <form method="POST" action="index.php?page=store-leave-request" enctype="multipart/form-data" id="leaveForm">
+                        <div class="mb-request-form-grid">
+                            <div class="mb-request-form-group">
+                                <label for="loaiNghiPhep">Loại nghỉ phép <span style="color:#ef4444">*</span></label>
+                                <div class="mb-request-input-wrapper">
+                                    <i class="fa-solid fa-list" style="left:14px; top:50%; transform:translateY(-50%); position:absolute;"></i>
+                                    <select id="loaiNghiPhep" name="loaiNghiPhep" class="mb-request-input-field" required>
+                                        <option value="" disabled selected>— Chọn loại nghỉ —</option>
+                                        <?php foreach ($leaveTypeLabels as $val => $lbl): ?>
+                                            <option value="<?= htmlspecialchars($val) ?>"><?= htmlspecialchars($lbl) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="error-msg" id="err-leave-type" style="display:none; color:#ef4444; font-size:11px; margin-top:2px;">Vui lòng chọn loại nghỉ phép.</div>
+                            </div>
+
+                            <div class="mb-request-form-group">
+                                <label for="tuNgay">Từ ngày <span style="color:#ef4444">*</span></label>
+                                <div class="mb-request-input-wrapper">
+                                    <i class="fa-solid fa-calendar" style="left:14px; top:50%; transform:translateY(-50%); position:absolute;"></i>
+                                    <input type="date" id="tuNgay" name="tuNgay" class="mb-request-input-field" required min="<?= date('Y-m-d') ?>">
+                                </div>
+                                <div class="error-msg" id="err-from-date" style="display:none; color:#ef4444; font-size:11px; margin-top:2px;">Vui lòng chọn ngày bắt đầu.</div>
+                            </div>
+
+                            <div class="mb-request-form-group">
+                                <label for="denNgay">Đến ngày <span style="color:#ef4444">*</span></label>
+                                <div class="mb-request-input-wrapper">
+                                    <i class="fa-solid fa-calendar" style="left:14px; top:50%; transform:translateY(-50%); position:absolute;"></i>
+                                    <input type="date" id="denNgay" name="denNgay" class="mb-request-input-field" required min="<?= date('Y-m-d') ?>">
+                                </div>
+                                <div class="error-msg" id="err-to-date" style="display:none; color:#ef4444; font-size:11px; margin-top:2px;">Vui lòng chọn ngày kết thúc hợp lệ.</div>
+                            </div>
+
+                            <div class="mb-request-form-group">
+                                <label for="lyDo">Lý do nghỉ phép <span style="color:#ef4444">*</span></label>
+                                <textarea id="lyDo" name="lyDo" class="mb-request-textarea" placeholder="Nhập lý do chi tiết..." required style="min-height: 80px;"></textarea>
+                                <div class="error-msg" id="err-lyDo" style="display:none; color:#ef4444; font-size:11px; margin-top:2px;">Vui lòng nhập lý do.</div>
+                            </div>
+
+                            <div class="mb-request-form-group">
+                                <label>Đính kèm minh chứng</label>
+                                <div class="mb-request-file-zone" id="fileZone" onclick="document.getElementById('tepMinhChung').click()">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                    <span id="fileText">Chọn file minh chứng...</span>
+                                    <input type="file" name="tepMinhChung" id="tepMinhChung" accept=".jpg,.jpeg,.png,.pdf" style="display:none">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="mb-request-submit-btn" id="submitBtn">
+                                <span id="submitText"><i class="fa-solid fa-paper-plane"></i> Gửi yêu cầu nghỉ phép</span>
+                                <span class="lr-loading" id="submitLoading" style="display:none;"><span class="lr-spinner"></span> Đang gửi...</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <span class="mb-request-section-title">Lịch sử nghỉ phép</span>
+                <div class="mb-history-list">
+                    <?php if (!empty($myRequests) && is_array($myRequests)): ?>
+                        <?php foreach ($myRequests as $row): ?>
+                            <?php
+                                $trangThai = $row['trangThai'] ?? 'pending';
+                                $lt = $row['loaiNghiPhep'] ?? 'personal';
+                                $badgeClass = $trangThai === 'approved' ? 'hople' : ($trangThai === 'rejected' ? 'dimuon' : 'vesom');
+                                $statusText = $statusLabels[$trangThai] ?? 'Chờ duyệt';
+                            ?>
+                            <div class="mb-history-card-row lr-history-card" data-id="<?= (int)$row['id'] ?>">
+                                <div class="mb-history-card-header">
+                                    <div>
+                                        <span class="day-title"><?= htmlspecialchars($leaveTypeLabels[$lt] ?? $lt) ?></span>
+                                        <div class="date-title">
+                                            <?= htmlspecialchars(date('d/m/Y', strtotime($row['tuNgay'] ?? ''))) ?> 
+                                            — 
+                                            <?= htmlspecialchars(date('d/m/Y', strtotime($row['denNgay'] ?? ''))) ?>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="mb-history-status-badge <?= $badgeClass ?>"><?= $statusText ?></span>
+                                    </div>
+                                </div>
+                                <div class="mb-history-card-details">
+                                    <div style="font-size: 13px; color: #475569; width: 100%;">
+                                        <?= nl2br(htmlspecialchars($row['lyDo'] ?? '')) ?>
+                                    </div>
+                                </div>
+                                <?php if (!empty($row['tepMinhChung'])): ?>
+                                     <?php 
+                                         $fileUrl = $row['tepMinhChung'];
+                                         if (strpos($fileUrl, 'uploads/') !== 0) {
+                                             $fileUrl = 'uploads/leave_evidence/' . $fileUrl;
+                                         }
+                                     ?>
+                                     <div style="margin-top: 8px; font-size: 11px;">
+                                         <a href="<?= htmlspecialchars($fileUrl) ?>" target="_blank" onclick="event.stopPropagation();" style="color: #1e62ec; text-decoration: none; font-weight: 700;">
+                                             <i class="fa-solid fa-paperclip"></i> Xem minh chứng
+                                         </a>
+                                     </div>
+                                 <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="ls-empty">
+                            <i class="fas fa-inbox"></i>
+                            <p>Chưa có đơn nghỉ phép nào.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php else: ?>
         <!-- Page Header -->
         <div class="panel">
             <div class="lr-page-header">
@@ -238,7 +367,13 @@ $statusIcons = [
                             <div style="margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
                                 <div style="display: flex; gap: 10px;">
                                     <?php if (!empty($row['tepMinhChung'])): ?>
-                                        <a href="uploads/leave_evidence/<?= htmlspecialchars($row['tepMinhChung']) ?>" target="_blank" style="font-size: 11px; color: #4f6ef7; text-decoration: none; font-weight: 600;">
+                                        <?php 
+                                            $fileUrl = $row['tepMinhChung'];
+                                            if (strpos($fileUrl, 'uploads/') !== 0) {
+                                                $fileUrl = 'uploads/leave_evidence/' . $fileUrl;
+                                            }
+                                        ?>
+                                        <a href="<?= htmlspecialchars($fileUrl) ?>" target="_blank" style="font-size: 11px; color: #4f6ef7; text-decoration: none; font-weight: 600;">
                                             <i class="fas fa-paperclip"></i> Minh chứng
                                         </a>
                                     <?php endif; ?>
@@ -257,7 +392,6 @@ $statusIcons = [
                 </div>
             <?php endif; ?>
         </div>
-
         <!-- DETAIL MODAL -->
         <div id="detailModal" class="lr-modal">
             <div class="lr-modal-content">
@@ -273,7 +407,8 @@ $statusIcons = [
                 </div>
             </div>
         </div>
-
+        <?php endif; ?>
+        </div>
     </div>
 </div>
 

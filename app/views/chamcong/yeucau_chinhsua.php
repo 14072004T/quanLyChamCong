@@ -117,6 +117,141 @@ $todayOut = $todayShiftStatus['gioRaCuoi'] ?? null;
     <?php include 'app/views/layouts/sidebar.php'; ?>
     <div class="dashboard-container">
         <div class="yc-container">
+        <?php if (AuthMiddleware::isMobile()): ?>
+            <!-- Mobile UI (Screenshot 5) -->
+            <div class="main-content" style="padding: 0 !important; min-height: auto !important;">
+                <div class="mb-request-title">Tạo yêu cầu</div>
+                <p class="mb-request-subtitle">Gửi yêu cầu nghỉ phép hoặc chỉnh sửa ngày công tới quản lý.</p>
+
+                <!-- Selector tabs -->
+                <div class="mb-request-selector-row">
+                    <a href="index.php?page=create-leave-request" class="mb-request-selector-btn">
+                        <i class="fa-solid fa-calendar-minus"></i>
+                        <span>Nghỉ phép</span>
+                    </a>
+                    <a href="index.php?page=yeu-cau-chinh-sua-cham-cong" class="mb-request-selector-btn active">
+                        <i class="fa-solid fa-clock"></i>
+                        <span>Chỉnh sửa công</span>
+                    </a>
+                </div>
+
+                <span class="mb-request-section-title">Thông tin chỉnh sửa công</span>
+                <div class="mb-request-card">
+                    <form method="POST" action="index.php?page=store-edit-request" enctype="multipart/form-data" id="editRequestForm">
+                        <div class="mb-request-form-grid">
+                            
+                            <div class="mb-request-form-group">
+                                <label for="attendance-date">Ngày cần điều chỉnh <span style="color:#ef4444">*</span></label>
+                                <div class="mb-request-input-wrapper">
+                                    <i class="fa-solid fa-calendar" style="left:14px; top:50%; transform:translateY(-50%); position:absolute;"></i>
+                                    <input type="date" id="attendance-date" name="ngayChamCong" class="mb-request-input-field" required max="<?= date('Y-m-d') ?>" value="<?= htmlspecialchars($_GET['date'] ?? '') ?>">
+                                </div>
+                            </div>
+
+                            <!-- Current Data (Read-only) -->
+                            <div style="background: #f1f5f9; border-radius: 12px; padding: 12px; margin-bottom: 8px;">
+                                <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-database"></i> Dữ liệu hiện tại
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div class="mb-request-form-group">
+                                        <label style="font-size: 10px; color: #64748b;">Giờ vào</label>
+                                        <input type="text" id="original-checkin" class="mb-request-input-field" readonly value="--:--" style="padding-left: 12px !important; height: 38px;">
+                                    </div>
+                                    <div class="mb-request-form-group">
+                                        <label style="font-size: 10px; color: #64748b;">Giờ ra</label>
+                                        <input type="text" id="original-checkout" class="mb-request-input-field" readonly value="--:--" style="padding-left: 12px !important; height: 38px;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Proposed Data -->
+                            <div style="background: #eff6ff; border-radius: 12px; padding: 12px; border: 1px solid #bfdbfe; margin-bottom: 8px;">
+                                <div style="font-size: 11px; font-weight: 700; color: #1d4ed8; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-magic"></i> Dữ liệu đề xuất
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div class="mb-request-form-group">
+                                        <label style="font-size: 10px; color: #1d4ed8;">Giờ vào mới</label>
+                                        <input type="time" id="proposed-checkin" name="gioVaoDeXuat" class="mb-request-input-field" style="padding-left: 12px !important; height: 38px;">
+                                    </div>
+                                    <div class="mb-request-form-group">
+                                        <label style="font-size: 10px; color: #1d4ed8;">Giờ ra mới</label>
+                                        <input type="time" id="proposed-checkout" name="gioRaDeXuat" class="mb-request-input-field" style="padding-left: 12px !important; height: 38px;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-request-form-group">
+                                <label for="lyDo">Lý do điều chỉnh <span style="color:#ef4444">*</span></label>
+                                <textarea id="lyDo" name="lyDo" class="mb-request-textarea" placeholder="VD: Quên bấm thẻ, Đi công tác..." required style="min-height: 80px;"></textarea>
+                            </div>
+
+                            <div class="mb-request-form-group">
+                                <label>Minh chứng (Ảnh/PDF) <span style="color:#ef4444">*</span></label>
+                                <div class="mb-request-file-zone" id="fileZone" onclick="document.getElementById('evidenceFile').click()">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                    <span id="fileText">Chọn file minh chứng...</span>
+                                    <input type="file" id="evidenceFile" name="tepMinhChung" accept=".jpg,.jpeg,.png,.pdf" style="display:none">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="mb-request-submit-btn">
+                                <i class="fa-solid fa-paper-plane"></i> Gửi yêu cầu phê duyệt
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <span class="mb-request-section-title">Lịch sử yêu cầu</span>
+                <div class="mb-history-list">
+                    <?php if (!empty($requests) && is_array($requests)): ?>
+                        <?php foreach ($requests as $row): ?>
+                            <?php
+                                $trangThai = $row['trangThai'] ?? 'pending';
+                                $badgeClass = $trangThai === 'approved' ? 'hople' : ($trangThai === 'rejected' ? 'dimuon' : 'vesom');
+                                $statusText = $trangThai === 'approved' ? 'Đã duyệt' : ($trangThai === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
+                            ?>
+                            <div class="mb-history-card-row yc-history-card" id="request-<?= (int)($row['id'] ?? 0) ?>" data-id="<?= (int)($row['id'] ?? 0) ?>">
+                                <div class="mb-history-card-header">
+                                    <div>
+                                        <span class="day-title">Chỉnh sửa công</span>
+                                        <div class="date-title"><?= htmlspecialchars($row['ngayChamCong'] ?? '') ?></div>
+                                    </div>
+                                    <div>
+                                        <span class="mb-history-status-badge <?= $badgeClass ?>"><?= $statusText ?></span>
+                                    </div>
+                                </div>
+                                <div class="mb-history-card-details" style="flex-direction: column; gap: 4px;">
+                                    <div style="font-size: 11px; color: #475569; background: rgba(0,0,0,0.03); padding: 4px 8px; border-radius: 4px; display: inline-block;">
+                                        Sửa thành: <span style="font-weight: 700; color: #1e293b;">
+                                            <?= !empty($row['gioVaoDeXuat']) ? date('H:i', strtotime($row['gioVaoDeXuat'])) : '--:--' ?> 
+                                            - 
+                                            <?= !empty($row['gioRaDeXuat']) ? date('H:i', strtotime($row['gioRaDeXuat'])) : '--:--' ?>
+                                        </span>
+                                    </div>
+                                    <div style="font-size: 13px; color: #475569; margin-top: 4px;">
+                                        <?= nl2br(htmlspecialchars($row['lyDo'] ?? '')) ?>
+                                    </div>
+                                </div>
+                                <?php if (!empty($row['tepMinhChung'])): ?>
+                                    <div style="margin-top: 8px; font-size: 11px;">
+                                        <button type="button" onclick="event.stopPropagation(); previewEvidence('<?= htmlspecialchars($row['tepMinhChung']) ?>')" style="background:none; border:none; padding:0; font-size: 11px; color: #1e62ec; cursor:pointer; font-weight: 700;">
+                                            <i class="fa-solid fa-paperclip"></i> Xem minh chứng
+                                        </button>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="ls-empty">
+                            <i class="fas fa-inbox"></i>
+                            <p>Chưa có yêu cầu nào.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php else: ?>
             <!-- COMPACT HEADER BAR -->
             <div class="yc-card" style="padding: 10px 16px; margin-top: 10px; border-left: 4px solid var(--yc-primary);">
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -261,6 +396,7 @@ $todayOut = $todayShiftStatus['gioRaCuoi'] ?? null;
             <div style="text-align:center;margin-top:20px">
                 <a href="index.php?page=cham-cong-dashboard" class="yc-btn yc-btn-secondary"><i class="fas fa-arrow-left"></i> Quay lại</a>
             </div>
+        <?php endif; ?>
         </div>
     </div>
 </div>

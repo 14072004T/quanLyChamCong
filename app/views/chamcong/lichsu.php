@@ -106,123 +106,248 @@ $days = ($fromTs && $toTs) ? (int)max(1, floor(abs($toTs - $fromTs) / 86400) + 1
 <div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
     <div class="dashboard-container">
-        <div class="ls-wrap">
+        <?php if (AuthMiddleware::isMobile()): ?>
+            <?php
+            // Group history by date for mobile view
+            $groupedHistory = [];
+            if (is_array($history)) {
+                foreach ($history as $row) {
+                    $datetime = strtotime($row['ngayTao']);
+                    $date = date('Y-m-d', $datetime);
+                    if (!isset($groupedHistory[$date])) {
+                        $groupedHistory[$date] = [
+                            'date' => $date,
+                            'in' => null,
+                            'out' => null,
+                            'is_late' => false,
+                            'is_early' => false,
+                        ];
+                    }
+                    if (($row['hanhDong'] ?? '') === 'IN') {
+                        $groupedHistory[$date]['in'] = date('H:i', $datetime);
+                        $timeStr = date('H:i:s', $datetime);
+                        if ($timeStr > '08:15:00') {
+                            $groupedHistory[$date]['is_late'] = true;
+                        }
+                    } elseif (($row['hanhDong'] ?? '') === 'OUT') {
+                        $groupedHistory[$date]['out'] = date('H:i', $datetime);
+                        $timeStr = date('H:i:s', $datetime);
+                        if ($timeStr < '17:00:00') {
+                            $groupedHistory[$date]['is_early'] = true;
+                        }
+                    }
+                }
+            }
 
-            <!-- Header -->
-            <div class="ls-panel">
-                <h2><i class="fas fa-calendar-check"></i> Lịch sử Chấm công</h2>
-                <p>Xem chi tiết tất cả lần chấm công trong hệ thống.</p>
-            </div>
+            if (!function_exists('getVietnameseDayOfWeek')) {
+                function getVietnameseDayOfWeek($dateStr) {
+                    $days = [
+                        'Sunday' => 'Chủ Nhật',
+                        'Monday' => 'Thứ Hai',
+                        'Tuesday' => 'Thứ Ba',
+                        'Wednesday' => 'Thứ Tư',
+                        'Thursday' => 'Thứ Năm',
+                        'Friday' => 'Thứ Sáu',
+                        'Saturday' => 'Thứ Bảy'
+                    ];
+                    $dayName = date('l', strtotime($dateStr));
+                    return $days[$dayName] ?? $dayName;
+                }
+            }
+            $range = $range ?? 'month';
+            ?>
+            <div class="main-content">
+                <div class="mb-history-header-grid">
+                    <div class="mb-history-stat-card">
+                        <h4>Ngày công</h4>
+                        <div class="stat-val"><?= $inCount ?></div>
+                        <p class="update-time">Tháng này</p>
+                    </div>
+                    <div class="mb-history-stat-card">
+                        <h4>Đi muộn</h4>
+                        <div class="stat-val orange"><?= $lateCount ?></div>
+                        <p class="update-time">Tháng này</p>
+                    </div>
+                </div>
 
-            <!-- Filter -->
-            <div class="ls-panel">
-                <h3><i class="fas fa-filter"></i> Lọc dữ liệu</h3>
-                <form method="GET" action="index.php" class="ls-filter-grid">
-                    <input type="hidden" name="page" value="lich-su-cham-cong">
-                    <div class="ls-form-group">
-                        <label for="from-date">Từ ngày</label>
-                        <input type="date" id="from-date" name="tuNgay" value="<?= htmlspecialchars($from) ?>">
+                <div class="mb-history-title-bar">
+                    <h3>Lịch sử</h3>
+                    <div class="mb-history-toggle-group">
+                        <a href="index.php?page=lich-su-cham-cong&range=week" class="mb-history-toggle-btn <?= ($range === 'week') ? 'active' : '' ?>" style="text-decoration:none;">Tuần</a>
+                        <a href="index.php?page=lich-su-cham-cong&range=month" class="mb-history-toggle-btn <?= ($range === 'month') ? 'active' : '' ?>" style="text-decoration:none;">Tháng</a>
                     </div>
-                    <div class="ls-form-group">
-                        <label for="to-date">Đến ngày</label>
-                        <input type="date" id="to-date" name="denNgay" value="<?= htmlspecialchars($to) ?>">
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:flex-end;">
-                        <button type="submit" class="ls-btn ls-btn-primary" style="flex:1"><i class="fas fa-filter"></i> Lọc</button>
-                        <a href="index.php?page=lich-su-cham-cong" class="ls-btn ls-btn-outline" style="flex:1;text-align:center"><i class="fas fa-rotate-left"></i> Đặt lại</a>
-                    </div>
-                </form>
-            </div>
+                </div>
 
-            <!-- Table -->
-            <div class="ls-panel" style="padding: 10px;">
-                <h3 style="font-size: 14px; margin-bottom: 10px;"><i class="fas fa-table"></i> Lịch sử chi tiết</h3>
-                <?php if (!empty($history) && is_array($history)): ?>
-                    <div class="ls-table-wrap">
-                        <table class="ls-table">
-                            <thead>
-                                <tr>
-                                    <th style="padding: 6px 10px;">Thời gian</th>
-                                    <th style="padding: 6px 10px;">Hành động</th>
-                                    <th style="padding: 6px 10px;">Phương thức</th>
-                                    <th style="padding: 6px 10px;">WiFi</th>
-                                    <th style="padding: 6px 10px;">Ghi chú</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            <?php $count = 0; ?>
-                            <?php foreach ($history as $row): ?>
-                                <?php if ($count >= 100) break; ?>
-                                <?php $count++; ?>
-                                <tr>
-                                    <td style="font-size:11px; padding: 4px 10px;"><?= htmlspecialchars($row['ngayTao'] ?? '') ?></td>
-                                    <td style="padding: 4px 10px;">
-                                        <?php if (($row['hanhDong'] ?? '') === 'IN'): ?>
-                                            <span class="ls-badge ls-badge-in" style="padding: 2px 6px; font-size: 10px;">VÀO</span>
+                <div class="mb-history-list">
+                    <?php if (!empty($groupedHistory)): ?>
+                        <?php foreach ($groupedHistory as $dateStr => $data): ?>
+                            <div class="mb-history-card-row">
+                                <div class="mb-history-card-header">
+                                    <div>
+                                        <span class="day-title"><?= getVietnameseDayOfWeek($dateStr) ?></span>
+                                        <div class="date-title"><?= date('d/m/Y', strtotime($dateStr)) ?></div>
+                                    </div>
+                                    <div>
+                                        <?php if ($data['is_late']): ?>
+                                            <span class="mb-history-status-badge dimuon">Đi muộn</span>
+                                        <?php elseif ($data['is_early']): ?>
+                                            <span class="mb-history-status-badge vesom">Về sớm</span>
                                         <?php else: ?>
-                                            <span class="ls-badge ls-badge-out" style="padding: 2px 6px; font-size: 10px;">RA</span>
+                                            <span class="mb-history-status-badge hople">Hợp lệ</span>
                                         <?php endif; ?>
-                                    </td>
-                                    <td style="padding: 4px 10px;"><span class="ls-badge ls-badge-phuongThuc" style="padding: 2px 6px; font-size: 10px;"><?= htmlspecialchars($row['phuongThuc'] ?? 'LAN') ?></span></td>
-                                    <td style="font-size:11px; padding: 4px 10px;"><?= htmlspecialchars(!empty($row['tenWifi']) ? $row['tenWifi'] : 'Wifi Công ty') ?></td>
-                                    <td style="padding: 4px 10px;">
-                                        <?php 
-                                        if (($row['hanhDong'] ?? '') === 'IN') {
-                                            $time = date('H:i:s', strtotime($row['ngayTao']));
-                                            if ($time > '08:15:00') {
-                                                $diff = strtotime($time) - strtotime('08:00:00');
-                                                $mins = floor($diff / 60);
-                                                echo "<span class='ls-badge ls-badge-late'>Đi muộn {$mins}p</span>";
+                                    </div>
+                                </div>
+                                <div class="mb-history-card-details">
+                                    <div class="mb-history-detail-col">
+                                        <i class="fas fa-sign-in-alt"></i>
+                                        <div>
+                                            <div class="meta-label">Giờ vào</div>
+                                            <div class="time-val"><?= $data['in'] ?? '--:--' ?></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-history-detail-col">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                        <div>
+                                            <div class="meta-label">Giờ ra</div>
+                                            <div class="time-val"><?= $data['out'] ?? '--:--' ?></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        
+                        <?php if (count($groupedHistory) > 5): ?>
+                            <button class="mb-history-loadmore-btn" onclick="alert('Đã hiển thị tất cả bản ghi trong khoảng thời gian này.')">
+                                Xem thêm <i class="fas fa-chevron-down"></i>
+                            </button>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="ls-empty">
+                            <i class="fas fa-inbox"></i>
+                            <p>Chưa có dữ liệu chấm công.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php else: ?>
+            <div class="ls-wrap">
+
+                <!-- Header -->
+                <div class="ls-panel">
+                    <h2><i class="fas fa-calendar-check"></i> Lịch sử Chấm công</h2>
+                    <p>Xem chi tiết tất cả lần chấm công trong hệ thống.</p>
+                </div>
+
+                <!-- Filter -->
+                <div class="ls-panel">
+                    <h3><i class="fas fa-filter"></i> Lọc dữ liệu</h3>
+                    <form method="GET" action="index.php" class="ls-filter-grid">
+                        <input type="hidden" name="page" value="lich-su-cham-cong">
+                        <div class="ls-form-group">
+                            <label for="from-date">Từ ngày</label>
+                            <input type="date" id="from-date" name="tuNgay" value="<?= htmlspecialchars($from) ?>">
+                        </div>
+                        <div class="ls-form-group">
+                            <label for="to-date">Đến ngày</label>
+                            <input type="date" id="to-date" name="denNgay" value="<?= htmlspecialchars($to) ?>">
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:flex-end;">
+                            <button type="submit" class="ls-btn ls-btn-primary" style="flex:1"><i class="fas fa-filter"></i> Lọc</button>
+                            <a href="index.php?page=lich-su-cham-cong" class="ls-btn ls-btn-outline" style="flex:1;text-align:center"><i class="fas fa-rotate-left"></i> Đặt lại</a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Table -->
+                <div class="ls-panel" style="padding: 10px;">
+                    <h3 style="font-size: 14px; margin-bottom: 10px;"><i class="fas fa-table"></i> Lịch sử chi tiết</h3>
+                    <?php if (!empty($history) && is_array($history)): ?>
+                        <div class="ls-table-wrap">
+                            <table class="ls-table">
+                                <thead>
+                                    <tr>
+                                        <th style="padding: 6px 10px;">Thời gian</th>
+                                        <th style="padding: 6px 10px;">Hành động</th>
+                                        <th style="padding: 6px 10px;">Phương thức</th>
+                                        <th style="padding: 6px 10px;">WiFi</th>
+                                        <th style="padding: 6px 10px;">Ghi chú</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                <?php $count = 0; ?>
+                                <?php foreach ($history as $row): ?>
+                                    <?php if ($count >= 100) break; ?>
+                                    <?php $count++; ?>
+                                    <tr>
+                                        <td style="font-size:11px; padding: 4px 10px;"><?= htmlspecialchars($row['ngayTao'] ?? '') ?></td>
+                                        <td style="padding: 4px 10px;">
+                                            <?php if (($row['hanhDong'] ?? '') === 'IN'): ?>
+                                                <span class="ls-badge ls-badge-in" style="padding: 2px 6px; font-size: 10px;">VÀO</span>
+                                            <?php else: ?>
+                                                <span class="ls-badge ls-badge-out" style="padding: 2px 6px; font-size: 10px;">RA</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="padding: 4px 10px;"><span class="ls-badge ls-badge-phuongThuc" style="padding: 2px 6px; font-size: 10px;"><?= htmlspecialchars($row['phuongThuc'] ?? 'LAN') ?></span></td>
+                                        <td style="font-size:11px; padding: 4px 10px;"><?= htmlspecialchars(!empty($row['tenWifi']) ? $row['tenWifi'] : 'Wifi Công ty') ?></td>
+                                        <td style="padding: 4px 10px;">
+                                            <?php 
+                                            if (($row['hanhDong'] ?? '') === 'IN') {
+                                                $time = date('H:i:s', strtotime($row['ngayTao']));
+                                                if ($time > '08:15:00') {
+                                                    $diff = strtotime($time) - strtotime('08:00:00');
+                                                    $mins = floor($diff / 60);
+                                                    echo "<span class='ls-badge ls-badge-late'>Đi muộn {$mins}p</span>";
+                                                } else {
+                                                    echo "<span class='ls-badge ls-badge-ontime'>Đúng giờ</span>";
+                                                }
                                             } else {
-                                                echo "<span class='ls-badge ls-badge-ontime'>Đúng giờ</span>";
+                                                echo "<span class='ls-badge ls-badge-ok'><i class='fas fa-check'></i> Đã lưu</span>";
                                             }
-                                        } else {
-                                            echo "<span class='ls-badge ls-badge-ok'><i class='fas fa-check'></i> Đã lưu</span>";
-                                        }
-                                        ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php else: ?>
-                    <div class="ls-empty">
-                        <i class="fas fa-inbox"></i>
-                        <p>Chưa có dữ liệu chấm công.</p>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Stats -->
-            <div class="ls-panel" style="padding: 10px;">
-                <h3 style="font-size: 14px; margin-bottom: 10px;"><i class="fas fa-chart-column"></i> Thống kê nhanh</h3>
-                <div class="ls-stats" style="grid-template-columns: repeat(3, 1fr);">
-                    <a href="index.php?page=lich-su-cham-cong" class="ls-stat-card" style="padding: 8px;">
-                        <h4 style="font-size: 10px;">Tổng lần</h4>
-                        <div class="ls-stat-val" style="font-size: 18px;"><?= $totalCount ?></div>
-                    </a>
-                    <a href="index.php?page=lich-su-cham-cong" class="ls-stat-card" style="padding: 8px;">
-                        <h4 style="font-size: 10px;">Vào/Ra</h4>
-                        <div class="ls-stat-val" style="font-size: 18px;"><?= $inCount ?>/<?= $outCount ?></div>
-                    </a>
-                    <a href="index.php?page=yeu-cau-chinh-sua-cham-cong" class="ls-stat-card" style="padding: 8px;">
-                        <h4 style="font-size: 10px; color: #dc2626;">Đi muộn</h4>
-                        <div class="ls-stat-val" style="font-size: 18px; color: #dc2626;"><?= $lateCount ?></div>
-                    </a>
+                                            ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="ls-empty">
+                            <i class="fas fa-inbox"></i>
+                            <p>Chưa có dữ liệu chấm công.</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            </div>
 
-            <!-- Quick actions -->
-            <div class="ls-panel">
-                <h3><i class="fas fa-bolt"></i> Chức năng nhanh</h3>
-                <div class="ls-actions">
-                    <a href="index.php?page=cham-cong-dashboard" class="ls-btn ls-btn-primary"><i class="fas fa-house"></i> Dashboard</a>
-                    <a href="index.php?page=yeu-cau-chinh-sua-cham-cong" class="ls-btn ls-btn-outline"><i class="fas fa-pen-to-square"></i> Yêu cầu chỉnh sửa</a>
+                <!-- Stats -->
+                <div class="ls-panel" style="padding: 10px;">
+                    <h3 style="font-size: 14px; margin-bottom: 10px;"><i class="fas fa-chart-column"></i> Thống kê nhanh</h3>
+                    <div class="ls-stats" style="grid-template-columns: repeat(3, 1fr);">
+                        <a href="index.php?page=lich-su-cham-cong" class="ls-stat-card" style="padding: 8px;">
+                            <h4 style="font-size: 10px;">Tổng lần</h4>
+                            <div class="ls-stat-val" style="font-size: 18px;"><?= $totalCount ?></div>
+                        </a>
+                        <a href="index.php?page=lich-su-cham-cong" class="ls-stat-card" style="padding: 8px;">
+                            <h4 style="font-size: 10px;">Vào/Ra</h4>
+                            <div class="ls-stat-val" style="font-size: 18px;"><?= $inCount ?>/<?= $outCount ?></div>
+                        </a>
+                        <a href="index.php?page=yeu-cau-chinh-sua-cham-cong" class="ls-stat-card" style="padding: 8px;">
+                            <h4 style="font-size: 10px; color: #dc2626;">Đi muộn</h4>
+                            <div class="ls-stat-val" style="font-size: 18px; color: #dc2626;"><?= $lateCount ?></div>
+                        </a>
+                    </div>
                 </div>
-            </div>
 
-        </div>
+                <!-- Quick actions -->
+                <div class="ls-panel">
+                    <h3><i class="fas fa-bolt"></i> Chức năng nhanh</h3>
+                    <div class="ls-actions">
+                        <a href="index.php?page=cham-cong-dashboard" class="ls-btn ls-btn-primary"><i class="fas fa-house"></i> Dashboard</a>
+                        <a href="index.php?page=yeu-cau-chinh-sua-cham-cong" class="ls-btn ls-btn-outline"><i class="fas fa-pen-to-square"></i> Yêu cầu chỉnh sửa</a>
+                    </div>
+                </div>
+
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 <?php include 'app/views/layouts/footer.php'; ?>

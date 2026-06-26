@@ -430,118 +430,48 @@
             body { background: #e2e8f0; }
         }
     </style>
+    <?php
+    require_once 'app/middleware/AuthMiddleware.php';
+    if (AuthMiddleware::isMobile()):
+    ?>
+    <link rel="stylesheet" href="public/css/mobile.css?v=<?= time() ?>">
+    <?php endif; ?>
 </head>
-<body>
+<body class="<?= AuthMiddleware::isMobile() ? 'mobile-view mb-login-body' : '' ?>">
 
-    <!-- Background bubbles -->
-    <div class="bg-shape bg-shape-1"></div>
-    <div class="bg-shape bg-shape-2"></div>
-    <div class="bg-shape bg-shape-3"></div>
-
-    <div class="main-content">
-        <!-- HEADER -->
-        <div class="header-section">
-            <div class="brand-logo">
-                <span class="logo-r">R</span>
-                <span class="logo-f">F</span>
-                <span class="logo-t">T</span>
-            </div>
-            <h1 class="header-title">Hệ thống Quản lý Chấm công</h1>
-            <p class="header-subtitle">Giải pháp số hoá chấm công thông minh dành cho doanh nghiệp hiện đại.</p>
-        </div>
-
-        <!-- CONTENT -->
-        <div class="content-wrapper">
-            <!-- Left Illustration -->
-            <div class="illustration-panel">
-                <div class="mockup-container">
-                    <div class="mockup-header">
-                        <div class="mockup-header-left">
-                            <div class="mockup-logo">RFT</div>
-                            <span class="mockup-title">Dashboard</span>
-                        </div>
-                        <div class="mockup-header-right">
-                            <i class="fas fa-bell"></i>
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                    </div>
-                    
-                    <div class="mockup-cards">
-                        <div class="m-card">
-                            <div class="m-card-chart">
-                                <div class="bar"></div>
-                                <div class="bar"></div>
-                                <div class="bar"></div>
-                                <div class="bar"></div>
-                                <div class="bar"></div>
-                            </div>
-                            <p>Báo cáo & thống kê</p>
-                        </div>
-                        <div class="m-card">
-                            <div class="m-card-icon">
-                                <div class="icon-checkin-wrapper">
-                                    <i class="far fa-calendar"></i>
-                                    <i class="fas fa-map-marker-alt icon-map-pin"></i>
-                                </div>
-                            </div>
-                            <p>Check-in pin</p>
-                        </div>
-                        <div class="m-card">
-                            <div class="m-card-icon">
-                                <i class="fas fa-expand icon-faceid"></i>
-                            </div>
-                            <p>FaceID</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="features-grid">
-                    <div class="feature-item">
-                        <i class="fas fa-circle feature-bullet"></i>
-                        <div class="feature-text">
-                            <strong>WiFi</strong> chấm công qua WiFi nội bộ địa chấm công
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-circle feature-bullet"></i>
-                        <div class="feature-text">
-                            <strong>Reports</strong> Báo cáo & thống kê tự động
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-circle feature-bullet"></i>
-                        <div class="feature-text">
-                            <strong>QR</strong> giải pháp số hoá chấm công bằng QR dự phòng
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-circle feature-bullet"></i>
-                        <div class="feature-text">
-                            <strong>Security</strong> Bảo mật & phân quyền linh hoạt
-                        </div>
-                    </div>
-                </div>
+    <?php if (AuthMiddleware::isMobile()): ?>
+        <!-- ========================================== -->
+        <!-- MOBILE LOGIN VIEW                          -->
+        <!-- ========================================== -->
+        <div class="main-content" style="padding: 40px 16px 20px;">
+            
+            <!-- Logo boxes: R, F, T -->
+            <div class="mb-login-logo-container">
+                <div class="mb-login-logo-box r">R</div>
+                <div class="mb-login-logo-box f">F</div>
+                <div class="mb-login-logo-box t">T</div>
             </div>
 
-            <!-- Right Login Form -->
-            <div class="login-panel">
-                <div class="form-header">
-                    <h2>Đăng nhập</h2>
-                    <p>Vui lòng nhập thông tin tài khoản để tiếp tục</p>
-                </div>
+            <h1 class="mb-login-title">Chào mừng trở lại!</h1>
+            <p class="mb-login-subtitle">Hệ thống quản lý chấm công kỹ thuật số dành cho doanh nghiệp hiện đại.</p>
+
+            <!-- Login Card -->
+            <div class="mb-login-card">
+                <h2>Đăng nhập</h2>
+                <p>Vui lòng nhập thông tin tài khoản để tiếp tục</p>
 
                 <?php
                     $loi = $_GET['error'] ?? '';
                     if ($loi === '1'):
                 ?>
-                    <div class="alert alert-error">
+                    <div class="alert alert-error" style="margin-bottom: 16px; border-radius: 8px; font-size: 13px;">
                         <i class="fas fa-exclamation-circle"></i>
                         <span>Sai tên đăng nhập hoặc mật khẩu. Vui lòng thử lại.</span>
                     </div>
                 <?php endif; ?>
 
                 <?php if ($loi === 'inactive'): ?>
-                    <div class="alert alert-warning">
+                    <div class="alert alert-warning" style="margin-bottom: 16px; border-radius: 8px; font-size: 13px;">
                         <i class="fas fa-lock"></i>
                         <div>
                             <strong>Tài khoản đã bị khóa</strong><br>
@@ -550,37 +480,241 @@
                     </div>
                 <?php endif; ?>
 
+                <?php if ($loi === 'ib_only'): ?>
+                    <div class="alert alert-warning" style="margin-bottom: 16px; border-radius: 8px; font-size: 13px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #fca5a5;">
+                        <i class="fas fa-desktop"></i>
+                        <div>
+                            <strong>Quyền truy cập hạn chế</strong><br>
+                            <span>Tài khoản này chỉ được phép hoạt động trên Internet Banking (IB).</span>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <form method="POST" action="index.php?page=login-process">
-                    <div class="form-group">
+                    <div class="mb-form-group">
                         <label for="username">TÊN ĐĂNG NHẬP</label>
-                        <div class="input-group">
-                            <i class="fas fa-user"></i>
-                            <input type="text" id="username" name="username" placeholder="Nhập tên đăng nhập" autocomplete="username" autofocus required>
+                        <div class="mb-input-wrapper">
+                            <i class="fas fa-user input-icon"></i>
+                            <input type="text" id="username" name="username" class="mb-input-field" placeholder="Nhập tên đăng nhập" autocomplete="username" autofocus required>
                         </div>
                     </div>
 
-                    <div class="form-group">
+                    <div class="mb-form-group">
                         <label for="matKhau">MẬT KHẨU</label>
-                        <div class="input-group">
-                            <i class="fas fa-lock"></i>
-                            <input type="password" id="matKhau" name="matKhau" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+                        <div class="mb-input-wrapper">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" id="matKhau" name="matKhau" class="mb-input-field" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+                            <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('matKhau', this)"></i>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-submit">
-                        <i class="fas fa-arrow-right-to-bracket"></i> Đăng Nhập
+                    <div class="mb-forgot-pw">
+                        <a href="#">QUÊN MẬT KHẨU?</a>
+                    </div>
+
+                    <button type="submit" class="mb-login-btn">
+                        <i class="fas fa-arrow-right-to-bracket"></i> Đăng nhập
                     </button>
-                    <!-- Chú ý: Phần "Hoặc tiếp tục với Google vs Microsoft" đã được loại bỏ theo yêu cầu -->
                 </form>
             </div>
-        </div>
-    </div>
 
-    <!-- FOOTER -->
-    <footer class="footer">
-        <div>© 2026 RFT Hệ Thống Quản Lý Chấm Công — v1.0.2</div>
-        <div>Cần hỗ trợ? <a href="#">Trò chuyện ngay</a></div>
-    </footer>
+            <!-- Quick option cards -->
+            <div class="mb-quick-options">
+                <a href="#" class="mb-quick-option-card">
+                    <i class="fas fa-wifi"></i>
+                    <span>WIFI CHẤM CÔNG</span>
+                </a>
+                <a href="#" class="mb-quick-option-card">
+                    <i class="far fa-face-smile"></i>
+                    <span>FACEID</span>
+                </a>
+            </div>
+
+            <!-- Mobile Footer -->
+            <div class="mb-login-footer" style="background: none; border-top: none;">
+                <div>© 2026 RFT HỆ THỐNG QUẢN LÝ CHẤM CÔNG – V1.0.2</div>
+                <div style="margin-top: 4px;">CẦN HỖ TRỢ? <a href="#">Trò chuyện ngay</a> <i class="far fa-comment-dots" style="color: #1b5ed8;"></i></div>
+            </div>
+
+        </div>
+
+        <script>
+            function togglePasswordVisibility(fieldId, iconEl) {
+                const field = document.getElementById(fieldId);
+                if (field.type === 'password') {
+                    field.type = 'text';
+                    iconEl.classList.remove('fa-eye');
+                    iconEl.classList.add('fa-eye-slash');
+                } else {
+                    field.type = 'password';
+                    iconEl.classList.remove('fa-eye-slash');
+                    iconEl.classList.add('fa-eye');
+                }
+            }
+        </script>
+
+    <?php else: ?>
+        <!-- ========================================== -->
+        <!-- DESKTOP LOGIN VIEW (ORIGINAL)              -->
+        <!-- ========================================== -->
+        <!-- Background bubbles -->
+        <div class="bg-shape bg-shape-1"></div>
+        <div class="bg-shape bg-shape-2"></div>
+        <div class="bg-shape bg-shape-3"></div>
+
+        <div class="main-content">
+            <!-- HEADER -->
+            <div class="header-section">
+                <div class="brand-logo">
+                    <span class="logo-r">R</span>
+                    <span class="logo-f">F</span>
+                    <span class="logo-t">T</span>
+                </div>
+                <h1 class="header-title">Hệ thống Quản lý Chấm công</h1>
+                <p class="header-subtitle">Giải pháp số hoá chấm công thông minh dành cho doanh nghiệp hiện đại.</p>
+            </div>
+
+            <!-- CONTENT -->
+            <div class="content-wrapper">
+                <!-- Left Illustration -->
+                <div class="illustration-panel">
+                    <div class="mockup-container">
+                        <div class="mockup-header">
+                            <div class="mockup-header-left">
+                                <div class="mockup-logo">RFT</div>
+                                <span class="mockup-title">Dashboard</span>
+                            </div>
+                            <div class="mockup-header-right">
+                                <i class="fas fa-bell"></i>
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="mockup-cards">
+                            <div class="m-card">
+                                <div class="m-card-chart">
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                </div>
+                                <p>Báo cáo & thống kê</p>
+                            </div>
+                            <div class="m-card">
+                                <div class="m-card-icon">
+                                    <div class="icon-checkin-wrapper">
+                                        <i class="far fa-calendar"></i>
+                                        <i class="fas fa-map-marker-alt icon-map-pin"></i>
+                                    </div>
+                                </div>
+                                <p>Check-in pin</p>
+                            </div>
+                            <div class="m-card">
+                                <div class="m-card-icon">
+                                    <i class="fas fa-expand icon-faceid"></i>
+                                </div>
+                                <p>FaceID</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="features-grid">
+                        <div class="feature-item">
+                            <i class="fas fa-circle feature-bullet"></i>
+                            <div class="feature-text">
+                                <strong>WiFi</strong> chấm công qua WiFi nội bộ địa chấm công
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-circle feature-bullet"></i>
+                            <div class="feature-text">
+                                <strong>Reports</strong> Báo cáo & thống kê tự động
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-circle feature-bullet"></i>
+                            <div class="feature-text">
+                                <strong>QR</strong> giải pháp số hoá chấm công bằng QR dự phòng
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-circle feature-bullet"></i>
+                            <div class="feature-text">
+                                <strong>Security</strong> Bảo mật & phân quyền linh hoạt
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Login Form -->
+                <div class="login-panel">
+                    <div class="form-header">
+                        <h2>Đăng nhập</h2>
+                        <p>Vui lòng nhập thông tin tài khoản để tiếp tục</p>
+                    </div>
+
+                    <?php
+                        $loi = $_GET['error'] ?? '';
+                        if ($loi === '1'):
+                    ?>
+                        <div class="alert alert-error">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>Sai tên đăng nhập hoặc mật khẩu. Vui lòng thử lại.</span>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($loi === 'inactive'): ?>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-lock"></i>
+                            <div>
+                                <strong>Tài khoản đã bị khóa</strong><br>
+                                <span>Vui lòng liên hệ quản trị viên để được hỗ trợ.</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($loi === 'ib_only'): ?>
+                        <div class="alert alert-warning" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #fca5a5;">
+                            <i class="fas fa-desktop"></i>
+                            <div>
+                                <strong>Quyền truy cập hạn chế</strong><br>
+                                <span>Tài khoản này chỉ được phép hoạt động trên Internet Banking (IB).</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <form method="POST" action="index.php?page=login-process">
+                        <div class="form-group">
+                            <label for="username">TÊN ĐĂNG NHẬP</label>
+                            <div class="input-group">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="username" name="username" placeholder="Nhập tên đăng nhập" autocomplete="username" autofocus required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="matKhau">MẬT KHẨU</label>
+                            <div class="input-group">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="matKhau" name="matKhau" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit">
+                            <i class="fas fa-arrow-right-to-bracket"></i> Đăng Nhập
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="footer">
+            <div>© 2026 RFT Hệ Thống Quản Lý Chấm Công — v1.0.2</div>
+            <div>Cần hỗ trợ? <a href="#">Trò chuyện ngay</a></div>
+        </footer>
+    <?php endif; ?>
 
 </body>
 </html>

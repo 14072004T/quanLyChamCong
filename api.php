@@ -85,6 +85,10 @@ function requireRole($allowedRoles) {
     if (!in_array($role, (array)$allowedRoles)) {
         respondError('Bạn không có quyền truy cập chức năng này.', 403);
     }
+    require_once __DIR__ . '/app/middleware/AuthMiddleware.php';
+    if (AuthMiddleware::isMobile() && $role !== 'nhanvien') {
+        respondError('Tài khoản của bạn chỉ được phép hoạt động trên Internet Banking (IB).', 403);
+    }
     return $user;
 }
 
@@ -209,6 +213,11 @@ function handleAuth($phuongThuc, $hanhDong) {
             ];
             $chucVu = $user['chucVu'] ?? 'Nhân viên';
             $role = $roleMapping[$chucVu] ?? 'nhanvien';
+
+            require_once __DIR__ . '/app/middleware/AuthMiddleware.php';
+            if (AuthMiddleware::isMobile() && $role !== 'nhanvien') {
+                respondError('Tài khoản của bạn chỉ được phép hoạt động trên Internet Banking (IB).', 403);
+            }
 
             $_SESSION['user'] = [
                 'maTK' => $user['maTK'],

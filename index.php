@@ -74,6 +74,7 @@ if ($page === 'get-menu-by-role') {
 
 $allowedPages = [
     'home',
+    'profile',
     // Nhân viên - Chấm công
     'cham-cong',
     'cham-cong-vao',
@@ -129,6 +130,10 @@ $allowedPages = [
     'leave-request-detail',
     'get-leave-detail',
     'get-correction-detail',
+    // Face Recognition
+    'face-register',
+    'face-api-register',
+    'face-api-verify',
     // Legacy
     'cham-cong-dashboard',
     'hr-cham-cong',
@@ -144,6 +149,17 @@ if (!in_array($page, $allowedPages, true)) {
 if (!isset($_SESSION['user']) && !in_array($page, ['login', 'login-process', 'logout'])) {
     header('Location: index.php?page=login');
     exit;
+}
+
+// MB chỉ role nhân viên thực hiện chấm công, các role còn lại chỉ được thực hiện trên IB
+if (isset($_SESSION['user'])) {
+    $role = $_SESSION['role'] ?? 'nhanvien';
+    if (AuthMiddleware::isMobile() && $role !== 'nhanvien') {
+        session_unset();
+        session_destroy();
+        header('Location: index.php?page=login&error=ib_only');
+        exit;
+    }
 }
 
 // Kiểm tra quyền hạn nếu user đã login
@@ -412,6 +428,27 @@ switch ($page) {
         require_once 'app/controllers/ManagerController.php';
         (new ManagerController())->approveLeaveRequest();
         break;
+
+    // === NHẬN DIỆN KHUÔN MẶT ===
+    case 'face-register':
+        require_once 'app/controllers/FaceController.php';
+        (new FaceController())->registerView();
+        break;
+
+    case 'face-api-register':
+        require_once 'app/controllers/FaceController.php';
+        (new FaceController())->registerApi();
+        break;
+
+    case 'face-api-verify':
+        require_once 'app/controllers/FaceController.php';
+        (new FaceController())->verifyApi();
+        break;
+
+    case 'profile':
+        require_once 'app/views/profile.php';
+        break;
+
 
     default:
         require_once 'app/controllers/HomeController.php';

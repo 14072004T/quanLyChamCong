@@ -81,6 +81,13 @@ class LoginController {
             $chucVu = $user['chucVu'] ?? 'Nhân viên';
             $role = $roleMapping[$chucVu] ?? 'nhanvien';
 
+            // MB chỉ role nhân viên thực hiện chấm công, các role còn lại chỉ được thực hiện trên IB
+            require_once 'app/middleware/AuthMiddleware.php';
+            if (AuthMiddleware::isMobile() && $role !== 'nhanvien') {
+                header("Location: index.php?page=login&error=ib_only");
+                exit;
+            }
+
             // Đăng nhập thành công
             $_SESSION['user'] = [
                 'maTK' => $user['maTK'],
