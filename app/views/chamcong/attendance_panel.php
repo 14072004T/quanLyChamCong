@@ -1,5 +1,7 @@
 <?php
-// Attendance Panel - Refined Compact UI
+// Attendance Panel with Face Liveness Detection
+// ==============================================
+// Multi-layer anti-spoofing pipeline integrated into face attendance.
 if (!isset($_SESSION['user'])) { header('Location: index.php?page=login'); exit; }
 $user = $_SESSION['user'];
 $hoTen = $user['hoTen'] ?? 'User';
@@ -39,12 +41,126 @@ $hoTen = $user['hoTen'] ?? 'User';
         .history-table-compact td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
         
         @media (max-width: 640px) { .att-grid { grid-template-columns: 1fr; } }
+
+        /* ─── Liveness Modal Styles ─── */
+        .liveness-modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center;
+            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        }
+        .liveness-modal-content {
+            background: white; border-radius: 16px; width: 92%; max-width: 540px;
+            padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border: 1px solid #e2e8f0;
+            position: relative; max-height: 95vh; overflow-y: auto;
+        }
+        .liveness-modal-close {
+            position: absolute; top: 14px; right: 14px; background: #f1f5f9; border: none;
+            font-size: 16px; cursor: pointer; color: #64748b; width: 32px; height: 32px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .liveness-modal-close:hover { background: #fee2e2; color: #dc2626; }
+        .liveness-modal-title {
+            margin: 0 0 16px; font-size: 17px; font-weight: 700; color: #0f172a;
+            text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+
+        /* Status banner */
+        .liveness-status {
+            padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+            text-align: center; margin-bottom: 14px; transition: all 0.3s ease;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .liveness-status-info { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+        .liveness-status-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+        .liveness-status-warning { background: #fffbeb; color: #d97706; border: 1px solid #fef3c7; }
+        .liveness-status-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+        /* Progress bar */
+        .liveness-progress-wrap {
+            background: #f1f5f9; border-radius: 8px; height: 8px; margin-bottom: 14px; overflow: hidden;
+        }
+        .liveness-progress-bar {
+            height: 100%; border-radius: 8px; transition: width 0.4s ease, background 0.3s;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            width: 0%;
+        }
+        .liveness-progress-label {
+            font-size: 11px; color: #64748b; text-align: right; margin-bottom: 4px; font-weight: 600;
+        }
+
+        /* Step indicators */
+        .liveness-steps {
+            display: flex; justify-content: space-between; margin-bottom: 16px; padding: 10px 12px;
+            background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; gap: 4px;
+        }
+        .liveness-step {
+            display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600;
+            color: #94a3b8; transition: all 0.3s;
+        }
+        .liveness-step-num {
+            width: 22px; height: 22px; border-radius: 50%; background: #f1f5f9; color: #94a3b8;
+            border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 700; transition: all 0.3s; flex-shrink: 0;
+        }
+        .liveness-step.active { color: #3b82f6; }
+        .liveness-step.active .liveness-step-num { background: #3b82f6; color: white; border-color: #3b82f6; }
+        .liveness-step.done { color: #10b981; }
+        .liveness-step.done .liveness-step-num { background: #ecfdf5; color: #10b981; border-color: #10b981; }
+
+        /* Camera area */
+        .liveness-camera-area {
+            position: relative; width: 100%; aspect-ratio: 4/3; background: #0f172a;
+            border-radius: 10px; overflow: hidden; border: 2px solid #e2e8f0;
+            transition: border-color 0.3s;
+        }
+        .liveness-camera-area.detecting { border-color: #3b82f6; }
+        .liveness-camera-area.success { border-color: #10b981; }
+        .liveness-camera-area.failed { border-color: #ef4444; }
+
+        /* Challenge instruction overlay */
+        .liveness-challenge-overlay {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 20px 16px 14px; display: none;
+        }
+        .liveness-challenge-text {
+            color: white; font-size: 15px; font-weight: 700; text-align: center;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5); display: flex; align-items: center;
+            justify-content: center; gap: 8px;
+        }
+
+        /* Spoof alert */
+        .liveness-spoof-alert {
+            display: none; padding: 14px 16px; border-radius: 10px; margin-top: 14px;
+            background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 2px solid #fca5a5;
+            text-align: center; animation: shakeAlert 0.5s ease;
+        }
+        .liveness-spoof-alert i { font-size: 24px; color: #dc2626; display: block; margin-bottom: 6px; }
+        .liveness-spoof-alert strong { color: #991b1b; font-size: 15px; display: block; margin-bottom: 4px; }
+        .liveness-spoof-alert p { color: #b91c1c; font-size: 12px; margin: 0; }
+
+        @keyframes shakeAlert {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+
+        /* Retry button */
+        .liveness-retry-btn {
+            display: none; width: 100%; padding: 12px; border-radius: 8px; font-size: 14px;
+            font-weight: 600; border: 2px solid #3b82f6; background: white; color: #3b82f6;
+            cursor: pointer; margin-top: 12px; transition: all 0.2s;
+        }
+        .liveness-retry-btn:hover { background: #3b82f6; color: white; }
     </style>
 
     <div class="att-header-mini">
         <div class="att-header-info">
-            <h2><i class="fas fa-fingerprint" style="color: #3b82f6;"></i> Chấm công hệ thống</h2>
-            <p>Xác thực mạng nội bộ và ghi nhận thời gian làm việc</p>
+            <h2><i class="fas fa-shield-alt" style="color: #3b82f6;"></i> Chấm công xác minh khuôn mặt thật</h2>
+            <p>Xác thực mạng nội bộ + Nhận diện liveness + Ghi nhận thời gian</p>
         </div>
         <div id="clock-mini" style="font-size: 20px; font-weight: 700; color: #1e293b;">--:--:--</div>
     </div>
@@ -107,40 +223,74 @@ $hoTen = $user['hoTen'] ?? 'User';
         </div>
     </div>
 
-    <!-- Modal Nhận diện khuôn mặt -->
-    <div id="face-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-        <div style="background: white; border-radius: 16px; width: 90%; max-width: 500px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid #e2e8f0; position: relative;">
-            <button id="close-modal-btn" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 18px; cursor: pointer; color: #64748b;"><i class="fas fa-times"></i></button>
+    <!-- ═══ LIVENESS VERIFICATION MODAL ═══ -->
+    <div id="liveness-modal" class="liveness-modal-overlay">
+        <div class="liveness-modal-content">
+            <button id="liveness-close-btn" class="liveness-modal-close"><i class="fas fa-times"></i></button>
             
-            <h3 id="face-modal-title" style="margin: 0 0 15px; font-size: 16px; font-weight: 700; color: #0f172a; text-align: center;">Xác thực khuôn mặt Chấm công</h3>
-            
-            <div id="face-modal-status" style="padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">
-                Đang tải mô hình nhận diện...
+            <h3 id="liveness-modal-title" class="liveness-modal-title">
+                <i class="fas fa-shield-alt"></i> Xác minh khuôn mặt thật
+            </h3>
+
+            <!-- Status banner -->
+            <div id="liveness-status" class="liveness-status liveness-status-info">
+                <i class="fas fa-spinner fa-spin"></i> Đang tải mô hình nhận diện...
             </div>
 
-            <div style="position: relative; width: 100%; aspect-ratio: 4/3; background: #0f172a; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1;">
-                <video id="modal-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
-                <canvas id="modal-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1);"></canvas>
-            </div>
-            
-            <canvas id="snapshot-canvas" style="display: none;"></canvas>
 
-            <div style="margin-top: 15px; text-align: center;">
-                <span style="font-size: 12px; color: #64748b; display: block; margin-bottom: 10px;"><i class="fas fa-info-circle"></i> Vui lòng căn chỉnh khuôn mặt thẳng góc với camera</span>
-                <button id="modal-btn-verify" class="btn-att-mid btn-att-in" style="width: 100%; padding: 12px; display: inline-flex; align-items: center; justify-content: center;" disabled>
-                    <i class="fas fa-fingerprint"></i> XÁC THỰC VÀ CHẤM CÔNG
-                </button>
+
+            <!-- Progress bar -->
+            <div class="liveness-progress-label" id="liveness-progress-label">0%</div>
+            <div class="liveness-progress-wrap">
+                <div id="liveness-progress-bar" class="liveness-progress-bar" style="width: 0%;"></div>
+            </div>
+
+            <!-- Camera feed -->
+            <div id="liveness-camera" class="liveness-camera-area">
+                <video id="liveness-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                <canvas id="liveness-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1);"></canvas>
+                
+                <!-- Challenge instruction overlay -->
+                <div id="liveness-challenge-overlay" class="liveness-challenge-overlay">
+                    <div id="liveness-challenge-text" class="liveness-challenge-text">
+                        <i class="fas fa-eye"></i> <span>Vui lòng chớp mắt</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Snapshot canvas (hidden) -->
+            <canvas id="liveness-snapshot" style="display: none;"></canvas>
+
+            <!-- Spoof alert -->
+            <div id="liveness-spoof-alert" class="liveness-spoof-alert">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>PHÁT HIỆN KHUÔN MẶT GIẢ!</strong>
+                <p id="liveness-spoof-reason">Hệ thống phát hiện bạn không phải người thật.</p>
+            </div>
+
+            <!-- Retry button -->
+            <button id="liveness-retry-btn" class="liveness-retry-btn">
+                <i class="fas fa-redo"></i> Thử lại xác minh
+            </button>
+
+            <!-- Info footer -->
+            <div style="margin-top: 12px; text-align: center;">
+                <span style="font-size: 11px; color: #94a3b8;">
+                    <i class="fas fa-lock"></i> Xác minh liveness 6 lớp bảo mật — Chỉ khuôn mặt thật mới được chấm công
+                </span>
             </div>
         </div>
     </div>
 </div>
 
 <script src="public/js/face-api.js"></script>
+<script src="public/js/face-liveness.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const apiBase = 'index.php?page=';
 
+    // ─── Data Loading (Unchanged from original) ───────────────────
     function formatTimeFromHours(soGio) {
         if (!soGio || soGio <= 0) return '—';
         const h = Math.floor(soGio);
@@ -185,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
         // History
-        fetch(apiBase + 'attendance-history?limit=5')
+        fetch(apiBase + 'attendance-history&limit=5')
             .then(res => res.json())
             .then(data => {
                 const historyList = document.getElementById('history-list');
@@ -214,32 +364,42 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => { if(div.parentElement) div.remove(); }, 5000);
     }
 
+    // ─── Liveness Variables ───────────────────────────────────────
     let currentAction = 'IN';
     let faceApiLoaded = false;
     let modalStream = null;
     let detectionInterval = null;
-    let latestDescriptor = null;
+    let livenessDetector = null;
+    let isVerificationComplete = false;
 
+    // ─── Button Handlers ──────────────────────────────────────────
     document.getElementById('checkin-btn').onclick = () => {
-        triggerFaceAttendance('IN');
+        triggerLivenessAttendance('IN');
     };
 
     document.getElementById('checkout-btn').onclick = () => {
-        triggerFaceAttendance('OUT');
+        triggerLivenessAttendance('OUT');
     };
 
-    async function triggerFaceAttendance(action) {
+    // ─── Main Liveness Flow ───────────────────────────────────────
+    async function triggerLivenessAttendance(action) {
         currentAction = action;
-        const modal = document.getElementById('face-modal');
+        isVerificationComplete = false;
+
+        const modal = document.getElementById('liveness-modal');
         modal.style.display = 'flex';
-        
-        const title = document.getElementById('face-modal-title');
-        title.innerHTML = '<i class="fas fa-portrait"></i> Xác thực khuôn mặt - Chấm công ' + (action === 'IN' ? 'Vào' : 'Ra');
-        
-        const status = document.getElementById('face-modal-status');
-        status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
-        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải mô hình nhận diện khuôn mặt...';
-        
+
+        const title = document.getElementById('liveness-modal-title');
+        title.innerHTML = '<i class="fas fa-shield-alt"></i> Xác minh khuôn mặt — Chấm công ' + (action === 'IN' ? 'Vào' : 'Ra');
+
+        // Reset UI
+        resetLivenessUI();
+
+        const statusEl = document.getElementById('liveness-status');
+        statusEl.className = 'liveness-status liveness-status-info';
+        statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải mô hình nhận diện khuôn mặt...';
+
+        // Load face-api models
         if (!faceApiLoaded) {
             const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
             try {
@@ -249,175 +409,304 @@ document.addEventListener('DOMContentLoaded', function() {
                 faceApiLoaded = true;
             } catch (err) {
                 console.error('Lỗi tải mô hình face-api:', err);
-                status.style.background = '#fef2f2';
-                status.style.color = '#dc2626';
-                status.style.borderColor = '#fecaca';
-                status.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Lỗi khởi tạo thư viện nhận dạng khuôn mặt. Vui lòng kiểm tra internet.';
+                updateLivenessStatus('Lỗi khởi tạo thư viện nhận dạng khuôn mặt. Vui lòng kiểm tra internet.', 'error');
                 return;
             }
         }
-        
-        status.innerHTML = '<i class="fas fa-video"></i> Đang khởi động camera...';
-        
-        const video = document.getElementById('modal-video');
+
+        updateLivenessStatus('Đang khởi động camera...', 'info');
+
+        // Start camera
+        const video = document.getElementById('liveness-video');
         try {
             modalStream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
             });
             video.srcObject = modalStream;
+
             video.onplay = () => {
+                initLivenessDetector();
                 if (detectionInterval) clearTimeout(detectionInterval);
-                detectFaceModal();
+                detectFaceLiveness();
             };
         } catch (err) {
             console.error('Không thể mở camera:', err);
-            status.style.background = '#fef2f2';
-            status.style.color = '#dc2626';
-            status.style.borderColor = '#fecaca';
-            status.innerHTML = '<i class="fas fa-camera-slash"></i> Không thể truy cập camera. Vui lòng cho phép quyền camera trên trình duyệt.';
+            updateLivenessStatus('Không thể truy cập camera. Vui lòng cho phép quyền camera.', 'error');
         }
     }
 
-    let isDetectingModal = false;
+    // ─── Initialize LivenessDetector ──────────────────────────────
+    function initLivenessDetector() {
+        const video = document.getElementById('liveness-video');
+        const canvas = document.getElementById('liveness-canvas');
 
-    async function detectFaceModal() {
-        const video = document.getElementById('modal-video');
+        // Destroy previous instance if exists
+        if (livenessDetector) {
+            livenessDetector.destroy();
+        }
+
+        livenessDetector = new LivenessDetector(video, canvas, {
+            onStatusChange: (message, type) => {
+                updateLivenessStatus(message, type);
+            },
+
+            onProgress: (percent, label) => {
+                const bar = document.getElementById('liveness-progress-bar');
+                const labelEl = document.getElementById('liveness-progress-label');
+                bar.style.width = percent + '%';
+                labelEl.textContent = percent + '% — ' + label;
+            },
+
+            onComplete: async (livenessToken, descriptor) => {
+                isVerificationComplete = true;
+                document.getElementById('liveness-challenge-overlay').style.display = 'none';
+
+                // Update camera border
+                document.getElementById('liveness-camera').classList.remove('detecting');
+                document.getElementById('liveness-camera').classList.add('success');
+
+                // Now submit to server
+                await submitAttendance(livenessToken, descriptor);
+            },
+
+            onFail: (reason) => {
+                // Show spoof alert
+                document.getElementById('liveness-challenge-overlay').style.display = 'none';
+                document.getElementById('liveness-spoof-alert').style.display = 'block';
+                document.getElementById('liveness-spoof-reason').textContent = reason;
+                document.getElementById('liveness-retry-btn').style.display = 'block';
+
+                // Update camera border
+                document.getElementById('liveness-camera').classList.remove('detecting');
+                document.getElementById('liveness-camera').classList.add('failed');
+
+                // Stop detection
+                if (detectionInterval) {
+                    clearTimeout(detectionInterval);
+                    detectionInterval = null;
+                }
+            }
+        });
+
+        // Start the liveness session
+        livenessDetector.start();
+    }
+
+    // ─── Face Detection Loop with Liveness Processing ─────────────
+    let isDetecting = false;
+
+    async function detectFaceLiveness() {
+        const video = document.getElementById('liveness-video');
         if (!faceApiLoaded || video.paused || video.ended) {
-            detectionInterval = setTimeout(detectFaceModal, 500);
+            detectionInterval = setTimeout(detectFaceLiveness, 500);
             return;
         }
 
-        if (isDetectingModal) return;
-        isDetectingModal = true;
+        if (isDetecting || isVerificationComplete) return;
+        isDetecting = true;
 
         try {
-            const canvas = document.getElementById('modal-canvas');
-            const status = document.getElementById('face-modal-status');
-            const btnVerify = document.getElementById('modal-btn-verify');
-            
+            const canvas = document.getElementById('liveness-canvas');
             const displaySize = { width: video.videoWidth || 640, height: video.videoHeight || 480 };
             faceapi.matchDimensions(canvas, displaySize);
 
-            // Nhận diện khuôn mặt với inputSize 160 cho nhẹ
             const detection = await faceapi.detectSingleFace(
-                video, 
-                new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 })
+                video,
+                new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
             ).withFaceLandmarks().withFaceDescriptor();
 
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             if (detection) {
+                // Draw face bounding box
                 const resized = faceapi.resizeResults(detection, displaySize);
                 const box = resized.detection.box;
-                ctx.strokeStyle = '#10b981';
+
+                const state = livenessDetector ? livenessDetector.getState() : 'idle';
+                if (state === 'completed') {
+                    ctx.strokeStyle = '#10b981';
+                } else if (state === 'failed') {
+                    ctx.strokeStyle = '#ef4444';
+                } else {
+                    ctx.strokeStyle = '#3b82f6';
+                    document.getElementById('liveness-camera').classList.add('detecting');
+                }
                 ctx.lineWidth = 3;
                 ctx.strokeRect(box.x, box.y, box.width, box.height);
-                
-                latestDescriptor = detection.descriptor;
-                
-                status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;';
-                status.innerHTML = '<i class="fas fa-smile"></i> Khuôn mặt hợp lệ. Sẵn sàng chấm công!';
-                btnVerify.disabled = false;
+
+                // Draw EAR indicators (small dots on eye landmarks)
+                if (detection.landmarks) {
+                    const positions = detection.landmarks.positions;
+                    // Left eye: 36-41, Right eye: 42-47
+                    ctx.fillStyle = '#10b981';
+                    for (let i = 36; i <= 47; i++) {
+                        const p = faceapi.resizeResults({ x: positions[i].x, y: positions[i].y }, displaySize);
+                        // Scale manually since resizeResults expects detection format
+                        const sx = positions[i].x * (displaySize.width / (video.videoWidth || 640));
+                        const sy = positions[i].y * (displaySize.height / (video.videoHeight || 480));
+                        ctx.beginPath();
+                        ctx.arc(sx, sy, 2, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+
+                // Feed detection to liveness engine
+                if (livenessDetector && !isVerificationComplete) {
+                    livenessDetector.processFrame(detection);
+                }
             } else {
-                latestDescriptor = null;
-                status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fffbeb; color: #d97706; border: 1px solid #fef3c7;';
-                status.innerHTML = '<i class="fas fa-user-slash"></i> Vui lòng căn chỉnh khuôn mặt thẳng góc với camera.';
-                btnVerify.disabled = true;
+                if (livenessDetector && !isVerificationComplete) {
+                    livenessDetector.processFrame(null);
+                }
             }
         } catch (err) {
             console.error('Lỗi nhận dạng:', err);
         }
 
-        isDetectingModal = false;
-        detectionInterval = setTimeout(detectFaceModal, 150);
+        isDetecting = false;
+        if (!isVerificationComplete) {
+            detectionInterval = setTimeout(detectFaceLiveness, 120);
+        }
     }
 
-    function closeFaceModal() {
-        if (detectionInterval) {
-            clearTimeout(detectionInterval);
-            detectionInterval = null;
-        }
-        if (modalStream) {
-            modalStream.getTracks().forEach(track => track.stop());
-            modalStream = null;
-        }
-        const video = document.getElementById('modal-video');
-        video.srcObject = null;
-        document.getElementById('face-modal').style.display = 'none';
-        document.getElementById('modal-btn-verify').disabled = true;
-        latestDescriptor = null;
-        
-        const canvas = document.getElementById('modal-canvas');
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    // ─── Submit Attendance to Server ──────────────────────────────
+    async function submitAttendance(livenessToken, descriptor) {
+        updateLivenessStatus('Đang gửi kết quả xác thực lên máy chủ...', 'info');
 
-    document.getElementById('close-modal-btn').onclick = closeFaceModal;
-
-    document.getElementById('modal-btn-verify').onclick = async () => {
-        if (!latestDescriptor) return;
-        
-        const btnVerify = document.getElementById('modal-btn-verify');
-        const status = document.getElementById('face-modal-status');
-        btnVerify.disabled = true;
-        
-        status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
-        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chụp ảnh và xác thực khuôn mặt...';
-        
-        const video = document.getElementById('modal-video');
-        const snapCanvas = document.getElementById('snapshot-canvas');
+        const video = document.getElementById('liveness-video');
+        const snapCanvas = document.getElementById('liveness-snapshot');
         snapCanvas.width = video.videoWidth || 640;
         snapCanvas.height = video.videoHeight || 480;
         const sCtx = snapCanvas.getContext('2d');
-        
+
+        // Mirror snapshot to match what user sees
         sCtx.translate(snapCanvas.width, 0);
         sCtx.scale(-1, 1);
         sCtx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
         sCtx.setTransform(1, 0, 0, 1, 0, 0);
-        
+
         const photoBase64 = snapCanvas.toDataURL('image/jpeg', 0.85);
-        const embeddingStr = JSON.stringify(Array.from(latestDescriptor));
-        
+        const embeddingStr = JSON.stringify(Array.from(descriptor));
         const wifi = document.getElementById('wifi-select').value;
-        
+
         const formData = new FormData();
         formData.append('hanhDong', currentAction);
         formData.append('tenWifi', wifi || 'INTERNAL_NETWORK');
         formData.append('phuongThuc', 'LAN');
         formData.append('embedding', embeddingStr);
         formData.append('photo', photoBase64);
-        
+        formData.append('livenessToken', JSON.stringify(livenessToken));
+
         try {
             const response = await fetch('index.php?page=face-api-verify', {
                 method: 'POST',
                 body: formData
             });
             const result = await response.json();
-            
+
             if (result.success) {
-                status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;';
-                status.innerHTML = '<i class="fas fa-check-circle"></i> ' + result.message;
-                
-                showMsg('Chấm công ' + (currentAction === 'IN' ? 'vào' : 'ra') + ' thành công!', 'success');
-                
+                updateLivenessStatus(result.message, 'success');
+                showMsg('Chấm công ' + (currentAction === 'IN' ? 'vào' : 'ra') + ' thành công! (Liveness Score: ' + ((result.livenessScore || 0) * 100).toFixed(0) + '%)', 'success');
+
                 setTimeout(() => {
-                    closeFaceModal();
+                    closeLivenessModal();
                     loadData();
-                }, 1500);
+                }, 2000);
             } else {
-                status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;';
-                status.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + (result.message || 'Xác thực thất bại');
-                btnVerify.disabled = false;
+                updateLivenessStatus(result.message || 'Xác thực thất bại', 'error');
+                document.getElementById('liveness-retry-btn').style.display = 'block';
             }
         } catch (err) {
             console.error('Lỗi API xác thực:', err);
-            status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;';
-            status.innerHTML = '<i class="fas fa-wifi"></i> Lỗi kết nối mạng hoặc máy chủ.';
-            btnVerify.disabled = false;
+            updateLivenessStatus('Lỗi kết nối mạng hoặc máy chủ.', 'error');
+            document.getElementById('liveness-retry-btn').style.display = 'block';
+        }
+    }
+
+    // ─── UI Helper Functions ──────────────────────────────────────
+    function updateLivenessStatus(message, type) {
+        const el = document.getElementById('liveness-status');
+        const iconMap = {
+            'info': 'fa-spinner fa-spin',
+            'success': 'fa-check-circle',
+            'warning': 'fa-exclamation-circle',
+            'error': 'fa-times-circle'
+        };
+        el.className = 'liveness-status liveness-status-' + type;
+        el.innerHTML = `<i class="fas ${iconMap[type] || 'fa-info-circle'}"></i> ${message}`;
+    }
+
+    function resetLivenessUI() {
+        // Reset progress
+
+        // Reset progress
+        document.getElementById('liveness-progress-bar').style.width = '0%';
+        document.getElementById('liveness-progress-label').textContent = '0%';
+
+        // Hide alerts
+        document.getElementById('liveness-spoof-alert').style.display = 'none';
+        document.getElementById('liveness-retry-btn').style.display = 'none';
+        document.getElementById('liveness-challenge-overlay').style.display = 'none';
+
+        // Reset camera border
+        const camera = document.getElementById('liveness-camera');
+        camera.classList.remove('detecting', 'success', 'failed');
+    }
+
+    function closeLivenessModal() {
+        // Stop detection loop
+        if (detectionInterval) {
+            clearTimeout(detectionInterval);
+            detectionInterval = null;
+        }
+
+        // Destroy liveness detector
+        if (livenessDetector) {
+            livenessDetector.destroy();
+            livenessDetector = null;
+        }
+
+        // Stop camera
+        if (modalStream) {
+            modalStream.getTracks().forEach(track => track.stop());
+            modalStream = null;
+        }
+
+        const video = document.getElementById('liveness-video');
+        video.srcObject = null;
+
+        document.getElementById('liveness-modal').style.display = 'none';
+        isVerificationComplete = false;
+        isDetecting = false;
+
+        // Clear canvas
+        const canvas = document.getElementById('liveness-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        resetLivenessUI();
+    }
+
+    // ─── Event Handlers ───────────────────────────────────────────
+    document.getElementById('liveness-close-btn').onclick = closeLivenessModal;
+
+    document.getElementById('liveness-retry-btn').onclick = () => {
+        resetLivenessUI();
+        isVerificationComplete = false;
+        isDetecting = false;
+        initLivenessDetector();
+        detectFaceLiveness();
+    };
+
+    // Close modal on background click
+    document.getElementById('liveness-modal').onclick = (e) => {
+        if (e.target === document.getElementById('liveness-modal')) {
+            closeLivenessModal();
         }
     };
 
+    // ─── Clock & Initial Load ─────────────────────────────────────
     function updateClock() {
         document.getElementById('clock-mini').textContent = new Date().toLocaleTimeString('en-GB');
     }

@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
     
     try {
-        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
         await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
         await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
         
@@ -258,14 +258,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (isDetecting) return;
         isDetecting = true;
 
+        // Wait for camera exposure to stabilize
+        if (!window.regWarmupFrames) window.regWarmupFrames = 0;
+        if (window.regWarmupFrames < 5) {
+            window.regWarmupFrames++;
+            statusDisplay.className = 'status-banner status-loading';
+            statusDisplay.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tối ưu hóa độ sáng camera...';
+            isDetecting = false;
+            detectionTimeout = setTimeout(detectFace, 150);
+            return;
+        }
+
         try {
             const displaySize = { width: video.videoWidth || 640, height: video.videoHeight || 480 };
             faceapi.matchDimensions(canvas, displaySize);
 
-            // Nhận diện khuôn mặt với inputSize: 160 (nhanh và cực nhẹ CPU)
+            // Nhận diện khuôn mặt với SsdMobilenetv1 chất lượng cao
             const detection = await faceapi.detectSingleFace(
                 video, 
-                new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 })
+                new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })
             ).withFaceLandmarks().withFaceDescriptor();
 
             const ctx = canvas.getContext('2d');
@@ -354,7 +365,24 @@ document.addEventListener('DOMContentLoaded', async function() {
                         statusDisplay.className = 'status-banner status-ready';
                         statusDisplay.innerHTML = '<i class="fas fa-check-circle"></i> Đã quét đủ 3 góc khuôn mặt! Nhấn nút bên dưới để lưu.';
                         btnRegister.disabled = false;
-                        lastDescriptor = savedFrontDescriptor;
+                        
+                        // Capture fresh straight-facing descriptor at the end when user is steady
+                        const landmarks = detection.landmarks;
+                        const leftJaw = landmarks.positions[0];
+                        const rightJaw = landmarks.positions[16];
+                        const noseTip = landmarks.positions[30];
+                        const dLeft = noseTip.x - leftJaw.x;
+                        const dRight = rightJaw.x - noseTip.x;
+                        if (dRight !== 0) {
+                            const ratio = dLeft / dRight;
+                            // Verify they are looking straight (ratio balanced) to get optimal vector quality
+                            if (ratio >= 0.72 && ratio <= 1.38) {
+                                lastDescriptor = detection.descriptor;
+                            }
+                        }
+                        if (!lastDescriptor) {
+                            lastDescriptor = detection.descriptor; // Fallback to current frame descriptor
+                        }
                     }
                 }
             } else {
@@ -387,6 +415,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             savedFrontDescriptor = null;
             firstTurnSide = null;
             btnRegister.disabled = true;
+            window.regWarmupFrames = 0;
             updateStepperUI();
         };
     }
@@ -414,6 +443,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             firstTurnSide = null;
             lastDescriptor = null;
             btnRegister.disabled = true;
+            window.regWarmupFrames = 0;
             updateStepperUI();
             
             statusDisplay.className = 'status-banner status-noface';

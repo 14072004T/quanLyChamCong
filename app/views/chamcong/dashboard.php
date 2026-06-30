@@ -81,6 +81,13 @@ if (!isset($view) || is_null($view)) {
                     <div class="mb-face-corners-inner"></div>
                 </div>
 
+                <!-- Challenge instruction overlay for Mobile -->
+                <div id="liveness-challenge-overlay" style="position: absolute; bottom: 180px; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.85)); padding: 20px 16px; display: none; z-index: 20; text-align: center; border-radius: 12px; margin: 0 10px;">
+                    <div id="liveness-challenge-text" style="color: white; font-size: 16px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="fas fa-eye"></i> <span>Vui lòng chớp mắt</span>
+                    </div>
+                </div>
+
                 <!-- Light badge -->
                 <div class="mb-face-light-badge">
                     <i class="fa-solid fa-sun"></i>
@@ -91,6 +98,12 @@ if (!isset($view) || is_null($view)) {
                 <div class="mb-face-status-panel">
                     <h4 id="face-modal-title"><i class="fa-solid fa-circle" style="color: #1e62ec; font-size: 8px;"></i> Đang nhận diện...</h4>
                     <p id="face-modal-status">Vui lòng đưa mặt vào khung hình và giữ yên trong vài giây.</p>
+                    
+                    <!-- Progress Bar & Stepper -->
+                    <div class="liveness-progress-label" id="liveness-progress-label" style="font-size: 11px; color: #64748b; text-align: right; margin-bottom: 4px; font-weight: 600; display: none;">0%</div>
+                    <div class="liveness-progress-wrap" id="liveness-progress-wrap" style="background: #e2e8f0; border-radius: 8px; height: 6px; margin-bottom: 14px; overflow: hidden; width: 100%; display: none;">
+                        <div id="liveness-progress-bar" class="liveness-progress-bar" style="height: 100%; border-radius: 8px; background: linear-gradient(90deg, #3b82f6, #10b981); width: 0%;"></div>
+                    </div>
                     
                     <button id="modal-btn-verify" class="mb-request-submit-btn" style="margin-top: 15px; background-color: #1e62ec;" disabled>
                         <i class="fa-solid fa-fingerprint"></i> XÁC THỰC VÀ CHẤM CÔNG
@@ -261,9 +274,22 @@ if (!isset($view) || is_null($view)) {
                             Đang tải mô hình nhận diện...
                         </div>
 
+                        <!-- Progress Bar & Stepper -->
+                        <div class="liveness-progress-label" id="liveness-progress-label" style="font-size: 11px; color: #64748b; text-align: right; margin-bottom: 4px; font-weight: 600; display: none;">0%</div>
+                        <div class="liveness-progress-wrap" id="liveness-progress-wrap" style="background: #e2e8f0; border-radius: 8px; height: 6px; margin-bottom: 14px; overflow: hidden; width: 100%; display: none;">
+                            <div id="liveness-progress-bar" class="liveness-progress-bar" style="height: 100%; border-radius: 8px; background: linear-gradient(90deg, #3b82f6, #10b981); width: 0%;"></div>
+                        </div>
+
                         <div style="position: relative; width: 100%; aspect-ratio: 4/3; background: #0f172a; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1;">
                             <video id="modal-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
                             <canvas id="modal-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1);"></canvas>
+
+                            <!-- Challenge instruction overlay for Desktop -->
+                            <div id="liveness-challenge-overlay" style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 20px 16px 14px; display: none; z-index: 20;">
+                                <div id="liveness-challenge-text" style="color: white; font-size: 15px; font-weight: 700; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <i class="fas fa-eye"></i> <span>Vui lòng chớp mắt</span>
+                                </div>
+                            </div>
                         </div>
                         
                         <canvas id="snapshot-canvas" style="display: none;"></canvas>
@@ -282,12 +308,14 @@ if (!isset($view) || is_null($view)) {
 <?php endif; ?>
 
             <script src="public/js/face-api.js"></script>
+            <script src="public/js/face-liveness.js"></script>
             <script>
                 let currentAction = '<?= ($trangThaiHomNay === 'IN') ? 'OUT' : 'IN' ?>';
                 let faceApiLoaded = false;
                 let modalStream = null;
                 let detectionInterval = null;
-                let latestDescriptor = null;
+                let livenessDetector = null;
+                let isVerificationComplete = false;
 
                 function updateClock() {
                     const now = new Date();
@@ -301,6 +329,8 @@ if (!isset($view) || is_null($view)) {
 
                 async function triggerFaceAttendance(action) {
                     currentAction = action;
+                    isVerificationComplete = false;
+
                     const modal = document.getElementById('face-modal');
                     if (modal) {
                         modal.style.display = 'flex';
@@ -316,6 +346,8 @@ if (!isset($view) || is_null($view)) {
                         mobileTitle.textContent = 'Chấm công ' + (action === 'IN' ? 'Vào' : 'Ra');
                     }
                     
+                    resetLivenessUI();
+
                     const status = document.getElementById('face-modal-status');
                     if (status) {
                         status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
@@ -352,10 +384,12 @@ if (!isset($view) || is_null($view)) {
                         });
                         video.srcObject = modalStream;
                         video.onplay = () => {
+                            initLivenessDetector();
                             if (detectionInterval) clearTimeout(detectionInterval);
                             detectFaceModal();
                         };
                         video.onplaying = () => {
+                            initLivenessDetector();
                             if (detectionInterval) clearTimeout(detectionInterval);
                             detectFaceModal();
                         };
@@ -374,12 +408,117 @@ if (!isset($view) || is_null($view)) {
                     }
                 }
 
+                function initLivenessDetector() {
+                    const video = document.getElementById('modal-video');
+                    const canvas = document.getElementById('modal-canvas');
+
+                    if (livenessDetector) {
+                        livenessDetector.destroy();
+                    }
+
+                    livenessDetector = new LivenessDetector(video, canvas, {
+                        onStatusChange: (message, type) => {
+                            const status = document.getElementById('face-modal-status');
+                            if (status) {
+                                if (type === 'success') {
+                                    status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;';
+                                    status.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+                                } else if (type === 'error') {
+                                    status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;';
+                                    status.innerHTML = `<i class="fas fa-times-circle"></i> ${message}`;
+                                } else if (type === 'warning') {
+                                    status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fffbeb; color: #d97706; border: 1px solid #fef3c7;';
+                                    status.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+                                } else {
+                                    status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
+                                    status.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${message}`;
+                                }
+                            }
+
+                            // Show challenge overlay based on state
+                            const overlay = document.getElementById('liveness-challenge-overlay');
+                            const challengeText = document.getElementById('liveness-challenge-text');
+
+                            if (overlay && challengeText && livenessDetector) {
+                                const state = livenessDetector.getState();
+                                if (state === 'challenging') {
+                                    overlay.style.display = 'block';
+                                    const ch = livenessDetector.challenges[livenessDetector.currentChallengeIndex];
+                                    if (ch) {
+                                        const info = LivenessDetector.CHALLENGE_INSTRUCTIONS[ch];
+                                        challengeText.innerHTML = `<i class="fas ${info.icon}"></i> <span>${info.vi}</span>`;
+                                    }
+                                } else if (state === 'blink_check') {
+                                    overlay.style.display = 'block';
+                                    challengeText.innerHTML = '<i class="fas fa-eye"></i> <span>Vui lòng CHỚP MẮT tự nhiên</span>';
+                                } else if (state === 'pose_check') {
+                                    overlay.style.display = 'block';
+                                    challengeText.innerHTML = '<i class="fas fa-user"></i> <span>Nhìn THẲNG vào camera</span>';
+                                } else {
+                                    overlay.style.display = 'none';
+                                }
+                            }
+                        },
+
+                        onProgress: (percent, label) => {
+                            const labelEl = document.getElementById('liveness-progress-label');
+                            const barEl = document.getElementById('liveness-progress-bar');
+                            const wrapEl = document.getElementById('liveness-progress-wrap');
+
+                            if (labelEl) {
+                                labelEl.style.display = 'block';
+                                labelEl.textContent = `${percent}% — ${label}`;
+                            }
+                            if (wrapEl) {
+                                wrapEl.style.display = 'block';
+                            }
+                            if (barEl) {
+                                barEl.style.width = `${percent}%`;
+                            }
+                        },
+
+                        onComplete: async (livenessToken, descriptor) => {
+                            isVerificationComplete = true;
+                            const overlay = document.getElementById('liveness-challenge-overlay');
+                            if (overlay) overlay.style.display = 'none';
+
+                            await submitAttendance(livenessToken, descriptor);
+                        },
+
+                        onFail: (reason) => {
+                            isVerificationComplete = true;
+                            const overlay = document.getElementById('liveness-challenge-overlay');
+                            if (overlay) overlay.style.display = 'none';
+
+                            const status = document.getElementById('face-modal-status');
+                            if (status) {
+                                status.style.cssText = 'padding: 16px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; line-height: 1.5;';
+                                status.innerHTML = `<i class="fas fa-user-times" style="font-size: 28px; color: #ef4444; margin-bottom: 10px; display: block;"></i> <strong style="font-size: 16px; display:block; margin-bottom:6px;">Xác thực thất bại</strong> ${reason}`;
+                            }
+
+                            const btnVerify = document.getElementById('modal-btn-verify');
+                            if (btnVerify) {
+                                btnVerify.disabled = false;
+                                btnVerify.innerHTML = '<i class="fas fa-sync-alt"></i> THỬ LẠI';
+                                btnVerify.style.backgroundColor = '#f59e0b';
+                                btnVerify.onclick = () => {
+                                    btnVerify.style.backgroundColor = '#1e62ec';
+                                    btnVerify.innerHTML = '<i class="fa-solid fa-fingerprint"></i> XÁC THỰC VÀ CHẤM CÔNG';
+                                    btnVerify.disabled = true;
+                                    triggerFaceAttendance(currentAction);
+                                };
+                            }
+                        }
+                    });
+
+                    livenessDetector.start();
+                }
+
                 let isDetectingModal = false;
-                let isVerifying = false;
 
                 async function detectFaceModal() {
                     const video = document.getElementById('modal-video');
-                    if (isVerifying || !video || !faceApiLoaded || video.paused || video.ended || video.readyState < 2) {
+                    if (isVerificationComplete || !video || !faceApiLoaded || video.paused || video.ended || video.readyState < 2) {
                         detectionInterval = setTimeout(detectFaceModal, 200);
                         return;
                     }
@@ -389,15 +528,12 @@ if (!isset($view) || is_null($view)) {
 
                     try {
                         const canvas = document.getElementById('modal-canvas');
-                        const status = document.getElementById('face-modal-status');
-                        const btnVerify = document.getElementById('modal-btn-verify');
-                        
                         const displaySize = { width: video.videoWidth || 640, height: video.videoHeight || 480 };
                         faceapi.matchDimensions(canvas, displaySize);
 
                         const detection = await faceapi.detectSingleFace(
                             video, 
-                            new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 })
+                            new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
                         ).withFaceLandmarks().withFaceDescriptor();
 
                         const ctx = canvas.getContext('2d');
@@ -406,36 +542,47 @@ if (!isset($view) || is_null($view)) {
                         if (detection) {
                             const resized = faceapi.resizeResults(detection, displaySize);
                             const box = resized.detection.box;
-                            ctx.strokeStyle = '#10b981';
+                            
+                            const state = livenessDetector ? livenessDetector.getState() : 'idle';
+                            if (state === 'completed') {
+                                ctx.strokeStyle = '#10b981';
+                            } else if (state === 'failed') {
+                                ctx.strokeStyle = '#ef4444';
+                            } else {
+                                ctx.strokeStyle = '#3b82f6';
+                            }
                             ctx.lineWidth = 3;
                             ctx.strokeRect(box.x, box.y, box.width, box.height);
-                            
-                            latestDescriptor = detection.descriptor;
-                            
-                            if (status) {
-                                status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;';
-                                status.innerHTML = '<i class="fas fa-smile"></i> Khuôn mặt hợp lệ. Sẵn sàng chấm công!';
+
+                            // Draw landmarks dots
+                            if (detection.landmarks) {
+                                const positions = detection.landmarks.positions;
+                                ctx.fillStyle = '#10b981';
+                                for (let i = 36; i <= 47; i++) {
+                                    const sx = positions[i].x * (displaySize.width / (video.videoWidth || 640));
+                                    const sy = positions[i].y * (displaySize.height / (video.videoHeight || 480));
+                                    ctx.beginPath();
+                                    ctx.arc(sx, sy, 2, 0, 2 * Math.PI);
+                                    ctx.fill();
+                                }
                             }
-                            if (btnVerify) btnVerify.disabled = false;
+
+                            if (livenessDetector && !isVerificationComplete) {
+                                livenessDetector.processFrame(detection);
+                            }
                         } else {
-                            latestDescriptor = null;
-                            if (status) {
-                                status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fffbeb; color: #d97706; border: 1px solid #fef3c7;';
-                                status.innerHTML = '<i class="fas fa-user-slash"></i> Vui lòng căn chỉnh khuôn mặt thẳng góc với camera.';
+                            if (livenessDetector && !isVerificationComplete) {
+                                livenessDetector.processFrame(null);
                             }
-                            if (btnVerify) btnVerify.disabled = true;
                         }
                     } catch (err) {
                         console.error('Lỗi nhận dạng:', err);
-                        const status = document.getElementById('face-modal-status');
-                        if (status) {
-                            status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;';
-                            status.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Lỗi nhận diện: ' + err.message;
-                        }
                     }
 
                     isDetectingModal = false;
-                    detectionInterval = setTimeout(detectFaceModal, 150);
+                    if (!isVerificationComplete) {
+                        detectionInterval = setTimeout(detectFaceModal, 120);
+                    }
                 }
 
                 function closeFaceModal() {
@@ -443,100 +590,123 @@ if (!isset($view) || is_null($view)) {
                         clearTimeout(detectionInterval);
                         detectionInterval = null;
                     }
+                    if (livenessDetector) {
+                        livenessDetector.destroy();
+                        livenessDetector = null;
+                    }
                     if (modalStream) {
                         modalStream.getTracks().forEach(track => track.stop());
                         modalStream = null;
                     }
                     const video = document.getElementById('modal-video');
-                    video.srcObject = null;
+                    if (video) video.srcObject = null;
+
                     const modal = document.getElementById('face-modal');
                     if (modal) {
                         modal.style.display = 'none';
                     }
-                    document.getElementById('modal-btn-verify').disabled = true;
-                    latestDescriptor = null;
                     
                     const canvas = document.getElementById('modal-canvas');
-                    const ctx = canvas.getContext('2d');
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+
+                    resetLivenessUI();
+                    isVerificationComplete = false;
                 }
 
-                function setupVerifyButton() {
+                function resetLivenessUI() {
+                    const labelEl = document.getElementById('liveness-progress-label');
+                    const wrapEl = document.getElementById('liveness-progress-wrap');
+                    const barEl = document.getElementById('liveness-progress-bar');
+                    const overlay = document.getElementById('liveness-challenge-overlay');
+
+                    if (labelEl) labelEl.style.display = 'none';
+                    if (wrapEl) wrapEl.style.display = 'none';
+                    if (barEl) barEl.style.width = '0%';
+                    if (overlay) overlay.style.display = 'none';
+
                     const btnVerify = document.getElementById('modal-btn-verify');
-                    if (!btnVerify) return;
-                    
-                    btnVerify.onclick = async () => {
-                        if (!latestDescriptor) return;
-                        
-                        isVerifying = true; // Pause loop
+                    if (btnVerify) {
                         btnVerify.disabled = true;
+                        btnVerify.innerHTML = '<i class="fa-solid fa-fingerprint"></i> XÁC THỰC VÀ CHẤM CÔNG';
+                        btnVerify.style.backgroundColor = '#1e62ec';
+                    }
+                }
+
+                async function submitAttendance(livenessToken, descriptor) {
+                    const status = document.getElementById('face-modal-status');
+                    if (status) {
+                        status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
+                        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi ảnh và dữ liệu chấm công...';
+                    }
+
+                    const video = document.getElementById('modal-video');
+                    const snapCanvas = document.getElementById('snapshot-canvas');
+                    snapCanvas.width = video.videoWidth || 640;
+                    snapCanvas.height = video.videoHeight || 480;
+                    const sCtx = snapCanvas.getContext('2d');
+                    
+                    sCtx.translate(snapCanvas.width, 0);
+                    sCtx.scale(-1, 1);
+                    sCtx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
+                    sCtx.setTransform(1, 0, 0, 1, 0, 0);
+                    
+                    const photoBase64 = snapCanvas.toDataURL('image/jpeg', 0.85);
+                    const embeddingStr = JSON.stringify(Array.from(descriptor));
+                    
+                    const formData = new FormData();
+                    formData.append('hanhDong', currentAction);
+                    formData.append('tenWifi', 'INTERNAL_NETWORK');
+                    formData.append('phuongThuc', 'LAN');
+                    formData.append('embedding', embeddingStr);
+                    formData.append('photo', photoBase64);
+                    formData.append('livenessToken', JSON.stringify(livenessToken));
+                    
+                    try {
+                        const response = await fetch('index.php?page=face-api-verify', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const result = await response.json();
                         
-                        const status = document.getElementById('face-modal-status');
-                        if (status) {
-                            status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
-                            status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chụp ảnh và xác thực khuôn mặt...';
-                        }
-                        
-                        const video = document.getElementById('modal-video');
-                        const snapCanvas = document.getElementById('snapshot-canvas');
-                        snapCanvas.width = video.videoWidth || 640;
-                        snapCanvas.height = video.videoHeight || 480;
-                        const sCtx = snapCanvas.getContext('2d');
-                        
-                        sCtx.translate(snapCanvas.width, 0);
-                        sCtx.scale(-1, 1);
-                        sCtx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
-                        sCtx.setTransform(1, 0, 0, 1, 0, 0);
-                        
-                        const photoBase64 = snapCanvas.toDataURL('image/jpeg', 0.85);
-                        const embeddingStr = JSON.stringify(Array.from(latestDescriptor));
-                        
-                        const formData = new FormData();
-                        formData.append('hanhDong', currentAction);
-                        formData.append('tenWifi', 'INTERNAL_NETWORK');
-                        formData.append('phuongThuc', 'LAN');
-                        formData.append('embedding', embeddingStr);
-                        formData.append('photo', photoBase64);
-                        
-                        try {
-                            const response = await fetch('index.php?page=face-api-verify', {
-                                method: 'POST',
-                                body: formData
-                            });
-                            const result = await response.json();
+                        if (result.success) {
+                            if (status) {
+                                status.style.cssText = 'padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;';
+                                status.innerHTML = '<i class="fas fa-check-circle" style="font-size: 18px; margin-bottom: 4px; display: block;"></i> ' + result.message;
+                            }
+                            setTimeout(() => {
+                                closeFaceModal();
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            const msg = result.message || '';
+                            const isPolicyError = msg.includes('Ca làm việc') || msg.includes('chấm công') || msg.includes('mạng nội bộ');
                             
-                            if (result.success) {
+                            if (status) {
+                                status.style.cssText = 'padding: 16px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; line-height: 1.5;';
+                            }
+                            
+                            if (isPolicyError) {
                                 if (status) {
-                                    status.style.cssText = 'padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;';
-                                    status.innerHTML = '<i class="fas fa-check-circle" style="font-size: 18px; margin-bottom: 4px; display: block;"></i> ' + result.message;
-                                }
-                                setTimeout(() => {
-                                    closeFaceModal();
-                                    window.location.reload();
-                                }, 1500);
-                            } else {
-                                const msg = result.message || '';
-                                const isPolicyError = msg.includes('Ca làm việc') || msg.includes('chấm công') || msg.includes('mạng nội bộ');
-                                
-                                if (status) {
-                                    status.style.cssText = 'padding: 16px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; line-height: 1.5;';
+                                    status.innerHTML = '<i class="fas fa-calendar-times" style="font-size: 28px; color: #ef4444; margin-bottom: 10px; display: block;"></i> <strong style="font-size: 16px; display:block; margin-bottom:6px;">Chấm công không thành công</strong>' + msg;
                                 }
                                 
-                                if (isPolicyError) {
-                                    if (status) {
-                                        status.innerHTML = '<i class="fas fa-calendar-times" style="font-size: 28px; color: #ef4444; margin-bottom: 10px; display: block;"></i> <strong style="font-size: 16px; display:block; margin-bottom:6px;">Chấm công không thành công</strong>' + msg;
-                                    }
-                                    
-                                    // Replace verification button with a prominent Home return link
+                                const btnVerify = document.getElementById('modal-btn-verify');
+                                if (btnVerify) {
                                     btnVerify.outerHTML = '<a href="index.php?page=home" class="mb-request-submit-btn" style="margin-top: 15px; background-color: #475569; color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="fas fa-arrow-left"></i> Quay lại Trang chủ</a>';
-                                    
-                                    if (modalStream) {
-                                        modalStream.getTracks().forEach(track => track.stop());
-                                    }
-                                } else {
-                                    if (status) {
-                                        status.innerHTML = '<i class="fas fa-user-times" style="font-size: 28px; color: #ef4444; margin-bottom: 10px; display: block;"></i> <strong style="font-size: 16px; display:block; margin-bottom:6px;">Xác thực không khớp</strong>' + msg;
-                                    }
+                                }
+                                
+                                if (modalStream) {
+                                    modalStream.getTracks().forEach(track => track.stop());
+                                }
+                            } else {
+                                if (status) {
+                                    status.innerHTML = '<i class="fas fa-user-times" style="font-size: 28px; color: #ef4444; margin-bottom: 10px; display: block;"></i> <strong style="font-size: 16px; display:block; margin-bottom:6px;">Xác thực không khớp</strong>' + msg;
+                                }
+                                const btnVerify = document.getElementById('modal-btn-verify');
+                                if (btnVerify) {
                                     btnVerify.innerHTML = '<i class="fas fa-sync-alt"></i> THỬ LẠI';
                                     btnVerify.disabled = false;
                                     btnVerify.style.backgroundColor = '#f59e0b';
@@ -544,28 +714,24 @@ if (!isset($view) || is_null($view)) {
                                         btnVerify.style.backgroundColor = '#1e62ec';
                                         btnVerify.innerHTML = '<i class="fa-solid fa-fingerprint"></i> XÁC THỰC VÀ CHẤM CÔNG';
                                         btnVerify.disabled = true;
-                                        
-                                        if (status) {
-                                            status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
-                                            status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải mô hình nhận diện khuôn mặt...';
-                                        }
-                                        isVerifying = false;
-                                        setupVerifyButton();
+                                        triggerFaceAttendance(currentAction);
                                     };
                                 }
                             }
-                        } catch (err) {
-                            console.error('Lỗi API xác thực:', err);
-                            if (status) {
-                                status.style.cssText = 'padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;';
-                                status.innerHTML = '<i class="fas fa-wifi"></i> Lỗi kết nối mạng hoặc máy chủ. Vui lòng thử lại.';
-                            }
-                            btnVerify.disabled = false;
-                            isVerifying = false;
                         }
-                    };
+                    } catch (err) {
+                        console.error('Lỗi API xác thực:', err);
+                        if (status) {
+                            status.style.cssText = 'padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;';
+                            status.innerHTML = '<i class="fas fa-wifi"></i> Lỗi kết nối mạng hoặc máy chủ. Vui lòng thử lại.';
+                        }
+                        const btnVerify = document.getElementById('modal-btn-verify');
+                        if (btnVerify) {
+                            btnVerify.disabled = false;
+                        }
+                        isVerificationComplete = false;
+                    }
                 }
-                setupVerifyButton();
 
                 // Tự động khởi chạy camera trên thiết bị di động
                 if (<?= (AuthMiddleware::isMobile() && $hasFaceRegistered) ? 'true' : 'false' ?>) {

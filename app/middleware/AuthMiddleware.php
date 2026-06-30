@@ -23,6 +23,7 @@ class AuthMiddleware
             'face-register',
             'face-api-register',
             'face-api-verify',
+            'face-liveness-session',
             'logout'
         ],
         'hr' => [
@@ -54,6 +55,7 @@ class AuthMiddleware
             'face-register',
             'face-api-register',
             'face-api-verify',
+            'face-liveness-session',
             'logout'
         ],
         'manager' => [
@@ -74,6 +76,7 @@ class AuthMiddleware
             'face-register',
             'face-api-register',
             'face-api-verify',
+            'face-liveness-session',
             'logout'
         ],
         'tech' => [
@@ -98,6 +101,7 @@ class AuthMiddleware
             'face-register',
             'face-api-register',
             'face-api-verify',
+            'face-liveness-session',
             'logout'
         ]
     ];

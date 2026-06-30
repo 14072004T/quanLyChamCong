@@ -134,6 +134,7 @@ $allowedPages = [
     'face-register',
     'face-api-register',
     'face-api-verify',
+    'face-liveness-session',
     // Legacy
     'cham-cong-dashboard',
     'hr-cham-cong',
@@ -443,6 +444,11 @@ switch ($page) {
     case 'face-api-verify':
         require_once 'app/controllers/FaceController.php';
         (new FaceController())->verifyApi();
+        break;
+
+    case 'face-liveness-session':
+        require_once 'app/controllers/FaceController.php';
+        (new FaceController())->livenessSession();
         break;
 
     case 'profile':

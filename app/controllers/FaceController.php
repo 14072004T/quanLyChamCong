@@ -2,6 +2,7 @@
 require_once 'app/models/FaceModel.php';
 require_once 'app/models/ChamCongModel.php';
 require_once 'app/controllers/Controller.php';
+require_once 'app/helpers/LivenessHelper.php';
 
 class FaceController extends Controller
 {
@@ -113,6 +114,13 @@ class FaceController extends Controller
             $otherEmbedding = json_decode($prof['embedding'], true);
             if (is_array($otherEmbedding)) {
                 $dist = $this->euclideanDistance($incomingEmbedding, $otherEmbedding);
+                
+                // Write debug log to workspace file
+                $logDir = __DIR__ . '/../../uploads/liveness_logs/';
+                if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+                $logMsg = sprintf("[%s] Register target=%s vs existing maND=%s, dist=%.4f (threshold=%s)\n", date('Y-m-d H:i:s'), $maND, $prof['maND'], $dist, $threshold);
+                @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND);
+
                 if ($dist <= $threshold) {
                     $otherName = $this->faceModel->getUserName($prof['maND']);
                     echo json_encode([
@@ -134,7 +142,31 @@ class FaceController extends Controller
     }
 
     /**
+     * API Khởi tạo phiên liveness — tạo session secret cho HMAC [POST]
+     */
+    public function livenessSession()
+    {
+        header('Content-Type: application/json');
+        $this->requireLogin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        $secret = LivenessHelper::generateSessionSecret();
+
+        echo json_encode([
+            'success' => true,
+            'sessionSecret' => $secret
+        ]);
+        exit;
+    }
+
+    /**
      * API Xác thực khuôn mặt và Chấm công [POST]
+     * Pipeline: Liveness Token Validation → Face Recognition → Attendance
      */
     public function verifyApi()
     {
@@ -153,6 +185,7 @@ class FaceController extends Controller
         $phuongThuc = trim($_POST['phuongThuc'] ?? 'LAN');
         $embedding = $_POST['embedding'] ?? '';
         $photo = $_POST['photo'] ?? '';
+        $livenessTokenRaw = $_POST['livenessToken'] ?? '';
 
         if (!$maND) {
             echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập hoặc phiên làm việc hết hạn.']);
@@ -168,6 +201,38 @@ class FaceController extends Controller
             echo json_encode(['success' => false, 'message' => 'Thiếu ảnh chụp minh chứng chấm công.']);
             exit;
         }
+
+        // ═══ LAYER 0: LIVENESS TOKEN VALIDATION ═══
+        // This MUST pass before any face recognition is performed.
+        // The token proves the user completed the multi-layer liveness challenge.
+        if (empty($livenessTokenRaw)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Thiếu token xác minh liveness. Vui lòng hoàn thành quy trình xác minh khuôn mặt thật.'
+            ]);
+            exit;
+        }
+
+        $livenessToken = json_decode($livenessTokenRaw, true);
+        if (!$livenessToken) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Token xác minh liveness không hợp lệ (lỗi JSON).'
+            ]);
+            exit;
+        }
+
+        $livenessResult = LivenessHelper::validateLivenessToken($livenessToken);
+        if (!$livenessResult['valid']) {
+            echo json_encode([
+                'success' => false,
+                'message' => '⚠ ' . $livenessResult['message']
+            ]);
+            exit;
+        }
+
+        // ═══ LAYER 1: FACE RECOGNITION ═══
+        // Only reached after liveness verification succeeds.
 
         // 1. Lấy profile khuôn mặt đã lưu của người dùng
         $profile = $this->faceModel->getFaceProfile($maND);
@@ -304,14 +369,15 @@ class FaceController extends Controller
         }
 
         // 5. Ghi nhận chấm công vào CSDL
-        $ghiChu = ($hanhDong === 'IN') ? 'Chấm vào bằng khuôn mặt' : 'Chấm ra bằng khuôn mặt';
+        $ghiChu = ($hanhDong === 'IN') ? 'Chấm vào bằng khuôn mặt (Liveness verified)' : 'Chấm ra bằng khuôn mặt (Liveness verified)';
         $ok = $this->chamCongModel->chamCong($maND, $hanhDong, $phuongThuc, $tenWifi, $ghiChu, $clientIp, $photoFilename);
 
         if ($ok) {
             echo json_encode([
                 'success' => true,
-                'message' => 'Chấm công ' . ($hanhDong === 'IN' ? 'vào' : 'ra') . ' thành công qua xác thực khuôn mặt!',
-                'distance' => $distance
+                'message' => 'Chấm công ' . ($hanhDong === 'IN' ? 'vào' : 'ra') . ' thành công qua xác thực khuôn mặt thật!',
+                'distance' => $distance,
+                'livenessScore' => $livenessResult['score']
             ]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Đã xác thực khuôn mặt khớp nhưng lưu chấm công vào hệ thống thất bại.']);
