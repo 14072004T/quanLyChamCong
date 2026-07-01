@@ -89,6 +89,25 @@ $hoTen = $user['hoTen'] ?? 'User';
             font-size: 11px; color: #64748b; text-align: right; margin-bottom: 4px; font-weight: 600;
         }
 
+        /* Blink detection indicator */
+        .liveness-blink-indicator {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            margin-bottom: 12px; transition: all 0.3s ease;
+        }
+        .blink-waiting {
+            background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
+        }
+        .blink-detected {
+            background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;
+            animation: blinkPulse 0.5s ease;
+        }
+        @keyframes blinkPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
         /* Step indicators */
         .liveness-steps {
             display: flex; justify-content: space-between; margin-bottom: 16px; padding: 10px 12px;
@@ -245,6 +264,12 @@ $hoTen = $user['hoTen'] ?? 'User';
                 <div id="liveness-progress-bar" class="liveness-progress-bar" style="width: 0%;"></div>
             </div>
 
+            <!-- ★ Blink Detection Indicator -->
+            <div id="liveness-blink-indicator" class="liveness-blink-indicator blink-waiting">
+                <i class="fas fa-eye" id="blink-icon"></i>
+                <span id="blink-text">Chờ phát hiện chớp mắt tự nhiên...</span>
+            </div>
+
             <!-- Camera feed -->
             <div id="liveness-camera" class="liveness-camera-area">
                 <video id="liveness-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
@@ -276,7 +301,7 @@ $hoTen = $user['hoTen'] ?? 'User';
             <!-- Info footer -->
             <div style="margin-top: 12px; text-align: center;">
                 <span style="font-size: 11px; color: #94a3b8;">
-                    <i class="fas fa-lock"></i> Xác minh liveness 6 lớp bảo mật — Chỉ khuôn mặt thật mới được chấm công
+                    <i class="fas fa-lock"></i> Xác minh liveness 8 lớp bảo mật + Phát hiện nháy mắt — Chỉ khuôn mặt thật mới được chấm công
                 </span>
             </div>
         </div>
@@ -457,6 +482,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 labelEl.textContent = percent + '% — ' + label;
             },
 
+            onBlinkDetected: (count) => {
+                const indicator = document.getElementById('liveness-blink-indicator');
+                const icon = document.getElementById('blink-icon');
+                const text = document.getElementById('blink-text');
+                indicator.className = 'liveness-blink-indicator blink-detected';
+                icon.className = 'fas fa-check-circle';
+                text.textContent = `✅ Đã phát hiện ${count} lần chớp mắt!`;
+            },
+
             onComplete: async (livenessToken, descriptor) => {
                 isVerificationComplete = true;
                 document.getElementById('liveness-challenge-overlay').style.display = 'none';
@@ -566,7 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         isDetecting = false;
         if (!isVerificationComplete) {
-            detectionInterval = setTimeout(detectFaceLiveness, 120);
+            detectionInterval = setTimeout(detectFaceLiveness, 30); // Reduced from 120ms to capture blinks reliably
         }
     }
 
@@ -648,6 +682,14 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('liveness-spoof-alert').style.display = 'none';
         document.getElementById('liveness-retry-btn').style.display = 'none';
         document.getElementById('liveness-challenge-overlay').style.display = 'none';
+
+        // Reset blink indicator
+        const blinkIndicator = document.getElementById('liveness-blink-indicator');
+        const blinkIcon = document.getElementById('blink-icon');
+        const blinkText = document.getElementById('blink-text');
+        blinkIndicator.className = 'liveness-blink-indicator blink-waiting';
+        blinkIcon.className = 'fas fa-eye';
+        blinkText.textContent = 'Chờ phát hiện chớp mắt tự nhiên...';
 
         // Reset camera border
         const camera = document.getElementById('liveness-camera');

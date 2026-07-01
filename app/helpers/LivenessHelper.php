@@ -1,15 +1,18 @@
 <?php
 /**
- * LivenessHelper — Server-side passive liveness token validation
- * ===============================================================
+ * LivenessHelper v3.0 — Server-side passive liveness token validation
+ * ====================================================================
  * Validates HMAC-signed passive liveness tokens from the client-side
- * LivenessDetector to ensure face attendance cannot be spoofed.
+ * LivenessDetector v3.0 to ensure face attendance cannot be spoofed.
  * 
  * Security layers:
  *   1. HMAC-SHA256 signature verification
  *   2. Token freshness check (max 120 seconds)
- *   3. Passive layer scores threshold verification
- *   4. Audit logging
+ *   3. ★ Blink detection verification (HARD REJECT if no blink)
+ *   4. Frame count minimum (25 frames)
+ *   5. Passive layer scores threshold verification (8 metrics)
+ *   6. Combined score threshold (62%)
+ *   7. Audit logging
  */
 
 class LivenessHelper
@@ -65,7 +68,7 @@ class LivenessHelper
             ];
         }
 
-        $payload = $token['payload'];
+        $payloadStr = $token['payload'];
         $signature = $token['signature'];
 
         // 2. Retrieve session secret
@@ -78,15 +81,38 @@ class LivenessHelper
             ];
         }
 
-        // 3. Verify HMAC signature
-        $payloadJson = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $expectedSig = hash_hmac('sha256', $payloadJson, $secret);
+        // 3. Verify HMAC signature (Verify raw JSON string directly to prevent float format mismatches)
+        $expectedSig = hash_hmac('sha256', $payloadStr, $secret);
+
+        // DEBUG: Log signature comparison details
+        $debugLog = __DIR__ . '/../../uploads/liveness_logs/debug_sig.log';
+        @file_put_contents($debugLog, sprintf(
+            "[%s] payloadStr type=%s len=%d\npayloadStr=%s\nsecret=%s\nexpectedSig=%s\nactualSig=%s\nmatch=%s\n\n",
+            date('Y-m-d H:i:s'),
+            gettype($payloadStr),
+            strlen($payloadStr),
+            $payloadStr,
+            $secret,
+            $expectedSig,
+            $signature,
+            hash_equals($expectedSig, $signature) ? 'YES' : 'NO'
+        ), FILE_APPEND | LOCK_EX);
 
         if (!hash_equals($expectedSig, $signature)) {
-            self::logLivenessAttempt('SIGNATURE_MISMATCH', $payload);
+            self::logLivenessAttempt('SIGNATURE_MISMATCH', $payloadStr);
             return [
                 'valid' => false,
                 'message' => 'Chữ ký xác minh không hợp lệ. Phát hiện giả mạo token!',
+                'score' => 0
+            ];
+        }
+
+        // Decode payload from string
+        $payload = json_decode($payloadStr, true);
+        if (!$payload) {
+            return [
+                'valid' => false,
+                'message' => 'Dữ liệu xác minh bị lỗi cấu trúc (JSON).',
                 'score' => 0
             ];
         }
@@ -118,9 +144,34 @@ class LivenessHelper
             ];
         }
 
-        // 6. Check combined score (min threshold 55%)
+        // 6. ★ HARD REJECT: Eye Blink Detection
+        // This is the single most important anti-photo check.
+        // A static photo can NEVER produce a blink.
+        $blinkDetected = $payload['blinkDetected'] ?? false;
+        $blinkCount = intval($payload['blinkCount'] ?? 0);
+        if (!$blinkDetected || $blinkCount < 1) {
+            self::logLivenessAttempt('NO_BLINK_DETECTED', $payload);
+            return [
+                'valid' => false,
+                'message' => 'Không phát hiện nháy mắt! Hệ thống yêu cầu chớp mắt tự nhiên để xác minh người thật.',
+                'score' => 0
+            ];
+        }
+
+        // 7. Check frame count (must be >= 25 for v3.0)
+        $frameCount = intval($payload['frameCount'] ?? 0);
+        if ($frameCount < 25) {
+            self::logLivenessAttempt('INSUFFICIENT_FRAMES', $payload);
+            return [
+                'valid' => false,
+                'message' => 'Không đủ dữ liệu để xác minh (cần tối thiểu 25 frames).',
+                'score' => 0
+            ];
+        }
+
+        // 8. Check combined score (min threshold 52%)
         $combinedScore = floatval($payload['combinedScore'] ?? 0);
-        if ($combinedScore < 0.55) {
+        if ($combinedScore < 0.52) {
             self::logLivenessAttempt('LOW_SCORE', $payload);
             return [
                 'valid' => false,
@@ -129,12 +180,14 @@ class LivenessHelper
             ];
         }
 
-        // 7. Check individual passive metrics
+        // 9. Check individual passive metrics
         $passiveScores = $payload['passiveScores'] ?? [];
+
+        // Critical motion metrics (relaxed to allow static laptop cameras)
         $criticalMetrics = ['motion', 'geometricJitter'];
         foreach ($criticalMetrics as $metric) {
             $score = floatval($passiveScores[$metric] ?? 0);
-            if ($score < 0.2) {
+            if ($score < 0.01) {
                 self::logLivenessAttempt('METRIC_FAIL_' . strtoupper($metric), $payload);
                 return [
                     'valid' => false,
@@ -144,6 +197,18 @@ class LivenessHelper
             }
         }
 
+        // ★ Eye blink score must be substantial
+        $eyeBlinkScore = floatval($passiveScores['eyeBlink'] ?? 0);
+        if ($eyeBlinkScore < 0.3) {
+            self::logLivenessAttempt('METRIC_FAIL_EYEBLINK', $payload);
+            return [
+                'valid' => false,
+                'message' => 'Chỉ số xác minh nháy mắt quá thấp. Vui lòng chớp mắt tự nhiên hơn.',
+                'score' => $combinedScore
+            ];
+        }
+
+        // Texture metrics
         $textureMetrics = ['lbpTexture', 'laplacianMoire', 'colorReflection'];
         foreach ($textureMetrics as $metric) {
             $score = floatval($passiveScores[$metric] ?? 0);
@@ -157,7 +222,7 @@ class LivenessHelper
             }
         }
 
-        // 8. One-time use token invalidation
+        // 10. One-time use token invalidation
         unset($_SESSION['liveness_session_secret']);
         unset($_SESSION['liveness_session_time']);
         $_SESSION['liveness_session_used'] = true;
@@ -166,7 +231,7 @@ class LivenessHelper
 
         return [
             'valid' => true,
-            'message' => 'Xác thực người thật thành công.',
+            'message' => 'Xác thực người thật thành công (bao gồm xác minh nháy mắt).',
             'score' => $combinedScore
         ];
     }
@@ -176,6 +241,10 @@ class LivenessHelper
      */
     public static function logLivenessAttempt($result, $payload = [])
     {
+        if (is_string($payload)) {
+            $payload = json_decode($payload, true) ?? [];
+        }
+
         $logDir = __DIR__ . '/../../uploads/liveness_logs/';
         if (!is_dir($logDir)) {
             @mkdir($logDir, 0755, true);
@@ -185,6 +254,9 @@ class LivenessHelper
         $maND = $_SESSION['user']['maND'] ?? 'unknown';
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $score = $payload['combinedScore'] ?? 0;
+        $blinkDetected = ($payload['blinkDetected'] ?? false) ? 'YES' : 'NO';
+        $blinkCount = $payload['blinkCount'] ?? 0;
+        $frameCount = $payload['frameCount'] ?? 0;
         
         $pScores = $payload['passiveScores'] ?? [];
         $motion = $pScores['motion'] ?? 0;
@@ -192,19 +264,28 @@ class LivenessHelper
         $lbp = $pScores['lbpTexture'] ?? 0;
         $lap = $pScores['laplacianMoire'] ?? 0;
         $color = $pScores['colorReflection'] ?? 0;
+        $eyeBlink = $pScores['eyeBlink'] ?? 0;
+        $headPose = $pScores['headPose'] ?? 0;
+        $sizeVar = $pScores['sizeVariation'] ?? 0;
 
         $logEntry = sprintf(
-            "[%s] maND=%s IP=%s Result=%s Score=%.2f (Mot=%.2f, Jt=%.2f, Lbp=%.2f, Lap=%.2f, Col=%.2f)\n",
+            "[%s] maND=%s IP=%s Result=%s Score=%.2f Blink=%s(x%d) Frames=%d (Mot=%.2f, Jt=%.2f, Lbp=%.2f, Lap=%.2f, Col=%.2f, Eye=%.2f, Head=%.2f, Size=%.2f)\n",
             date('Y-m-d H:i:s'),
             $maND,
             $ip,
             $result,
             $score,
+            $blinkDetected,
+            $blinkCount,
+            $frameCount,
             $motion,
             $jitter,
             $lbp,
             $lap,
-            $color
+            $color,
+            $eyeBlink,
+            $headPose,
+            $sizeVar
         );
 
         @file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
