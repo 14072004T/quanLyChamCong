@@ -60,12 +60,20 @@ class LoginController {
                 exit;
             }
 
-            // âœ… Kiá»ƒm tra tráº¡ng thÃ¡i tÃ i khoáº£n (taikhoan hoáº·c nguoidung)
+            // Kiểm tra trạng thái tài khoản (taikhoan hoặc nguoidung)
             $trangThaiTK = $user['trangThaiTK'] ?? '';
             $trangThaiND = $user['trangThaiND'] ?? 1;
-            
-            if ($trangThaiTK !== 'Hoáº¡t Ä‘á»™ng' || $trangThaiND != 1) {
-                // TÃ i khoáº£n bá»‹ ngá»«ng hoáº¡t Ä‘á»™ng
+
+            $activeStatusValues = [
+                'hoạt động',
+                'hoat dong',
+                'hoáº¡t ä»™ng',
+                'hoáº¡t Ä‘á»™ng',
+                'hoạt dộng'
+            ];
+            $statusNormalized = mb_strtolower(trim($trangThaiTK), 'UTF-8');
+
+            if (!in_array($statusNormalized, $activeStatusValues, true) || $trangThaiND != 1) {
                 header("Location: index.php?page=login&error=inactive");
                 exit;
             }

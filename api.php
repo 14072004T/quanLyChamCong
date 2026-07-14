@@ -201,7 +201,18 @@ function handleAuth($phuongThuc, $hanhDong) {
                 respondError('Sai tên đăng nhập hoặc mật khẩu', 401);
             }
 
-            if (($user['trangThaiTK'] ?? '') !== 'Hoạt động' || ($user['trangThaiND'] ?? 1) != 1) {
+            $trangThaiTK = $user['trangThaiTK'] ?? '';
+            $trangThaiND = $user['trangThaiND'] ?? 1;
+            $activeStatusValues = [
+                'hoạt động',
+                'hoat dong',
+                'hoáº¡t ä»™ng',
+                'hoáº¡t Ä‘á»™ng',
+                'hoạt dộng'
+            ];
+            $statusNormalized = mb_strtolower(trim($trangThaiTK), 'UTF-8');
+
+            if (!in_array($statusNormalized, $activeStatusValues, true) || $trangThaiND != 1) {
                 respondError('Tài khoản đã bị ngưng hoạt động', 403);
             }
 
