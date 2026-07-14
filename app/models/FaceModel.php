@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'app/models/ketNoi.php';
 
 class FaceModel
@@ -12,13 +12,13 @@ class FaceModel
     }
 
     /**
-     * Lấy profile khuôn mặt của người dùng
+     * Láº¥y profile khuÃ´n máº·t cá»§a ngÆ°á»i dÃ¹ng
      * @param int $maND
      * @return array|null
      */
     public function getFaceProfile($maND)
     {
-        $sql = "SELECT id, maND, embedding, ngayTao, ngayCapNhat FROM face_profiles WHERE maND = ?";
+        $sql = "SELECT id, maND, embedding, ngayTao, ngayCapNhat FROM face_profile WHERE maND = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return null;
@@ -31,7 +31,7 @@ class FaceModel
     }
 
     /**
-     * Đăng ký hoặc cập nhật embedding khuôn mặt cho người dùng
+     * ÄÄƒng kÃ½ hoáº·c cáº­p nháº­t embedding khuÃ´n máº·t cho ngÆ°á»i dÃ¹ng
      * @param int $maND
      * @param string $embeddingJson
      * @return bool
@@ -40,14 +40,14 @@ class FaceModel
     {
         $existing = $this->getFaceProfile($maND);
         if ($existing) {
-            $sql = "UPDATE face_profiles SET embedding = ? WHERE maND = ?";
+            $sql = "UPDATE face_profile SET embedding = ? WHERE maND = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
             }
             $stmt->bind_param("si", $embeddingJson, $maND);
         } else {
-            $sql = "INSERT INTO face_profiles (maND, embedding) VALUES (?, ?)";
+            $sql = "INSERT INTO face_profile (maND, embedding) VALUES (?, ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
@@ -60,13 +60,13 @@ class FaceModel
     }
 
     /**
-     * Xóa profile khuôn mặt của người dùng
+     * XÃ³a profile khuÃ´n máº·t cá»§a ngÆ°á»i dÃ¹ng
      * @param int $maND
      * @return bool
      */
     public function deleteFaceProfile($maND)
     {
-        $sql = "DELETE FROM face_profiles WHERE maND = ?";
+        $sql = "DELETE FROM face_profile WHERE maND = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
@@ -78,7 +78,7 @@ class FaceModel
     }
 
     /**
-     * Lấy danh sách tất cả profile khuôn mặt ngoại trừ của maND hiện tại
+     * Láº¥y danh sÃ¡ch táº¥t cáº£ profile khuÃ´n máº·t ngoáº¡i trá»« cá»§a maND hiá»‡n táº¡i
      * @param int|null $excludeMaND
      * @return array
      */
@@ -86,7 +86,7 @@ class FaceModel
     {
         $profiles = [];
         if ($excludeMaND !== null) {
-            $sql = "SELECT id, maND, embedding FROM face_profiles WHERE maND != ?";
+            $sql = "SELECT id, maND, embedding FROM face_profile WHERE maND != ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return [];
@@ -99,7 +99,7 @@ class FaceModel
             }
             $stmt->close();
         } else {
-            $sql = "SELECT id, maND, embedding FROM face_profiles";
+            $sql = "SELECT id, maND, embedding FROM face_profile";
             $result = $this->conn->query($sql);
             if ($result) {
                 while ($row = $result->fetch_assoc()) {
@@ -111,7 +111,7 @@ class FaceModel
     }
 
     /**
-     * Lấy họ tên nhân viên từ bảng nguoidung
+     * Láº¥y há» tÃªn nhÃ¢n viÃªn tá»« báº£ng nguoidung
      * @param int $maND
      * @return string
      */
@@ -130,3 +130,4 @@ class FaceModel
     }
 }
 ?>
+

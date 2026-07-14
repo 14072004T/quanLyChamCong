@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'app/models/ketNoi.php';
 
 class LoginController {
@@ -40,7 +40,7 @@ class LoginController {
         $db = new KetNoi();
         $conn = $db->connect();
 
-        // Kiểm tra tài khoản (không filter theo trangThai để kiểm tra riêng)
+        // Kiá»ƒm tra tÃ i khoáº£n (khÃ´ng filter theo trangThai Ä‘á»ƒ kiá»ƒm tra riÃªng)
         $sql = "SELECT tk.*, nd.hoTen, nd.chucVu, nd.phongBan, nd.maND, nd.trangThai as trangThaiND, tk.trangThai as trangThaiTK
         FROM taikhoan tk 
         LEFT JOIN nguoidung nd ON tk.maTK = nd.maTK 
@@ -54,41 +54,41 @@ class LoginController {
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
             
-            // Kiểm tra mật khẩu trước
+            // Kiá»ƒm tra máº­t kháº©u trÆ°á»›c
             if (md5($matKhau) !== $user['matKhau']) {
                 header("Location: index.php?page=login&error=1");
                 exit;
             }
 
-            // ✅ Kiểm tra trạng thái tài khoản (taikhoan hoặc nguoidung)
+            // âœ… Kiá»ƒm tra tráº¡ng thÃ¡i tÃ i khoáº£n (taikhoan hoáº·c nguoidung)
             $trangThaiTK = $user['trangThaiTK'] ?? '';
             $trangThaiND = $user['trangThaiND'] ?? 1;
             
-            if ($trangThaiTK !== 'Hoạt động' || $trangThaiND != 1) {
-                // Tài khoản bị ngừng hoạt động
+            if ($trangThaiTK !== 'Hoáº¡t Ä‘á»™ng' || $trangThaiND != 1) {
+                // TÃ i khoáº£n bá»‹ ngá»«ng hoáº¡t Ä‘á»™ng
                 header("Location: index.php?page=login&error=inactive");
                 exit;
             }
 
             // Map chucVu sang role
             $roleMapping = [
-                'Nhân viên' => 'nhanvien',
-                'Bộ phận Nhân sự' => 'hr',
-                'Quản lý / Ban lãnh đạo' => 'manager',
-                'Bộ phận Kỹ thuật' => 'tech'
+                'NhÃ¢n viÃªn' => 'nhanvien',
+                'Bá»™ pháº­n NhÃ¢n sá»±' => 'hr',
+                'Quáº£n lÃ½ / Ban lÃ£nh Ä‘áº¡o' => 'manager',
+                'Bá»™ pháº­n Ká»¹ thuáº­t' => 'tech'
             ];
             
-            $chucVu = $user['chucVu'] ?? 'Nhân viên';
+            $chucVu = $user['chucVu'] ?? 'NhÃ¢n viÃªn';
             $role = $roleMapping[$chucVu] ?? 'nhanvien';
 
-            // MB chỉ role nhân viên thực hiện chấm công, các role còn lại chỉ được thực hiện trên IB
+            // MB chá»‰ role nhÃ¢n viÃªn thá»±c hiá»‡n cháº¥m cÃ´ng, cÃ¡c role cÃ²n láº¡i chá»‰ Ä‘Æ°á»£c thá»±c hiá»‡n trÃªn IB
             require_once 'app/middleware/AuthMiddleware.php';
             if (AuthMiddleware::isMobile() && $role !== 'nhanvien') {
                 header("Location: index.php?page=login&error=ib_only");
                 exit;
             }
 
-            // Đăng nhập thành công
+            // ÄÄƒng nháº­p thÃ nh cÃ´ng
             $_SESSION['user'] = [
                 'maTK' => $user['maTK'],
                 'maND' => $user['maND'] ?? null,
@@ -104,7 +104,7 @@ class LoginController {
             exit;
         }
 
-        // Sai tài khoản hoặc mật khẩu
+        // Sai tÃ i khoáº£n hoáº·c máº­t kháº©u
         header("Location: index.php?page=login&error=1");
         exit;
     }
@@ -122,3 +122,4 @@ class LoginController {
     }
 }
 ?>
+

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'app/models/ketNoi.php';
 
 class ChamCongModel
@@ -15,7 +15,7 @@ class ChamCongModel
     private function ensureTables()
     {
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS lichSuChamCong (
+            CREATE TABLE IF NOT EXISTS lichsuchamcong (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
                 hanhDong ENUM('IN', 'OUT') NOT NULL,
@@ -27,7 +27,7 @@ class ChamCongModel
         ");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS suaChamCong (
+            CREATE TABLE IF NOT EXISTS suachamcong (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
                 ngayChamCong DATE NOT NULL,
@@ -42,7 +42,7 @@ class ChamCongModel
         ");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS wifiChamCong (
+            CREATE TABLE IF NOT EXISTS wifichamcong (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 tenWifi VARCHAR(120) NOT NULL UNIQUE,
                 daiIP VARCHAR(50) DEFAULT NULL,
@@ -57,15 +57,15 @@ class ChamCongModel
         ");
 
         // Add missing columns if they don't exist (for existing databases)
-        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS daiIP VARCHAR(50) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS congMacDinh VARCHAR(50) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS moTa VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS ssid VARCHAR(120) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS matKhau VARCHAR(120) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE wifiChamCong ADD COLUMN IF NOT EXISTS viTri VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS daiIP VARCHAR(50) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS congMacDinh VARCHAR(50) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS moTa VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS ssid VARCHAR(120) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS matKhau VARCHAR(120) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS viTri VARCHAR(255) DEFAULT NULL");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS caLamViec (
+            CREATE TABLE IF NOT EXISTS calamviec (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 tenCa VARCHAR(100) NOT NULL,
                 gioBatDau TIME NOT NULL,
@@ -76,7 +76,7 @@ class ChamCongModel
         ");
 
         $this->conn->query(" 
-            CREATE TABLE IF NOT EXISTS caNhanVien (
+            CREATE TABLE IF NOT EXISTS canhanvien (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
                 maCa INT NOT NULL,
@@ -87,7 +87,7 @@ class ChamCongModel
         ");
 
         $this->conn->query(" 
-            CREATE TABLE IF NOT EXISTS duyetCongThang (
+            CREATE TABLE IF NOT EXISTS duyetcongthang (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 thangNam CHAR(7) NOT NULL,
                 phongBan VARCHAR(120) NOT NULL DEFAULT '',
@@ -102,20 +102,20 @@ class ChamCongModel
                 UNIQUE KEY uk_month_dept (thangNam, phongBan)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-        $this->conn->query("ALTER TABLE duyetCongThang ADD COLUMN IF NOT EXISTS phongBan VARCHAR(120) NOT NULL DEFAULT ''");
-        $this->conn->query("UPDATE duyetCongThang SET phongBan = '' WHERE phongBan IS NULL");
+        $this->conn->query("ALTER TABLE duyetcongthang ADD COLUMN IF NOT EXISTS phongBan VARCHAR(120) NOT NULL DEFAULT ''");
+        $this->conn->query("UPDATE duyetcongthang SET phongBan = '' WHERE phongBan IS NULL");
 
-        $oldIndex = $this->conn->query("SHOW INDEX FROM duyetCongThang WHERE Key_name = 'uk_month_key'");
+        $oldIndex = $this->conn->query("SHOW INDEX FROM duyetcongthang WHERE Key_name = 'uk_month_key'");
         if ($oldIndex && $oldIndex->num_rows > 0) {
-            $this->conn->query("ALTER TABLE duyetCongThang DROP INDEX uk_month_key");
+            $this->conn->query("ALTER TABLE duyetcongthang DROP INDEX uk_month_key");
         }
-        $newIndex = $this->conn->query("SHOW INDEX FROM duyetCongThang WHERE Key_name = 'uk_month_dept'");
+        $newIndex = $this->conn->query("SHOW INDEX FROM duyetcongthang WHERE Key_name = 'uk_month_dept'");
         if ($newIndex && $newIndex->num_rows === 0) {
-            $this->conn->query("ALTER TABLE duyetCongThang ADD UNIQUE KEY uk_month_dept (thangNam, phongBan)");
+            $this->conn->query("ALTER TABLE duyetcongthang ADD UNIQUE KEY uk_month_dept (thangNam, phongBan)");
         }
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS duyetCongNhanVien (
+            CREATE TABLE IF NOT EXISTS duyetcongnhanvien (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 thangNam CHAR(7) NOT NULL,
                 maND INT NOT NULL,
@@ -154,7 +154,7 @@ class ChamCongModel
 
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS caiDatHeThong (
+            CREATE TABLE IF NOT EXISTS caidathethong (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 tenCaiDat VARCHAR(100) NOT NULL UNIQUE,
                 giaTri VARCHAR(255) DEFAULT NULL,
@@ -164,7 +164,7 @@ class ChamCongModel
         ");
 
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS donNghiPhep (
+            CREATE TABLE IF NOT EXISTS donnghiphep (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
                 loaiNghiPhep VARCHAR(50) NOT NULL DEFAULT 'personal',
@@ -179,19 +179,19 @@ class ChamCongModel
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
         // Migration for existing tables
-        $this->conn->query("ALTER TABLE donNghiPhep ADD COLUMN IF NOT EXISTS loaiNghiPhep VARCHAR(50) NOT NULL DEFAULT 'personal'");
-        $this->conn->query("ALTER TABLE donNghiPhep ADD COLUMN IF NOT EXISTS tepMinhChung VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE donNghiPhep ADD COLUMN IF NOT EXISTS nguoiDuyet INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE donNghiPhep ADD COLUMN IF NOT EXISTS ngayDuyet DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE donnghiphep ADD COLUMN IF NOT EXISTS loaiNghiPhep VARCHAR(50) NOT NULL DEFAULT 'personal'");
+        $this->conn->query("ALTER TABLE donnghiphep ADD COLUMN IF NOT EXISTS tepMinhChung VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE donnghiphep ADD COLUMN IF NOT EXISTS nguoiDuyet INT DEFAULT NULL");
+        $this->conn->query("ALTER TABLE donnghiphep ADD COLUMN IF NOT EXISTS ngayDuyet DATETIME DEFAULT NULL");
 
-        // Migration: suaChamCong — add nullable columns for edit request feature
-        $this->conn->query("ALTER TABLE suaChamCong ADD COLUMN IF NOT EXISTS gioVaoDeXuat DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE suaChamCong ADD COLUMN IF NOT EXISTS gioRaDeXuat DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE suaChamCong ADD COLUMN IF NOT EXISTS tepMinhChung VARCHAR(255) DEFAULT NULL");
+        // Migration: suachamcong â€” add nullable columns for edit request feature
+        $this->conn->query("ALTER TABLE suachamcong ADD COLUMN IF NOT EXISTS gioVaoDeXuat DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE suachamcong ADD COLUMN IF NOT EXISTS gioRaDeXuat DATETIME DEFAULT NULL");
+        $this->conn->query("ALTER TABLE suachamcong ADD COLUMN IF NOT EXISTS tepMinhChung VARCHAR(255) DEFAULT NULL");
 
-        // Migration: face_profiles and lichSuChamCong modification
+        // Migration: face_profile and lichsuchamcong modification
         $this->conn->query("
-            CREATE TABLE IF NOT EXISTS face_profiles (
+            CREATE TABLE IF NOT EXISTS face_profile (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL UNIQUE,
                 embedding TEXT NOT NULL,
@@ -200,7 +200,7 @@ class ChamCongModel
                 FOREIGN KEY (maND) REFERENCES nguoidung(maND) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-        $this->conn->query("ALTER TABLE lichSuChamCong ADD COLUMN IF NOT EXISTS anhMinhChung VARCHAR(255) DEFAULT NULL");
+        $this->conn->query("ALTER TABLE lichsuchamcong ADD COLUMN IF NOT EXISTS anhMinhChung VARCHAR(255) DEFAULT NULL");
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
@@ -210,7 +210,7 @@ class ChamCongModel
             $clientIP = $this->getServerIP();
         }
 
-        $sql = "INSERT INTO lichSuChamCong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, anhMinhChung, ngayTao) 
+        $sql = "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, anhMinhChung, ngayTao) 
                 VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("isssss", $maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $anhMinhChung);
@@ -220,7 +220,7 @@ class ChamCongModel
     public function getLichSuTheoNhanVien($maND, $limit = 30)
     {
         $sql = "SELECT id, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao
-                FROM lichSuChamCong
+                FROM lichsuchamcong
                 WHERE maND = ?
                 ORDER BY ngayTao DESC
                 LIMIT ?";
@@ -238,7 +238,7 @@ class ChamCongModel
 
     public function taoYeuCauChinhSua($maND, $attendanceDate, $oldTime, $newTime, $lyDo)
     {
-        $sql = "INSERT INTO suaChamCong (maND, ngayChamCong, gioCu, gioMoi, lyDo)
+        $sql = "INSERT INTO suachamcong (maND, ngayChamCong, gioCu, gioMoi, lyDo)
                 VALUES (?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("issss", $maND, $attendanceDate, $oldTime, $newTime, $lyDo);
@@ -247,7 +247,7 @@ class ChamCongModel
 
     /**
      * Insert enhanced edit request with proposed times and evidence file.
-     * All new fields are nullable — backward compatible with existing data.
+     * All new fields are nullable â€” backward compatible with existing data.
      */
     public function insertEditRequest(array $data)
     {
@@ -272,7 +272,7 @@ class ChamCongModel
             $newTime = date('Y-m-d H:i:s');
         }
 
-        $sql = "INSERT INTO suaChamCong 
+        $sql = "INSERT INTO suachamcong 
                 (maND, ngayChamCong, gioCu, gioMoi, lyDo, gioVaoDeXuat, gioRaDeXuat, tepMinhChung)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
@@ -290,7 +290,7 @@ class ChamCongModel
         $sql = "SELECT id, ngayChamCong, gioCu, gioMoi, lyDo, trangThai, ghiChuNS, 
                        gioVaoDeXuat, gioRaDeXuat, tepMinhChung,
                        ngayTao, ngayCapNhat
-                FROM suaChamCong
+                FROM suachamcong
                 WHERE maND = ?
                 ORDER BY ngayTao DESC";
         $stmt = $this->conn->prepare($sql);
@@ -300,7 +300,7 @@ class ChamCongModel
     }
 
     /**
-     * Alias for getYeuCauTheoNhanVien — clearer name.
+     * Alias for getYeuCauTheoNhanVien â€” clearer name.
      */
     public function getEditRequestsByUser($maND)
     {
@@ -320,7 +320,7 @@ class ChamCongModel
                     DATE(ngayTao) AS ngayLamViec,
                     MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) AS gioVaoDau,
                     MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) AS gioRaCuoi
-                FROM lichSuChamCong
+                FROM lichsuchamcong
                 WHERE maND = ?
                 GROUP BY DATE(ngayTao)
                 ORDER BY ngayLamViec DESC
@@ -348,8 +348,8 @@ class ChamCongModel
         }
 
         $sql = "SELECT s.id AS maCa, s.tenCa, s.gioBatDau, s.gioKetThuc
-                FROM caNhanVien aes
-                JOIN caLamViec s ON s.id = aes.maCa AND s.hoatDong = 1
+                FROM canhanvien aes
+                JOIN calamviec s ON s.id = aes.maCa AND s.hoatDong = 1
                 WHERE aes.maND = ?
                   AND aes.hieuLucTu <= ?
                   AND (aes.hieuLucDen IS NULL OR aes.hieuLucDen >= ?)
@@ -364,9 +364,9 @@ class ChamCongModel
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        // Fallback to default shift (Hành chính) if no explicit assignment exists
+        // Fallback to default shift (HÃ nh chÃ­nh) if no explicit assignment exists
         if (!$row) {
-            $res = $this->conn->query("SELECT id AS maCa, tenCa, gioBatDau, gioKetThuc FROM caLamViec WHERE hoatDong = 1 ORDER BY id ASC LIMIT 1");
+            $res = $this->conn->query("SELECT id AS maCa, tenCa, gioBatDau, gioKetThuc FROM calamviec WHERE hoatDong = 1 ORDER BY id ASC LIMIT 1");
             if ($res && $res->num_rows > 0) {
                 $row = $res->fetch_assoc();
             }
@@ -396,10 +396,10 @@ class ChamCongModel
             'colors' => [],
         ];
 
-        // Handle NULL shift safely — can't calculate without shift info
+        // Handle NULL shift safely â€” can't calculate without shift info
         if ($shiftStart === null || $shiftEnd === null) {
             $result['statuses'][] = 'no_shift';
-            $result['labels'][] = 'Chưa phân ca';
+            $result['labels'][] = 'ChÆ°a phÃ¢n ca';
             $result['colors'][] = '#94a3b8';
             return $result;
         }
@@ -407,7 +407,7 @@ class ChamCongModel
         // Handle no check-in at all
         if ($checkIn === null) {
             $result['statuses'][] = 'absent';
-            $result['labels'][] = 'Chưa chấm công';
+            $result['labels'][] = 'ChÆ°a cháº¥m cÃ´ng';
             $result['colors'][] = '#94a3b8';
             return $result;
         }
@@ -432,24 +432,24 @@ class ChamCongModel
             // Late (more than 1 minute grace)
             $result['statuses'][] = 'late';
             $result['minutes_late'] = (int)round($diffIn);
-            $result['labels'][] = 'Đi trễ ' . $result['minutes_late'] . ' phút';
+            $result['labels'][] = 'Äi trá»… ' . $result['minutes_late'] . ' phÃºt';
             $result['colors'][] = '#ef4444';
         } elseif ($diffIn < -1) {
             // Early arrival
             $result['statuses'][] = 'early_arrival';
-            $result['labels'][] = 'Đến sớm ' . abs((int)round($diffIn)) . ' phút';
+            $result['labels'][] = 'Äáº¿n sá»›m ' . abs((int)round($diffIn)) . ' phÃºt';
             $result['colors'][] = '#10b981';
         } else {
             $result['statuses'][] = 'on_time';
-            $result['labels'][] = 'Đúng giờ';
+            $result['labels'][] = 'ÄÃºng giá»';
             $result['colors'][] = '#10b981';
         }
 
         // === CHECK-OUT analysis ===
         if ($checkOut === null) {
-            // Missing check-out — still in shift or forgot
+            // Missing check-out â€” still in shift or forgot
             $result['statuses'][] = 'missing_checkout';
-            $result['labels'][] = 'Chưa chấm ra';
+            $result['labels'][] = 'ChÆ°a cháº¥m ra';
             $result['colors'][] = '#f59e0b';
         } else {
             $checkOutTime = strtotime($checkOut);
@@ -459,18 +459,18 @@ class ChamCongModel
                 // Left early
                 $result['statuses'][] = 'early_leave';
                 $result['minutes_early'] = abs((int)round($diffOut));
-                $result['labels'][] = 'Về sớm ' . $result['minutes_early'] . ' phút';
+                $result['labels'][] = 'Vá» sá»›m ' . $result['minutes_early'] . ' phÃºt';
                 $result['colors'][] = '#f97316';
             } elseif ($diffOut > 1) {
                 // Overtime
                 $result['statuses'][] = 'overtime';
                 $result['phutTangCa'] = (int)round($diffOut);
-                $result['labels'][] = 'Tăng ca ' . $result['phutTangCa'] . ' phút';
+                $result['labels'][] = 'TÄƒng ca ' . $result['phutTangCa'] . ' phÃºt';
                 $result['colors'][] = '#3b82f6';
             }
         }
 
-        // If no special trangThai for check-out, and check-in was on time — overall on_time
+        // If no special trangThai for check-out, and check-in was on time â€” overall on_time
         if (count($result['statuses']) === 1 && $result['statuses'][0] === 'on_time' && $checkOut !== null) {
             // Just on_time, no additional trangThai needed
         }
@@ -494,11 +494,11 @@ class ChamCongModel
         $sql = "SELECT 
                     MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) AS gioVaoDau,
                     MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) AS gioRaCuoi
-                FROM lichSuChamCong
+                FROM lichsuchamcong
                 WHERE maND = ? AND DATE(ngayTao) = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
-            return ['shift' => $shift, 'trangThai' => ['statuses' => ['error'], 'labels' => ['Lỗi hệ thống'], 'colors' => ['#94a3b8'], 'minutes_late' => 0, 'minutes_early' => 0, 'phutTangCa' => 0], 'gioVaoDau' => null, 'gioRaCuoi' => null];
+            return ['shift' => $shift, 'trangThai' => ['statuses' => ['error'], 'labels' => ['Lá»—i há»‡ thá»‘ng'], 'colors' => ['#94a3b8'], 'minutes_late' => 0, 'minutes_early' => 0, 'phutTangCa' => 0], 'gioVaoDau' => null, 'gioRaCuoi' => null];
         }
         $stmt->bind_param("is", $maND, $today);
         $stmt->execute();
@@ -540,7 +540,7 @@ class ChamCongModel
                 COUNT(*) AS total_logs_today,
                 SUM(CASE WHEN hanhDong = 'IN' THEN 1 ELSE 0 END) AS in_today,
                 SUM(CASE WHEN hanhDong = 'OUT' THEN 1 ELSE 0 END) AS out_today
-            FROM lichSuChamCong
+            FROM lichsuchamcong
             WHERE DATE(ngayTao) = CURDATE()
         ");
         if ($result) {
@@ -555,14 +555,14 @@ class ChamCongModel
             }
         }
 
-        $result2 = $this->conn->query("SELECT COUNT(*) AS pending_requests FROM suaChamCong WHERE trangThai = 'pending'");
+        $result2 = $this->conn->query("SELECT COUNT(*) AS pending_requests FROM suachamcong WHERE trangThai = 'pending'");
         if ($result2) {
             $row2 = $result2->fetch_assoc();
             $data['pending_requests'] = (int) ($row2['pending_requests'] ?? 0);
             $data['pending_corrections'] = $data['pending_requests'];
         }
 
-        $result3 = $this->conn->query("SELECT COUNT(*) AS pending_approvals FROM duyetCongThang WHERE trangThai = 'submitted'");
+        $result3 = $this->conn->query("SELECT COUNT(*) AS pending_approvals FROM duyetcongthang WHERE trangThai = 'submitted'");
         if ($result3) {
             $row3 = $result3->fetch_assoc();
             $data['pending_approvals'] = (int) ($row3['pending_approvals'] ?? 0);
@@ -619,7 +619,7 @@ class ChamCongModel
         $sql = "SELECT maND, maTK, hoTen, email, soDienThoai, chucVu, phongBan, trangThai, ngayTao
                 FROM nguoidung
                 WHERE trangThai = 1
-                  AND chucVu = 'Nhân viên'";
+                  AND chucVu = 'NhÃ¢n viÃªn'";
         $types = '';
         $params = [];
 
@@ -657,7 +657,7 @@ class ChamCongModel
         $hoTen = trim($payload['hoTen'] ?? '');
         $email = trim($payload['email'] ?? '');
         $soDienThoai = trim($payload['soDienThoai'] ?? '');
-        $chucVu = trim($payload['chucVu'] ?? 'Nhân viên');
+        $chucVu = trim($payload['chucVu'] ?? 'NhÃ¢n viÃªn');
         $phongBan = trim($payload['phongBan'] ?? '');
         $trangThai = (int)($payload['trangThai'] ?? 1);
 
@@ -684,9 +684,9 @@ class ChamCongModel
 
                 // Insert into correct child table
                 $childTable = 'nhanvien';
-                if ($chucVu === 'Bộ phận Nhân sự') $childTable = 'nhansu';
-                elseif ($chucVu === 'Bộ phận Kỹ thuật') $childTable = 'kythuat';
-                elseif ($chucVu === 'Quản lý / Ban lãnh đạo') $childTable = 'quanly';
+                if ($chucVu === 'Bá»™ pháº­n NhÃ¢n sá»±') $childTable = 'nhansu';
+                elseif ($chucVu === 'Bá»™ pháº­n Ká»¹ thuáº­t') $childTable = 'kythuat';
+                elseif ($chucVu === 'Quáº£n lÃ½ / Ban lÃ£nh Ä‘áº¡o') $childTable = 'quanly';
 
                 $this->conn->query("INSERT INTO $childTable (maND) VALUES ($maND)");
 
@@ -708,7 +708,7 @@ class ChamCongModel
             $username .= rand(10, 99);
 
             $defaultPassword = md5('123456');
-            $insertAccount = $this->conn->prepare("INSERT INTO taikhoan (tenDangNhap, matKhau, trangThai) VALUES (?, ?, 'Hoạt động')");
+            $insertAccount = $this->conn->prepare("INSERT INTO taikhoan (tenDangNhap, matKhau, trangThai) VALUES (?, ?, 'Hoáº¡t Ä‘á»™ng')");
             $insertAccount->bind_param("ss", $username, $defaultPassword);
             if (!$insertAccount->execute()) {
                 $this->conn->rollback();
@@ -726,9 +726,9 @@ class ChamCongModel
 
             // Insert into role-specific child table
             $childTable = 'nhanvien';
-            if ($chucVu === 'Bộ phận Nhân sự') $childTable = 'nhansu';
-            elseif ($chucVu === 'Bộ phận Kỹ thuật') $childTable = 'kythuat';
-            elseif ($chucVu === 'Quản lý / Ban lãnh đạo') $childTable = 'quanly';
+            if ($chucVu === 'Bá»™ pháº­n NhÃ¢n sá»±') $childTable = 'nhansu';
+            elseif ($chucVu === 'Bá»™ pháº­n Ká»¹ thuáº­t') $childTable = 'kythuat';
+            elseif ($chucVu === 'Quáº£n lÃ½ / Ban lÃ£nh Ä‘áº¡o') $childTable = 'quanly';
 
             $insertChild = $this->conn->prepare("INSERT INTO $childTable (maND) VALUES (?)");
             if ($insertChild) {
@@ -747,12 +747,12 @@ class ChamCongModel
     public function getShifts()
     {
         $sql = "SELECT s.id, s.tenCa, s.gioBatDau, s.gioKetThuc, s.hoatDong, s.ngayTao,
-                       (SELECT COUNT(DISTINCT aes.maND) FROM caNhanVien aes
+                       (SELECT COUNT(DISTINCT aes.maND) FROM canhanvien aes
                         JOIN nguoidung nd ON nd.maND = aes.maND
                         WHERE aes.maCa = s.id 
                           AND (aes.hieuLucDen IS NULL OR aes.hieuLucDen >= CURDATE())
-                          AND nd.chucVu = 'Nhân viên' AND nd.trangThai = 1) AS assigned_count
-                FROM caLamViec s
+                          AND nd.chucVu = 'NhÃ¢n viÃªn' AND nd.trangThai = 1) AS assigned_count
+                FROM calamviec s
                 ORDER BY s.ngayTao DESC";
         $result = $this->conn->query($sql);
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
@@ -771,13 +771,13 @@ class ChamCongModel
         }
 
         if ($id > 0) {
-            $sql = "UPDATE caLamViec SET tenCa = ?, gioBatDau = ?, gioKetThuc = ?, hoatDong = ? WHERE id = ?";
+            $sql = "UPDATE calamviec SET tenCa = ?, gioBatDau = ?, gioKetThuc = ?, hoatDong = ? WHERE id = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("sssii", $name, $start, $end, $isActive, $id);
             return $stmt->execute();
         }
 
-        $sql = "INSERT INTO caLamViec (tenCa, gioBatDau, gioKetThuc, hoatDong) VALUES (?, ?, ?, ?)";
+        $sql = "INSERT INTO calamviec (tenCa, gioBatDau, gioKetThuc, hoatDong) VALUES (?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("sssi", $name, $start, $end, $isActive);
         return $stmt->execute();
@@ -791,11 +791,11 @@ class ChamCongModel
             return false;
         }
 
-        $closeCurrent = $this->conn->prepare("UPDATE caNhanVien SET hieuLucDen = DATE_SUB(?, INTERVAL 1 DAY) WHERE maND = ? AND hieuLucDen IS NULL");
+        $closeCurrent = $this->conn->prepare("UPDATE canhanvien SET hieuLucDen = DATE_SUB(?, INTERVAL 1 DAY) WHERE maND = ? AND hieuLucDen IS NULL");
         $closeCurrent->bind_param("si", $effectiveFrom, $maND);
         $closeCurrent->execute();
 
-        $insert = $this->conn->prepare("INSERT INTO caNhanVien (maND, maCa, hieuLucTu) VALUES (?, ?, ?)");
+        $insert = $this->conn->prepare("INSERT INTO canhanvien (maND, maCa, hieuLucTu) VALUES (?, ?, ?)");
         $insert->bind_param("iis", $maND, $shiftId, $effectiveFrom);
         return $insert->execute();
     }
@@ -824,13 +824,13 @@ class ChamCongModel
                                    ), 0)
                                ELSE 0
                            END AS phutLamViec
-                    FROM lichSuChamCong
+                    FROM lichsuchamcong
                     WHERE ngayTao >= ?
                       AND ngayTao < DATE_ADD(?, INTERVAL 1 MONTH)
                     GROUP BY maND, DATE(ngayTao)
                 ) d ON d.maND = u.maND
                 WHERE u.trangThai = 1
-                  AND u.chucVu = 'Nhân viên'
+                  AND u.chucVu = 'NhÃ¢n viÃªn'
                   AND (? = '' OR u.phongBan = ?)
                 GROUP BY u.maND, u.hoTen, u.phongBan
                 ORDER BY u.hoTen";
@@ -859,7 +859,7 @@ class ChamCongModel
                        NULL AS tenCaHienTai, NULL AS tenCaMoi,
                        r.lyDo, r.trangThai, NULL AS ghiChuQL, r.ngayTao, r.ngayDuyet AS ngayCapNhat,
                        n.hoTen, n.chucVu, n.phongBan
-                FROM donNghiPhep r
+                FROM donnghiphep r
                 LEFT JOIN nguoidung n ON n.maND = r.maND";
 
         $conditions = [];
@@ -933,7 +933,7 @@ class ChamCongModel
 
         $trangThai = $hanhDong === 'approve' ? 'approved' : 'rejected';
         if ($type === 'leave') {
-            $sql = "UPDATE donNghiPhep
+            $sql = "UPDATE donnghiphep
                     SET trangThai = ?, nguoiDuyet = ?, ngayDuyet = NOW()
                     WHERE id = ? AND trangThai = 'pending'";
             $stmt = $this->conn->prepare($sql);
@@ -947,7 +947,7 @@ class ChamCongModel
 
     public function getAttendanceReport($fromDate, $toDate, $phongBan = '')
     {
-        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        $validDepts = ['Sáº£n xuáº¥t', 'Kho', 'QC', 'Báº£o trÃ¬'];
         $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
         
         $sql = "SELECT u.maND, u.hoTen, u.phongBan,
@@ -955,11 +955,11 @@ class ChamCongModel
                        SUM(CASE WHEN l.hanhDong = 'IN' THEN 1 ELSE 0 END) AS checkin_count,
                        SUM(CASE WHEN l.hanhDong = 'OUT' THEN 1 ELSE 0 END) AS checkout_count
                 FROM nguoidung u
-                LEFT JOIN lichSuChamCong l ON l.maND = u.maND
+                LEFT JOIN lichsuchamcong l ON l.maND = u.maND
                     AND DATE(l.ngayTao) >= ?
                     AND DATE(l.ngayTao) <= ?
                 WHERE u.trangThai = 1
-                  AND u.chucVu = 'Nhân viên'
+                  AND u.chucVu = 'NhÃ¢n viÃªn'
                   AND u.phongBan IN ($placeholders)";
 
         $params = [$fromDate, $toDate];
@@ -995,7 +995,7 @@ class ChamCongModel
 
     public function getValidDepartments()
     {
-        return ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        return ['Sáº£n xuáº¥t', 'Kho', 'QC', 'Báº£o trÃ¬'];
     }
 
     public function submitMonthlyApproval($monthKey, $hrSenderId, $phongBan = '')
@@ -1025,7 +1025,7 @@ class ChamCongModel
                 continue;
             }
 
-            $find = $this->conn->prepare("SELECT id FROM duyetCongThang WHERE thangNam = ? AND phongBan = ? ORDER BY id DESC LIMIT 1");
+            $find = $this->conn->prepare("SELECT id FROM duyetcongthang WHERE thangNam = ? AND phongBan = ? ORDER BY id DESC LIMIT 1");
             if (!$find) {
                 $okAll = false;
                 continue;
@@ -1037,7 +1037,7 @@ class ChamCongModel
 
             if (!empty($existing['id'])) {
                 $id = (int)$existing['id'];
-                $update = $this->conn->prepare("UPDATE duyetCongThang
+                $update = $this->conn->prepare("UPDATE duyetcongthang
                                                 SET maNguoiGuiNS = ?, trangThai = 'submitted', ngayGui = NOW(), ngayDuyet = NULL, maNguoiDuyetQL = NULL, ghiChu = NULL
                                                 WHERE id = ?");
                 if (!$update) {
@@ -1050,7 +1050,7 @@ class ChamCongModel
                 continue;
             }
 
-            $insert = $this->conn->prepare("INSERT INTO duyetCongThang (thangNam, phongBan, maNguoiGuiNS, trangThai, ngayGui)
+            $insert = $this->conn->prepare("INSERT INTO duyetcongthang (thangNam, phongBan, maNguoiGuiNS, trangThai, ngayGui)
                                             VALUES (?, ?, ?, 'submitted', NOW())");
             if (!$insert) {
                 $okAll = false;
@@ -1070,7 +1070,7 @@ class ChamCongModel
                        a.phongBan,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
-                FROM duyetCongThang a
+                FROM duyetcongthang a
                 LEFT JOIN nguoidung u ON u.maND = a.maNguoiGuiNS
                 LEFT JOIN nguoidung u2 ON u2.maND = a.maNguoiDuyetQL";
 
@@ -1117,7 +1117,7 @@ class ChamCongModel
                        a.phongBan,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
-                FROM duyetCongThang a
+                FROM duyetcongthang a
                 LEFT JOIN nguoidung u ON u.maND = a.maNguoiGuiNS
                 LEFT JOIN nguoidung u2 ON u2.maND = a.maNguoiDuyetQL
                 WHERE a.trangThai IN ('approved', 'rejected')";
@@ -1167,7 +1167,7 @@ class ChamCongModel
         $sql = "SELECT a.id, a.thangNam, a.maNguoiGuiNS, a.maNguoiDuyetQL, a.trangThai, a.ngayGui, a.ngayDuyet, a.ghiChu,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
-                FROM duyetCongThang a
+                FROM duyetcongthang a
                 LEFT JOIN nguoidung u ON u.maND = a.maNguoiGuiNS
                 LEFT JOIN nguoidung u2 ON u2.maND = a.maNguoiDuyetQL
                 WHERE a.maNguoiGuiNS = ?";
@@ -1214,7 +1214,7 @@ class ChamCongModel
         $phongBan = trim((string)$phongBan);
         if ($phongBan === '') {
             $stmt = $this->conn->prepare("SELECT trangThai, ngayGui, ngayDuyet
-                                          FROM duyetCongThang
+                                          FROM duyetcongthang
                                           WHERE thangNam = ?");
             if (!$stmt) {
                 return null;
@@ -1261,7 +1261,7 @@ class ChamCongModel
                        a.phongBan,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
-                FROM duyetCongThang a
+                FROM duyetcongthang a
                 LEFT JOIN nguoidung u ON u.maND = a.maNguoiGuiNS
                 LEFT JOIN nguoidung u2 ON u2.maND = a.maNguoiDuyetQL
                 WHERE a.thangNam = ?";
@@ -1299,7 +1299,7 @@ class ChamCongModel
                        a.phongBan,
                        u.hoTen AS hr_name,
                        u2.hoTen AS approver_name
-                FROM duyetCongThang a
+                FROM duyetcongthang a
                 LEFT JOIN nguoidung u ON u.maND = a.maNguoiGuiNS
                 LEFT JOIN nguoidung u2 ON u2.maND = a.maNguoiDuyetQL
                 WHERE a.id = ?";
@@ -1357,7 +1357,7 @@ class ChamCongModel
         }
 
         $phongBan = trim((string)$phongBan);
-        $sql = "UPDATE duyetCongThang
+        $sql = "UPDATE duyetcongthang
                 SET trangThai = ?, maNguoiDuyetQL = ?, ngayDuyet = NOW(), ghiChu = ?
                 WHERE id = ? AND trangThai = 'submitted'";
         if ($phongBan !== '') {
@@ -1379,7 +1379,7 @@ class ChamCongModel
     {
         $sql = "SELECT c.id, c.maND, c.ngayChamCong, c.gioCu, c.gioMoi, c.lyDo, c.trangThai, c.ghiChuNS, c.ngayTao, c.ngayCapNhat, c.tepMinhChung,
                        n.hoTen, n.chucVu, n.phongBan
-                FROM suaChamCong c
+                FROM suachamcong c
                 LEFT JOIN nguoidung n ON n.maND = c.maND";
 
         $conditions = [];
@@ -1450,20 +1450,20 @@ class ChamCongModel
         }
 
         $trangThai = $hanhDong === 'approve' ? 'approved' : 'rejected';
-        $sql = "UPDATE suaChamCong SET trangThai = ?, ghiChuNS = ?, ngayCapNhat = NOW() WHERE id = ?";
+        $sql = "UPDATE suachamcong SET trangThai = ?, ghiChuNS = ?, ngayCapNhat = NOW() WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ssi", $trangThai, $ghiChu, $correctionId);
         return $stmt->execute();
     }
 
     /**
-     * Kiểm tra WiFi nội bộ
+     * Kiá»ƒm tra WiFi ná»™i bá»™
      * @return bool
      */
     public function checkWifi()
     {
         // Check if there are any active WiFi networks configured
-        $sql = "SELECT COUNT(*) AS count FROM wifiChamCong WHERE hoatDong = 1";
+        $sql = "SELECT COUNT(*) AS count FROM wifichamcong WHERE hoatDong = 1";
         $result = $this->conn->query($sql);
         if ($result) {
             $row = $result->fetch_assoc();
@@ -1473,13 +1473,13 @@ class ChamCongModel
     }
 
     /**
-     * Kiểm tra xem WiFi có được phép không
+     * Kiá»ƒm tra xem WiFi cÃ³ Ä‘Æ°á»£c phÃ©p khÃ´ng
      * @param string $wifiName
      * @return bool
      */
     public function isWifiAllowed($wifiName)
     {
-        $sql = "SELECT id FROM wifiChamCong WHERE tenWifi = ? AND hoatDong = 1 LIMIT 1";
+        $sql = "SELECT id FROM wifichamcong WHERE tenWifi = ? AND hoatDong = 1 LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
@@ -1493,12 +1493,12 @@ class ChamCongModel
     }
 
     /**
-     * Lấy tên WiFi đang hoạt động đầu tiên để fallback.
+     * Láº¥y tÃªn WiFi Ä‘ang hoáº¡t Ä‘á»™ng Ä‘áº§u tiÃªn Ä‘á»ƒ fallback.
      * @return string|null
      */
     public function getFirstActiveWifiName()
     {
-        $sql = "SELECT tenWifi FROM wifiChamCong WHERE hoatDong = 1 ORDER BY id ASC LIMIT 1";
+        $sql = "SELECT tenWifi FROM wifichamcong WHERE hoatDong = 1 ORDER BY id ASC LIMIT 1";
         $result = $this->conn->query($sql);
         if (!$result) {
             return null;
@@ -1508,26 +1508,26 @@ class ChamCongModel
     }
 
     /**
-     * Lấy danh sách cấu hình WiFi đang hoạt động (Tên + Dải IP)
+     * Láº¥y danh sÃ¡ch cáº¥u hÃ¬nh WiFi Ä‘ang hoáº¡t Ä‘á»™ng (TÃªn + Dáº£i IP)
      * @return array
      */
     public function getActiveWifiConfigurations()
     {
-        $sql = "SELECT tenWifi, daiIP FROM wifiChamCong WHERE hoatDong = 1";
+        $sql = "SELECT tenWifi, daiIP FROM wifichamcong WHERE hoatDong = 1";
         $result = $this->conn->query($sql);
         if (!$result) return [];
         return $result->fetch_all(MYSQLI_ASSOC);
     }
 
     /**
-     * Lấy tất cả logs chấm công của hôm nay
+     * Láº¥y táº¥t cáº£ logs cháº¥m cÃ´ng cá»§a hÃ´m nay
      * @param int $maND
      * @return array
      */
     public function getTodayLogs($maND)
     {
         $sql = "SELECT id, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao
-                FROM lichSuChamCong
+                FROM lichsuchamcong
                 WHERE maND = ? AND DATE(ngayTao) = CURDATE()
                 ORDER BY ngayTao ASC";
         $stmt = $this->conn->prepare($sql);
@@ -1537,13 +1537,13 @@ class ChamCongModel
     }
 
     /**
-     * Lấy trạng thái chấm công trong ngày
+     * Láº¥y tráº¡ng thÃ¡i cháº¥m cÃ´ng trong ngÃ y
      * @param int $maND
-     * @return string|null - 'IN', 'OUT', hoặc null
+     * @return string|null - 'IN', 'OUT', hoáº·c null
      */
     public function getTrangThaiHomNay($maND)
     {
-        $sql = "SELECT hanhDong FROM lichSuChamCong
+        $sql = "SELECT hanhDong FROM lichsuchamcong
                 WHERE maND = ? AND DATE(ngayTao) = CURDATE()
                 ORDER BY ngayTao DESC
                 LIMIT 1";
@@ -1556,7 +1556,7 @@ class ChamCongModel
     }
 
     /**
-     * Lấy lịch sử chấm công theo khoảng ngày
+     * Láº¥y lá»‹ch sá»­ cháº¥m cÃ´ng theo khoáº£ng ngÃ y
      * @param int $maND
      * @param string $from - YYYY-MM-DD
      * @param string $to - YYYY-MM-DD
@@ -1565,14 +1565,14 @@ class ChamCongModel
     public function getLichSu($maND, $from = null, $to = null)
     {
         if (!$from) {
-            $from = date('Y-m-01'); // Đầu tháng hiện tại
+            $from = date('Y-m-01'); // Äáº§u thÃ¡ng hiá»‡n táº¡i
         }
         if (!$to) {
-            $to = date('Y-m-d'); // Hôm nay
+            $to = date('Y-m-d'); // HÃ´m nay
         }
 
         $sql = "SELECT id, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao
-                FROM lichSuChamCong
+                FROM lichsuchamcong
                 WHERE maND = ? 
                 AND DATE(ngayTao) >= ? 
                 AND DATE(ngayTao) <= ?
@@ -1616,13 +1616,13 @@ class ChamCongModel
     /**
      * Get all allowed IP ranges from database (IT managed)
      * SECURITY: Returns ONLY active networks from database - no hardcoded defaults
-     * If no networks configured → returns empty array → all IPs rejected
+     * If no networks configured â†’ returns empty array â†’ all IPs rejected
      * 
      * @return array - List of allowed IP ranges (e.g., ['192.168.1', '192.168.2', '10.0.1'])
      */
     public function getAllowedNetworks()
     {
-        $sql = "SELECT daiIP FROM wifiChamCong WHERE hoatDong = 1";
+        $sql = "SELECT daiIP FROM wifichamcong WHERE hoatDong = 1";
         $result = $this->conn->query($sql);
         
         if (!$result) {
@@ -1692,9 +1692,9 @@ class ChamCongModel
         $message = '';
         
         if ($isValid) {
-            $message = 'Bạn đang ở mạng nội bộ công ty';
+            $message = 'Báº¡n Ä‘ang á»Ÿ máº¡ng ná»™i bá»™ cÃ´ng ty';
         } else {
-            $message = 'Bạn không ở trong mạng nội bộ công ty (IP: ' . htmlspecialchars($ip) . ')';
+            $message = 'Báº¡n khÃ´ng á»Ÿ trong máº¡ng ná»™i bá»™ cÃ´ng ty (IP: ' . htmlspecialchars($ip) . ')';
         }
         
         return [
@@ -1717,7 +1717,7 @@ class ChamCongModel
     public function getAllNetworks()
     {
         $sql = "SELECT id, tenWifi, daiIP, congMacDinh, moTa, ssid, matKhau, viTri, hoatDong, ngayTao 
-                FROM wifiChamCong ORDER BY id DESC";
+                FROM wifichamcong ORDER BY id DESC";
         $result = $this->conn->query($sql);
         
         if (!$result) {
@@ -1780,7 +1780,7 @@ class ChamCongModel
         $id = (int)$id;
         if ($id <= 0) return null;
         $sql = "SELECT id, tenWifi, daiIP, congMacDinh, moTa, ssid, matKhau, viTri, hoatDong, ngayTao 
-                FROM wifiChamCong WHERE id = ?";
+                FROM wifichamcong WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return null;
         $stmt->bind_param("i", $id);
@@ -1814,7 +1814,7 @@ class ChamCongModel
             return false;
         }
         
-        $sql = "INSERT INTO wifiChamCong (tenWifi, daiIP, congMacDinh, moTa, hoatDong, ssid, matKhau, viTri) 
+        $sql = "INSERT INTO wifichamcong (tenWifi, daiIP, congMacDinh, moTa, hoatDong, ssid, matKhau, viTri) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -1842,7 +1842,7 @@ class ChamCongModel
             return false;
         }
         
-        $sql = "INSERT INTO wifiChamCong (tenWifi, hoatDong) VALUES (?, ?)";
+        $sql = "INSERT INTO wifichamcong (tenWifi, hoatDong) VALUES (?, ?)";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
@@ -1879,7 +1879,7 @@ class ChamCongModel
             return false;
         }
 
-        $sql = "UPDATE wifiChamCong 
+        $sql = "UPDATE wifichamcong 
                 SET tenWifi = ?, daiIP = ?, congMacDinh = ?, moTa = ?, hoatDong = ?, ssid = ?, matKhau = ?, viTri = ? 
                 WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
@@ -1910,11 +1910,11 @@ class ChamCongModel
 
         if ($isActive !== null) {
             $isActive = (int)$isActive;
-            $sql = "UPDATE wifiChamCong SET tenWifi = ?, hoatDong = ? WHERE id = ?";
+            $sql = "UPDATE wifichamcong SET tenWifi = ?, hoatDong = ? WHERE id = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("sii", $wifiName, $isActive, $wifiId);
         } else {
-            $sql = "UPDATE wifiChamCong SET tenWifi = ? WHERE id = ?";
+            $sql = "UPDATE wifichamcong SET tenWifi = ? WHERE id = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("si", $wifiName, $wifiId);
         }
@@ -1937,7 +1937,7 @@ class ChamCongModel
             return false;
         }
 
-        $sql = "SELECT COUNT(*) as count FROM wifiChamCong WHERE tenWifi = ?";
+        $sql = "SELECT COUNT(*) as count FROM wifichamcong WHERE tenWifi = ?";
         
         if ($excludeId !== null) {
             $sql .= " AND id != ?";
@@ -1975,7 +1975,7 @@ class ChamCongModel
             return false;
         }
 
-        $sql = "SELECT COUNT(*) as count FROM wifiChamCong WHERE congMacDinh = ?";
+        $sql = "SELECT COUNT(*) as count FROM wifichamcong WHERE congMacDinh = ?";
         
         if ($excludeId !== null) {
             $sql .= " AND id != ?";
@@ -2023,7 +2023,7 @@ class ChamCongModel
             return false;
         }
 
-        $sql = "UPDATE wifiChamCong SET hoatDong = !hoatDong WHERE id = ?";
+        $sql = "UPDATE wifichamcong SET hoatDong = !hoatDong WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $networkId);
         $result = $stmt->execute();
@@ -2053,7 +2053,7 @@ class ChamCongModel
             return false;
         }
 
-        $sql = "DELETE FROM wifiChamCong WHERE id = ?";
+        $sql = "DELETE FROM wifichamcong WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
@@ -2079,7 +2079,7 @@ class ChamCongModel
      */
 
     /**
-     * Lấy thông tin chi tiết công tháng với phép, lễ, OT (UPDATED 2026)
+     * Láº¥y thÃ´ng tin chi tiáº¿t cÃ´ng thÃ¡ng vá»›i phÃ©p, lá»…, OT (UPDATED 2026)
      * @param string $monthKey - YYYY-MM
      * @return array
      */
@@ -2091,7 +2091,7 @@ class ChamCongModel
 
         $monthKey = trim((string)$monthKey);
         $phongBan = trim((string)$phongBan);
-        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        $validDepts = ['Sáº£n xuáº¥t', 'Kho', 'QC', 'Báº£o trÃ¬'];
         
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
             return [];
@@ -2100,29 +2100,29 @@ class ChamCongModel
         $monthStart = $monthKey . '-01';
         $monthEnd = date('Y-m-t', strtotime($monthStart));
 
-        // Lấy danh sách tất cả nhân viên hoạt động
+        // Láº¥y danh sÃ¡ch táº¥t cáº£ nhÃ¢n viÃªn hoáº¡t Ä‘á»™ng
         $allEmployees = $this->getEmployees('', true);
         
-        // Chỉ lấy nhân viên (filter theo phòng ban nếu có)
+        // Chá»‰ láº¥y nhÃ¢n viÃªn (filter theo phÃ²ng ban náº¿u cÃ³)
         $employees = array_filter($allEmployees, function($e) use ($monthEnd, $phongBan, $validDepts) {
-            if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') {
+            if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhÃ¢n viÃªn') {
                 return false;
             }
             
-            // Filter theo phòng ban hợp lệ
+            // Filter theo phÃ²ng ban há»£p lá»‡
             $empDept = (string)($e['phongBan'] ?? '');
             if (!in_array($empDept, $validDepts, true)) {
                 return false;
             }
             
-            // Filter theo phòng ban cụ thể nếu có
+            // Filter theo phÃ²ng ban cá»¥ thá»ƒ náº¿u cÃ³
             if ($phongBan !== '') {
                 if ($empDept !== $phongBan) {
                     return false;
                 }
             }
             
-            // Bỏ qua nhân viên được tạo sau tháng đang xem
+            // Bá» qua nhÃ¢n viÃªn Ä‘Æ°á»£c táº¡o sau thÃ¡ng Ä‘ang xem
             $createdAt = !empty($e['ngayTao']) ? substr($e['ngayTao'], 0, 10) : null;
             if ($createdAt && $createdAt > $monthEnd) {
                 return false;
@@ -2136,17 +2136,17 @@ class ChamCongModel
             $maND = (int)($employee['maND'] ?? 0);
             $hoTen = (string)($employee['hoTen'] ?? '');
 
-            // Lấy dữ liệu chấm công trong tháng
+            // Láº¥y dá»¯ liá»‡u cháº¥m cÃ´ng trong thÃ¡ng
             $attendanceData = $this->getMonthlyAttendanceRaw($maND, $monthStart, $monthEnd);
 
 
-            // Lấy thông tin phép của nhân viên
+            // Láº¥y thÃ´ng tin phÃ©p cá»§a nhÃ¢n viÃªn
             $leaveInfo = $this->getEmployeeLeaveInfo($maND);
 
-            // Lấy các yêu cầu xin phép đã approve
+            // Láº¥y cÃ¡c yÃªu cáº§u xin phÃ©p Ä‘Ã£ approve
             $leaveRequests = $this->getApprovedLeaveRequests($maND, $monthStart, $monthEnd);
 
-            // Tính toán chi tiết
+            // TÃ­nh toÃ¡n chi tiáº¿t
             $monthlyCalc = AttendanceCalculator::calculateMonthlyAttendance(
                 $monthKey,
                 $attendanceData,
@@ -2154,10 +2154,10 @@ class ChamCongModel
                 $leaveInfo
             );
 
-            // Lấy số ngày làm việc tiêu chuẩn của tháng
+            // Láº¥y sá»‘ ngÃ y lÃ m viá»‡c tiÃªu chuáº©n cá»§a thÃ¡ng
             $standardWorkDays = HolidayCalculator::getWorkingDaysCountInMonth($monthKey);
 
-            // So sánh với tiêu chuẩn
+            // So sÃ¡nh vá»›i tiÃªu chuáº©n
             $comparison = AttendanceCalculator::compareWithStandard(
                 $monthlyCalc['totals']['total_work_days'] ?? 0,
                 $standardWorkDays
@@ -2241,7 +2241,7 @@ class ChamCongModel
     }
 
     /**
-     * Lấy dữ liệu chấm công thô (raw) trong khoảng ngày
+     * Láº¥y dá»¯ liá»‡u cháº¥m cÃ´ng thÃ´ (raw) trong khoáº£ng ngÃ y
      * @param int $maND
      * @param string $fromDate - YYYY-MM-DD
      * @param string $toDate - YYYY-MM-DD
@@ -2253,13 +2253,13 @@ class ChamCongModel
         $fromDate = trim((string)$fromDate);
         $toDate = trim((string)$toDate);
 
-        // 1. Get raw logs from lichSuChamCong
+        // 1. Get raw logs from lichsuchamcong
         $sql = "
             SELECT
                 DATE(ngayTao) as ngayChamCong,
                 MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) as checkIn,
                 MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) as checkOut
-            FROM lichSuChamCong
+            FROM lichsuchamcong
             WHERE maND = ?
               AND DATE(ngayTao) >= ?
               AND DATE(ngayTao) <= ?
@@ -2289,7 +2289,7 @@ class ChamCongModel
 
         // 2. Fetch approved corrections and OVERRIDE raw logs
         $sqlCorr = "SELECT ngayChamCong, gioVaoDeXuat, gioRaDeXuat 
-                    FROM suaChamCong 
+                    FROM suachamcong 
                     WHERE maND = ? AND trangThai = 'approved' 
                     AND ngayChamCong >= ? AND ngayChamCong <= ?";
         $stmtCorr = $this->conn->prepare($sqlCorr);
@@ -2320,7 +2320,7 @@ class ChamCongModel
     }
 
     /**
-     * Lấy thông tin phép của nhân viên từ database
+     * Láº¥y thÃ´ng tin phÃ©p cá»§a nhÃ¢n viÃªn tá»« database
      * @param int $maND
      * @return array
      */
@@ -2328,8 +2328,8 @@ class ChamCongModel
     {
         $maND = (int)$maND;
 
-        // Kiểm tra xem table `employee_leaves` có tồn tại không
-        // Nếu chưa, sử dụng giá trị mặc định
+        // Kiá»ƒm tra xem table `employee_leaves` cÃ³ tá»“n táº¡i khÃ´ng
+        // Náº¿u chÆ°a, sá»­ dá»¥ng giÃ¡ trá»‹ máº·c Ä‘á»‹nh
         $table_exists = $this->conn->query("
             SHOW TABLES LIKE 'employee_leaves'
         ")->num_rows > 0;
@@ -2366,7 +2366,7 @@ class ChamCongModel
             }
         }
 
-        // Mặc định: công việc bình thường, 0 năm thâm niên, 12 ngày phép, chưa dùng
+        // Máº·c Ä‘á»‹nh: cÃ´ng viá»‡c bÃ¬nh thÆ°á»ng, 0 nÄƒm thÃ¢m niÃªn, 12 ngÃ y phÃ©p, chÆ°a dÃ¹ng
         return [
             'jobType' => 'basic',
             'seniority' => 0,
@@ -2377,7 +2377,7 @@ class ChamCongModel
     }
 
     /**
-     * Lấy các yêu cầu xin phép đã được phê duyệt
+     * Láº¥y cÃ¡c yÃªu cáº§u xin phÃ©p Ä‘Ã£ Ä‘Æ°á»£c phÃª duyá»‡t
      * @param int $maND
      * @param string $fromDate
      * @param string $toDate
@@ -2389,7 +2389,7 @@ class ChamCongModel
         $fromDate = trim((string)$fromDate);
         $toDate = trim((string)$toDate);
 
-        // Sử dụng bảng `donNghiPhep` thay vì `yeuCauNghiPhep` (vì yeuCauNghiPhep không tồn tại hoặc không dùng nữa)
+        // Sá»­ dá»¥ng báº£ng `donnghiphep` thay vÃ¬ `yeuCauNghiPhep` (vÃ¬ yeuCauNghiPhep khÃ´ng tá»“n táº¡i hoáº·c khÃ´ng dÃ¹ng ná»¯a)
         $sql = "
             SELECT
                 id,
@@ -2397,7 +2397,7 @@ class ChamCongModel
                 denNgay,
                 loaiNghiPhep,
                 lyDo
-            FROM donNghiPhep
+            FROM donnghiphep
             WHERE maND = ?
               AND trangThai = 'approved'
               AND (
@@ -2444,7 +2444,7 @@ class ChamCongModel
     }
 
     /**
-     * Kiểm tra xem nhân viên có đang trong thời gian nghỉ phép đã được duyệt vào ngày hôm nay hay không
+     * Kiá»ƒm tra xem nhÃ¢n viÃªn cÃ³ Ä‘ang trong thá»i gian nghá»‰ phÃ©p Ä‘Ã£ Ä‘Æ°á»£c duyá»‡t vÃ o ngÃ y hÃ´m nay hay khÃ´ng
      * @param int $maND
      * @return bool
      */
@@ -2455,7 +2455,7 @@ class ChamCongModel
         
         $sql = "
             SELECT 1
-            FROM donNghiPhep
+            FROM donnghiphep
             WHERE maND = ?
               AND trangThai = 'approved'
               AND tuNgay <= ? 
@@ -2476,7 +2476,7 @@ class ChamCongModel
     }
 
     /**
-     * Lấy thông tin ngày lễ tháng
+     * Láº¥y thÃ´ng tin ngÃ y lá»… thÃ¡ng
      * @param string $monthKey - YYYY-MM
      * @return array
      */
@@ -2504,23 +2504,23 @@ class ChamCongModel
      */
 
     /**
-     * Lấy tất cả settings
+     * Láº¥y táº¥t cáº£ settings
      * @return array
      */
     public function getAllSettings()
     {
-        $sql = "SELECT id, tenCaiDat, giaTri, ngayCapNhat FROM caiDatHeThong ORDER BY tenCaiDat ASC";
+        $sql = "SELECT id, tenCaiDat, giaTri, ngayCapNhat FROM caidathethong ORDER BY tenCaiDat ASC";
         $result = $this->conn->query($sql);
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
 
     /**
-     * Lấy tất cả settings (legacy format key => value)
+     * Láº¥y táº¥t cáº£ settings (legacy format key => value)
      * @return array
      */
     public function getSettings()
     {
-        $sql = "SELECT tenCaiDat, giaTri FROM caiDatHeThong ORDER BY tenCaiDat ASC";
+        $sql = "SELECT tenCaiDat, giaTri FROM caidathethong ORDER BY tenCaiDat ASC";
         $result = $this->conn->query($sql);
         if (!$result) {
             return [];
@@ -2533,7 +2533,7 @@ class ChamCongModel
     }
 
     /**
-     * Lấy giá trị 1 setting
+     * Láº¥y giÃ¡ trá»‹ 1 setting
      * @param string $key
      * @param string $default
      * @return string|null
@@ -2541,7 +2541,7 @@ class ChamCongModel
     public function getSettingValue($key, $default = null)
     {
         $key = trim($key);
-        $sql = "SELECT giaTri FROM caiDatHeThong WHERE tenCaiDat = ? LIMIT 1";
+        $sql = "SELECT giaTri FROM caidathethong WHERE tenCaiDat = ? LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return $default;
@@ -2555,7 +2555,7 @@ class ChamCongModel
     }
 
     /**
-     * Cập nhật setting (insert or update)
+     * Cáº­p nháº­t setting (insert or update)
      * @param string $key
      * @param string $value
      * @return bool
@@ -2570,7 +2570,7 @@ class ChamCongModel
         }
 
         // Check if exists
-        $checkSql = "SELECT id FROM caiDatHeThong WHERE tenCaiDat = ? LIMIT 1";
+        $checkSql = "SELECT id FROM caidathethong WHERE tenCaiDat = ? LIMIT 1";
         $checkStmt = $this->conn->prepare($checkSql);
         if (!$checkStmt) {
             return false;
@@ -2582,7 +2582,7 @@ class ChamCongModel
 
         if ($exists) {
             // UPDATE
-            $sql = "UPDATE caiDatHeThong SET giaTri = ?, ngayCapNhat = CURRENT_TIMESTAMP WHERE tenCaiDat = ?";
+            $sql = "UPDATE caidathethong SET giaTri = ?, ngayCapNhat = CURRENT_TIMESTAMP WHERE tenCaiDat = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
@@ -2590,7 +2590,7 @@ class ChamCongModel
             $stmt->bind_param("ss", $value, $key);
         } else {
             // INSERT
-            $sql = "INSERT INTO caiDatHeThong (tenCaiDat, giaTri) VALUES (?, ?)";
+            $sql = "INSERT INTO caidathethong (tenCaiDat, giaTri) VALUES (?, ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
@@ -2604,7 +2604,7 @@ class ChamCongModel
     }
 
     // ============================
-    // ĐƠN NGHỈ PHÉP (Leave Request)
+    // ÄÆ N NGHá»ˆ PHÃ‰P (Leave Request)
     // ============================
 
     public function insertLeaveRequest($maND, $loaiNghiPhep, $tuNgay, $denNgay, $lyDo, $tepMinhChung = null)
@@ -2626,7 +2626,7 @@ class ChamCongModel
             return false;
         }
 
-        $sql = "INSERT INTO donNghiPhep (maND, loaiNghiPhep, tuNgay, denNgay, lyDo, tepMinhChung) VALUES (?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO donnghiphep (maND, loaiNghiPhep, tuNgay, denNgay, lyDo, tepMinhChung) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
@@ -2642,7 +2642,7 @@ class ChamCongModel
         $maND = (int)$maND;
         $sql = "SELECT lr.*, nd.hoTen,
                        approver.hoTen AS approver_name
-                FROM donNghiPhep lr
+                FROM donnghiphep lr
                 LEFT JOIN nguoidung nd ON nd.maND = lr.maND
                 LEFT JOIN nguoidung approver ON approver.maND = lr.nguoiDuyet
                 WHERE lr.maND = ?
@@ -2662,7 +2662,7 @@ class ChamCongModel
     {
         $sql = "SELECT lr.*, nd.hoTen, nd.phongBan,
                        approver.hoTen AS approver_name
-                FROM donNghiPhep lr
+                FROM donnghiphep lr
                 LEFT JOIN nguoidung nd ON nd.maND = lr.maND
                 LEFT JOIN nguoidung approver ON approver.maND = lr.nguoiDuyet
                 ORDER BY
@@ -2682,7 +2682,7 @@ class ChamCongModel
             return false;
         }
 
-        $sql = "UPDATE donNghiPhep SET trangThai = ?, nguoiDuyet = ?, ngayDuyet = NOW() WHERE id = ? AND trangThai = 'pending'";
+        $sql = "UPDATE donnghiphep SET trangThai = ?, nguoiDuyet = ?, ngayDuyet = NOW() WHERE id = ? AND trangThai = 'pending'";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
@@ -2695,14 +2695,14 @@ class ChamCongModel
     }
 
     /**
-     * Lấy chi tiết đơn nghỉ phép theo ID
+     * Láº¥y chi tiáº¿t Ä‘Æ¡n nghá»‰ phÃ©p theo ID
      * @param int $id
      * @return array|null
      */
     public function getLeaveRequestById($id)
     {
         $sql = "SELECT d.*, n.hoTen as approver_name 
-                FROM donNghiPhep d
+                FROM donnghiphep d
                 LEFT JOIN nguoidung n ON d.nguoiDuyet = n.maND
                 WHERE d.id = ?";
         $stmt = $this->conn->prepare($sql);
@@ -2718,13 +2718,13 @@ class ChamCongModel
     }
 
     /**
-     * Lấy chi tiết yêu cầu chỉnh sửa theo ID
+     * Láº¥y chi tiáº¿t yÃªu cáº§u chá»‰nh sá»­a theo ID
      * @param int $id
      * @return array|null
      */
     public function getCorrectionById($id)
     {
-        $sql = "SELECT * FROM suaChamCong WHERE id = ?";
+        $sql = "SELECT * FROM suachamcong WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return null;
         $stmt->bind_param("i", $id);
@@ -2733,11 +2733,11 @@ class ChamCongModel
     }
 
     // =============================================
-    // EMPLOYEE TIMESHEET APPROVAL (Bảng công tháng cho nhân viên)
+    // EMPLOYEE TIMESHEET APPROVAL (Báº£ng cÃ´ng thÃ¡ng cho nhÃ¢n viÃªn)
     // =============================================
 
     /**
-     * HR gửi bảng công đến từng nhân viên có dữ liệu chấm công trong tháng
+     * HR gá»­i báº£ng cÃ´ng Ä‘áº¿n tá»«ng nhÃ¢n viÃªn cÃ³ dá»¯ liá»‡u cháº¥m cÃ´ng trong thÃ¡ng
      */
     public function submitTimesheetToEmployees($monthKey, $hrSenderId)
     {
@@ -2747,7 +2747,7 @@ class ChamCongModel
             return false;
         }
 
-        // Lấy danh sách nhân viên có dữ liệu chấm công trong tháng
+        // Láº¥y danh sÃ¡ch nhÃ¢n viÃªn cÃ³ dá»¯ liá»‡u cháº¥m cÃ´ng trong thÃ¡ng
         $startDate = $monthKey . '-01';
         $endDate = date('Y-m-t', strtotime($startDate));
 
@@ -2755,7 +2755,7 @@ class ChamCongModel
                 FROM nguoidung n
                 INNER JOIN tongHopNgayCong ads ON ads.maND = n.maND
                     AND ads.ngayLamViec >= ? AND ads.ngayLamViec <= ?
-                WHERE n.trangThai = 1 AND n.chucVu = 'Nhân viên'";
+                WHERE n.trangThai = 1 AND n.chucVu = 'NhÃ¢n viÃªn'";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return false;
         $stmt->bind_param('ss', $startDate, $endDate);
@@ -2769,8 +2769,8 @@ class ChamCongModel
         foreach ($employees as $emp) {
             $maND = (int)$emp['maND'];
 
-            // Kiểm tra nếu đã tồn tại
-            $find = $this->conn->prepare("SELECT id FROM duyetCongNhanVien WHERE thangNam = ? AND maND = ? LIMIT 1");
+            // Kiá»ƒm tra náº¿u Ä‘Ã£ tá»“n táº¡i
+            $find = $this->conn->prepare("SELECT id FROM duyetcongnhanvien WHERE thangNam = ? AND maND = ? LIMIT 1");
             if (!$find) { $okAll = false; continue; }
             $find->bind_param('si', $monthKey, $maND);
             $find->execute();
@@ -2778,16 +2778,16 @@ class ChamCongModel
             $find->close();
 
             if (!empty($existing['id'])) {
-                // Cập nhật lại (gửi lại)
-                $update = $this->conn->prepare("UPDATE duyetCongNhanVien SET maNguoiGuiNS = ?, trangThai = 'submitted', ngayGui = NOW(), ngayDuyet = NULL, ghiChu = NULL WHERE id = ?");
+                // Cáº­p nháº­t láº¡i (gá»­i láº¡i)
+                $update = $this->conn->prepare("UPDATE duyetcongnhanvien SET maNguoiGuiNS = ?, trangThai = 'submitted', ngayGui = NOW(), ngayDuyet = NULL, ghiChu = NULL WHERE id = ?");
                 if (!$update) { $okAll = false; continue; }
                 $id = (int)$existing['id'];
                 $update->bind_param('ii', $hrSenderId, $id);
                 $okAll = $update->execute() && $okAll;
                 $update->close();
             } else {
-                // Tạo mới
-                $insert = $this->conn->prepare("INSERT INTO duyetCongNhanVien (thangNam, maND, maNguoiGuiNS, trangThai, ngayGui) VALUES (?, ?, ?, 'submitted', NOW())");
+                // Táº¡o má»›i
+                $insert = $this->conn->prepare("INSERT INTO duyetcongnhanvien (thangNam, maND, maNguoiGuiNS, trangThai, ngayGui) VALUES (?, ?, ?, 'submitted', NOW())");
                 if (!$insert) { $okAll = false; continue; }
                 $insert->bind_param('sii', $monthKey, $maND, $hrSenderId);
                 $okAll = $insert->execute() && $okAll;
@@ -2799,7 +2799,7 @@ class ChamCongModel
     }
 
     /**
-     * Lấy danh sách bảng công tháng đã gửi cho 1 nhân viên
+     * Láº¥y danh sÃ¡ch báº£ng cÃ´ng thÃ¡ng Ä‘Ã£ gá»­i cho 1 nhÃ¢n viÃªn
      */
     public function getEmployeeTimesheetList($maND)
     {
@@ -2808,7 +2808,7 @@ class ChamCongModel
 
         $sql = "SELECT eta.id, eta.thangNam, eta.trangThai, eta.ngayGui, eta.ngayDuyet, eta.ghiChu,
                        u.hoTen AS hr_name
-                FROM duyetCongNhanVien eta
+                FROM duyetcongnhanvien eta
                 LEFT JOIN nguoidung u ON u.maND = eta.maNguoiGuiNS
                 WHERE eta.maND = ?
                 ORDER BY eta.thangNam DESC, eta.id DESC";
@@ -2820,7 +2820,7 @@ class ChamCongModel
     }
 
     /**
-     * Lấy chi tiết bảng công tháng cho 1 nhân viên (dữ liệu chấm công)
+     * Láº¥y chi tiáº¿t báº£ng cÃ´ng thÃ¡ng cho 1 nhÃ¢n viÃªn (dá»¯ liá»‡u cháº¥m cÃ´ng)
      */
     public function getEmployeeTimesheetDetail($timesheetId, $maND)
     {
@@ -2830,7 +2830,7 @@ class ChamCongModel
 
         $sql = "SELECT eta.id, eta.thangNam, eta.trangThai, eta.ngayGui, eta.ngayDuyet, eta.ghiChu,
                        u.hoTen AS hr_name
-                FROM duyetCongNhanVien eta
+                FROM duyetcongnhanvien eta
                 LEFT JOIN nguoidung u ON u.maND = eta.maNguoiGuiNS
                 WHERE eta.id = ? AND eta.maND = ?
                 LIMIT 1";
@@ -2900,7 +2900,7 @@ class ChamCongModel
     }
 
     /**
-     * Nhân viên duyệt bảng công
+     * NhÃ¢n viÃªn duyá»‡t báº£ng cÃ´ng
      */
     public function approveEmployeeTimesheet($timesheetId, $maND, $ghiChu = '')
     {
@@ -2908,7 +2908,7 @@ class ChamCongModel
         $maND = (int)$maND;
         if ($timesheetId <= 0 || $maND <= 0) return false;
 
-        $sql = "UPDATE duyetCongNhanVien
+        $sql = "UPDATE duyetcongnhanvien
                 SET trangThai = 'approved', ngayDuyet = NOW(), ghiChu = ?
                 WHERE id = ? AND maND = ? AND trangThai = 'submitted'";
         $stmt = $this->conn->prepare($sql);
@@ -2918,13 +2918,13 @@ class ChamCongModel
     }
 
     /**
-     * Đếm bảng công chờ nhân viên duyệt
+     * Äáº¿m báº£ng cÃ´ng chá» nhÃ¢n viÃªn duyá»‡t
      */
     public function countPendingTimesheets($maND)
     {
         $maND = (int)$maND;
         if ($maND <= 0) return 0;
-        $sql = "SELECT COUNT(*) AS cnt FROM duyetCongNhanVien WHERE maND = ? AND trangThai = 'submitted'";
+        $sql = "SELECT COUNT(*) AS cnt FROM duyetcongnhanvien WHERE maND = ? AND trangThai = 'submitted'";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return 0;
         $stmt->bind_param('i', $maND);
@@ -2935,7 +2935,7 @@ class ChamCongModel
     }
 
     /**
-     * Lấy danh sách bảng công chờ nhân viên duyệt (cho notification)
+     * Láº¥y danh sÃ¡ch báº£ng cÃ´ng chá» nhÃ¢n viÃªn duyá»‡t (cho notification)
      */
     public function getPendingTimesheets($maND, $limit = 5)
     {
@@ -2943,7 +2943,7 @@ class ChamCongModel
         if ($maND <= 0) return [];
         $sql = "SELECT eta.id, eta.thangNam, eta.ngayGui,
                        u.hoTen AS hr_name
-                FROM duyetCongNhanVien eta
+                FROM duyetcongnhanvien eta
                 LEFT JOIN nguoidung u ON u.maND = eta.maNguoiGuiNS
                 WHERE eta.maND = ? AND eta.trangThai = 'submitted'
                 ORDER BY eta.ngayGui DESC
@@ -2956,7 +2956,7 @@ class ChamCongModel
     }
 
     /**
-     * HR: Lấy tổng quan trạng thái bảng công nhân viên đã gửi theo tháng
+     * HR: Láº¥y tá»•ng quan tráº¡ng thÃ¡i báº£ng cÃ´ng nhÃ¢n viÃªn Ä‘Ã£ gá»­i theo thÃ¡ng
      */
     public function getTimesheetApprovalSummary($monthKey = null)
     {
@@ -2965,7 +2965,7 @@ class ChamCongModel
                        SUM(CASE WHEN eta.trangThai = 'submitted' THEN 1 ELSE 0 END) AS pending,
                        SUM(CASE WHEN eta.trangThai = 'approved' THEN 1 ELSE 0 END) AS approved,
                        MAX(eta.ngayGui) AS last_submitted
-                FROM duyetCongNhanVien eta";
+                FROM duyetcongnhanvien eta";
         $params = [];
         $types = '';
         if ($monthKey) {
@@ -2986,12 +2986,12 @@ class ChamCongModel
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
     /**
-     * HR: Lấy chi tiết trạng thái phê duyệt của từng nhân viên theo kỳ công
+     * HR: Láº¥y chi tiáº¿t tráº¡ng thÃ¡i phÃª duyá»‡t cá»§a tá»«ng nhÃ¢n viÃªn theo ká»³ cÃ´ng
      */
     public function getTimesheetApprovalDetails($monthKey)
     {
         $sql = "SELECT eta.id, eta.maND, u.hoTen, u.phongBan, eta.trangThai, eta.ngayGui, eta.ngayDuyet
-                FROM duyetCongNhanVien eta
+                FROM duyetcongnhanvien eta
                 JOIN nguoidung u ON u.maND = eta.maND
                 WHERE eta.thangNam = ?
                 ORDER BY u.phongBan, u.hoTen";
@@ -3002,5 +3002,6 @@ class ChamCongModel
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 }
+
 
 
