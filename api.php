@@ -217,13 +217,14 @@ function handleAuth($phuongThuc, $hanhDong) {
             }
 
             $roleMapping = [
-                'Nhân viên' => 'nhanvien',
-                'Bộ phận Nhân sự' => 'hr',
-                'Quản lý / Ban lãnh đạo' => 'manager',
-                'Bộ phận Kỹ thuật' => 'tech'
+                'nhân viên' => 'nhanvien',
+                'bộ phận nhân sự' => 'hr',
+                'quản lý / ban lãnh đạo' => 'manager',
+                'bộ phận kỹ thuật' => 'tech'
             ];
-            $chucVu = $user['chucVu'] ?? 'Nhân viên';
-            $role = $roleMapping[$chucVu] ?? 'nhanvien';
+            $chucVu = trim($user['chucVu'] ?? 'Nhân viên');
+            $normalizedChucVu = mb_strtolower($chucVu, 'UTF-8');
+            $role = $roleMapping[$normalizedChucVu] ?? 'nhanvien';
 
             require_once __DIR__ . '/app/middleware/AuthMiddleware.php';
             if (AuthMiddleware::isMobile() && $role !== 'nhanvien') {

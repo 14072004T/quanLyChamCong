@@ -67,7 +67,7 @@ if ($page === 'get-menu-by-role') {
     echo json_encode([
         'success' => true,
         'menuItems' => $menuItems,
-        'role' => $_SESSION['user']['vaiTro'] ?? 'Không xác định'
+        'role' => $_SESSION['role'] ?? 'nhanvien'
     ]);
     exit;
 }

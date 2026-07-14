@@ -80,14 +80,15 @@ class LoginController {
 
             // Map chucVu sang role
             $roleMapping = [
-                'NhÃ¢n viÃªn' => 'nhanvien',
-                'Bá»™ pháº­n NhÃ¢n sá»±' => 'hr',
-                'Quáº£n lÃ½ / Ban lÃ£nh Ä‘áº¡o' => 'manager',
-                'Bá»™ pháº­n Ká»¹ thuáº­t' => 'tech'
+                'nhân viên' => 'nhanvien',
+                'bộ phận nhân sự' => 'hr',
+                'quản lý / ban lãnh đạo' => 'manager',
+                'bộ phận kỹ thuật' => 'tech'
             ];
             
-            $chucVu = $user['chucVu'] ?? 'NhÃ¢n viÃªn';
-            $role = $roleMapping[$chucVu] ?? 'nhanvien';
+            $chucVu = trim($user['chucVu'] ?? 'Nhân viên');
+            $normalizedChucVu = mb_strtolower($chucVu, 'UTF-8');
+            $role = $roleMapping[$normalizedChucVu] ?? 'nhanvien';
 
             // MB chá»‰ role nhÃ¢n viÃªn thá»±c hiá»‡n cháº¥m cÃ´ng, cÃ¡c role cÃ²n láº¡i chá»‰ Ä‘Æ°á»£c thá»±c hiá»‡n trÃªn IB
             require_once 'app/middleware/AuthMiddleware.php';
