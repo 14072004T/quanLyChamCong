@@ -1,15 +1,17 @@
 <?php
 class KetNoi {
-    // === THAY ĐỔI THÔNG TIN KẾT NỐI CỦA BẠN Ở ĐÂY ===
-    private $host = "127.0.0.1";
-    private $user = "root";
-    private $pass = "";     // Mật khẩu XAMPP của bạn (thường là rỗng)
+    // // === Kết nối local ===
+    // private $host = "127.0.0.1";
+    // private $user = "root";
+    // private $pass = "";     // Mật khẩu XAMPP của bạn (thường là rỗng)
     
-    // Tên CSDL bạn đã import (ví dụ: QLAo)
-
-    private $dbname = "dl_final";
+    // private $dbname = "dl_final";
     // =============================================
-
+    // Kết nối lên hosting
+    private $host = "sql208.infinityfree.com";
+    private $user = "if0_42404629";
+    private $pass = "NHD80NHD80";
+    private $dbname = "if0_42404629_dl_final";
     private $conn; // Biến để giữ kết nối
 
     /**
