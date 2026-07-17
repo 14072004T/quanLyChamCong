@@ -9,7 +9,6 @@ $menus = [
         ['page' => 'bang-cong-thang', 'label' => 'Bảng công tháng', 'icon' => 'fa-file-invoice'],
         ['page' => 'yeu-cau-chinh-sua-cham-cong', 'label' => 'Gửi yêu cầu chỉnh sửa', 'icon' => 'fa-pen-to-square'],
         ['page' => 'create-leave-request', 'label' => 'Đơn nghỉ phép', 'icon' => 'fa-calendar-check'],
-        ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
     ],
     'hr' => [
         ['page' => 'quan-ly-nhanvien', 'label' => 'Quản lý Nhân viên', 'icon' => 'fa-users'],
@@ -21,12 +20,10 @@ $menus = [
     'manager' => [
         ['page' => 'bao-cao-tong-hop', 'label' => 'Báo cáo tổng hợp', 'icon' => 'fa-file-lines'],
         ['page' => 'list-leave-requests', 'label' => 'Quản lý Đơn phép', 'icon' => 'fa-calendar-check'],
-        ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
     ],
     'tech' => [
         ['page' => 'tech-wifi', 'label' => 'Mạng & WiFi', 'icon' => 'fa-wifi'],
         ['page' => 'tech-settings', 'label' => 'Cấu hình Hệ thống', 'icon' => 'fa-server'],
-        ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
     ],
 ];
 
@@ -39,7 +36,7 @@ $faceModel = new FaceModel();
 $chamCongModel = new ChamCongModel();
 $maND = $_SESSION['user']['maND'] ?? null;
 $hasFace = $faceModel->getFaceProfile($maND) !== null;
-$isHR = in_array($role, ['hr', 'manager']);
+$isHR = ($role === 'hr');
 $showFaceRegisterMenu = true;
 
 if ($hasFace) {

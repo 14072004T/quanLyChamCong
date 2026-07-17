@@ -28,32 +28,32 @@ class FaceController extends Controller
         $maND = $_SESSION['user']['maND'] ?? null;
         $existingProfile = $this->faceModel->getFaceProfile($maND);
         
-        // HR/Manager có thể đăng ký cho nhân viên khác
-        $isHR = in_array($_SESSION['role'] ?? '', ['hr', 'manager']);
+        // Chỉ HR mới có thể đăng ký khuôn mặt cho nhân viên
+        $isHR = ($_SESSION['role'] ?? '') === 'hr';
         $employeesList = [];
+        $departmentsList = [];
         
         if (!$isHR) {
-            // Nếu không phải HR và bản thân đã đăng ký rồi, chặn truy cập
-            if ($existingProfile) {
-                header('Location: index.php?page=home');
-                exit();
-            }
+            header('Location: index.php?page=home');
+            exit();
         } else {
-            // Nếu là HR, chỉ lấy danh sách những nhân viên CHƯA đăng ký khuôn mặt
-            $rawList = $this->chamCongModel->getEmployees('', true) ?? [];
-            foreach ($rawList as $emp) {
-                if ($emp['maND'] != $maND) {
-                    $profile = $this->faceModel->getFaceProfile($emp['maND']);
-                    if (!$profile) {
-                        $employeesList[] = $emp;
-                    }
-                }
-            }
+            // Lấy danh sách phòng ban hợp lệ
+            $departmentsList = $this->chamCongModel->getValidDepartments() ?? ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
             
-            // Nếu bản thân HR đã đăng ký và không còn nhân viên nào chưa đăng ký
-            if ($existingProfile && empty($employeesList)) {
-                header('Location: index.php?page=home');
-                exit();
+            // Lấy toàn bộ danh sách nhân viên đang hoạt động
+            $rawList = $this->chamCongModel->getEmployees('', true) ?? [];
+            $registeredList = [];
+            foreach ($rawList as $emp) {
+                $profile = $this->faceModel->getFaceProfile($emp['maND']);
+                if ($profile === null) {
+                    // Nhân viên chưa đăng ký khuôn mặt
+                    $emp['hasFace'] = false;
+                    $employeesList[] = $emp;
+                } else {
+                    // Nhân viên đã đăng ký khuôn mặt
+                    $emp['hasFace'] = true;
+                    $registeredList[] = $emp;
+                }
             }
         }
 
@@ -61,6 +61,8 @@ class FaceController extends Controller
             'existingProfile' => $existingProfile,
             'isHR' => $isHR,
             'employeesList' => $employeesList,
+            'registeredList' => $registeredList ?? [],
+            'departmentsList' => $departmentsList,
             'currentMaND' => $maND
         ];
 
@@ -87,10 +89,15 @@ class FaceController extends Controller
             exit;
         }
 
-        // Kiểm tra xem là tự đăng ký hay HR đăng ký cho nhân viên khác
+        // Chỉ cho phép HR thực hiện đăng ký khuôn mặt
+        $isHR = ($_SESSION['role'] ?? '') === 'hr';
+        if (!$isHR) {
+            echo json_encode(['success' => false, 'message' => 'Bạn không có quyền thực hiện chức năng này.']);
+            exit;
+        }
+
         $maND = $_SESSION['user']['maND'] ?? null;
-        $isHR = in_array($_SESSION['role'] ?? '', ['hr', 'manager']);
-        if ($isHR && isset($_POST['targetMaND']) && !empty($_POST['targetMaND'])) {
+        if (isset($_POST['targetMaND']) && !empty($_POST['targetMaND'])) {
             $maND = intval($_POST['targetMaND']);
         }
 
@@ -137,6 +144,49 @@ class FaceController extends Controller
             echo json_encode(['success' => true, 'message' => 'Đăng ký khuôn mặt thành công!']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Lưu dữ liệu khuôn mặt thất bại.']);
+        }
+        exit;
+    }
+
+    /**
+     * API Xóa khuôn mặt đã đăng ký [POST]
+     */
+    public function deleteApi()
+    {
+        header('Content-Type: application/json');
+        $this->requireLogin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        // Chỉ HR mới được phép xóa
+        $isHR = ($_SESSION['role'] ?? '') === 'hr';
+        if (!$isHR) {
+            echo json_encode(['success' => false, 'message' => 'Bạn không có quyền thực hiện chức năng này.']);
+            exit;
+        }
+
+        $maND = intval($_POST['targetMaND'] ?? 0);
+        if (!$maND) {
+            echo json_encode(['success' => false, 'message' => 'Mã nhân viên không hợp lệ.']);
+            exit;
+        }
+
+        // Kiểm tra nhân viên có dữ liệu khuôn mặt hay không
+        $profile = $this->faceModel->getFaceProfile($maND);
+        if (!$profile) {
+            echo json_encode(['success' => false, 'message' => 'Nhân viên này chưa đăng ký khuôn mặt.']);
+            exit;
+        }
+
+        $ok = $this->faceModel->deleteFaceProfile($maND);
+        if ($ok) {
+            echo json_encode(['success' => true, 'message' => 'Đã xóa dữ liệu khuôn mặt thành công!']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Xóa dữ liệu khuôn mặt thất bại.']);
         }
         exit;
     }

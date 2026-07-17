@@ -30,12 +30,12 @@ class HomeController
         $hasFaceRegistered = $faceModel->getFaceProfile($maND) !== null;
         
         $role = $_SESSION['role'] ?? 'nhanvien';
-        $isHR = in_array($role, ['hr', 'manager']);
-        $showFaceRegisterOption = true;
-        if ($hasFaceRegistered) {
-            if (!$isHR) {
-                $showFaceRegisterOption = false;
-            } else {
+        $isHR = ($role === 'hr');
+        $showFaceRegisterOption = false;
+        
+        if ($isHR) {
+            $showFaceRegisterOption = true;
+            if ($hasFaceRegistered) {
                 $rawList = $chamCongModel->getEmployees('', true) ?? [];
                 $hasUnregisteredEmp = false;
                 foreach ($rawList as $emp) {

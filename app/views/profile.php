@@ -14,13 +14,12 @@ $chamCongModel = new ChamCongModel();
 $maND = $user['maND'] ?? null;
 $hasFace = $faceModel->getFaceProfile($maND) !== null;
 
-$isHR = in_array($role, ['hr', 'manager']);
-$showFaceRegisterOption = true;
+$isHR = ($role === 'hr');
+$showFaceRegisterOption = false;
 
-if ($hasFace) {
-    if (!$isHR) {
-        $showFaceRegisterOption = false;
-    } else {
+if ($isHR) {
+    $showFaceRegisterOption = true;
+    if ($hasFace) {
         $rawList = $chamCongModel->getEmployees('', true) ?? [];
         $hasUnregisteredEmp = false;
         foreach ($rawList as $emp) {

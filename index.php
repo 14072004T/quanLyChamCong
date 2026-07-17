@@ -133,6 +133,7 @@ $allowedPages = [
     // Face Recognition
     'face-register',
     'face-api-register',
+    'face-api-delete',
     'face-api-verify',
     'face-liveness-session',
     // Legacy
@@ -162,6 +163,14 @@ if (isset($_SESSION['user'])) {
         exit;
     }
 }
+
+// Debug log
+$logDir = __DIR__ . '/uploads/liveness_logs/';
+if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+$userRole = isset($_SESSION['role']) ? $_SESSION['role'] : 'guest';
+$hasPerm = AuthMiddleware::hasPermissionForPage($page) ? 'YES' : 'NO';
+$logMsg = sprintf("[%s] Request page=%s, role=%s, hasPerm=%s\n", date('Y-m-d H:i:s'), $page, $userRole, $hasPerm);
+@file_put_contents($logDir . 'routing_debug.log', $logMsg, FILE_APPEND);
 
 // Kiểm tra quyền hạn nếu user đã login
 if (isset($_SESSION['user']) && !in_array($page, ['home', 'logout'])) {
@@ -439,6 +448,11 @@ switch ($page) {
     case 'face-api-register':
         require_once 'app/controllers/FaceController.php';
         (new FaceController())->registerApi();
+        break;
+
+    case 'face-api-delete':
+        require_once 'app/controllers/FaceController.php';
+        (new FaceController())->deleteApi();
         break;
 
     case 'face-api-verify':

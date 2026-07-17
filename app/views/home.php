@@ -127,10 +127,14 @@ $user = $_SESSION['user'] ?? [];
             <div style="color: #d97706; font-size: 20px; margin-top: 2px;"><i class="fa-solid fa-triangle-exclamation"></i></div>
             <div style="flex: 1;">
                 <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #b45309;">Chưa đăng ký khuôn mặt</h4>
-                <p style="margin: 0 0 10px 0; font-size: 12px; color: #d97706; line-height: 1.4;">Bạn chưa có dữ liệu khuôn mặt trên hệ thống. Hãy đăng ký ngay để bắt đầu chấm công.</p>
-                <a href="index.php?page=face-register" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #d97706; color: white; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 700; box-shadow: 0 4px 6px rgba(217, 119, 6, 0.2);">
-                    <i class="fa-solid fa-portrait"></i> Đăng ký ngay
-                </a>
+                <?php if ($role === 'hr'): ?>
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #d97706; line-height: 1.4;">Bạn chưa có dữ liệu khuôn mặt trên hệ thống. Hãy thực hiện đăng ký để bắt đầu chấm công.</p>
+                    <a href="index.php?page=face-register" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #d97706; color: white; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: 700; box-shadow: 0 4px 6px rgba(217, 119, 6, 0.2);">
+                        <i class="fa-solid fa-portrait"></i> Đăng ký ngay
+                    </a>
+                <?php else: ?>
+                    <p style="margin: 0; font-size: 12px; color: #d97706; line-height: 1.4;">Bạn chưa có dữ liệu khuôn mặt trên hệ thống. Vui lòng liên hệ bộ phận Nhân sự (HR) để được hỗ trợ đăng ký khuôn mặt trước khi chấm công.</p>
+                <?php endif; ?>
             </div>
         </div>
         <?php endif; ?>
@@ -150,10 +154,17 @@ $user = $_SESSION['user'] ?? [];
                     <span>Chấm công ngay</span>
                 </a>
             <?php else: ?>
-                <a href="index.php?page=face-register" class="mb-attendance-btn" style="text-decoration: none; background-color: #d97706; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25);">
-                    <i class="fa-solid fa-portrait"></i>
-                    <span>Đăng ký khuôn mặt ngay</span>
-                </a>
+                <?php if ($role === 'hr'): ?>
+                    <a href="index.php?page=face-register" class="mb-attendance-btn" style="text-decoration: none; background-color: #d97706; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25);">
+                        <i class="fa-solid fa-portrait"></i>
+                        <span>Đăng ký khuôn mặt ngay</span>
+                    </a>
+                <?php else: ?>
+                    <button class="mb-attendance-btn" style="background-color: #64748b; box-shadow: none; cursor: not-allowed; text-decoration: none;" disabled>
+                        <i class="fa-solid fa-user-lock"></i>
+                        <span>Chưa đăng ký khuôn mặt (Liên hệ HR)</span>
+                    </button>
+                <?php endif; ?>
             <?php endif; ?>
             <div class="status-text">
                 Trạng thái: 

@@ -20,8 +20,6 @@ class AuthMiddleware
             'store-leave-request',
             'get-leave-detail',
             'get-correction-detail',
-            'face-register',
-            'face-api-register',
             'face-api-verify',
             'face-liveness-session',
             'logout'
@@ -54,6 +52,7 @@ class AuthMiddleware
             'get-correction-detail',
             'face-register',
             'face-api-register',
+            'face-api-delete',
             'face-api-verify',
             'face-liveness-session',
             'logout'
@@ -73,8 +72,6 @@ class AuthMiddleware
             'approve-leave-request',
             'get-leave-detail',
             'get-correction-detail',
-            'face-register',
-            'face-api-register',
             'face-api-verify',
             'face-liveness-session',
             'logout'
@@ -98,8 +95,6 @@ class AuthMiddleware
             'store-leave-request',
             'get-leave-detail',
             'get-correction-detail',
-            'face-register',
-            'face-api-register',
             'face-api-verify',
             'face-liveness-session',
             'logout'

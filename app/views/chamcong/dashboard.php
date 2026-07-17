@@ -51,10 +51,14 @@ if (!isset($view) || is_null($view)) {
                     <i class="fa-solid fa-triangle-exclamation"></i>
                 </div>
                 <h3 style="color: white; margin: 0 0 10px 0; font-size: 18px; font-weight: 750;">Chưa đăng ký khuôn mặt</h3>
-                <p style="color: #a0aec0; font-size: 13px; line-height: 1.5; margin: 0 0 24px 0;">Bạn cần đăng ký khuôn mặt trên hệ thống trước khi thực hiện chấm công.</p>
-                <a href="index.php?page=face-register" class="mb-attendance-btn" style="text-decoration: none; margin: 0 auto; background-color: #d97706; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25);">
-                    <i class="fa-solid fa-portrait"></i> Đăng ký ngay
-                </a>
+                <?php if ($role === 'hr'): ?>
+                    <p style="color: #a0aec0; font-size: 13px; line-height: 1.5; margin: 0 0 24px 0;">Bạn cần thực hiện đăng ký khuôn mặt trên hệ thống trước khi thực hiện chấm công.</p>
+                    <a href="index.php?page=face-register" class="mb-attendance-btn" style="text-decoration: none; margin: 0 auto; background-color: #d97706; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25);">
+                        <i class="fa-solid fa-portrait"></i> Đăng ký ngay
+                    </a>
+                <?php else: ?>
+                    <p style="color: #a0aec0; font-size: 13px; line-height: 1.5; margin: 0 0 24px 0;">Bạn chưa có dữ liệu khuôn mặt trên hệ thống. Vui lòng liên hệ bộ phận Nhân sự (HR) để được đăng ký khuôn mặt trước khi chấm công.</p>
+                <?php endif; ?>
                 <a href="index.php?page=home" style="display: block; margin-top: 16px; color: #a0aec0; font-size: 13px; text-decoration: none; font-weight: 600;">
                     <i class="fa-solid fa-arrow-left"></i> Quay lại Trang chủ
                 </a>

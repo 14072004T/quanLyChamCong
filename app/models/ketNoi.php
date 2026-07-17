@@ -6,7 +6,7 @@ class KetNoi {
     // private $pass = "";     // Mật khẩu XAMPP của bạn (thường là rỗng)
     
     // private $dbname = "dl_final";
-    // =============================================
+    // // =============================================
     // Kết nối lên hosting
     private $host = "sql208.infinityfree.com";
     private $user = "if0_42404629";
