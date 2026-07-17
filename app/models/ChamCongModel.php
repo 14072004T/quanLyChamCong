@@ -619,7 +619,7 @@ class ChamCongModel
         $sql = "SELECT maND, maTK, hoTen, email, soDienThoai, chucVu, phongBan, trangThai, ngayTao
                 FROM nguoidung
                 WHERE trangThai = 1
-                  AND chucVu = 'NhÃ¢n viÃªn'";
+                  AND chucVu = 'Nhân viên'";
         $types = '';
         $params = [];
 
@@ -657,7 +657,7 @@ class ChamCongModel
         $hoTen = trim($payload['hoTen'] ?? '');
         $email = trim($payload['email'] ?? '');
         $soDienThoai = trim($payload['soDienThoai'] ?? '');
-        $chucVu = trim($payload['chucVu'] ?? 'NhÃ¢n viÃªn');
+        $chucVu = trim($payload['chucVu'] ?? 'Nhân viên');
         $phongBan = trim($payload['phongBan'] ?? '');
         $trangThai = (int)($payload['trangThai'] ?? 1);
 
@@ -684,9 +684,9 @@ class ChamCongModel
 
                 // Insert into correct child table
                 $childTable = 'nhanvien';
-                if ($chucVu === 'Bá»™ pháº­n NhÃ¢n sá»±') $childTable = 'nhansu';
-                elseif ($chucVu === 'Bá»™ pháº­n Ká»¹ thuáº­t') $childTable = 'kythuat';
-                elseif ($chucVu === 'Quáº£n lÃ½ / Ban lÃ£nh Ä‘áº¡o') $childTable = 'quanly';
+                if ($chucVu === 'Bộ phận Nhân sự') $childTable = 'nhansu';
+                elseif ($chucVu === 'Bộ phận Kỹ thuật') $childTable = 'kythuat';
+                elseif ($chucVu === 'Quản lý / Ban lãnh đạo') $childTable = 'quanly';
 
                 $this->conn->query("INSERT INTO $childTable (maND) VALUES ($maND)");
 
@@ -726,9 +726,9 @@ class ChamCongModel
 
             // Insert into role-specific child table
             $childTable = 'nhanvien';
-            if ($chucVu === 'Bá»™ pháº­n NhÃ¢n sá»±') $childTable = 'nhansu';
-            elseif ($chucVu === 'Bá»™ pháº­n Ká»¹ thuáº­t') $childTable = 'kythuat';
-            elseif ($chucVu === 'Quáº£n lÃ½ / Ban lÃ£nh Ä‘áº¡o') $childTable = 'quanly';
+            if ($chucVu === 'Bộ phận Nhân sự') $childTable = 'nhansu';
+            elseif ($chucVu === 'Bộ phận Kỹ thuật') $childTable = 'kythuat';
+            elseif ($chucVu === 'Quản lý / Ban lãnh đạo') $childTable = 'quanly';
 
             $insertChild = $this->conn->prepare("INSERT INTO $childTable (maND) VALUES (?)");
             if ($insertChild) {
@@ -751,7 +751,7 @@ class ChamCongModel
                         JOIN nguoidung nd ON nd.maND = aes.maND
                         WHERE aes.maCa = s.id 
                           AND (aes.hieuLucDen IS NULL OR aes.hieuLucDen >= CURDATE())
-                          AND nd.chucVu = 'NhÃ¢n viÃªn' AND nd.trangThai = 1) AS assigned_count
+                          AND nd.chucVu = 'Nhân viên' AND nd.trangThai = 1) AS assigned_count
                 FROM calamviec s
                 ORDER BY s.ngayTao DESC";
         $result = $this->conn->query($sql);
@@ -830,7 +830,7 @@ class ChamCongModel
                     GROUP BY maND, DATE(ngayTao)
                 ) d ON d.maND = u.maND
                 WHERE u.trangThai = 1
-                  AND u.chucVu = 'NhÃ¢n viÃªn'
+                  AND u.chucVu = 'Nhân viên'
                   AND (? = '' OR u.phongBan = ?)
                 GROUP BY u.maND, u.hoTen, u.phongBan
                 ORDER BY u.hoTen";
@@ -947,7 +947,7 @@ class ChamCongModel
 
     public function getAttendanceReport($fromDate, $toDate, $phongBan = '')
     {
-        $validDepts = ['Sáº£n xuáº¥t', 'Kho', 'QC', 'Báº£o trÃ¬'];
+        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
         $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
         
         $sql = "SELECT u.maND, u.hoTen, u.phongBan,
@@ -959,7 +959,7 @@ class ChamCongModel
                     AND DATE(l.ngayTao) >= ?
                     AND DATE(l.ngayTao) <= ?
                 WHERE u.trangThai = 1
-                  AND u.chucVu = 'NhÃ¢n viÃªn'
+                  AND u.chucVu = 'Nhân viên'
                   AND u.phongBan IN ($placeholders)";
 
         $params = [$fromDate, $toDate];
@@ -995,7 +995,7 @@ class ChamCongModel
 
     public function getValidDepartments()
     {
-        return ['Sáº£n xuáº¥t', 'Kho', 'QC', 'Báº£o trÃ¬'];
+        return ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
     }
 
     public function submitMonthlyApproval($monthKey, $hrSenderId, $phongBan = '')
@@ -2091,7 +2091,7 @@ class ChamCongModel
 
         $monthKey = trim((string)$monthKey);
         $phongBan = trim((string)$phongBan);
-        $validDepts = ['Sáº£n xuáº¥t', 'Kho', 'QC', 'Báº£o trÃ¬'];
+        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
         
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
             return [];
@@ -2105,7 +2105,7 @@ class ChamCongModel
         
         // Chá»‰ láº¥y nhÃ¢n viÃªn (filter theo phÃ²ng ban náº¿u cÃ³)
         $employees = array_filter($allEmployees, function($e) use ($monthEnd, $phongBan, $validDepts) {
-            if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhÃ¢n viÃªn') {
+            if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') {
                 return false;
             }
             
@@ -2755,7 +2755,7 @@ class ChamCongModel
                 FROM nguoidung n
                 INNER JOIN tongHopNgayCong ads ON ads.maND = n.maND
                     AND ads.ngayLamViec >= ? AND ads.ngayLamViec <= ?
-                WHERE n.trangThai = 1 AND n.chucVu = 'NhÃ¢n viÃªn'";
+                WHERE n.trangThai = 1 AND n.chucVu = 'Nhân viên'";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return false;
         $stmt->bind_param('ss', $startDate, $endDate);
