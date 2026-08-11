@@ -424,18 +424,49 @@ document.addEventListener('DOMContentLoaded', function() {
         statusEl.className = 'liveness-status liveness-status-info';
         statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải mô hình nhận diện khuôn mặt...';
 
-        // Load face-api models
+        // Load face-api models (Tính toán đường dẫn tuyệt đối local public/models/)
         if (!faceApiLoaded) {
-            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+            // Khởi tạo TensorFlow.js backend (WebGL / CPU) trước khi load models
+            if (window.faceapi && faceapi.tf) {
+                try {
+                    await faceapi.tf.setBackend('webgl');
+                } catch (e1) {
+                    try {
+                        await faceapi.tf.setBackend('cpu');
+                    } catch (e2) {}
+                }
+                if (typeof faceapi.tf.ready === 'function') {
+                    await faceapi.tf.ready();
+                }
+            }
+
+            const getLocalPath = () => {
+                const p = window.location.pathname;
+                const dir = p.substring(0, p.lastIndexOf('/') + 1);
+                return dir + 'public/models';
+            };
+            const localUrl = getLocalPath();
+            const cdnUrl = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+            
             try {
-                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                await faceapi.nets.tinyFaceDetector.loadFromUri(localUrl);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(localUrl);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(localUrl);
                 faceApiLoaded = true;
-            } catch (err) {
-                console.error('Lỗi tải mô hình face-api:', err);
-                updateLivenessStatus('Lỗi khởi tạo thư viện nhận dạng khuôn mặt. Vui lòng kiểm tra internet.', 'error');
-                return;
+                console.log('✓ Loaded face-api models from:', localUrl);
+            } catch (errLocal) {
+                console.warn('Local model load failed (' + localUrl + '), trying CDN...', errLocal);
+                try {
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(cdnUrl);
+                    await faceapi.nets.faceLandmark68Net.loadFromUri(cdnUrl);
+                    await faceapi.nets.faceRecognitionNet.loadFromUri(cdnUrl);
+                    faceApiLoaded = true;
+                    console.log('✓ Loaded face-api models from CDN');
+                } catch (errCdn) {
+                    console.error('Lỗi tải mô hình face-api:', errLocal, errCdn);
+                    updateLivenessStatus('Lỗi khởi tạo thư viện nhận dạng khuôn mặt: ' + (errLocal.message || errLocal), 'error');
+                    return;
+                }
             }
         }
 
@@ -546,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const detection = await faceapi.detectSingleFace(
                 video,
-                new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
+                new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.4 })
             ).withFaceLandmarks().withFaceDescriptor();
 
             const ctx = canvas.getContext('2d');
@@ -600,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         isDetecting = false;
         if (!isVerificationComplete) {
-            detectionInterval = setTimeout(detectFaceLiveness, 30); // Reduced from 120ms to capture blinks reliably
+            detectionInterval = setTimeout(detectFaceLiveness, 16);
         }
     }
 

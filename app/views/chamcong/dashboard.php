@@ -359,21 +359,52 @@ if (!isset($view) || is_null($view)) {
                     }
                     
                     if (!faceApiLoaded) {
-                        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
-                        try {
-                            await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-                            await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-                            await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-                            faceApiLoaded = true;
-                        } catch (err) {
-                            console.error('Lỗi tải mô hình face-api:', err);
-                            if (status) {
-                                status.style.background = '#fef2f2';
-                                status.style.color = '#dc2626';
-                                status.style.borderColor = '#fecaca';
-                                status.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Lỗi khởi tạo thư viện nhận dạng khuôn mặt. Vui lòng kiểm tra internet.';
+                        // Khởi tạo TensorFlow.js backend (WebGL / CPU) trước khi load models
+                        if (window.faceapi && faceapi.tf) {
+                            try {
+                                await faceapi.tf.setBackend('webgl');
+                            } catch (e1) {
+                                try {
+                                    await faceapi.tf.setBackend('cpu');
+                                } catch (e2) {}
                             }
-                            return;
+                            if (typeof faceapi.tf.ready === 'function') {
+                                await faceapi.tf.ready();
+                            }
+                        }
+
+                        const getLocalPath = () => {
+                            const p = window.location.pathname;
+                            const dir = p.substring(0, p.lastIndexOf('/') + 1);
+                            return dir + 'public/models';
+                        };
+                        const localUrl = getLocalPath();
+                        const cdnUrl = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+                        
+                        try {
+                            await faceapi.nets.tinyFaceDetector.loadFromUri(localUrl);
+                            await faceapi.nets.faceLandmark68Net.loadFromUri(localUrl);
+                            await faceapi.nets.faceRecognitionNet.loadFromUri(localUrl);
+                            faceApiLoaded = true;
+                            console.log('✓ Loaded face-api models from:', localUrl);
+                        } catch (errLocal) {
+                            console.warn('Local model load failed (' + localUrl + '), trying CDN...', errLocal);
+                            try {
+                                await faceapi.nets.tinyFaceDetector.loadFromUri(cdnUrl);
+                                await faceapi.nets.faceLandmark68Net.loadFromUri(cdnUrl);
+                                await faceapi.nets.faceRecognitionNet.loadFromUri(cdnUrl);
+                                faceApiLoaded = true;
+                                console.log('✓ Loaded face-api models from CDN');
+                            } catch (errCdn) {
+                                console.error('Lỗi tải mô hình face-api:', errLocal, errCdn);
+                                if (status) {
+                                    status.style.background = '#fef2f2';
+                                    status.style.color = '#dc2626';
+                                    status.style.borderColor = '#fecaca';
+                                    status.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Lỗi khởi tạo thư viện nhận dạng khuôn mặt: ' + (errLocal.message || errLocal);
+                                }
+                                return;
+                            }
                         }
                     }
                     
@@ -537,7 +568,7 @@ if (!isset($view) || is_null($view)) {
 
                         const detection = await faceapi.detectSingleFace(
                             video, 
-                            new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
+                            new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.4 })
                         ).withFaceLandmarks().withFaceDescriptor();
 
                         const ctx = canvas.getContext('2d');
@@ -585,7 +616,7 @@ if (!isset($view) || is_null($view)) {
 
                     isDetectingModal = false;
                     if (!isVerificationComplete) {
-                        detectionInterval = setTimeout(detectFaceModal, 120);
+                        detectionInterval = setTimeout(detectFaceModal, 16);
                     }
                 }
 

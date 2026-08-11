@@ -37,13 +37,18 @@ class FaceController extends Controller
             header('Location: index.php?page=home');
             exit();
         } else {
-            // Lấy danh sách phòng ban hợp lệ
-            $departmentsList = $this->chamCongModel->getValidDepartments() ?? ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+            // Chỉ đăng ký cho 4 phòng ban cố định: Sản xuất, Kho, QC, Bảo trì
+            $departmentsList = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
             
-            // Lấy toàn bộ danh sách nhân viên đang hoạt động
+            // Lấy danh sách nhân viên đang hoạt động thuộc 4 phòng ban này
             $rawList = $this->chamCongModel->getEmployees('', true) ?? [];
             $registeredList = [];
             foreach ($rawList as $emp) {
+                $empDept = trim($emp['phongBan'] ?? '');
+                if (!in_array($empDept, $departmentsList)) {
+                    continue; // Chỉ nhận 4 phòng ban: Sản xuất, Kho, QC, Bảo trì
+                }
+                
                 $profile = $this->faceModel->getFaceProfile($emp['maND']);
                 if ($profile === null) {
                     // Nhân viên chưa đăng ký khuôn mặt
@@ -113,7 +118,19 @@ class FaceController extends Controller
             exit;
         }
 
-        // 2. Kiểm tra tính độc nhất: Khuôn mặt này có trùng với tài khoản khác không?
+        // 2. Kiểm tra nhân viên này đã đăng ký khuôn mặt chưa (1 user chỉ được 1 face)
+        $existingProfile = $this->faceModel->getFaceProfile($maND);
+        if ($existingProfile) {
+            $userName = $this->faceModel->getUserName($maND);
+            echo json_encode([
+                'success'    => false,
+                'alreadyExists' => true,
+                'message'    => '⚠️ Nhân viên "' . $userName . '" đã có dữ liệu khuôn mặt được đăng ký trước đó. Mỗi nhân viên chỉ được đăng ký 1 khuôn mặt duy nhất. Nếu cần cập nhật, HR phải xóa khuôn mặt cũ trước rồi đăng ký lại.'
+            ]);
+            exit;
+        }
+
+        // 3. Kiểm tra tính độc nhất: Khuôn mặt này có trùng với tài khoản khác không?
         $allProfiles = $this->faceModel->getAllFaceProfiles($maND);
         $threshold = 0.6; // Ngưỡng xác định cùng một người
         
@@ -132,16 +149,17 @@ class FaceController extends Controller
                     $otherName = $this->faceModel->getUserName($prof['maND']);
                     echo json_encode([
                         'success' => false,
-                        'message' => 'Đăng ký thất bại! Khuôn mặt này trùng khớp với khuôn mặt đã đăng ký của nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Mỗi người chỉ được sở hữu duy nhất 1 tài khoản chấm công khuôn mặt!'
+                        'message' => '🚫 Đăng ký thất bại! Khuôn mặt này trùng khớp với khuôn mặt đã đăng ký của nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Mỗi người chỉ được sở hữu duy nhất 1 tài khoản chấm công khuôn mặt!'
                     ]);
                     exit;
                 }
             }
         }
 
+        // 4. Lưu khuôn mặt mới (INSERT)
         $ok = $this->faceModel->saveFaceProfile($maND, $embedding);
         if ($ok) {
-            echo json_encode(['success' => true, 'message' => 'Đăng ký khuôn mặt thành công!']);
+            echo json_encode(['success' => true, 'message' => '✅ Đăng ký khuôn mặt thành công!']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Lưu dữ liệu khuôn mặt thất bại.']);
         }
@@ -460,4 +478,3 @@ class FaceController extends Controller
         }
     }
 }
-?>

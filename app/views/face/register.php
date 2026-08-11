@@ -598,6 +598,10 @@ if (!isset($_SESSION['user'])) {
                 gap: 8px;
             }
             
+            .setup-form-group.hidden-group {
+                display: none !important;
+            }
+            
             .setup-form-group label {
                 font-size: 13.5px;
                 font-weight: 700;
@@ -941,7 +945,7 @@ if (!isset($_SESSION['user'])) {
                                     </select>
                                 </div>
                                 
-                                <div class="setup-form-group" id="employee-select-group" style="display: none; margin-top: 8px;">
+                                <div class="setup-form-group hidden-group" id="employee-select-group" style="margin-top: 8px;">
                                     <label for="employee-select">
                                         <i class="fas fa-user-tag text-cyan"></i> Chọn Nhân viên:
                                     </label>
@@ -1103,13 +1107,207 @@ if (!isset($_SESSION['user'])) {
         </div>
     </div>
 </div>
+<!-- Wizard JS: chạy ngay lập tức, không chờ face-api.js (3MB) -->
+<script>
+// Data từ PHP - khai báo global để camera code dùng được
+const unregisteredEmployees = <?= json_encode($employeesList ?? [], JSON_UNESCAPED_UNICODE) ?>;
+const registeredEmployees   = <?= json_encode($registeredList ?? [], JSON_UNESCAPED_UNICODE) ?>;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // ==========================================
+    // WIZARD: Chọn Phòng ban & Nhân viên (Bước 1 & 2)
+    // ==========================================
+    const deptSelect       = document.getElementById('dept-select');
+    const employeeSelect   = document.getElementById('employee-select');
+    const empSelectGroup   = document.getElementById('employee-select-group');
+    const deptStats        = document.getElementById('dept-stats');
+    const deptStatsText    = document.getElementById('dept-stats-text');
+    const registeredSection  = document.getElementById('registered-section');
+    const registeredCount    = document.getElementById('registered-count');
+    const registeredListBody = document.getElementById('registered-list-body');
+    const wizStep1 = document.getElementById('wiz-step-1');
+    const wizStep2 = document.getElementById('wiz-step-2');
+
+    if (!deptSelect) return; // Không có wizard (trang không có select phòng ban)
+
+    deptSelect.addEventListener('change', function() {
+        const selectedDept = this.value;
+
+        // Reset
+        employeeSelect.innerHTML = '<option value="">-- Chọn nhân viên --</option>';
+        if (empSelectGroup) empSelectGroup.classList.add('hidden-group');
+        if (deptStats) deptStats.style.display = 'none';
+        if (registeredListBody) registeredListBody.innerHTML = '';
+        if (registeredSection) registeredSection.style.display = 'none';
+
+        const btnStartCamera = document.getElementById('btn-start-camera');
+        const selectedEmpInfo = document.getElementById('selected-emp-info');
+        const profilePlaceholder = document.getElementById('profile-placeholder');
+        if (btnStartCamera) btnStartCamera.disabled = true;
+        if (selectedEmpInfo) selectedEmpInfo.style.display = 'none';
+        if (profilePlaceholder) profilePlaceholder.style.display = 'flex';
+
+        if (!selectedDept) {
+            if (wizStep1) { wizStep1.classList.add('active'); wizStep1.classList.remove('completed'); }
+            if (wizStep2) wizStep2.classList.remove('active', 'completed');
+            return;
+        }
+
+        const targetLower = selectedDept.trim().toLowerCase();
+
+        // Lọc nhân viên CHƯA đăng ký
+        const filteredUnregistered = unregisteredEmployees.filter(function(emp) {
+            return (emp.phongBan || '').trim().toLowerCase() === targetLower;
+        });
+
+        filteredUnregistered.forEach(function(emp) {
+            const opt = document.createElement('option');
+            opt.value = emp.maND;
+            opt.textContent = emp.hoTen + ' (ID: ' + emp.maND + ')';
+            employeeSelect.appendChild(opt);
+        });
+
+        // Hiển thị thống kê & dropdown nhân viên
+        if (deptStatsText) deptStatsText.textContent = 'Có ' + filteredUnregistered.length + ' nhân viên chưa đăng ký.';
+        if (deptStats) deptStats.style.display = 'flex';
+        if (empSelectGroup) empSelectGroup.classList.remove('hidden-group');
+
+        // Cập nhật wizard step
+        if (wizStep1) { wizStep1.classList.add('completed'); wizStep1.classList.remove('active'); }
+        if (wizStep2) wizStep2.classList.add('active');
+
+        // Nhân viên ĐÃ đăng ký
+        const filteredRegistered = registeredEmployees.filter(function(emp) {
+            return (emp.phongBan || '').trim().toLowerCase() === targetLower;
+        });
+
+        if (filteredRegistered.length > 0 && registeredCount && registeredListBody && registeredSection) {
+            registeredCount.textContent = filteredRegistered.length;
+            filteredRegistered.forEach(function(emp) {
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td><strong>#' + emp.maND + '</strong></td>' +
+                    '<td><strong>' + emp.hoTen + '</strong></td>' +
+                    '<td>' + (emp.chucVu || 'Nhân viên') + '</td>' +
+                    '<td><span class="badge-registered"><i class="fas fa-check-circle"></i> Đã đăng ký</span></td>' +
+                    '<td style="text-align:right;"><button class="btn-delete-face" data-id="' + emp.maND + '" data-name="' + emp.hoTen + '"><i class="fas fa-trash-alt"></i> Xóa Face ID</button></td>';
+                registeredListBody.appendChild(tr);
+            });
+
+            // Gắn sự kiện xóa
+            registeredListBody.querySelectorAll('.btn-delete-face').forEach(function(btn) {
+                btn.onclick = async function() {
+                    const maND = this.getAttribute('data-id');
+                    const name = this.getAttribute('data-name');
+                    if (!confirm('Bạn có chắc chắn muốn XÓA dữ liệu khuôn mặt của nhân viên "' + name + '" (ID: ' + maND + ')?\n\nHành động này không thể hoàn tác!')) return;
+                    const formData = new FormData();
+                    formData.append('targetMaND', maND);
+                    try {
+                        const res = await fetch('index.php?page=face-api-delete', { method: 'POST', body: formData });
+                        const result = await res.json();
+                        if (result.success) { alert(result.message); window.location.reload(); }
+                        else { alert('Lỗi: ' + result.message); }
+                    } catch(e) { alert('Lỗi kết nối: ' + e.message); }
+                };
+            });
+
+            registeredSection.style.display = 'block';
+        }
+    });
+
+    // Thay đổi nhân viên (Bước 2 - Hiển thị ngay hồ sơ & kích hoạt nút Bắt đầu quét)
+    if (employeeSelect) {
+        employeeSelect.addEventListener('change', function() {
+            const selectedMaND = this.value;
+            const profilePlaceholder = document.getElementById('profile-placeholder');
+            const selectedEmpInfo = document.getElementById('selected-emp-info');
+            const btnStartCamera = document.getElementById('btn-start-camera');
+            const empInfoId = document.getElementById('emp-info-id');
+            const empInfoName = document.getElementById('emp-info-name');
+            const empInfoDept = document.getElementById('emp-info-dept');
+            const empInfoRole = document.getElementById('emp-info-role');
+
+            if (selectedMaND) {
+                const emp = unregisteredEmployees.find(function(e) { return e.maND.toString() === selectedMaND.toString(); });
+                if (emp) {
+                    if (empInfoId) empInfoId.textContent = emp.maND;
+                    if (empInfoName) empInfoName.textContent = emp.hoTen;
+                    if (empInfoDept) empInfoDept.textContent = emp.phongBan || 'Không xác định';
+                    if (empInfoRole) empInfoRole.textContent = emp.chucVu || 'Nhân viên';
+                    
+                    if (profilePlaceholder) profilePlaceholder.style.display = 'none';
+                    if (selectedEmpInfo) selectedEmpInfo.style.display = 'flex';
+                    if (btnStartCamera) btnStartCamera.disabled = false;
+                }
+            } else {
+                if (selectedEmpInfo) selectedEmpInfo.style.display = 'none';
+                if (profilePlaceholder) profilePlaceholder.style.display = 'flex';
+                if (btnStartCamera) btnStartCamera.disabled = true;
+            }
+        });
+    }
+
+    // Nhấn Nút Kích hoạt camera (Chuyển sang Bước 3 ngay lập tức)
+    const btnStartCamera = document.getElementById('btn-start-camera');
+    if (btnStartCamera) {
+        btnStartCamera.addEventListener('click', function() {
+            const selectedMaND = employeeSelect.value;
+            if (!selectedMaND) return;
+
+            const emp = unregisteredEmployees.find(function(e) { return e.maND.toString() === selectedMaND.toString(); });
+            const scanningEmpName = document.getElementById('scanning-emp-name');
+            const scanningEmpId   = document.getElementById('scanning-emp-id');
+            const setupPanel      = document.getElementById('setup-panel');
+            const cameraPanel     = document.getElementById('camera-panel');
+            const wizStep2        = document.getElementById('wiz-step-2');
+            const wizStep3        = document.getElementById('wiz-step-3');
+
+            if (emp) {
+                if (scanningEmpName) scanningEmpName.textContent = emp.hoTen;
+                if (scanningEmpId)   scanningEmpId.textContent   = emp.maND;
+            }
+
+            // Hiển thị khung camera ngay lập tức
+            if (setupPanel)  setupPanel.style.display  = 'none';
+            if (cameraPanel) cameraPanel.style.display = 'block';
+
+            if (wizStep2) { wizStep2.classList.add('completed'); wizStep2.classList.remove('active'); }
+            if (wizStep3) { wizStep3.classList.add('active'); }
+
+            // Gọi khởi chạy nạp mô hình & bật camera
+            if (typeof startRegistrationCamera === 'function') {
+                startRegistrationCamera();
+            }
+        });
+    }
+
+    // Nhấn Nút Quay lại
+    const btnBackSetup = document.getElementById('btn-back-setup');
+    if (btnBackSetup) {
+        btnBackSetup.addEventListener('click', function() {
+            const cameraPanel = document.getElementById('camera-panel');
+            const setupPanel  = document.getElementById('setup-panel');
+            const wizStep2    = document.getElementById('wiz-step-2');
+            const wizStep3    = document.getElementById('wiz-step-3');
+
+            if (typeof stopRegistrationCamera === 'function') {
+                stopRegistrationCamera();
+            }
+
+            if (cameraPanel) cameraPanel.style.display = 'none';
+            if (setupPanel)  setupPanel.style.display  = 'block';
+
+            if (wizStep3) wizStep3.classList.remove('active', 'completed');
+            if (wizStep2) { wizStep2.classList.add('active'); wizStep2.classList.remove('completed'); }
+        });
+    }
+});
+</script>
 
 <script src="public/js/face-api.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
-    // Nhúng danh sách nhân viên từ PHP
-    const unregisteredEmployees = <?= json_encode($employeesList ?? []) ?>;
-    const registeredEmployees = <?= json_encode($registeredList ?? []) ?>;
+    // Biến giao diện (phần camera & wizard còn lại)
 
     // Các phần tử giao diện
     const deptSelect = document.getElementById('dept-select');
@@ -1154,7 +1352,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Các biến trạng thái của Stepper quét 3 bước
     let currentStep = 'front'; // 'front', 'turn1', 'turn2', 'completed'
     let successFrames = 0;
-    const requiredSuccessFrames = 8;
+    const requiredSuccessFrames = 2;
     let savedFrontDescriptor = null;
     let firstTurnSide = null;
 
@@ -1163,208 +1361,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     const stepTurn2 = document.getElementById('step-turn2');
     const faceStepper = document.getElementById('face-stepper');
 
-    // ==========================================
-    // 1. LOGIC WIZARD BƯỚC 1 & 2
-    // ==========================================
-    
-    // Thay đổi phòng ban (Bước 1)
-    if (deptSelect) {
-        deptSelect.onchange = function() {
-            const selectedDept = this.value;
-            const empSelectGroup = document.getElementById('employee-select-group');
-            const profilePlaceholder = document.getElementById('profile-placeholder');
-            
-            // Xóa danh sách nhân viên hiện tại
-            employeeSelect.innerHTML = '<option value="">-- Chọn nhân viên --</option>';
-            selectedEmpInfo.style.display = 'none';
-            if (profilePlaceholder) profilePlaceholder.style.display = 'flex';
-            btnStartCamera.disabled = true;
+    // (Wizard Bước 1 - chọn phòng ban - đã xử lý ở script riêng phía trên face-api.js)
 
-            // Xóa danh sách nhân viên đã đăng ký trong bảng cũ
-            registeredListBody.innerHTML = '';
-            registeredSection.style.display = 'none';
+    // (Wizard Bước 2 - chọn nhân viên - đã xử lý ở script riêng phía trên face-api.js)
 
-            if (selectedDept) {
-                const targetDeptLower = selectedDept.trim().toLowerCase();
 
-                // 1. Lọc nhân viên CHƯA đăng ký thuộc phòng ban
-                const filteredUnregistered = unregisteredEmployees.filter(emp => {
-                    const empDept = (emp.phongBan || '').trim().toLowerCase();
-                    return empDept === targetDeptLower;
-                });
-                
-                filteredUnregistered.forEach(emp => {
-                    const opt = document.createElement('option');
-                    opt.value = emp.maND;
-                    opt.textContent = `${emp.hoTen} (ID: ${emp.maND})`;
-                    employeeSelect.appendChild(opt);
-                });
+    window.startRegistrationCamera = async function() {
+        currentStep = 'front';
+        successFrames = 0;
+        savedFrontDescriptor = null;
+        firstTurnSide = null;
+        lastDescriptor = null;
+        if (btnRegister) btnRegister.disabled = true;
+        window.regWarmupFrames = 0;
+        updateStepperUI();
 
-                // Cập nhật thống kê phòng ban
-                deptStatsText.textContent = `Có ${filteredUnregistered.length} nhân viên chưa đăng ký.`;
-                deptStats.style.display = 'flex';
+        await initFaceApiAndCamera();
+    };
 
-                // Hiển thị phần chọn nhân viên (Bước 2)
-                if (empSelectGroup) empSelectGroup.style.display = 'block';
-                wizStep1.classList.add('completed');
-                wizStep1.classList.remove('active');
-                wizStep2.classList.add('active');
-
-                // 2. Lọc nhân viên ĐÃ đăng ký thuộc phòng ban
-                const filteredRegistered = registeredEmployees.filter(emp => {
-                    const empDept = (emp.phongBan || '').trim().toLowerCase();
-                    return empDept === targetDeptLower;
-                });
-
-                if (filteredRegistered.length > 0) {
-                    registeredCount.textContent = filteredRegistered.length;
-                    
-                    filteredRegistered.forEach(emp => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td><strong>#${emp.maND}</strong></td>
-                            <td><strong>${emp.hoTen}</strong></td>
-                            <td>${emp.chucVu || 'Nhân viên'}</td>
-                            <td><span class="badge-registered"><i class="fas fa-check-circle"></i> Đã đăng ký</span></td>
-                            <td style="text-align: right;">
-                                <button class="btn-delete-face" data-id="${emp.maND}" data-name="${emp.hoTen}">
-                                    <i class="fas fa-trash-alt"></i> Xóa Face ID
-                                </button>
-                            </td>
-                        `;
-                        registeredListBody.appendChild(tr);
-                    });
-
-                    // Gắn sự kiện cho các nút Xóa Face ID vừa tạo
-                    const deleteButtons = registeredListBody.querySelectorAll('.btn-delete-face');
-                    deleteButtons.forEach(btn => {
-                        btn.onclick = async function() {
-                            const maND = this.getAttribute('data-id');
-                            const name = this.getAttribute('data-name');
-                            
-                            const confirmDelete = confirm(`Bạn có chắc chắn muốn XÓA dữ liệu khuôn mặt của nhân viên "${name}" (ID: ${maND})?\n\nHành động này không thể hoàn tác!`);
-                            if (!confirmDelete) return;
-
-                            const formData = new FormData();
-                            formData.append('targetMaND', maND);
-
-                            try {
-                                const response = await fetch('index.php?page=face-api-delete', {
-                                    method: 'POST',
-                                    body: formData
-                                });
-                                
-                                const responseText = await response.text();
-                                let result;
-                                try {
-                                    result = JSON.parse(responseText);
-                                } catch(e) {
-                                    throw new Error("Không thể xử lý phản hồi từ máy chủ. Chi tiết: " + responseText.substring(0, 200));
-                                }
-
-                                if (result.success) {
-                                    alert(result.message);
-                                    window.location.reload();
-                                } else {
-                                    alert('Lỗi: ' + result.message);
-                                }
-                            } catch (err) {
-                                console.error('Lỗi khi gửi yêu cầu xóa:', err);
-                                alert(err.message);
-                            }
-                        };
-                    });
-
-                    registeredSection.style.display = 'block';
-                }
-            } else {
-                deptStats.style.display = 'none';
-                if (empSelectGroup) empSelectGroup.style.display = 'none';
-                wizStep1.classList.add('active');
-                wizStep1.classList.remove('completed');
-                wizStep2.classList.remove('active', 'completed');
-            }
-        };
-    }
-
-    // Thay đổi nhân viên (Bước 2)
-    if (employeeSelect) {
-        employeeSelect.onchange = function() {
-            const selectedMaND = this.value;
-            const profilePlaceholder = document.getElementById('profile-placeholder');
-            const empInfoRole = document.getElementById('emp-info-role');
-
-            if (selectedMaND) {
-                const emp = unregisteredEmployees.find(e => e.maND.toString() === selectedMaND.toString());
-                if (emp) {
-                    empInfoId.textContent = emp.maND;
-                    empInfoName.textContent = emp.hoTen;
-                    empInfoDept.textContent = emp.phongBan || 'Không xác định';
-                    if (empInfoRole) empInfoRole.textContent = emp.chucVu || 'Nhân viên';
-                    
-                    if (profilePlaceholder) profilePlaceholder.style.display = 'none';
-                    selectedEmpInfo.style.display = 'flex';
-                    btnStartCamera.disabled = false;
-                }
-            } else {
-                selectedEmpInfo.style.display = 'none';
-                if (profilePlaceholder) profilePlaceholder.style.display = 'flex';
-                btnStartCamera.disabled = true;
-            }
-        };
-    }
-
-    // Nhấn Bắt đầu quét khuôn mặt (Chuyển sang Bước 3)
-    if (btnStartCamera) {
-        btnStartCamera.onclick = async function() {
-            const selectedMaND = employeeSelect.value;
-            const emp = unregisteredEmployees.find(e => e.maND.toString() === selectedMaND.toString());
-            if (!emp) return;
-
-            // Thiết lập thông tin nhân viên đang quét
-            scanningEmpName.textContent = emp.hoTen;
-            scanningEmpId.textContent = emp.maND;
-
-            // Chuyển đổi giao diện panel
-            setupPanel.style.display = 'none';
-            cameraPanel.style.display = 'block';
-
-            // Cập nhật chỉ báo bước quét
-            wizStep2.classList.add('completed');
-            wizStep2.classList.remove('active');
-            wizStep3.classList.add('active');
-
-            // Reset camera state & Stepper
-            currentStep = 'front';
-            successFrames = 0;
-            savedFrontDescriptor = null;
-            firstTurnSide = null;
-            lastDescriptor = null;
-            btnRegister.disabled = true;
-            window.regWarmupFrames = 0;
-            updateStepperUI();
-
-            // Khởi chạy nạp mô hình và bật camera
-            await initFaceApiAndCamera();
-        };
-    }
-
-    // Nhấn Quay lại chọn nhân viên
-    if (btnBackSetup) {
-        btnBackSetup.onclick = function() {
-            // Tắt camera
-            stopCamera();
-
-            // Quay về giao diện thiết lập
-            cameraPanel.style.display = 'none';
-            setupPanel.style.display = 'block';
-
-            // Cập nhật chỉ báo bước quét
-            wizStep3.classList.remove('active', 'completed');
-            wizStep2.classList.add('active');
-            wizStep2.classList.remove('completed');
-        };
-    }
+    window.stopRegistrationCamera = function() {
+        stopCamera();
+    };
 
     function stopCamera() {
         if (detectionTimeout) clearTimeout(detectionTimeout);
@@ -1452,14 +1469,37 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+        // Khởi tạo TensorFlow.js backend (WebGL / CPU) trước khi load models
+        if (window.faceapi && faceapi.tf) {
+            try {
+                await faceapi.tf.setBackend('webgl');
+            } catch (e1) {
+                try {
+                    await faceapi.tf.setBackend('cpu');
+                } catch (e2) {}
+            }
+            if (typeof faceapi.tf.ready === 'function') {
+                await faceapi.tf.ready();
+            }
+        }
+
+        const LOCAL_MODEL_URL = 'public/models/';
+        const CDN_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
         statusDisplay.className = 'status-banner status-loading';
         statusDisplay.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải mô hình nhận diện khuôn mặt...';
 
         try {
-            await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-            await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+            try {
+                await faceapi.nets.tinyFaceDetector.loadFromUri(LOCAL_MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(LOCAL_MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(LOCAL_MODEL_URL);
+                console.log('✓ Loaded face-api models from local public/models/');
+            } catch (e) {
+                console.warn('Local model load failed, falling back to CDN:', e);
+                await faceapi.nets.tinyFaceDetector.loadFromUri(CDN_MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(CDN_MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(CDN_MODEL_URL);
+            }
             
             isModelLoaded = true;
             statusDisplay.className = 'status-banner status-noface';
@@ -1505,7 +1545,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Phân tích khuôn mặt tuần tự
     async function detectFace() {
         if (!isModelLoaded || !cameraStream || video.paused || video.ended || video.readyState < 2) {
-            detectionTimeout = setTimeout(detectFace, 300);
+            detectionTimeout = setTimeout(detectFace, 16);
             return;
         }
 
@@ -1513,12 +1553,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         isDetecting = true;
 
         if (!window.regWarmupFrames) window.regWarmupFrames = 0;
-        if (window.regWarmupFrames < 5) {
+        if (window.regWarmupFrames < 1) {
             window.regWarmupFrames++;
-            statusDisplay.className = 'status-banner status-loading';
-            statusDisplay.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tối ưu hóa độ sáng camera...';
             isDetecting = false;
-            detectionTimeout = setTimeout(detectFace, 150);
+            detectionTimeout = setTimeout(detectFace, 16);
             return;
         }
 
@@ -1528,7 +1566,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             const detection = await faceapi.detectSingleFace(
                 video, 
-                new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })
+                new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.4 })
             ).withFaceLandmarks().withFaceDescriptor();
 
             const ctx = canvas.getContext('2d');
@@ -1553,13 +1591,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const ratio = dLeft / dRight;
                     
                     if (currentStep === 'front') {
-                        if (ratio >= 0.72 && ratio <= 1.38) {
+                        if (ratio >= 0.70 && ratio <= 1.40) {
                             successFrames++;
                             statusDisplay.className = 'status-banner status-ready';
-                            statusDisplay.innerHTML = `<i class="fas fa-smile"></i> Đang quét chính diện... (${Math.round((successFrames/requiredSuccessFrames)*100)}%)`;
+                            statusDisplay.innerHTML = `<i class="fas fa-smile"></i> Bước 1/3: Đang quét chính diện... (${Math.round((successFrames/requiredSuccessFrames)*100)}%)`;
                             
                             if (successFrames >= requiredSuccessFrames) {
                                 savedFrontDescriptor = detection.descriptor;
+                                lastDescriptor = detection.descriptor;
                                 currentStep = 'turn1';
                                 successFrames = 0;
                                 updateStepperUI();
@@ -1575,7 +1614,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             firstTurnSide = ratio < 0.68 ? 'left' : 'right';
                             const sideText = firstTurnSide === 'left' ? 'trái' : 'phải';
                             statusDisplay.className = 'status-banner status-ready';
-                            statusDisplay.innerHTML = `<i class="fas fa-sync"></i> Đang quét góc thứ nhất (${sideText})... (${Math.round((successFrames/requiredSuccessFrames)*100)}%)`;
+                            statusDisplay.innerHTML = `<i class="fas fa-sync"></i> Bước 2/3: Đang quét góc thứ nhất (${sideText})... (${Math.round((successFrames/requiredSuccessFrames)*100)}%)`;
                             
                             if (successFrames >= requiredSuccessFrames) {
                                 currentStep = 'turn2';
@@ -1594,7 +1633,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         if (isOppositeOk) {
                             successFrames++;
                             statusDisplay.className = 'status-banner status-ready';
-                            statusDisplay.innerHTML = `<i class="fas fa-sync"></i> Đang quét góc thứ hai (${oppositeText.toLowerCase()})... (${Math.round((successFrames/requiredSuccessFrames)*100)}%)`;
+                            statusDisplay.innerHTML = `<i class="fas fa-sync"></i> Bước 3/3: Đang quét góc thứ hai (${oppositeText.toLowerCase()})... (${Math.round((successFrames/requiredSuccessFrames)*100)}%)`;
                             
                             if (successFrames >= requiredSuccessFrames) {
                                 currentStep = 'completed';
@@ -1610,19 +1649,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                         statusDisplay.className = 'status-banner status-ready';
                         statusDisplay.innerHTML = '<i class="fas fa-check-circle"></i> Đã quét đủ 3 góc khuôn mặt! Nhấn nút bên dưới để lưu.';
                         btnRegister.disabled = false;
-                        
-                        const landmarks = detection.landmarks;
-                        const leftJaw = landmarks.positions[0];
-                        const rightJaw = landmarks.positions[16];
-                        const noseTip = landmarks.positions[30];
-                        const dLeft = noseTip.x - leftJaw.x;
-                        const dRight = rightJaw.x - noseTip.x;
-                        if (dRight !== 0) {
-                            const ratio = dLeft / dRight;
-                            if (ratio >= 0.72 && ratio <= 1.38) {
-                                lastDescriptor = detection.descriptor;
-                            }
-                        }
                         if (!lastDescriptor) {
                             lastDescriptor = detection.descriptor;
                         }
@@ -1631,7 +1657,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             } else {
                 statusDisplay.className = 'status-banner status-noface';
                 if (currentStep === 'front') {
-                    statusDisplay.innerHTML = '<i class="fas fa-user-slash"></i> Vui lòng căn chỉnh khuôn mặt thẳng góc với camera.';
+                    statusDisplay.innerHTML = '<i class="fas fa-user-slash"></i> Bước 1/3: Vui lòng căn chỉnh khuôn mặt thẳng góc với camera.';
                 } else if (currentStep === 'turn1') {
                     statusDisplay.innerHTML = '<i class="fas fa-chevron-left"></i> Bước 2/3: Quay đầu nhẹ sang bên TRÁI hoặc bên PHẢI.';
                 } else if (currentStep === 'turn2') {
@@ -1647,7 +1673,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         isDetecting = false;
-        detectionTimeout = setTimeout(detectFace, 150);
+        detectionTimeout = setTimeout(detectFace, 16);
     }
 
     // Hủy timeout khi trang unload
@@ -1693,22 +1719,41 @@ document.addEventListener('DOMContentLoaded', async function() {
                 method: 'POST',
                 body: formData
             });
-            const result = await response.json();
+
+            let result;
+            const responseText = await response.text();
+            try {
+                result = JSON.parse(responseText);
+            } catch(e) {
+                throw new Error('Phản hồi từ máy chủ không hợp lệ: ' + responseText.substring(0, 200));
+            }
 
             if (result.success) {
+                // ✅ THÀNH CÔNG
+                stopCamera();
                 statusDisplay.className = 'status-banner status-ready';
                 statusDisplay.innerHTML = '<i class="fas fa-check-circle"></i> ' + result.message;
-                
-                stopCamera();
-                
-                setTimeout(() => {
-                    alert('Đăng ký khuôn mặt thành công!');
-                    window.location.reload();
-                }, 500);
+
+                // Hiện modal thông báo thành công đẹp
+                showRegisterResult(true,
+                    '✅ Đăng ký khuôn mặt thành công!',
+                    'Dữ liệu khuôn mặt của nhân viên đã được lưu vào hệ thống. Trang sẽ tự làm mới sau 2 giây.',
+                    function() { window.location.reload(); }
+                );
+                setTimeout(() => { window.location.reload(); }, 2500);
+
             } else {
+                // ❌ THẤT BẠI — trùng face hoặc lỗi khác
                 statusDisplay.className = 'status-banner status-error';
                 statusDisplay.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + (result.message || 'Lỗi lưu dữ liệu');
                 btnRegister.disabled = false;
+
+                // Hiện modal cảnh báo lỗi
+                showRegisterResult(false,
+                    '❌ Đăng ký thất bại',
+                    result.message || 'Có lỗi xảy ra khi lưu dữ liệu khuôn mặt.',
+                    null
+                );
             }
         } catch (err) {
             console.error('Lỗi khi gửi API:', err);
@@ -1717,6 +1762,56 @@ document.addEventListener('DOMContentLoaded', async function() {
             btnRegister.disabled = false;
         }
     };
+
+    // Helper: hiện modal thông báo kết quả đăng ký
+    function showRegisterResult(isSuccess, title, message, onClose) {
+        // Xóa modal cũ nếu có
+        const old = document.getElementById('reg-result-modal');
+        if (old) old.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'reg-result-modal';
+        overlay.style.cssText = [
+            'position:fixed', 'inset:0', 'background:rgba(0,0,0,0.6)',
+            'display:flex', 'align-items:center', 'justify-content:center',
+            'z-index:9999', 'animation:fadeIn .2s ease'
+        ].join(';');
+
+        const color  = isSuccess ? '#10b981' : '#ef4444';
+        const bgCard = isSuccess ? '#f0fdf4'  : '#fef2f2';
+        const icon   = isSuccess ? 'fa-check-circle' : 'fa-times-circle';
+
+        overlay.innerHTML = `
+            <div style="background:#fff;border-radius:16px;padding:36px 40px;max-width:480px;width:90%;
+                        box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center;border-top:5px solid ${color};">
+                <div style="font-size:56px;color:${color};margin-bottom:16px;">
+                    <i class="fas ${icon}"></i>
+                </div>
+                <h3 style="margin:0 0 12px;font-size:20px;color:#1e293b;">${title}</h3>
+                <p style="margin:0 0 24px;color:#64748b;font-size:14.5px;line-height:1.6;">${message}</p>
+                <button id="reg-result-close" style="
+                    background:${color};color:#fff;border:none;padding:12px 32px;
+                    border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;
+                    transition:opacity .2s;"
+                    onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                    ${isSuccess ? 'OK — Tải lại trang' : 'Đã hiểu, thử lại'}
+                </button>
+            </div>`;
+
+        document.body.appendChild(overlay);
+
+        document.getElementById('reg-result-close').onclick = function() {
+            overlay.remove();
+            if (typeof onClose === 'function') onClose();
+        };
+
+        // Bấm ra ngoài để đóng (chỉ khi không thành công)
+        if (!isSuccess) {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) overlay.remove();
+            });
+        }
+    }
 });
 </script>
 

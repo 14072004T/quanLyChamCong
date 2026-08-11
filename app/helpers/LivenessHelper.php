@@ -132,94 +132,38 @@ class LivenessHelper
             ];
         }
 
-        // 5. Check session start was recent
+        // 5. Check session start was recent (< 5 minutes)
         $sessionStart = $payload['sessionStart'] ?? 0;
         $sessionDuration = $completedAt - $sessionStart;
-        if ($sessionDuration > 300000 || $sessionDuration < 300) {
+        if ($sessionDuration > 300000) {
             self::logLivenessAttempt('SESSION_DURATION_INVALID', $payload);
             return [
                 'valid' => false,
-                'message' => 'Thời gian phiên xác thực không hợp lệ.',
+                'message' => 'Thời gian phiên xác thực không hợp lệ. Vui lòng thử lại.',
                 'score' => 0
             ];
         }
 
-        // 6. ★ HARD REJECT: Eye Blink Detection
-        // This is the single most important anti-photo check.
-        // A static photo can NEVER produce a blink.
-        $blinkDetected = $payload['blinkDetected'] ?? false;
-        $blinkCount = intval($payload['blinkCount'] ?? 0);
-        if (!$blinkDetected || $blinkCount < 1) {
-            self::logLivenessAttempt('NO_BLINK_DETECTED', $payload);
-            return [
-                'valid' => false,
-                'message' => 'Không phát hiện nháy mắt! Hệ thống yêu cầu chớp mắt tự nhiên để xác minh người thật.',
-                'score' => 0
-            ];
-        }
-
-        // 7. Check frame count (must be >= 25 for v3.0)
+        // 6. Frame count check (cần ít nhất 3 frames)
         $frameCount = intval($payload['frameCount'] ?? 0);
-        if ($frameCount < 25) {
+        if ($frameCount < 3) {
             self::logLivenessAttempt('INSUFFICIENT_FRAMES', $payload);
             return [
                 'valid' => false,
-                'message' => 'Không đủ dữ liệu để xác minh (cần tối thiểu 25 frames).',
+                'message' => 'Không đủ dữ liệu quét (cần tối thiểu 3 frames).',
                 'score' => 0
             ];
         }
 
-        // 8. Check combined score (min threshold 52%)
+        // 7. Combined score check (ngưỡng 35%)
         $combinedScore = floatval($payload['combinedScore'] ?? 0);
-        if ($combinedScore < 0.52) {
+        if ($combinedScore < 0.35) {
             self::logLivenessAttempt('LOW_SCORE', $payload);
             return [
                 'valid' => false,
-                'message' => sprintf('Chỉ số xác thực người thật quá thấp (%.0f%%). Từ chối chấm công!', $combinedScore * 100),
+                'message' => sprintf('Chỉ số xác thực người thật không đạt (%.0f%%). Từ chối chấm công!', $combinedScore * 100),
                 'score' => $combinedScore
             ];
-        }
-
-        // 9. Check individual passive metrics
-        $passiveScores = $payload['passiveScores'] ?? [];
-
-        // Critical motion metrics (relaxed to allow static laptop cameras)
-        $criticalMetrics = ['motion', 'geometricJitter'];
-        foreach ($criticalMetrics as $metric) {
-            $score = floatval($passiveScores[$metric] ?? 0);
-            if ($score < 0.01) {
-                self::logLivenessAttempt('METRIC_FAIL_' . strtoupper($metric), $payload);
-                return [
-                    'valid' => false,
-                    'message' => 'Phát hiện bất thường chuyển động (' . $metric . '). Từ chối chấm công!',
-                    'score' => $combinedScore
-                ];
-            }
-        }
-
-        // ★ Eye blink score must be substantial
-        $eyeBlinkScore = floatval($passiveScores['eyeBlink'] ?? 0);
-        if ($eyeBlinkScore < 0.3) {
-            self::logLivenessAttempt('METRIC_FAIL_EYEBLINK', $payload);
-            return [
-                'valid' => false,
-                'message' => 'Chỉ số xác minh nháy mắt quá thấp. Vui lòng chớp mắt tự nhiên hơn.',
-                'score' => $combinedScore
-            ];
-        }
-
-        // Texture metrics
-        $textureMetrics = ['lbpTexture', 'laplacianMoire', 'colorReflection'];
-        foreach ($textureMetrics as $metric) {
-            $score = floatval($passiveScores[$metric] ?? 0);
-            if ($score < 0.1) {
-                self::logLivenessAttempt('METRIC_FAIL_' . strtoupper($metric), $payload);
-                return [
-                    'valid' => false,
-                    'message' => 'Phát hiện bất thường kết cấu quang học (' . $metric . '). Từ chối chấm công!',
-                    'score' => $combinedScore
-                ];
-            }
         }
 
         // 10. One-time use token invalidation

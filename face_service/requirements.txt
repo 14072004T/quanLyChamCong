@@ -1,0 +1,18 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+python-dotenv==1.0.1
+Pillow==10.3.0
+numpy==1.26.4
+opencv-python-headless==4.9.0.80
+
+# Face detection - MTCNN
+facenet-pytorch==2.6.0
+
+# Deep learning - ArcFace & Anti-Spoofing
+torch==2.3.0
+torchvision==0.18.0
+onnxruntime==1.18.0
+
+# InsightFace cho ArcFace (tùy chọn, nhẹ hơn)
+insightface==0.7.3

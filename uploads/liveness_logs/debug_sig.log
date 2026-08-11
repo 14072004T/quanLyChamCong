@@ -1,0 +1,28 @@
+[2026-08-11 10:16:26] payloadStr type=string len=379
+payloadStr={"sessionStart":1786418165728,"completedAt":1786418186068,"passiveScores":{"motion":1,"geometricJitter":1,"lbpTexture":0.7374131632968783,"laplacianMoire":1,"colorReflection":0.3461890674076765,"eyeBlink":0.8891115841960536,"headPose":1,"sizeVariation":1},"combinedScore":0.8675087772843129,"frameCount":25,"blinkCount":1,"blinkDetected":true,"earVariance":0.0005673347525881611}
+secret=10ae2c7e8cf148c541b20383635f1ed0582d612bdaca9367645d63d342712aeb
+expectedSig=ba8ba3926cc201588d54ccde9bee5cc50218e9a5e15e648e3ad68bc8564c59fc
+actualSig=ba8ba3926cc201588d54ccde9bee5cc50218e9a5e15e648e3ad68bc8564c59fc
+match=YES
+
+[2026-08-11 11:01:45] payloadStr type=string len=380
+payloadStr={"sessionStart":1786420841033,"completedAt":1786420905228,"passiveScores":{"motion":1,"geometricJitter":1,"lbpTexture":0.9800863731652498,"laplacianMoire":1,"colorReflection":0.3694210149815238,"eyeBlink":0.7366916720582292,"headPose":1,"sizeVariation":1},"combinedScore":0.8681279754874971,"frameCount":25,"blinkCount":2,"blinkDetected":true,"earVariance":0.00011007501617468773}
+secret=7287b00b7a5e885b3cf1da33731203111d390d0448a6ab61609ec9ecc45cd79f
+expectedSig=34c2e749fd0e3b6856db2b9dbdb8aa1b667f351cf63cbe8d59e524b5102d1dcf
+actualSig=34c2e749fd0e3b6856db2b9dbdb8aa1b667f351cf63cbe8d59e524b5102d1dcf
+match=YES
+
+[2026-08-11 11:07:40] payloadStr type=string len=395
+payloadStr={"sessionStart":1786421209762,"completedAt":1786421260856,"passiveScores":{"motion":1,"geometricJitter":1,"lbpTexture":0.997188194305636,"laplacianMoire":0.9898167923932856,"colorReflection":0.4059897794102797,"eyeBlink":0.7495502717777577,"headPose":1,"sizeVariation":1},"combinedScore":0.8765464542706413,"frameCount":25,"blinkCount":1,"blinkDetected":true,"earVariance":0.0001486508153332733}
+secret=781ba0bb812222b51033063581b04a9e554abda52fdcf5943e683a7236ef4bd3
+expectedSig=8db415c343a214fbfa48d4ad5b9d62c5680e7daa8124e67d8af0bcf188c66b62
+actualSig=8db415c343a214fbfa48d4ad5b9d62c5680e7daa8124e67d8af0bcf188c66b62
+match=YES
+
+[2026-08-11 18:12:21] payloadStr type=string len=398
+payloadStr={"sessionStart":1786446694115,"completedAt":1786446741470,"passiveScores":{"motion":1,"geometricJitter":1,"lbpTexture":0.9775086265290156,"laplacianMoire":0.9964554896193192,"colorReflection":0.42365320343983603,"eyeBlink":0.7265345138188849,"headPose":1,"sizeVariation":1},"combinedScore":0.8702707917399891,"frameCount":25,"blinkCount":1,"blinkDetected":true,"earVariance":0.00007960354145665482}
+secret=4b4957b91bc9693b82ce1f0f96003b8d7c11e187feacedb816217f7f69aee873
+expectedSig=c80ce3550ea527b39e483a850540d6728db2c33c1e5fe80ced6fa4dd5153ccb3
+actualSig=c80ce3550ea527b39e483a850540d6728db2c33c1e5fe80ced6fa4dd5153ccb3
+match=YES
+
