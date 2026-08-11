@@ -327,12 +327,14 @@ class FaceController extends Controller
         }
 
         $distance = $this->euclideanDistance($storedEmbedding, $incomingEmbedding);
-        $threshold = 0.6; // Ngưỡng nhận diện (càng thấp càng nghiêm ngặt)
+        $cosine = $this->cosineSimilarity($storedEmbedding, $incomingEmbedding);
+        $threshold = 0.8; // Cho phép khớp ổn hơn giữa descriptor đã đăng ký và frame chấm công
+        $cosineThreshold = 0.75;
 
-        if ($distance > $threshold) {
+        if ($distance > $threshold && $cosine < $cosineThreshold) {
             echo json_encode([
-                'success' => false, 
-                'message' => sprintf('Nhận diện thất bại! Không trùng khớp khuôn mặt đã đăng ký (Khoảng cách: %.4f, yêu cầu <= %.1f).', $distance, $threshold)
+                'success' => false,
+                'message' => sprintf('Nhận diện thất bại! Không trùng khớp khuôn mặt đã đăng ký (Khoảng cách: %.4f, cosine: %.4f).', $distance, $cosine)
             ]);
             exit;
         }

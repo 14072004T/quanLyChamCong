@@ -24,35 +24,35 @@ class LivenessDetector {
     // ═══════════════════════════════════════════════════════════════
     //  THRESHOLDS (tightened significantly from v2.0)
     // ═══════════════════════════════════════════════════════════════
-    
-    static FRAME_COUNT_REQUIRED = 6;          // Cực kỳ nhanh: chỉ cần 6 frames (~0.15 - 0.25 giây)
-    static WARMUP_FRAMES = 1;                 // Warmup 1 frame
+
+    static FRAME_COUNT_REQUIRED = 6; // Cực kỳ nhanh: chỉ cần 6 frames (~0.15 - 0.25 giây)
+    static WARMUP_FRAMES = 1; // Warmup 1 frame
 
     // Motion & Geometry
-    static GEOMETRIC_VARIANCE_MIN = 0.00002;  
-    static LANDMARK_VARIANCE_MIN = 0.02;      
-    static LANDMARK_VARIANCE_MAX = 20.0;      
-    
+    static GEOMETRIC_VARIANCE_MIN = 0.00002;
+    static LANDMARK_VARIANCE_MIN = 0.02;
+    static LANDMARK_VARIANCE_MAX = 20.0;
+
     // Texture Analysis
-    static LBP_GRID_REPETITION_MAX = 0.28;    
-    static LAPLACIAN_MOIRE_MAX = 80.0;        
-    static COLOR_UNIFORMITY_MAX = 0.88;       
+    static LBP_GRID_REPETITION_MAX = 0.28;
+    static LAPLACIAN_MOIRE_MAX = 80.0;
+    static COLOR_UNIFORMITY_MAX = 0.88;
 
     // ★ Eye Blink Detection (EAR)
-    static MIN_BLINKS_REQUIRED = 1;           
-    static EAR_BLINK_THRESHOLD_RATIO = 0.75;  // Nới lỏng: blink nhẹ cũng nhận
-    static EAR_OPEN_THRESHOLD_RATIO  = 0.88;  // Mắt mở lại không cần tới 93%
-    static EAR_VARIANCE_MIN = 0.00002;        // Nới lỏng ngưỡng variance        
+    static MIN_BLINKS_REQUIRED = 1;
+    static EAR_BLINK_THRESHOLD_RATIO = 0.75; // Nới lỏng: blink nhẹ cũng nhận
+    static EAR_OPEN_THRESHOLD_RATIO = 0.88; // Mắt mở lại không cần tới 93%
+    static EAR_VARIANCE_MIN = 0.00002; // Nới lỏng ngưỡng variance        
 
     // Head Pose
-    static HEAD_YAW_VARIANCE_MIN = 0.00004;   
-    static HEAD_PITCH_VARIANCE_MIN = 0.00003; 
+    static HEAD_YAW_VARIANCE_MIN = 0.00004;
+    static HEAD_PITCH_VARIANCE_MIN = 0.00003;
 
     // Face Size (breathing/sway)
-    static FACE_SIZE_VARIANCE_MIN = 0.2;      
+    static FACE_SIZE_VARIANCE_MIN = 0.2;
 
     // Combined Score
-    static COMBINED_SCORE_MIN = 0.55;         // Thực tế: mặt thật có score ~0.87, ngưỡng 0.55 là an toàn
+    static COMBINED_SCORE_MIN = 0.55; // Thực tế: mặt thật có score ~0.87, ngưỡng 0.55 là an toàn
 
     constructor(videoEl, canvasEl, callbacks = {}) {
         this.video = videoEl;
@@ -68,17 +68,17 @@ class LivenessDetector {
         this.warmupFrames = 0;
         this.sessionStartTime = null;
         this.sessionSecret = null;
-        
+
         // Data history for passive analysis
         this.landmarkHistory = [];
         this.boxHistory = [];
         this.textureSamples = [];
 
         // ★ Eye Blink Detection (EAR) state
-        this.earHistory = [];           // EAR value per frame
-        this.blinkCount = 0;            // Detected blinks
-        this.blinkState = 'open';       // 'open' | 'closing' | 'closed'
-        this.blinkDetected = false;     // At least one blink found
+        this.earHistory = []; // EAR value per frame
+        this.blinkCount = 0; // Detected blinks
+        this.blinkState = 'open'; // 'open' | 'closing' | 'closed'
+        this.blinkDetected = false; // At least one blink found
 
         // Head Pose state
         this.yawHistory = [];
@@ -88,6 +88,7 @@ class LivenessDetector {
         this.faceSizeHistory = [];
 
         this.latestDescriptor = null;
+        this.descriptorSamples = [];
     }
 
     /**
@@ -99,7 +100,7 @@ class LivenessDetector {
         this.frameCount = 0;
         this.warmupFrames = 0;
         this.sessionStartTime = Date.now();
-        
+
         // Reset all history
         this.landmarkHistory = [];
         this.boxHistory = [];
@@ -112,6 +113,7 @@ class LivenessDetector {
         this.yawHistory = [];
         this.pitchHistory = [];
         this.faceSizeHistory = [];
+        this.descriptorSamples = [];
 
         // Fetch session secret from server
         try {
@@ -154,14 +156,20 @@ class LivenessDetector {
         }
 
         this.frameCount++;
-        
+
         // ─── Gather landmark data ───
         const positions = detection.landmarks.positions.map(p => ({ x: p.x, y: p.y }));
         this.landmarkHistory.push(positions);
-        
+
         const box = detection.detection.box;
         this.boxHistory.push(box);
-        this.latestDescriptor = detection.descriptor;
+        if (Array.isArray(detection.descriptor) && detection.descriptor.length > 0) {
+            this.descriptorSamples.push(Array.from(detection.descriptor));
+            if (this.descriptorSamples.length > 8) {
+                this.descriptorSamples.shift();
+            }
+            this.latestDescriptor = this._buildAverageDescriptor(this.descriptorSamples) || Array.from(detection.descriptor);
+        }
 
         // ─── ★ Eye Blink Detection (EAR) ───
         this._processEyeBlink(positions);
@@ -182,7 +190,7 @@ class LivenessDetector {
 
         // ─── Progressive feedback ───
         const progress = Math.min(95, Math.round((this.frameCount / LivenessDetector.FRAME_COUNT_REQUIRED) * 95));
-        
+
         // Show blink status in progress
         const blinkIcon = this.blinkDetected ? '✅' : '👁️';
         const blinkLabel = this.blinkDetected ? 'Nháy mắt: OK' : 'Chờ nháy mắt...';
@@ -214,6 +222,7 @@ class LivenessDetector {
         this.yawHistory = [];
         this.pitchHistory = [];
         this.faceSizeHistory = [];
+        this.descriptorSamples = [];
     }
 
     getState() {
@@ -245,7 +254,7 @@ class LivenessDetector {
         // Calculate EAR for both eyes
         const leftEAR = this._calculateEAR(positions, [36, 37, 38, 39, 40, 41]);
         const rightEAR = this._calculateEAR(positions, [42, 43, 44, 45, 46, 47]);
-        
+
         // Average EAR of both eyes
         const avgEAR = (leftEAR + rightEAR) / 2.0;
 
@@ -282,7 +291,7 @@ class LivenessDetector {
 
         // Baseline mắt mở: ưu tiên giá trị đo được, fallback 0.26
         const baseline = (this.maxEAR >= 0.18 && this.maxEAR <= 0.45) ? this.maxEAR : 0.26;
-        
+
         // ★ Ngưỡng siết chặt: mắt phải nhắm tối thiểu 18% (EAR_BLINK_THRESHOLD_RATIO=0.82)
         const blinkThreshold = baseline * LivenessDetector.EAR_BLINK_THRESHOLD_RATIO;
         // Mắt phải mở lại đến 93% mới tính là blink hoàn chỉnh
@@ -300,7 +309,7 @@ class LivenessDetector {
                     console.log(`[Liveness] Eye closed (avgEAR: ${avgEAR.toFixed(3)} < threshold: ${blinkThreshold.toFixed(3)})`);
                 }
                 break;
-            
+
             case 'closed':
                 if (avgEAR > openThreshold) {
                     // Kiểm tra blink có đủ sâu không (tránh jitter nhẹ)
@@ -341,9 +350,9 @@ class LivenessDetector {
         // Vertical distances
         const v1 = this._dist(p2, p6); // ||p2 - p6||
         const v2 = this._dist(p3, p5); // ||p3 - p5||
-        
+
         // Horizontal distance
-        const h = this._dist(p1, p4);  // ||p1 - p4||
+        const h = this._dist(p1, p4); // ||p1 - p4||
 
         if (h === 0) return 0.3; // Fallback
 
@@ -408,7 +417,8 @@ class LivenessDetector {
         this._updateStatus('Xác thực khuôn mặt thật thành công!', 'success');
 
         if (this.cb.onComplete) {
-            this.cb.onComplete(token, this.latestDescriptor);
+            const descriptorToSend = this._buildAverageDescriptor(this.descriptorSamples) || this.latestDescriptor;
+            this.cb.onComplete(token, descriptorToSend);
         }
     }
 
@@ -425,7 +435,7 @@ class LivenessDetector {
             const tempCanvas = document.createElement('canvas');
             const vw = this.video.videoWidth || 640;
             const vh = this.video.videoHeight || 480;
-            
+
             tempCanvas.width = vw;
             tempCanvas.height = vh;
             const tempCtx = tempCanvas.getContext('2d');
@@ -455,16 +465,16 @@ class LivenessDetector {
                 for (let x = 1; x < fw - 1; x++) {
                     const center = gray[y * fw + x];
                     let code = 0;
-                    
+
                     if (gray[(y - 1) * fw + (x - 1)] >= center) code |= 1;
-                    if (gray[(y - 1) * fw + x]       >= center) code |= 2;
+                    if (gray[(y - 1) * fw + x] >= center) code |= 2;
                     if (gray[(y - 1) * fw + (x + 1)] >= center) code |= 4;
-                    if (gray[y * fw + (x + 1)]       >= center) code |= 8;
+                    if (gray[y * fw + (x + 1)] >= center) code |= 8;
                     if (gray[(y + 1) * fw + (x + 1)] >= center) code |= 16;
-                    if (gray[(y + 1) * fw + x]       >= center) code |= 32;
+                    if (gray[(y + 1) * fw + x] >= center) code |= 32;
                     if (gray[(y + 1) * fw + (x - 1)] >= center) code |= 64;
-                    if (gray[y * fw + (x - 1)]       >= center) code |= 128;
-                    
+                    if (gray[y * fw + (x - 1)] >= center) code |= 128;
+
                     lbpHist[code]++;
                 }
             }
@@ -505,7 +515,9 @@ class LivenessDetector {
             const laplacianVar = (sumSqL / countL) - (meanL * meanL);
 
             // 4. Color uniformity (screens emit standard light)
-            let rSum = 0, gSum = 0, bSum = 0;
+            let rSum = 0,
+                gSum = 0,
+                bSum = 0;
             for (let i = 0; i < pixels.length; i += 4) {
                 rSum += pixels[i];
                 gSum += pixels[i + 1];
@@ -514,7 +526,7 @@ class LivenessDetector {
             const rMean = rSum / (pixels.length / 4);
             const gMean = gSum / (pixels.length / 4);
             const bMean = bSum / (pixels.length / 4);
-            
+
             // Calculate similarity across RGB
             const colorUniformity = 1.0 - (Math.abs(rMean - gMean) + Math.abs(gMean - bMean) + Math.abs(bMean - rMean)) / 765.0;
 
@@ -545,7 +557,7 @@ class LivenessDetector {
             const dEyes = this._dist(pts[36], pts[45]);
             // Nose tip to chin distance
             const dNoseChin = this._dist(pts[30], pts[8]);
-            
+
             ratios.push(dEyes / (dNoseChin || 1));
         }
 
@@ -563,7 +575,10 @@ class LivenessDetector {
         let totalVar = 0;
 
         for (const idx of keyPoints) {
-            let sumX = 0, sumY = 0, sumXSq = 0, sumYSq = 0;
+            let sumX = 0,
+                sumY = 0,
+                sumXSq = 0,
+                sumYSq = 0;
             for (let f = 0; f < n; f++) {
                 const p = this.landmarkHistory[f][idx];
                 sumX += p.x;
@@ -587,8 +602,9 @@ class LivenessDetector {
     _computeArrayVariance(arr) {
         const n = arr.length;
         if (n < 2) return 0;
-        
-        let sum = 0, sumSq = 0;
+
+        let sum = 0,
+            sumSq = 0;
         for (let i = 0; i < n; i++) {
             sum += arr[i];
             sumSq += arr[i] * arr[i];
@@ -599,6 +615,24 @@ class LivenessDetector {
 
     _dist(a, b) {
         return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+    }
+
+    _buildAverageDescriptor(samples) {
+        if (!Array.isArray(samples) || samples.length === 0) {
+            return null;
+        }
+
+        const dims = samples[0].length;
+        const avg = new Array(dims).fill(0);
+        samples.forEach((sample) => {
+            if (!Array.isArray(sample) || sample.length !== dims) return;
+            sample.forEach((value, index) => {
+                avg[index] += Number(value) || 0;
+            });
+        });
+
+        const count = samples.length;
+        return avg.map((value) => value / count);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -624,10 +658,8 @@ class LivenessDetector {
             const encoder = new TextEncoder();
             const key = await crypto.subtle.importKey(
                 'raw',
-                encoder.encode(this.sessionSecret),
-                { name: 'HMAC', hash: 'SHA-256' },
-                false,
-                ['sign']
+                encoder.encode(this.sessionSecret), { name: 'HMAC', hash: 'SHA-256' },
+                false, ['sign']
             );
             const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(payloadStr));
             signature = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
