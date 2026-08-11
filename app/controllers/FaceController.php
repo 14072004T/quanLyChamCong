@@ -345,25 +345,9 @@ class FaceController extends Controller
             $clientIp = '192.168.1.129'; // IP nội bộ giả lập khi test localhost
         }
 
+        // Bỏ kiểm tra mạng nội bộ / WiFi để chấm công chỉ phụ thuộc vào xác thực khuôn mặt.
         if ($phuongThuc === 'LAN') {
-            if (!$this->chamCongModel->isAllowedIp($clientIp)) {
-                echo json_encode(['success' => false, 'message' => 'Bạn không ở trong mạng nội bộ công ty. Không thể chấm công.']);
-                exit;
-            }
-            if (!$this->chamCongModel->checkWifi()) {
-                echo json_encode(['success' => false, 'message' => 'Không có cấu hình WiFi nội bộ hợp lệ nào. Vui lòng liên hệ IT.']);
-                exit;
-            }
-            if ($tenWifi === '' || strtoupper($tenWifi) === 'INTERNAL_NETWORK' || !$this->chamCongModel->isWifiAllowed($tenWifi)) {
-                $fallback = $this->chamCongModel->getFirstActiveWifiName();
-                if ($fallback) {
-                    $tenWifi = $fallback;
-                }
-            }
-            if (!$this->chamCongModel->isWifiAllowed($tenWifi)) {
-                echo json_encode(['success' => false, 'message' => 'WiFi "' . $tenWifi . '" không được phép dùng chấm công.']);
-                exit;
-            }
+            $tenWifi = 'OFFLINE_FALLBACK';
         } else {
             $tenWifi = 'QR_FALLBACK';
         }
