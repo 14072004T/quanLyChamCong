@@ -1344,6 +1344,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const scanningEmpId = document.getElementById('scanning-emp-id');
 
     let lastDescriptor = null;
+    let lastDescriptorConfidence = 0;
     let isModelLoaded = false;
     let cameraStream = null;
     let isDetecting = false;
@@ -1372,6 +1373,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         savedFrontDescriptor = null;
         firstTurnSide = null;
         lastDescriptor = null;
+        lastDescriptorConfidence = 0;
         if (btnRegister) btnRegister.disabled = true;
         window.regWarmupFrames = 0;
         updateStepperUI();
@@ -1566,7 +1568,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             const detection = await faceapi.detectSingleFace(
                 video, 
-                new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.4 })
+                new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.6 })
             ).withFaceLandmarks().withFaceDescriptor();
 
             const ctx = canvas.getContext('2d');
@@ -1575,6 +1577,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (detection) {
                 const resizedDetection = faceapi.resizeResults(detection, displaySize);
                 const box = resizedDetection.detection.box;
+                const detectionScore = Number(detection?.detection?.score || 0);
+                const isFaceConfident = detectionScore >= 0.72;
                 ctx.strokeStyle = (currentStep === 'completed') ? '#10b981' : '#3b82f6';
                 ctx.lineWidth = 3;
                 ctx.strokeRect(box.x, box.y, box.width, box.height);
@@ -1590,7 +1594,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (dRight !== 0) {
                     const ratio = dLeft / dRight;
                     
-                    if (currentStep === 'front') {
+                    if (!isFaceConfident) {
+                        successFrames = 0;
+                        statusDisplay.className = 'status-banner status-noface';
+                        statusDisplay.innerHTML = '<i class="fas fa-adjust"></i> Vui lòng đưa khuôn mặt rõ nét vào khung hình và giữ cố định.';
+                    } else if (currentStep === 'front') {
                         if (ratio >= 0.70 && ratio <= 1.40) {
                             successFrames++;
                             statusDisplay.className = 'status-banner status-ready';
@@ -1599,6 +1607,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             if (successFrames >= requiredSuccessFrames) {
                                 savedFrontDescriptor = detection.descriptor;
                                 lastDescriptor = detection.descriptor;
+                                lastDescriptorConfidence = detectionScore;
                                 currentStep = 'turn1';
                                 successFrames = 0;
                                 updateStepperUI();
@@ -1649,8 +1658,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                         statusDisplay.className = 'status-banner status-ready';
                         statusDisplay.innerHTML = '<i class="fas fa-check-circle"></i> Đã quét đủ 3 góc khuôn mặt! Nhấn nút bên dưới để lưu.';
                         btnRegister.disabled = false;
-                        if (!lastDescriptor) {
+                        if (!lastDescriptor || detectionScore > lastDescriptorConfidence) {
                             lastDescriptor = detection.descriptor;
+                            lastDescriptorConfidence = detectionScore;
                         }
                     }
                 }
@@ -1705,11 +1715,20 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         btnRegister.disabled = true;
         const targetMaND = employeeSelect.value;
+        if (!lastDescriptor || lastDescriptorConfidence < 0.72) {
+            statusDisplay.className = 'status-banner status-error';
+            statusDisplay.innerHTML = '<i class="fas fa-exclamation-circle"></i> Khuôn mặt quét chưa đủ rõ nét. Hãy quay lại và giữ khuôn mặt ở trung tâm khung hình.';
+            btnRegister.disabled = false;
+            showRegisterResult(false, '❌ Đăng ký thất bại', 'Khuôn mặt quét chưa đủ rõ nét. Hãy thử lại với nền sáng và giữ khuôn mặt cố định.', null);
+            return;
+        }
+
         const embeddingString = JSON.stringify(Array.from(lastDescriptor));
 
         const formData = new FormData();
         formData.append('embedding', embeddingString);
         formData.append('targetMaND', targetMaND);
+        formData.append('confidence', String(lastDescriptorConfidence));
 
         statusDisplay.className = 'status-banner status-loading';
         statusDisplay.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu dữ liệu khuôn mặt...';

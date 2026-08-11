@@ -106,6 +106,12 @@ class FaceController extends Controller
             $maND = intval($_POST['targetMaND']);
         }
 
+        $confidence = isset($_POST['confidence']) ? floatval($_POST['confidence']) : 0.0;
+        if ($confidence > 0.0 && $confidence < 0.72) {
+            echo json_encode(['success' => false, 'message' => 'Khuôn mặt quét chưa đủ rõ nét. Hãy giữ khuôn mặt ở trung tâm khung hình và thử lại.']);
+            exit;
+        }
+
         if (!$maND) {
             echo json_encode(['success' => false, 'message' => 'Mã người dùng không hợp lệ.']);
             exit;
@@ -132,7 +138,7 @@ class FaceController extends Controller
 
         // 3. Kiểm tra tính độc nhất: Khuôn mặt này có trùng với tài khoản khác không?
         $allProfiles = $this->faceModel->getAllFaceProfiles($maND);
-        $threshold = 0.6; // Ngưỡng xác định cùng một người
+        $threshold = 0.55; // Ngưỡng xác định cùng một người, stricter để tránh nhầm trùng khi quét không rõ nét
         
         foreach ($allProfiles as $prof) {
             $otherEmbedding = json_decode($prof['embedding'], true);
@@ -142,7 +148,7 @@ class FaceController extends Controller
                 // Write debug log to workspace file
                 $logDir = __DIR__ . '/../../uploads/liveness_logs/';
                 if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
-                $logMsg = sprintf("[%s] Register target=%s vs existing maND=%s, dist=%.4f (threshold=%s)\n", date('Y-m-d H:i:s'), $maND, $prof['maND'], $dist, $threshold);
+                $logMsg = sprintf("[%s] Register target=%s vs existing maND=%s, dist=%.4f, confidence=%.4f (threshold=%s)\n", date('Y-m-d H:i:s'), $maND, $prof['maND'], $dist, $confidence, $threshold);
                 @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND);
 
                 if ($dist <= $threshold) {
