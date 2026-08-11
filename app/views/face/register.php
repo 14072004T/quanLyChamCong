@@ -1345,6 +1345,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     let lastDescriptor = null;
     let lastDescriptorConfidence = 0;
+    let collectedDescriptors = [];
     let isModelLoaded = false;
     let cameraStream = null;
     let isDetecting = false;
@@ -1374,6 +1375,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         firstTurnSide = null;
         lastDescriptor = null;
         lastDescriptorConfidence = 0;
+        collectedDescriptors = [];
         if (btnRegister) btnRegister.disabled = true;
         window.regWarmupFrames = 0;
         updateStepperUI();
@@ -1399,6 +1401,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     // ==========================================
     // 2. NHẬN DIỆN KHUÔN MẶT & STEPPER JS
     // ==========================================
+
+    function buildAverageDescriptor(descriptors) {
+        if (!Array.isArray(descriptors) || descriptors.length === 0) {
+            return null;
+        }
+
+        const dims = descriptors[0].length;
+        const averaged = new Array(dims).fill(0);
+
+        descriptors.forEach(function(desc) {
+            if (!Array.isArray(desc) || desc.length !== dims) return;
+            desc.forEach(function(value, idx) {
+                averaged[idx] += Number(value) || 0;
+            });
+        });
+
+        const count = descriptors.length;
+        return averaged.map(function(value) {
+            return value / count;
+        });
+    }
 
     // Hàm cập nhật trạng thái trực quan cho Stepper dọc
     function updateStepperUI() {
@@ -1579,6 +1602,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const box = resizedDetection.detection.box;
                 const detectionScore = Number(detection?.detection?.score || 0);
                 const isFaceConfident = detectionScore >= 0.72;
+                if (isFaceConfident && Array.isArray(detection.descriptor)) {
+                    collectedDescriptors.push(Array.from(detection.descriptor));
+                    if (collectedDescriptors.length > 12) {
+                        collectedDescriptors.shift();
+                    }
+                }
                 ctx.strokeStyle = (currentStep === 'completed') ? '#10b981' : '#3b82f6';
                 ctx.lineWidth = 3;
                 ctx.strokeRect(box.x, box.y, box.width, box.height);
@@ -1606,7 +1635,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             
                             if (successFrames >= requiredSuccessFrames) {
                                 savedFrontDescriptor = detection.descriptor;
-                                lastDescriptor = detection.descriptor;
+                                lastDescriptor = buildAverageDescriptor(collectedDescriptors) || detection.descriptor;
                                 lastDescriptorConfidence = detectionScore;
                                 currentStep = 'turn1';
                                 successFrames = 0;
@@ -1659,7 +1688,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         statusDisplay.innerHTML = '<i class="fas fa-check-circle"></i> Đã quét đủ 3 góc khuôn mặt! Nhấn nút bên dưới để lưu.';
                         btnRegister.disabled = false;
                         if (!lastDescriptor || detectionScore > lastDescriptorConfidence) {
-                            lastDescriptor = detection.descriptor;
+                            lastDescriptor = buildAverageDescriptor(collectedDescriptors) || detection.descriptor;
                             lastDescriptorConfidence = detectionScore;
                         }
                     }
@@ -1723,7 +1752,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        const embeddingString = JSON.stringify(Array.from(lastDescriptor));
+        const descriptorToSave = buildAverageDescriptor(collectedDescriptors) || lastDescriptor;
+        const embeddingString = JSON.stringify(Array.from(descriptorToSave));
 
         const formData = new FormData();
         formData.append('embedding', embeddingString);

@@ -138,20 +138,22 @@ class FaceController extends Controller
 
         // 3. Kiểm tra tính độc nhất: Khuôn mặt này có trùng với tài khoản khác không?
         $allProfiles = $this->faceModel->getAllFaceProfiles($maND);
-        $threshold = 0.18; // Chỉ báo trùng khi descriptor thực sự rất gần; ngưỡng cũ 0.55 khiến nhiều trường hợp khác người bị chặn nhầm
+        $threshold = 0.6; // Ngưỡng chuẩn cho descriptor FaceAPI: cùng một người thường <= 0.6
+        $cosineThreshold = 0.85;
 
         foreach ($allProfiles as $prof) {
             $otherEmbedding = json_decode($prof['embedding'], true);
             if (is_array($otherEmbedding)) {
                 $dist = $this->euclideanDistance($incomingEmbedding, $otherEmbedding);
-                
+                $cosine = $this->cosineSimilarity($incomingEmbedding, $otherEmbedding);
+
                 // Write debug log to workspace file
                 $logDir = __DIR__ . '/../../uploads/liveness_logs/';
                 if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
-                $logMsg = sprintf("[%s] Register target=%s vs existing maND=%s, dist=%.4f, confidence=%.4f (threshold=%s)\n", date('Y-m-d H:i:s'), $maND, $prof['maND'], $dist, $confidence, $threshold);
+                $logMsg = sprintf("[%s] Register target=%s vs existing maND=%s, dist=%.4f, cosine=%.4f, confidence=%.4f (threshold=%s)\n", date('Y-m-d H:i:s'), $maND, $prof['maND'], $dist, $cosine, $confidence, $threshold);
                 @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND);
 
-                if ($dist <= $threshold) {
+                if ($dist <= $threshold || $cosine >= $cosineThreshold) {
                     $otherName = $this->faceModel->getUserName($prof['maND']);
                     echo json_encode([
                         'success' => false,
@@ -473,6 +475,30 @@ class FaceController extends Controller
             $sum += $diff * $diff;
         }
         return sqrt($sum);
+    }
+
+    private function cosineSimilarity($v1, $v2)
+    {
+        if (count($v1) !== count($v2)) {
+            return 0.0;
+        }
+
+        $dot = 0.0;
+        $norm1 = 0.0;
+        $norm2 = 0.0;
+        for ($i = 0; $i < count($v1); $i++) {
+            $a = floatval($v1[$i]);
+            $b = floatval($v2[$i]);
+            $dot += $a * $b;
+            $norm1 += $a * $a;
+            $norm2 += $b * $b;
+        }
+
+        if ($norm1 <= 0 || $norm2 <= 0) {
+            return 0.0;
+        }
+
+        return $dot / (sqrt($norm1) * sqrt($norm2));
     }
 
     private function requireLogin()
