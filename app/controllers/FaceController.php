@@ -138,8 +138,8 @@ class FaceController extends Controller
 
         // 3. Kiểm tra tính độc nhất: Khuôn mặt này có trùng với tài khoản khác không?
         $allProfiles = $this->faceModel->getAllFaceProfiles($maND);
-        $threshold = 0.55; // Ngưỡng xác định cùng một người, stricter để tránh nhầm trùng khi quét không rõ nét
-        
+        $threshold = 0.18; // Chỉ báo trùng khi descriptor thực sự rất gần; ngưỡng cũ 0.55 khiến nhiều trường hợp khác người bị chặn nhầm
+
         foreach ($allProfiles as $prof) {
             $otherEmbedding = json_decode($prof['embedding'], true);
             if (is_array($otherEmbedding)) {
