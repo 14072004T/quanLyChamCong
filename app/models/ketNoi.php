@@ -8,10 +8,10 @@ class KetNoi {
     // private $dbname = "dl_final";
     // // =============================================
     // Kết nối lên hosting
-    private $host = "sql208.infinityfree.com";
-    private $user = "if0_42404629";
-    private $pass = "NHD80NHD80";
-    private $dbname = "if0_42404629_dl_final";
+    private $host = "sql208.infinityfree.com"; //"127.0.0.1";//
+    private $user = "if0_42404629";//"root";//
+    private $pass = "NHD80NHD80";//"";
+    private $dbname = "if0_42404629_dl_final";//"dl_final";//
     private $conn; // Biến để giữ kết nối
 
     /**

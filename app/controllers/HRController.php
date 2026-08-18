@@ -74,6 +74,9 @@ class HRController
             if ($hanhDong === 'assign_shift') {
                 $ok = $this->model->assignShift($_POST['maND'] ?? 0, $_POST['maCa'] ?? 0, $_POST['hieuLucTu'] ?? date('Y-m-d'));
                 $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Gán ca làm thành công' : 'Không thể gán ca làm';
+            } elseif ($hanhDong === 'delete_shift') {
+                $ok = $this->model->deleteShift($_POST['id'] ?? 0);
+                $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Xóa ca làm thành công' : 'Không thể xóa ca làm';
             } else {
                 $ok = $this->model->saveShift($_POST);
                 $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Lưu ca làm thành công' : 'Dữ liệu ca làm không hợp lệ';
@@ -102,6 +105,8 @@ class HRController
         $payload = [
             'id' => $_POST['id'] ?? 0,
             'tenCa' => $_POST['tenCa'] ?? '',
+            'kyHieu' => $_POST['kyHieu'] ?? '',
+            'mauSac' => $_POST['mauSac'] ?? '#3b82f6',
             'gioBatDau' => $_POST['gioBatDau'] ?? '',
             'gioKetThuc' => $_POST['gioKetThuc'] ?? '',
             'hoatDong' => $_POST['hoatDong'] ?? 1,
@@ -117,6 +122,10 @@ class HRController
     public function shiftAssignmentsApi()
     {
         AuthMiddleware::requirePermission('hr-api-shift-assignments');
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $this->respond(['success' => true, 'data' => []]);
+            return;
+        }
         $this->jsonOnly(['POST']);
 
         $ok = $this->model->assignShift(

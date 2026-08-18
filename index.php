@@ -38,6 +38,8 @@ if ($page === 'login' || $page === 'login-process' || $page === 'logout') {
 
     if ($page === 'login-process') {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // DEBUG - Comment out để test
+            // die("DEBUG: handleLogin() will be called\n\nPOST data:\n" . print_r($_POST, true));
             $controller->handleLogin();
         } else {
             header('Location: index.php?page=login');
@@ -136,6 +138,8 @@ $allowedPages = [
     'face-api-delete',
     'face-api-verify',
     'face-liveness-session',
+    'tablet-cham-cong',
+    'tablet-face-api-verify',
     // Legacy
     'cham-cong-dashboard',
     'hr-cham-cong',
@@ -289,6 +293,16 @@ switch ($page) {
     case 'quan-ly-ca-lam':
         require_once 'app/controllers/HRController.php';
         (new HRController())->shifts();
+        break;
+
+    case 'tablet-cham-cong':
+        require_once 'app/controllers/FaceController.php';
+        (new FaceController())->tabletView();
+        break;
+
+    case 'tablet-face-api-verify':
+        require_once 'app/controllers/FaceController.php';
+        (new FaceController())->tabletVerifyApi();
         break;
 
     case 'tinh-cong':

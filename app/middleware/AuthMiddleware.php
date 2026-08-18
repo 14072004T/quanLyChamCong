@@ -30,6 +30,8 @@ class AuthMiddleware
             'cham-cong-dashboard',
             'quan-ly-nhanvien',
             'quan-ly-ca-lam',
+            'tablet-cham-cong',
+            'tablet-face-api-verify',
             'tinh-cong',
             'xuat-bao-cao',
             'gui-bang-cong-phe-duyet',

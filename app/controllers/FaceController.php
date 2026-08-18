@@ -21,6 +21,25 @@ class FaceController extends Controller
     /**
      * Hiển thị trang đăng ký khuôn mặt
      */
+    private function normalizeDisplayText($value)
+    {
+        $text = trim((string)($value ?? ''));
+        if ($text === '') {
+            return '';
+        }
+
+        // Chỉ sửa chuỗi mojibake. Dữ liệu UTF-8 hợp lệ không được chạy qua
+        // iconv vì thao tác đó sẽ biến "Nguyễn" thành "Nguyá»…".
+        if (!preg_match('/(?:Ã.|Â.|á»|áº|Ä.|Ä‘)/u', $text)) {
+            return $text;
+        }
+
+        // Chuỗi mojibake là UTF-8 của các byte ISO-8859-1. Đổi ngược
+        // UTF-8 -> ISO-8859-1 sẽ khôi phục lại chuỗi tiếng Việt ban đầu.
+        $fixed = @iconv('UTF-8', 'ISO-8859-1//IGNORE', $text);
+        return ($fixed !== false && $fixed !== '') ? $fixed : $text;
+    }
+
     public function registerView()
     {
         $this->requireLogin();
@@ -37,29 +56,38 @@ class FaceController extends Controller
             header('Location: index.php?page=home');
             exit();
         } else {
-            // Chỉ đăng ký cho 4 phòng ban cố định: Sản xuất, Kho, QC, Bảo trì
-            $departmentsList = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
-            
-            // Lấy danh sách nhân viên đang hoạt động thuộc 4 phòng ban này
+            // Lấy tất cả nhân viên đang hoạt động để hiển thị danh sách đầy đủ.
+            // Không khóa theo 4 phòng ban cố định vì dữ liệu thực tế trong DB có thể khác nhau hoặc bị mojibake.
             $rawList = $this->chamCongModel->getEmployees('', true) ?? [];
+            $departmentsList = [];
+            $allEmployees = [];
+            $unregisteredList = [];
             $registeredList = [];
+            
             foreach ($rawList as $emp) {
-                $empDept = trim($emp['phongBan'] ?? '');
-                if (!in_array($empDept, $departmentsList)) {
-                    continue; // Chỉ nhận 4 phòng ban: Sản xuất, Kho, QC, Bảo trì
+                $emp['hoTen'] = $this->normalizeDisplayText($emp['hoTen'] ?? '');
+                $emp['phongBan'] = $this->normalizeDisplayText($emp['phongBan'] ?? '');
+                $emp['chucVu'] = $this->normalizeDisplayText($emp['chucVu'] ?? '');
+
+                $empDept = trim((string)($emp['phongBan'] ?? ''));
+                if ($empDept !== '' && !in_array($empDept, $departmentsList, true)) {
+                    $departmentsList[] = $empDept;
                 }
                 
                 $profile = $this->faceModel->getFaceProfile($emp['maND']);
                 if ($profile === null) {
-                    // Nhân viên chưa đăng ký khuôn mặt
                     $emp['hasFace'] = false;
-                    $employeesList[] = $emp;
+                    $unregisteredList[] = $emp;
                 } else {
-                    // Nhân viên đã đăng ký khuôn mặt
                     $emp['hasFace'] = true;
                     $registeredList[] = $emp;
                 }
+                
+                $allEmployees[] = $emp;
             }
+            
+            // Sắp xếp dữ liệu để hiển thị nhân viên chưa đăng ký ở trên.
+            $employeesList = array_merge($unregisteredList, $registeredList);
         }
 
         $data = [
@@ -237,6 +265,83 @@ class FaceController extends Controller
             'success' => true,
             'sessionSecret' => $secret
         ]);
+        exit;
+    }
+
+    public function tabletView()
+    {
+        $this->requireLogin();
+        if (($_SESSION['role'] ?? '') !== 'hr') {
+            header('Location: index.php?page=home');
+            exit;
+        }
+        require 'app/views/chamcong/tablet_cham_cong.php';
+    }
+
+    public function tabletVerifyApi()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        $this->requireLogin();
+        if (($_SESSION['role'] ?? '') !== 'hr' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Không có quyền thực hiện thao tác này.']);
+            exit;
+        }
+
+        $embedding = json_decode($_POST['embedding'] ?? '', true);
+        $token = json_decode($_POST['livenessToken'] ?? '', true);
+        $photo = $_POST['photo'] ?? '';
+        $action = strtoupper(trim($_POST['hanhDong'] ?? 'IN')) === 'OUT' ? 'OUT' : 'IN';
+        if (!is_array($embedding) || !is_array($token) || $photo === '') {
+            echo json_encode(['success' => false, 'message' => 'Thiếu dữ liệu khuôn mặt, liveness hoặc ảnh minh chứng.']);
+            exit;
+        }
+        $liveness = LivenessHelper::validateLivenessToken($token);
+        if (!$liveness['valid']) {
+            echo json_encode(['success' => false, 'message' => $liveness['message']]);
+            exit;
+        }
+
+        $matchedId = 0;
+        $bestDistance = 999.0;
+        foreach ($this->faceModel->getAllFaceProfiles() as $profile) {
+            $stored = json_decode($profile['embedding'], true);
+            if (!is_array($stored)) continue;
+            $distance = $this->euclideanDistance($stored, $embedding);
+            $cosine = $this->cosineSimilarity($stored, $embedding);
+            if (($distance <= 0.8 || $cosine >= 0.75) && $distance < $bestDistance) {
+                $matchedId = (int)$profile['maND'];
+                $bestDistance = $distance;
+            }
+        }
+        if ($matchedId <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Không nhận diện được nhân viên.']);
+            exit;
+        }
+
+        $attendance = $this->chamCongModel->getAttendanceByUser($matchedId, 1);
+        $today = date('Y-m-d');
+        $hasIn = !empty($attendance[0]['ngayLamViec']) && $attendance[0]['ngayLamViec'] === $today && !empty($attendance[0]['gioVaoDau']);
+        $hasOut = !empty($attendance[0]['ngayLamViec']) && $attendance[0]['ngayLamViec'] === $today && !empty($attendance[0]['gioRaCuoi']);
+        if (($action === 'IN' && $hasIn) || ($action === 'OUT' && !$hasIn) || ($action === 'OUT' && $hasOut)) {
+            echo json_encode(['success' => false, 'message' => $action === 'IN' ? 'Nhân viên đã chấm vào hôm nay.' : ($hasOut ? 'Nhân viên đã chấm ra hôm nay.' : 'Nhân viên chưa chấm vào hôm nay.')]);
+            exit;
+        }
+        if ($action === 'IN') {
+            $shift = $this->chamCongModel->getShiftForUser($matchedId);
+            if (!$shift) {
+                echo json_encode(['success' => false, 'message' => 'Nhân viên chưa được gán ca làm việc.']);
+                exit;
+            }
+        }
+
+        $photo = str_replace(['data:image/jpeg;base64,', 'data:image/png;base64,', ' '], ['', '', '+'], $photo);
+        $photoFilename = $matchedId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.jpg';
+        $uploadDir = 'uploads/attendance_faces/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        file_put_contents($uploadDir . $photoFilename, base64_decode($photo));
+        $ok = $this->chamCongModel->chamCong($matchedId, $action, 'LAN', 'TABLET', 'Chấm ' . ($action === 'IN' ? 'vào' : 'ra') . ' bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+        echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã chấm ' . ($action === 'IN' ? 'vào' : 'ra') . ' cho ' . $this->faceModel->getUserName($matchedId) . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 

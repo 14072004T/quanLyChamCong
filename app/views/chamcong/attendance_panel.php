@@ -474,6 +474,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Start camera
         const video = document.getElementById('liveness-video');
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            updateLivenessStatus('Trình duyệt của bạn không hỗ trợ camera. Hãy dùng Chrome/Edge/Firefox trên localhost hoặc HTTPS.', 'error');
+            return;
+        }
+
+        const isInsecureOrigin = window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname);
+        if (isInsecureOrigin) {
+            updateLivenessStatus('Trang đang chạy trên HTTP không an toàn. Hãy mở bằng http://localhost hoặc https, rồi cho phép camera.', 'error');
+            return;
+        }
+
         try {
             modalStream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
@@ -487,7 +499,11 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         } catch (err) {
             console.error('Không thể mở camera:', err);
-            updateLivenessStatus('Không thể truy cập camera. Vui lòng cho phép quyền camera.', 'error');
+            const errName = (err && err.name) || '';
+            const permissionHint = errName.includes('NotAllowed') || errName.includes('Permission') || errName.includes('Security')
+                ? ' Vui lòng bấm biểu tượng khóa/camera trên thanh địa chỉ → Chọn Cho phép → Tải lại trang.'
+                : '';
+            updateLivenessStatus('Không thể truy cập camera. Vui lòng cho phép quyền camera trên trình duyệt.' + permissionHint, 'error');
         }
     }
 
@@ -637,6 +653,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ─── Submit Attendance to Server ──────────────────────────────
     async function submitAttendance(livenessToken, descriptor) {
+        const normalizedDescriptor = Array.isArray(descriptor)
+            ? descriptor
+            : (ArrayBuffer.isView(descriptor) ? Array.from(descriptor) : null);
+
+        if (!normalizedDescriptor || normalizedDescriptor.length === 0) {
+            updateLivenessStatus('Không thu thập được dữ liệu khuôn mặt từ camera. Vui lòng nhìn thẳng vào camera và thử lại.', 'error');
+            document.getElementById('liveness-retry-btn').style.display = 'block';
+            return;
+        }
+
         updateLivenessStatus('Đang gửi kết quả xác thực lên máy chủ...', 'info');
 
         const video = document.getElementById('liveness-video');
@@ -652,7 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
         sCtx.setTransform(1, 0, 0, 1, 0, 0);
 
         const photoBase64 = snapCanvas.toDataURL('image/jpeg', 0.85);
-        const embeddingStr = JSON.stringify(Array.from(descriptor));
+        const embeddingStr = JSON.stringify(normalizedDescriptor);
         const wifi = document.getElementById('wifi-select').value;
 
         const formData = new FormData();

@@ -12,6 +12,31 @@ class ChamCongModel
         $this->ensureTables();
     }
 
+    private function columnExists($tableName, $columnName)
+    {
+        $sql = "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return false;
+        }
+
+        $stmt->bind_param('ss', $tableName, $columnName);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        return $result && $result->num_rows > 0;
+    }
+
+    private function addColumnIfMissing($tableName, $columnName, $definition)
+    {
+        if ($this->columnExists($tableName, $columnName)) {
+            return true;
+        }
+
+        $sql = "ALTER TABLE `" . $tableName . "` ADD COLUMN `" . $columnName . "` " . $definition;
+        return $this->conn->query($sql);
+    }
+
     private function ensureTables()
     {
         $this->conn->query("
@@ -57,23 +82,30 @@ class ChamCongModel
         ");
 
         // Add missing columns if they don't exist (for existing databases)
-        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS daiIP VARCHAR(50) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS congMacDinh VARCHAR(50) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS moTa VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS ssid VARCHAR(120) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS matKhau VARCHAR(120) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE wifichamcong ADD COLUMN IF NOT EXISTS viTri VARCHAR(255) DEFAULT NULL");
+        $this->addColumnIfMissing('wifichamcong', 'daiIP', 'VARCHAR(50) DEFAULT NULL');
+        $this->addColumnIfMissing('wifichamcong', 'congMacDinh', 'VARCHAR(50) DEFAULT NULL');
+        $this->addColumnIfMissing('wifichamcong', 'moTa', 'VARCHAR(255) DEFAULT NULL');
+        $this->addColumnIfMissing('wifichamcong', 'ssid', 'VARCHAR(120) DEFAULT NULL');
+        $this->addColumnIfMissing('wifichamcong', 'matKhau', 'VARCHAR(120) DEFAULT NULL');
+        $this->addColumnIfMissing('wifichamcong', 'viTri', 'VARCHAR(255) DEFAULT NULL');
 
         $this->conn->query("
             CREATE TABLE IF NOT EXISTS calamviec (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 tenCa VARCHAR(100) NOT NULL,
+                kyHieu VARCHAR(20) NOT NULL DEFAULT '',
+                mauSac VARCHAR(20) NOT NULL DEFAULT '#3b82f6',
                 gioBatDau TIME NOT NULL,
                 gioKetThuc TIME NOT NULL,
                 hoatDong TINYINT(1) NOT NULL DEFAULT 1,
                 ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+        $this->addColumnIfMissing('calamviec', 'kyHieu', "VARCHAR(20) NOT NULL DEFAULT '' AFTER tenCa");
+        $this->addColumnIfMissing('calamviec', 'mauSac', "VARCHAR(20) NOT NULL DEFAULT '#3b82f6' AFTER kyHieu");
+        $this->conn->query("UPDATE calamviec SET tenCa = 'Ca hành chính' WHERE id = 1 AND tenCa LIKE 'Ca h%'");
+        $this->conn->query("UPDATE calamviec SET tenCa = 'Ca tối' WHERE id = 2 AND tenCa LIKE 'Ca t%'");
+        $this->conn->query("UPDATE calamviec SET kyHieu = CASE WHEN id = 1 THEN 'HC' WHEN id = 2 THEN 'OT' ELSE CONCAT('C', id) END WHERE kyHieu = '' OR kyHieu IS NULL");
 
         $this->conn->query(" 
             CREATE TABLE IF NOT EXISTS canhanvien (
@@ -102,7 +134,7 @@ class ChamCongModel
                 UNIQUE KEY uk_month_dept (thangNam, phongBan)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-        $this->conn->query("ALTER TABLE duyetcongthang ADD COLUMN IF NOT EXISTS phongBan VARCHAR(120) NOT NULL DEFAULT ''");
+        $this->addColumnIfMissing('duyetcongthang', 'phongBan', "VARCHAR(120) NOT NULL DEFAULT ''");
         $this->conn->query("UPDATE duyetcongthang SET phongBan = '' WHERE phongBan IS NULL");
 
         $oldIndex = $this->conn->query("SHOW INDEX FROM duyetcongthang WHERE Key_name = 'uk_month_key'");
@@ -179,15 +211,15 @@ class ChamCongModel
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
         // Migration for existing tables
-        $this->conn->query("ALTER TABLE donnghiphep ADD COLUMN IF NOT EXISTS loaiNghiPhep VARCHAR(50) NOT NULL DEFAULT 'personal'");
-        $this->conn->query("ALTER TABLE donnghiphep ADD COLUMN IF NOT EXISTS tepMinhChung VARCHAR(255) DEFAULT NULL");
-        $this->conn->query("ALTER TABLE donnghiphep ADD COLUMN IF NOT EXISTS nguoiDuyet INT DEFAULT NULL");
-        $this->conn->query("ALTER TABLE donnghiphep ADD COLUMN IF NOT EXISTS ngayDuyet DATETIME DEFAULT NULL");
+        $this->addColumnIfMissing('donnghiphep', 'loaiNghiPhep', "VARCHAR(50) NOT NULL DEFAULT 'personal'");
+        $this->addColumnIfMissing('donnghiphep', 'tepMinhChung', 'VARCHAR(255) DEFAULT NULL');
+        $this->addColumnIfMissing('donnghiphep', 'nguoiDuyet', 'INT DEFAULT NULL');
+        $this->addColumnIfMissing('donnghiphep', 'ngayDuyet', 'DATETIME DEFAULT NULL');
 
-        // Migration: suachamcong â€” add nullable columns for edit request feature
-        $this->conn->query("ALTER TABLE suachamcong ADD COLUMN IF NOT EXISTS gioVaoDeXuat DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE suachamcong ADD COLUMN IF NOT EXISTS gioRaDeXuat DATETIME DEFAULT NULL");
-        $this->conn->query("ALTER TABLE suachamcong ADD COLUMN IF NOT EXISTS tepMinhChung VARCHAR(255) DEFAULT NULL");
+        // Migration: suachamcong — add nullable columns for edit request feature
+        $this->addColumnIfMissing('suachamcong', 'gioVaoDeXuat', 'DATETIME DEFAULT NULL');
+        $this->addColumnIfMissing('suachamcong', 'gioRaDeXuat', 'DATETIME DEFAULT NULL');
+        $this->addColumnIfMissing('suachamcong', 'tepMinhChung', 'VARCHAR(255) DEFAULT NULL');
 
         // Migration: face_profile and lichsuchamcong modification
         $this->conn->query("
@@ -200,7 +232,7 @@ class ChamCongModel
                 FOREIGN KEY (maND) REFERENCES nguoidung(maND) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-        $this->conn->query("ALTER TABLE lichsuchamcong ADD COLUMN IF NOT EXISTS anhMinhChung VARCHAR(255) DEFAULT NULL");
+        $this->addColumnIfMissing('lichsuchamcong', 'anhMinhChung', 'VARCHAR(255) DEFAULT NULL');
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
@@ -746,7 +778,7 @@ class ChamCongModel
 
     public function getShifts()
     {
-        $sql = "SELECT s.id, s.tenCa, s.gioBatDau, s.gioKetThuc, s.hoatDong, s.ngayTao,
+        $sql = "SELECT s.id, s.tenCa, s.kyHieu, s.mauSac, s.gioBatDau, s.gioKetThuc, s.hoatDong, s.ngayTao,
                        (SELECT COUNT(DISTINCT aes.maND) FROM canhanvien aes
                         JOIN nguoidung nd ON nd.maND = aes.maND
                         WHERE aes.maCa = s.id 
@@ -762,24 +794,36 @@ class ChamCongModel
     {
         $id = (int)($payload['id'] ?? 0);
         $name = trim($payload['tenCa'] ?? '');
+        $code = trim($payload['kyHieu'] ?? '');
+        $color = trim($payload['mauSac'] ?? '#3b82f6');
         $start = trim($payload['gioBatDau'] ?? '');
         $end = trim($payload['gioKetThuc'] ?? '');
         $isActive = (int)($payload['hoatDong'] ?? 1);
 
-        if ($name === '' || $start === '' || $end === '' || $start >= $end) {
+        if ($name === '' || $code === '' || !preg_match('/^#[0-9a-fA-F]{6}$/', $color) || $start === '' || $end === '' || $start >= $end) {
             return false;
         }
 
         if ($id > 0) {
-            $sql = "UPDATE calamviec SET tenCa = ?, gioBatDau = ?, gioKetThuc = ?, hoatDong = ? WHERE id = ?";
+            $sql = "UPDATE calamviec SET tenCa = ?, kyHieu = ?, mauSac = ?, gioBatDau = ?, gioKetThuc = ?, hoatDong = ? WHERE id = ?";
             $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("sssii", $name, $start, $end, $isActive, $id);
+            $stmt->bind_param("sssssii", $name, $code, $color, $start, $end, $isActive, $id);
             return $stmt->execute();
         }
 
-        $sql = "INSERT INTO calamviec (tenCa, gioBatDau, gioKetThuc, hoatDong) VALUES (?, ?, ?, ?)";
+        $sql = "INSERT INTO calamviec (tenCa, kyHieu, mauSac, gioBatDau, gioKetThuc, hoatDong) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("sssi", $name, $start, $end, $isActive);
+        $stmt->bind_param("sssssi", $name, $code, $color, $start, $end, $isActive);
+        return $stmt->execute();
+    }
+
+    public function deleteShift($id)
+    {
+        $id = (int)$id;
+        if ($id <= 0) return false;
+        $this->conn->query("DELETE FROM canhanvien WHERE maCa = $id");
+        $stmt = $this->conn->prepare("DELETE FROM calamviec WHERE id = ?");
+        $stmt->bind_param('i', $id);
         return $stmt->execute();
     }
 

@@ -853,6 +853,58 @@ if (!isset($_SESSION['user'])) {
                 border: 1px solid #bbf7d0;
             }
             
+            .badge-status {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 12px;
+                font-weight: 700;
+                padding: 4px 12px;
+                border-radius: 6px;
+            }
+            
+            .btn-register-first {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 6px 14px;
+                font-size: 12.5px;
+                font-weight: 700;
+                border: 1px solid #bfdbfe;
+                background: #eff6ff;
+                color: #2563eb;
+                border-radius: 7px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            
+            .btn-register-first:hover {
+                background: #dbeafe;
+                border-color: #93c5fd;
+                box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+            }
+            
+            .btn-reregister {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 6px 14px;
+                font-size: 12.5px;
+                font-weight: 700;
+                border: 1px solid #fed7aa;
+                background: #fef3c7;
+                color: #d97706;
+                border-radius: 7px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            
+            .btn-reregister:hover {
+                background: #fde68a;
+                border-color: #fbbf24;
+                box-shadow: 0 2px 6px rgba(217, 119, 6, 0.12);
+            }
+            
             .btn-delete-face {
                 display: inline-flex;
                 align-items: center;
@@ -945,7 +997,7 @@ if (!isset($_SESSION['user'])) {
                                     </select>
                                 </div>
                                 
-                                <div class="setup-form-group hidden-group" id="employee-select-group" style="margin-top: 8px;">
+                                <div class="setup-form-group hidden-group" id="employee-select-group" style="display: none; margin-top: 8px;">
                                     <label for="employee-select">
                                         <i class="fas fa-user-tag text-cyan"></i> Chọn Nhân viên:
                                     </label>
@@ -970,7 +1022,7 @@ if (!isset($_SESSION['user'])) {
                                         <i class="fas fa-id-card"></i>
                                     </div>
                                     <h4>Thông tin sinh trắc</h4>
-                                    <p>Vui lòng lựa chọn Phòng ban và Nhân viên ở cột bên trái để tải thông tin hồ sơ chi tiết.</p>
+                                    <p>Chọn nút Đăng ký trong danh sách bên dưới để bắt đầu quét khuôn mặt.</p>
                                 </div>
                                 
                                 <!-- Trạng thái Sẵn sàng khi đã chọn nhân viên -->
@@ -1012,14 +1064,18 @@ if (!isset($_SESSION['user'])) {
                         </div>
                     </div>
                     
-                    <!-- Danh sách nhân viên ĐÃ đăng ký thuộc phòng ban (Hiển thị động bằng JS) -->
-                    <div class="registered-section" id="registered-section" style="display: none;">
-                        <div class="registered-header">
+<!-- Danh sách tất cả nhân viên với trạng thái khuôn mặt -->
+                    <div class="registered-section" id="all-employees-section" style="display: block; margin-top: 0;">
+                        <div class="registered-header" style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border-bottom: 1px solid #bfdbfe;">
                             <div class="registered-header-left">
-                                <i class="fas fa-user-check"></i>
-                                <span>Nhân viên ĐÃ ĐĂNG KÝ khuôn mặt trong phòng ban</span>
+                                <i class="fas fa-users"></i>
+                                <span>Danh sách nhân viên và trạng thái khuôn mặt</span>
                             </div>
-                            <span class="registered-count" id="registered-count">0</span>
+                            <div style="display: flex; gap: 12px;">
+                                <span class="registered-count" id="total-count" style="background: #dbeafe; color: #2563eb; border-color: #93c5fd;">0 Tổng</span>
+                                <span class="registered-count" id="registered-count" style="background: #dbeafe; color: #2563eb; border-color: #93c5fd;">0 Đã đăng ký</span>
+                                <span class="registered-count" id="unregistered-count" style="background: #fff1f2; color: #e11d48; border-color: #fecdd3;">0 Chưa đăng ký</span>
+                            </div>
                         </div>
                         <div style="overflow-x: auto;">
                             <table class="reg-table">
@@ -1028,11 +1084,12 @@ if (!isset($_SESSION['user'])) {
                                         <th>Mã NV</th>
                                         <th>Họ tên</th>
                                         <th>Chức vụ</th>
-                                        <th>Trạng thái</th>
+                                        <th>Phòng ban</th>
+                                        <th>Trạng thái khuôn mặt</th>
                                         <th style="text-align: right;">Thao tác</th>
                                     </tr>
                                 </thead>
-                                <tbody id="registered-list-body">
+                                <tbody id="all-employees-list-body">
                                     <!-- JS sẽ render dòng dữ liệu tại đây -->
                                 </tbody>
                             </table>
@@ -1109,13 +1166,187 @@ if (!isset($_SESSION['user'])) {
 </div>
 <!-- Wizard JS: chạy ngay lập tức, không chờ face-api.js (3MB) -->
 <script>
+function repairMojibakeText(value) {
+    const raw = String(value ?? '');
+    if (!raw) return '';
+
+    // Dữ liệu UTF-8 hợp lệ từ session/DB phải được giữ nguyên.
+    if (!/(?:Ã.|Â.|á»|áº|Ä.|Ä‘|�)/u.test(raw)) {
+        return raw;
+    }
+
+    try {
+        return decodeURIComponent(escape(raw));
+    } catch (e) {
+        return raw;
+    }
+}
+
+function normalizeComparableText(value) {
+    return repairMojibakeText(value)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .trim()
+        .toLowerCase();
+}
+
 // Data từ PHP - khai báo global để camera code dùng được
 const unregisteredEmployees = <?= json_encode($employeesList ?? [], JSON_UNESCAPED_UNICODE) ?>;
 const registeredEmployees   = <?= json_encode($registeredList ?? [], JSON_UNESCAPED_UNICODE) ?>;
+// Combine all employees with hasFace flag
+const allEmployees = unregisteredEmployees.filter(e => e.hasFace === false).concat(
+    registeredEmployees.filter(e => e.hasFace === true)
+);
 
 document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
-    // WIZARD: Chọn Phòng ban & Nhân viên (Bước 1 & 2)
+    // HIỂN THỊ DANH SÁCH TẤT CẢ NHÂN VIÊN
+    // ==========================================
+    const allEmployeesListBody = document.getElementById('all-employees-list-body');
+    const totalCount = document.getElementById('total-count');
+    const registeredCount = document.getElementById('registered-count');
+    const unregisteredCount = document.getElementById('unregistered-count');
+
+    if (allEmployeesListBody) {
+        let registeredCnt = 0;
+        let unregisteredCnt = 0;
+        
+        allEmployees.forEach(function(emp) {
+            const hasFace = emp.hasFace === true;
+            if (hasFace) {
+                registeredCnt++;
+            } else {
+                unregisteredCnt++;
+            }
+
+            const empName = repairMojibakeText(emp.hoTen || '');
+            const empDept = repairMojibakeText(emp.phongBan || 'Không xác định');
+            const empRole = repairMojibakeText(emp.chucVu || 'Nhân viên');
+            
+            const tr = document.createElement('tr');
+            tr.dataset.department = normalizeComparableText(emp.phongBan || '');
+            tr.dataset.hasFace = hasFace ? 'true' : 'false';
+            const badgeClass = hasFace ? 'badge-registered' : 'badge-unregistered';
+            const badgeText = hasFace ? '<i class="fas fa-check-circle"></i> Đã đăng ký' : '<i class="fas fa-times-circle"></i> Chưa đăng ký';
+            const badgeStyle = hasFace ? 'style="background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;"' : 'style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3;"';
+            
+                        const actionBtn = hasFace 
+                                ? '<div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">' +
+                                    '<button class="btn-reregister" data-id="' + emp.maND + '" data-name="' + empName + '" title="Đăng ký lại"><i class="fas fa-sync-alt"></i> Đăng ký lại</button>' +
+                                    '<button class="btn-delete-face" data-id="' + emp.maND + '" data-name="' + empName + '" title="Xóa Face ID"><i class="fas fa-trash-alt"></i> Xóa</button>' +
+                                    '</div>'
+                                : '<button class="btn-register-first" data-id="' + emp.maND + '" data-name="' + empName + '" title="Đăng ký lần đầu"><i class="fas fa-plus-circle"></i> Đăng ký</button>';
+            
+            tr.innerHTML =
+                '<td><strong>#' + emp.maND + '</strong></td>' +
+                '<td><strong style="font-family: Arial, Helvetica, sans-serif;">' + empName + '</strong></td>' +
+                '<td>' + empRole + '</td>' +
+                '<td style="font-family: Arial, Helvetica, sans-serif;">' + empDept + '</td>' +
+                '<td><span class="badge-status" ' + badgeStyle + '>' + badgeText + '</span></td>' +
+                '<td style="text-align:right;">' + actionBtn + '</td>';
+            allEmployeesListBody.appendChild(tr);
+        });
+        
+        if (totalCount) totalCount.textContent = allEmployees.length + ' Tổng';
+        if (registeredCount) registeredCount.textContent = registeredCnt + ' Đã đăng ký';
+        if (unregisteredCount) unregisteredCount.textContent = unregisteredCnt + ' Chưa đăng ký';
+    }
+
+    function filterEmployeeTable(departmentKey) {
+        if (!allEmployeesListBody) return;
+
+        const rows = Array.from(allEmployeesListBody.querySelectorAll('tr'));
+        let visibleRegistered = 0;
+        let visibleUnregistered = 0;
+
+        rows.forEach(function(row) {
+            const visible = !departmentKey || row.dataset.department === departmentKey;
+            row.style.display = visible ? '' : 'none';
+            if (visible) {
+                if (row.dataset.hasFace === 'true') visibleRegistered++;
+                else visibleUnregistered++;
+            }
+        });
+
+        if (totalCount) totalCount.textContent = (visibleRegistered + visibleUnregistered) + ' Tổng';
+        if (registeredCount) registeredCount.textContent = visibleRegistered + ' Đã đăng ký';
+        if (unregisteredCount) unregisteredCount.textContent = visibleUnregistered + ' Chưa đăng ký';
+    }
+
+    // ==========================================
+    // XỬ LÝ NƯỚC QUÉT KHUÔN MẶT (CÓ THỂ ĐĂNG KÝ LẦN ĐẦU HOẶC ĐĂNG KÝ LẠI)
+    // ==========================================
+    const allEmployeesSection = document.getElementById('all-employees-section');
+    
+    if (allEmployeesSection) {
+        allEmployeesSection.addEventListener('click', function(event) {
+            const btnRegisterFirst = event.target.closest('.btn-register-first');
+            const btnReregister = event.target.closest('.btn-reregister');
+            const btnDeleteFace = event.target.closest('.btn-delete-face');
+            
+            if (btnRegisterFirst || btnReregister) {
+                const maND = (btnRegisterFirst || btnReregister).getAttribute('data-id');
+                const name = (btnRegisterFirst || btnReregister).getAttribute('data-name');
+                const emp = allEmployees.find(e => e.maND.toString() === maND.toString());
+                
+                if (emp) {
+                    startFaceRegistration(emp);
+                }
+            } else if (btnDeleteFace) {
+                const maND = btnDeleteFace.getAttribute('data-id');
+                const name = btnDeleteFace.getAttribute('data-name');
+                deleteFaceData(maND, name);
+            }
+        });
+    }
+    
+    function startFaceRegistration(emp) {
+        const scanningEmpName = document.getElementById('scanning-emp-name');
+        const scanningEmpId = document.getElementById('scanning-emp-id');
+        const setupPanel = document.getElementById('setup-panel');
+        const cameraPanel = document.getElementById('camera-panel');
+        
+        // Lưu thông tin nhân viên đang quét
+        window.currentFaceRegistrationTarget = String(emp.maND);
+        if (scanningEmpName) scanningEmpName.textContent = emp.hoTen;
+        if (scanningEmpId) scanningEmpId.textContent = emp.maND;
+        
+        // Ẩn danh sách, hiện camera
+        if (setupPanel) setupPanel.style.display = 'none';
+        if (cameraPanel) cameraPanel.style.display = 'block';
+        
+        // Cuộn lên đầu trang
+        window.scrollTo(0, 0);
+        
+        // Bắt đầu quét
+        if (typeof startRegistrationCamera === 'function') {
+            startRegistrationCamera();
+        }
+    }
+    
+    function deleteFaceData(maND, name) {
+        if (!confirm('Bạn có chắc chắn muốn XÓA dữ liệu khuôn mặt của nhân viên "' + name + '" (ID: ' + maND + ')?\n\nHành động này không thể hoàn tác!')) return;
+        
+        const formData = new FormData();
+        formData.append('targetMaND', maND);
+        
+        fetch('index.php?page=face-api-delete', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    window.location.reload();
+                } else {
+                    alert('Lỗi: ' + result.message);
+                }
+            })
+            .catch(e => alert('Lỗi kết nối: ' + e.message));
+    }
+
+    // ==========================================
+    // WIZARD: Chọn Phòng ban & Nhân viên (Bước 1 & 2) - GIỮ LẠI ĐỂ TƯƠNG THÍCH
     // ==========================================
     const deptSelect       = document.getElementById('dept-select');
     const employeeSelect   = document.getElementById('employee-select');
@@ -1123,7 +1354,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const deptStats        = document.getElementById('dept-stats');
     const deptStatsText    = document.getElementById('dept-stats-text');
     const registeredSection  = document.getElementById('registered-section');
-    const registeredCount    = document.getElementById('registered-count');
+    const registeredDeptCount = document.getElementById('registered-count');
     const registeredListBody = document.getElementById('registered-list-body');
     const wizStep1 = document.getElementById('wiz-step-1');
     const wizStep2 = document.getElementById('wiz-step-2');
@@ -1134,7 +1365,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedDept = this.value;
 
         // Reset
-        employeeSelect.innerHTML = '<option value="">-- Chọn nhân viên --</option>';
+        if (employeeSelect) employeeSelect.innerHTML = '<option value="">-- Chọn nhân viên --</option>';
         if (empSelectGroup) empSelectGroup.classList.add('hidden-group');
         if (deptStats) deptStats.style.display = 'none';
         if (registeredListBody) registeredListBody.innerHTML = '';
@@ -1148,27 +1379,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if (profilePlaceholder) profilePlaceholder.style.display = 'flex';
 
         if (!selectedDept) {
+            filterEmployeeTable('');
             if (wizStep1) { wizStep1.classList.add('active'); wizStep1.classList.remove('completed'); }
             if (wizStep2) wizStep2.classList.remove('active', 'completed');
             return;
         }
 
-        const targetLower = selectedDept.trim().toLowerCase();
+        const targetKey = normalizeComparableText(selectedDept);
+        filterEmployeeTable(targetKey);
 
-        // Lọc nhân viên CHƯA đăng ký
-        const filteredUnregistered = unregisteredEmployees.filter(function(emp) {
-            return (emp.phongBan || '').trim().toLowerCase() === targetLower;
-        });
-
-        filteredUnregistered.forEach(function(emp) {
-            const opt = document.createElement('option');
-            opt.value = emp.maND;
-            opt.textContent = emp.hoTen + ' (ID: ' + emp.maND + ')';
-            employeeSelect.appendChild(opt);
+        // Lọc dữ liệu để cập nhật thống kê của phòng ban đang chọn.
+        const filteredEmployees = allEmployees.filter(function(emp) {
+            return normalizeComparableText(emp.phongBan || '') === targetKey;
         });
 
         // Hiển thị thống kê & dropdown nhân viên
-        if (deptStatsText) deptStatsText.textContent = 'Có ' + filteredUnregistered.length + ' nhân viên chưa đăng ký.';
+        const filteredUnregistered = filteredEmployees.filter(function(emp) {
+            return emp.hasFace !== true;
+        });
+        if (deptStatsText) deptStatsText.textContent = 'Có ' + filteredEmployees.length + ' nhân viên, trong đó ' + filteredUnregistered.length + ' chưa đăng ký.';
         if (deptStats) deptStats.style.display = 'flex';
         if (empSelectGroup) empSelectGroup.classList.remove('hidden-group');
 
@@ -1178,19 +1407,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Nhân viên ĐÃ đăng ký
         const filteredRegistered = registeredEmployees.filter(function(emp) {
-            return (emp.phongBan || '').trim().toLowerCase() === targetLower;
+            return normalizeComparableText(emp.phongBan || '') === targetKey;
         });
 
-        if (filteredRegistered.length > 0 && registeredCount && registeredListBody && registeredSection) {
-            registeredCount.textContent = filteredRegistered.length;
+        if (filteredRegistered.length > 0 && registeredDeptCount && registeredListBody && registeredSection) {
+            registeredDeptCount.textContent = filteredRegistered.length;
             filteredRegistered.forEach(function(emp) {
                 const tr = document.createElement('tr');
+                const empName = repairMojibakeText(emp.hoTen || '');
+                const empRole = repairMojibakeText(emp.chucVu || 'Nhân viên');
                 tr.innerHTML =
                     '<td><strong>#' + emp.maND + '</strong></td>' +
-                    '<td><strong>' + emp.hoTen + '</strong></td>' +
-                    '<td>' + (emp.chucVu || 'Nhân viên') + '</td>' +
+                    '<td><strong style="font-family: Arial, Helvetica, sans-serif;">' + empName + '</strong></td>' +
+                    '<td>' + empRole + '</td>' +
                     '<td><span class="badge-registered"><i class="fas fa-check-circle"></i> Đã đăng ký</span></td>' +
-                    '<td style="text-align:right;"><button class="btn-delete-face" data-id="' + emp.maND + '" data-name="' + emp.hoTen + '"><i class="fas fa-trash-alt"></i> Xóa Face ID</button></td>';
+                    '<td style="text-align:right;"><button class="btn-delete-face" data-id="' + emp.maND + '" data-name="' + empName + '"><i class="fas fa-trash-alt"></i> Xóa Face ID</button></td>';
                 registeredListBody.appendChild(tr);
             });
 
@@ -1228,12 +1459,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const empInfoRole = document.getElementById('emp-info-role');
 
             if (selectedMaND) {
-                const emp = unregisteredEmployees.find(function(e) { return e.maND.toString() === selectedMaND.toString(); });
+                const emp = allEmployees.find(function(e) { return e.maND.toString() === selectedMaND.toString(); });
                 if (emp) {
                     if (empInfoId) empInfoId.textContent = emp.maND;
-                    if (empInfoName) empInfoName.textContent = emp.hoTen;
-                    if (empInfoDept) empInfoDept.textContent = emp.phongBan || 'Không xác định';
-                    if (empInfoRole) empInfoRole.textContent = emp.chucVu || 'Nhân viên';
+                    if (empInfoName) empInfoName.textContent = repairMojibakeText(emp.hoTen || '');
+                    if (empInfoDept) empInfoDept.textContent = repairMojibakeText(emp.phongBan || 'Không xác định');
+                    if (empInfoRole) empInfoRole.textContent = repairMojibakeText(emp.chucVu || 'Nhân viên');
                     
                     if (profilePlaceholder) profilePlaceholder.style.display = 'none';
                     if (selectedEmpInfo) selectedEmpInfo.style.display = 'flex';
@@ -1254,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedMaND = employeeSelect.value;
             if (!selectedMaND) return;
 
-            const emp = unregisteredEmployees.find(function(e) { return e.maND.toString() === selectedMaND.toString(); });
+            const emp = allEmployees.find(function(e) { return e.maND.toString() === selectedMaND.toString(); });
             const scanningEmpName = document.getElementById('scanning-emp-name');
             const scanningEmpId   = document.getElementById('scanning-emp-id');
             const setupPanel      = document.getElementById('setup-panel');
@@ -1263,7 +1494,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const wizStep3        = document.getElementById('wiz-step-3');
 
             if (emp) {
-                if (scanningEmpName) scanningEmpName.textContent = emp.hoTen;
+                if (scanningEmpName) scanningEmpName.textContent = repairMojibakeText(emp.hoTen || '');
                 if (scanningEmpId)   scanningEmpId.textContent   = emp.maND;
             }
 
@@ -1299,6 +1530,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (wizStep3) wizStep3.classList.remove('active', 'completed');
             if (wizStep2) { wizStep2.classList.add('active'); wizStep2.classList.remove('completed'); }
+            
+            // Cuộn lên đầu trang để nhìn thấy danh sách nhân viên
+            window.scrollTo(0, 0);
         });
     }
 });
@@ -1541,6 +1775,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Khởi chạy Camera
     async function startCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            statusDisplay.className = 'status-banner status-error';
+            statusDisplay.innerHTML = '<i class="fas fa-camera-slash"></i> Trình duyệt của bạn không hỗ trợ camera. Hãy dùng Chrome/Edge/Firefox trên localhost hoặc HTTPS.';
+            return;
+        }
+
+        const isInsecureOrigin = window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname);
+        if (isInsecureOrigin) {
+            statusDisplay.className = 'status-banner status-error';
+            statusDisplay.innerHTML = '<i class="fas fa-lock"></i> Trang đang chạy trên HTTP không an toàn. Hãy mở bằng <strong>http://localhost</strong> hoặc <strong>https</strong>, sau đó cho phép camera.';
+            return;
+        }
+
         try {
             cameraStream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -1562,8 +1809,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             setTimeout(detectFace, 300);
         } catch (err) {
             console.error('Không thể truy cập camera:', err);
+            const errName = (err && err.name) || '';
+            const permissionHint = errName.includes('NotAllowed') || errName.includes('Permission') || errName.includes('Security')
+                ? '<br><small>Vui lòng bấm biểu tượng khóa/camera trên thanh địa chỉ → Chọn Cho phép → Tải lại trang.</small>'
+                : '';
+
             statusDisplay.className = 'status-banner status-error';
-            statusDisplay.innerHTML = '<i class="fas fa-camera-slash"></i> Không thể truy cập Camera. Vui lòng cấp quyền camera.';
+            statusDisplay.innerHTML = '<i class="fas fa-camera-slash"></i> Không thể truy cập Camera. Vui lòng cho phép quyền camera trên trình duyệt.' + permissionHint;
         }
     }
 
@@ -1743,7 +1995,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         btnRegister.disabled = true;
-        const targetMaND = employeeSelect.value;
+        const targetMaND = window.currentFaceRegistrationTarget || (employeeSelect ? employeeSelect.value : '');
+        if (!targetMaND) {
+            statusDisplay.className = 'status-banner status-error';
+            statusDisplay.innerHTML = '<i class="fas fa-exclamation-circle"></i> Chưa xác định được nhân viên cần đăng ký.';
+            btnRegister.disabled = false;
+            return;
+        }
         if (!lastDescriptor || lastDescriptorConfidence < 0.72) {
             statusDisplay.className = 'status-banner status-error';
             statusDisplay.innerHTML = '<i class="fas fa-exclamation-circle"></i> Khuôn mặt quét chưa đủ rõ nét. Hãy quay lại và giữ khuôn mặt ở trung tâm khung hình.';

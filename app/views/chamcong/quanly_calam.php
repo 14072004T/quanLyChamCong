@@ -5,6 +5,15 @@ if (($_SESSION['role'] ?? '') !== 'hr') { header('Location: index.php?page=home'
 $success = $_SESSION['success'] ?? '';
 $error = $_SESSION['error'] ?? '';
 unset($_SESSION['success'], $_SESSION['error']);
+
+function shiftDisplayText($value) {
+    $text = trim((string)($value ?? ''));
+    if ($text !== '' && preg_match('/(?:Ã.|Â.|á»|áº|Ä.|Ä‘)/u', $text)) {
+        $fixed = @utf8_decode($text);
+        if ($fixed !== false && $fixed !== '') $text = $fixed;
+    }
+    return $text;
+}
 ?>
 <?php include 'app/views/layouts/header.php'; ?>
 <?php include 'app/views/layouts/nav.php'; ?>
@@ -32,6 +41,7 @@ unset($_SESSION['success'], $_SESSION['error']);
         <div class="panel">
             <h2 style="border:none;padding:0;margin:0 0 6px;">QUẢN LÝ CA LÀM VIỆC</h2>
             <p style="color:#64748b;margin:0;">Ca làm việc được gán tự động theo tháng (Hành chính). Nhân viên đăng ký OT riêng, hệ thống tự tính thêm giờ.</p>
+            <a href="index.php?page=tablet-cham-cong" class="btn btn-primary" style="margin-top:14px;display:inline-flex;align-items:center;gap:8px;text-decoration:none;"><i class="fas fa-tablet-screen-button"></i> Mở tablet chấm công</a>
         </div>
 
         <?php if ($success): ?>
@@ -74,35 +84,49 @@ unset($_SESSION['success'], $_SESSION['error']);
                         <thead>
                             <tr>
                                 <th>TÊN CA</th>
+                                <th>KÝ HIỆU</th>
+                                <th>MÀU</th>
                                 <th>GIỜ BẮT ĐẦU</th>
                                 <th>GIỜ KẾT THÚC</th>
                                 <th>TRẠNG THÁI</th>
+                                <th>THAO TÁC</th>
                             </tr>
                         </thead>
                         <tbody id="shift-list-body">
                             <?php if (!empty($shifts)): ?>
                                 <?php foreach ($shifts as $shift): ?>
                                     <tr>
-                                        <td><strong><?= htmlspecialchars($shift['tenCa']) ?></strong></td>
+                                        <td><strong><?= htmlspecialchars(shiftDisplayText($shift['tenCa'])) ?></strong></td>
+                                        <td><strong><?= htmlspecialchars($shift['kyHieu'] ?? '') ?></strong></td>
+                                        <td><span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:<?= htmlspecialchars($shift['mauSac'] ?? '#3b82f6') ?>;vertical-align:middle;"></span> <?= htmlspecialchars($shift['mauSac'] ?? '#3b82f6') ?></td>
                                         <td><?= htmlspecialchars(substr($shift['gioBatDau'], 0, 5)) ?></td>
                                         <td><?= htmlspecialchars(substr($shift['gioKetThuc'], 0, 5)) ?></td>
                                         <td><span class="trangThai-badge <?= (int)$shift['hoatDong'] ? 'trangThai-approved' : 'trangThai-rejected' ?>"><?= (int)$shift['hoatDong'] ? 'Đang dùng' : 'Tắt' ?></span></td>
+                                        <td><button type="button" class="btn btn-secondary btn-sm edit-shift" data-id="<?= (int)$shift['id'] ?>" data-name="<?= htmlspecialchars(shiftDisplayText($shift['tenCa']), ENT_QUOTES) ?>" data-code="<?= htmlspecialchars($shift['kyHieu'] ?? '', ENT_QUOTES) ?>" data-color="<?= htmlspecialchars($shift['mauSac'] ?? '#3b82f6', ENT_QUOTES) ?>" data-start="<?= htmlspecialchars(substr($shift['gioBatDau'], 0, 5), ENT_QUOTES) ?>" data-end="<?= htmlspecialchars(substr($shift['gioKetThuc'], 0, 5), ENT_QUOTES) ?>"><i class="fas fa-pen"></i> Sửa</button> <form method="post" onsubmit="return confirm('Xóa ca này?');" style="display:inline;"><input type="hidden" name="form_action" value="delete_shift"><input type="hidden" name="id" value="<?= (int)$shift['id'] ?>"><button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Xóa</button></form></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <tr><td colspan="4" class="empty-state">Chưa có ca làm việc.</td></tr>
+                                <tr><td colspan="7" class="empty-state">Chưa có ca làm việc.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
                     <button type="button" class="btn btn-primary btn-sm" id="toggle-add-shift" style="margin-top:12px;"><i class="fas fa-plus"></i> Thêm ca mới</button>
                 </div>
                 <div class="shift-list-side" id="add-shift-form-panel" style="display:none;">
-                    <h4>Tạo ca mới</h4>
+                    <h4 id="shift-form-title">Tạo ca mới</h4>
                     <form id="shift-form">
                         <input type="hidden" name="id" value="0">
                         <div class="form-group">
                             <label>Tên ca *</label>
-                            <input type="text" name="tenCa" placeholder="VD: HC, Ca sáng, OT" required>
+                            <input type="text" name="tenCa" placeholder="VD: Hành chính" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Ký hiệu *</label>
+                            <input type="text" name="kyHieu" placeholder="VD: HC" maxlength="20" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Màu hiển thị *</label>
+                            <input type="color" name="mauSac" value="#3b82f6" style="height:38px;width:100%;padding:3px;">
                         </div>
                         <div class="form-group">
                             <label>Giờ bắt đầu *</label>
@@ -145,6 +169,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var shiftForm = document.getElementById('shift-form');
     var toggleBtn = document.getElementById('toggle-add-shift');
     var formPanel = document.getElementById('add-shift-form-panel');
+    var shiftFormTitle = document.getElementById('shift-form-title');
 
     function escapeHtml(val) {
         return String(val ?? '').replace(/[&<>"]/g, function(c) {
@@ -199,6 +224,26 @@ document.addEventListener('DOMContentLoaded', function () {
 
     toggleBtn.addEventListener('click', function () {
         formPanel.style.display = formPanel.style.display === 'none' ? 'block' : 'none';
+        if (formPanel.style.display === 'block') {
+            shiftForm.reset();
+            shiftForm.elements.id.value = '0';
+            shiftForm.elements.mauSac.value = '#3b82f6';
+            if (shiftFormTitle) shiftFormTitle.textContent = 'Tạo ca mới';
+        }
+    });
+
+    document.querySelectorAll('.edit-shift').forEach(function(button) {
+        button.addEventListener('click', function() {
+            shiftForm.elements.id.value = this.dataset.id;
+            shiftForm.elements.tenCa.value = this.dataset.name;
+            shiftForm.elements.kyHieu.value = this.dataset.code;
+            shiftForm.elements.mauSac.value = this.dataset.color;
+            shiftForm.elements.gioBatDau.value = this.dataset.start;
+            shiftForm.elements.gioKetThuc.value = this.dataset.end;
+            if (shiftFormTitle) shiftFormTitle.textContent = 'Sửa ca làm việc';
+            formPanel.style.display = 'block';
+            formPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
     });
 
     function getDaysInMonth(monthKey) {
@@ -232,11 +277,13 @@ document.addEventListener('DOMContentLoaded', function () {
         // Fetch employees + attendance data
         Promise.all([
             fetch('index.php?page=hr-api-employees&limit=0', { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); }),
-            fetch('index.php?page=hr-api-payroll&month=' + encodeURIComponent(month), { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); })
+            fetch('index.php?page=hr-api-payroll&month=' + encodeURIComponent(month), { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); }),
+            fetch('index.php?page=hr-api-shifts', { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); })
         ]).then(function(results) {
             var employees = (results[0].data || []).filter(function(e) { return e.trangThai == 1; });
             var payrollData = results[1].data || [];
             var otSchedule = results[1].otSchedule || {};
+            var shifts = (results[2].data || []).filter(function(s) { return Number(s.hoatDong) === 1; });
 
             // Map payroll by maND
             var payrollMap = {};
@@ -280,7 +327,15 @@ document.addEventListener('DOMContentLoaded', function () {
                             cells += '<span class="shift-cell shift-off">OFF</span>';
                         } else {
                             totalDays++;
-                            cells += '<span class="shift-cell shift-hc">HC</span>';
+                            if (shifts.length) {
+                                var shiftOptions = shifts.map(function(shift) {
+                                    var selected = shift.kyHieu === 'HC' ? ' selected' : '';
+                                    return '<option value="' + shift.id + '" data-color="' + escapeHtml(shift.mauSac || '#3b82f6') + '"' + selected + '>' + escapeHtml(shift.kyHieu || shift.tenCa) + '</option>';
+                                }).join('');
+                                cells += '<select class="shift-cell shift-picker" data-ma-nd="' + emp.maND + '" data-date="' + currentDate + '" title="Đổi ca" style="background:' + escapeHtml(shifts[0].mauSac || '#3b82f6') + ';color:#fff;border-color:' + escapeHtml(shifts[0].mauSac || '#3b82f6') + '" onchange="changeMonthlyShift(this)">' + shiftOptions + '</select>';
+                            } else {
+                                cells += '<span class="shift-cell shift-hc">-</span>';
+                            }
                         }
 
                         if (otInfo) {
@@ -295,6 +350,23 @@ document.addEventListener('DOMContentLoaded', function () {
             gridBody.innerHTML = '<tr><td colspan="' + (days + 1) + '" class="empty-state">Lỗi tải dữ liệu.</td></tr>';
         });
     }
+
+    window.changeMonthlyShift = function(select) {
+        var selectedOption = select.options[select.selectedIndex];
+        var color = selectedOption ? selectedOption.dataset.color : '#3b82f6';
+        select.style.backgroundColor = color;
+        select.style.borderColor = color;
+        var formData = new FormData();
+        formData.append('maND', select.dataset.maNd);
+        formData.append('maCa', select.value);
+        formData.append('hieuLucTu', select.dataset.date);
+        fetch('index.php?page=hr-api-shift-assignments', { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); })
+            .then(function(result) {
+                if (!result.success) alert(result.message || 'Không thể đổi ca');
+            })
+            .catch(function() { alert('Không thể kết nối máy chủ khi đổi ca.'); });
+    };
 
     monthPicker.addEventListener('change', loadMonthlyShifts);
 

@@ -163,12 +163,13 @@ class LivenessDetector {
 
         const box = detection.detection.box;
         this.boxHistory.push(box);
-        if (Array.isArray(detection.descriptor) && detection.descriptor.length > 0) {
-            this.descriptorSamples.push(Array.from(detection.descriptor));
+        const normalizedDescriptor = this._normalizeDescriptor(detection.descriptor);
+        if (normalizedDescriptor && normalizedDescriptor.length > 0) {
+            this.descriptorSamples.push(normalizedDescriptor);
             if (this.descriptorSamples.length > 8) {
                 this.descriptorSamples.shift();
             }
-            this.latestDescriptor = this._buildAverageDescriptor(this.descriptorSamples) || Array.from(detection.descriptor);
+            this.latestDescriptor = this._buildAverageDescriptor(this.descriptorSamples) || normalizedDescriptor;
         }
 
         // ─── ★ Eye Blink Detection (EAR) ───
@@ -417,7 +418,11 @@ class LivenessDetector {
         this._updateStatus('Xác thực khuôn mặt thật thành công!', 'success');
 
         if (this.cb.onComplete) {
-            const descriptorToSend = this._buildAverageDescriptor(this.descriptorSamples) || this.latestDescriptor;
+            const descriptorToSend = this._normalizeDescriptor(this._buildAverageDescriptor(this.descriptorSamples)) || this._normalizeDescriptor(this.latestDescriptor);
+            if (!descriptorToSend || descriptorToSend.length === 0) {
+                this._fail('Không thu thập được dữ liệu khuôn mặt từ camera. Vui lòng nhìn thẳng vào camera và thử lại.');
+                return;
+            }
             this.cb.onComplete(token, descriptorToSend);
         }
     }
@@ -617,6 +622,16 @@ class LivenessDetector {
         return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
     }
 
+    _normalizeDescriptor(descriptor) {
+        if (!descriptor) return null;
+        if (Array.isArray(descriptor)) return descriptor.slice();
+        if (ArrayBuffer.isView(descriptor)) return Array.from(descriptor);
+        if (descriptor && typeof descriptor === 'object' && typeof descriptor.length === 'number') {
+            return Array.from(descriptor);
+        }
+        return null;
+    }
+
     _buildAverageDescriptor(samples) {
         if (!Array.isArray(samples) || samples.length === 0) {
             return null;
@@ -625,8 +640,9 @@ class LivenessDetector {
         const dims = samples[0].length;
         const avg = new Array(dims).fill(0);
         samples.forEach((sample) => {
-            if (!Array.isArray(sample) || sample.length !== dims) return;
-            sample.forEach((value, index) => {
+            const normalizedSample = this._normalizeDescriptor(sample);
+            if (!normalizedSample || normalizedSample.length !== dims) return;
+            normalizedSample.forEach((value, index) => {
                 avg[index] += Number(value) || 0;
             });
         });
