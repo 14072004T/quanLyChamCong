@@ -672,6 +672,25 @@ if (!isset($view) || is_null($view)) {
 
                 async function submitAttendance(livenessToken, descriptor) {
                     const status = document.getElementById('face-modal-status');
+                    const normalizedDescriptor = Array.isArray(descriptor)
+                        ? descriptor
+                        : (ArrayBuffer.isView(descriptor) ? Array.from(descriptor) : null);
+
+                    if (!normalizedDescriptor || normalizedDescriptor.length === 0) {
+                        if (status) {
+                            status.style.cssText = 'padding: 16px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; line-height: 1.5;';
+                            status.innerHTML = '<i class="fas fa-user-times" style="font-size: 28px; color: #ef4444; margin-bottom: 10px; display: block;"></i> <strong style="font-size: 16px; display:block; margin-bottom:6px;">Không thể đọc dữ liệu khuôn mặt</strong> Vui lòng nhìn thẳng vào camera và thử lại.';
+                        }
+
+                        const btnVerify = document.getElementById('modal-btn-verify');
+                        if (btnVerify) {
+                            btnVerify.disabled = false;
+                            btnVerify.innerHTML = '<i class="fas fa-sync-alt"></i> THỬ LẠI';
+                            btnVerify.style.backgroundColor = '#f59e0b';
+                        }
+                        return;
+                    }
+
                     if (status) {
                         status.style.cssText = 'padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
                         status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi ảnh và dữ liệu chấm công...';
@@ -689,7 +708,7 @@ if (!isset($view) || is_null($view)) {
                     sCtx.setTransform(1, 0, 0, 1, 0, 0);
                     
                     const photoBase64 = snapCanvas.toDataURL('image/jpeg', 0.85);
-                    const embeddingStr = JSON.stringify(Array.from(descriptor));
+                    const embeddingStr = JSON.stringify(normalizedDescriptor);
                     
                     const formData = new FormData();
                     formData.append('hanhDong', currentAction);
