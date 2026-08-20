@@ -331,7 +331,7 @@ if (!isset($view) || is_null($view)) {
                 setInterval(updateClock, 1000);
                 updateClock();
 
-                async function triggerFaceAttendance(action) {
+                window.triggerFaceAttendance = async function triggerFaceAttendance(action) {
                     currentAction = action;
                     isVerificationComplete = false;
 
@@ -620,7 +620,7 @@ if (!isset($view) || is_null($view)) {
                     }
                 }
 
-                function closeFaceModal() {
+                window.closeFaceModal = function closeFaceModal() {
                     if (detectionInterval) {
                         clearTimeout(detectionInterval);
                         detectionInterval = null;
