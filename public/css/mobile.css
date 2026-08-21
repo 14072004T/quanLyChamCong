@@ -46,6 +46,10 @@ body.mobile-view {
 }
 
 /* Compact function menu for phones: open the existing role menu as a drawer. */
+.mobile-view .sidebar-nav {
+    display: none !important;
+}
+
 .mobile-view.mobile-menu-open .sidebar-nav {
     display: flex !important;
     position: fixed !important;

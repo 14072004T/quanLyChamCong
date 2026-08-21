@@ -72,14 +72,14 @@ $roleLabels = [
     'tech' => 'Kỹ thuật',
 ];
 
-$appVersion = 'v2.4.5';
+$appVersion = 'v2.4.6';
 ?>
 
 <nav class="sidebar-nav">
     <div class="sidebar-top-section">
         <i class="fa-solid fa-fingerprint"></i>
         <span>CHẤM CÔNG</span>
-        <button type="button" class="sidebar-close" onclick="toggleMobileMenu(false)" aria-label="Đóng menu">
+        <button type="button" class="sidebar-close" onclick="window.toggleMobileMenu(false); return false;" aria-label="Đóng menu">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
