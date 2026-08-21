@@ -3,7 +3,7 @@ window.toggleMobileMenu = function (shouldOpen) {
     const body = document.body;
     const sidebar = document.querySelector(".mobile-view .sidebar-nav");
     const menuTrigger = document.querySelector(".mobile-header .menu-trigger");
-    const reopenBtn = document.querySelector(".mobile-header .sidebar-reopen-btn");
+    const reopenBtn = document.querySelector(".sidebar-reopen-btn");
 
     if (!body.classList.contains("mobile-view")) {
         return;
@@ -109,7 +109,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const menuTrigger = document.querySelector(".mobile-header .menu-trigger");
-    const reopenBtn = document.querySelector(".mobile-header .sidebar-reopen-btn");
+    const reopenBtn = document.querySelector(".sidebar-reopen-btn");
 
     if (menuTrigger) {
         menuTrigger.addEventListener("click", function (event) {

@@ -244,6 +244,9 @@
                 <span class="logo-f">F</span>
                 <span class="logo-t">T</span>
             </div>
+            <button type="button" class="sidebar-reopen-btn" title="Mở menu" aria-label="Mở menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
             <h1>HỆ THỐNG QUẢN LÝ CHẤM CÔNG</h1>
             <div class="user-controls">
                 <div class="notif-wrapper" id="notifWrapper">
