@@ -1,16 +1,14 @@
-window.toggleMobileMenu = function (shouldOpen) {
-    const open = typeof shouldOpen === "boolean" ? shouldOpen : true;
-    document.body.classList.toggle("mobile-menu-open", open);
+if (typeof window.toggleMobileMenu !== "function") {
+    window.toggleMobileMenu = function (shouldOpen) {
+        const open = typeof shouldOpen === "boolean" ? shouldOpen : true;
+        document.body.classList.toggle("mobile-menu-open", open);
 
-    const sidebar = document.querySelector(".mobile-view .sidebar-nav");
-    if (sidebar) {
-        sidebar.setAttribute("aria-hidden", String(!open));
-    }
-
-    if (!open) {
-        document.removeEventListener("click", handleMobileMenuOutsideClick);
-    }
-};
+        const sidebar = document.querySelector(".mobile-view .sidebar-nav");
+        if (sidebar) {
+            sidebar.setAttribute("aria-hidden", String(!open));
+        }
+    };
+}
 
 function handleMobileMenuOutsideClick(event) {
     const sidebar = document.querySelector(".mobile-view .sidebar-nav");
@@ -20,8 +18,9 @@ function handleMobileMenuOutsideClick(event) {
 
     const clickedInsideMenu = sidebar.contains(event.target);
     const clickedTrigger = trigger.contains(event.target);
+    const clickedCloseButton = event.target.closest(".sidebar-close");
 
-    if (!clickedInsideMenu && !clickedTrigger) {
+    if (!clickedInsideMenu && !clickedTrigger && !clickedCloseButton) {
         window.toggleMobileMenu(false);
     }
 }
@@ -93,13 +92,27 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const menuTrigger = document.querySelector(".mobile-header .menu-trigger");
+    const closeButton = document.querySelector(".sidebar-close");
+
     if (menuTrigger) {
-        menuTrigger.addEventListener("click", function () {
+        menuTrigger.addEventListener("click", function (event) {
+            event.stopPropagation();
             const isOpen = document.body.classList.contains("mobile-menu-open");
             window.toggleMobileMenu(!isOpen);
-            if (!isOpen) {
-                document.addEventListener("click", handleMobileMenuOutsideClick);
-            }
         });
     }
+
+    if (closeButton) {
+        closeButton.addEventListener("click", function (event) {
+            event.stopPropagation();
+            window.toggleMobileMenu(false);
+        });
+    }
+
+    document.addEventListener("click", function (event) {
+        if (!document.body.classList.contains("mobile-menu-open")) return;
+        if (!event.target.closest(".sidebar-nav") && !event.target.closest(".menu-trigger") && !event.target.closest(".sidebar-close")) {
+            window.toggleMobileMenu(false);
+        }
+    });
 });

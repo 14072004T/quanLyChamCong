@@ -215,10 +215,6 @@
                     panel.setAttribute('aria-hidden', 'true');
                 }
             }
-            function toggleMobileMenu() {
-                const shouldOpen = arguments.length === 0 ? true : arguments[0];
-                document.body.classList.toggle('mobile-menu-open', shouldOpen);
-            }
         </script>
     <?php else: ?>
         <header class="header">

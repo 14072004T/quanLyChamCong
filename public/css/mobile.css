@@ -59,6 +59,20 @@ body.mobile-view {
     animation: mobile-menu-in .18s ease-out both;
 }
 
+.mobile-view .sidebar-nav .sidebar-version {
+    margin-top: auto !important;
+    padding: 10px 16px 16px !important;
+    border-top: 1px solid rgba(148, 163, 184, 0.18) !important;
+    color: rgba(191, 219, 254, 0.8) !important;
+    font-size: 11px !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+}
+
 .mobile-view.mobile-menu-open .main-layout-wrapper,
 .mobile-view.mobile-menu-open .main-content,
 .mobile-view.mobile-menu-open .dashboard-container,

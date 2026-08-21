@@ -71,6 +71,8 @@ $roleLabels = [
     'manager' => 'Quản lý',
     'tech' => 'Kỹ thuật',
 ];
+
+$appVersion = 'v2.4.1';
 ?>
 
 <nav class="sidebar-nav">
@@ -95,4 +97,9 @@ $roleLabels = [
             </li>
         <?php endforeach; ?>
     </ul>
+
+    <div class="sidebar-version">
+        <span>RFT</span>
+        <strong><?= htmlspecialchars($appVersion) ?></strong>
+    </div>
 </nav>
