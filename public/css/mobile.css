@@ -38,9 +38,9 @@ body.mobile-view {
     width: 100% !important;
 }
 
-/* Hide desktop components on mobile */
+/* Hide desktop sidebar only on mobile; keep the header visible */
+.mobile-view .main-container > .sidebar-nav,
 .mobile-view .sidebar-nav,
-.mobile-view .header:not(.mobile-header),
 .mobile-view .footer {
     display: none !important;
 }
@@ -151,6 +151,7 @@ body.mobile-view.mobile-menu-open .mobile-sidebar-nav,
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
+    min-width: 0 !important;
 }
 
 .mobile-header .header-logo {
