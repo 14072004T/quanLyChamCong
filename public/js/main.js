@@ -6,6 +6,7 @@ if (typeof window.toggleMobileMenu !== "function") {
 
         const sidebar = document.querySelector(".mobile-view .sidebar-nav");
         if (sidebar) {
+            sidebar.style.display = open ? "flex" : "none";
             sidebar.setAttribute("aria-hidden", String(!open));
         }
 
@@ -129,6 +130,4 @@ document.addEventListener("DOMContentLoaded", function () {
             window.toggleMobileMenu(false);
         }
     });
-
-    window.toggleMobileMenu(true);
 });
