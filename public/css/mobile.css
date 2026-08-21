@@ -46,11 +46,14 @@ body.mobile-view {
 }
 
 /* Compact function menu for phones: open the existing role menu as a drawer. */
-.mobile-view .sidebar-nav {
+body.mobile-view .sidebar-nav,
+.mobile-sidebar-nav {
     display: none !important;
 }
 
-.mobile-view.mobile-menu-open .sidebar-nav {
+body.mobile-view.mobile-menu-open .sidebar-nav,
+body.mobile-view.mobile-menu-open .mobile-sidebar-nav,
+.mobile-sidebar-nav.mobile-sidebar-open {
     display: flex !important;
     position: fixed !important;
     top: 0 !important;

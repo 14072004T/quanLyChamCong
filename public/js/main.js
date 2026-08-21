@@ -13,6 +13,8 @@ window.toggleMobileMenu = function (shouldOpen) {
     body.classList.toggle("sidebar-collapsed", !open);
 
     if (sidebar) {
+        sidebar.classList.toggle("mobile-sidebar-open", open);
+        sidebar.classList.toggle("mobile-sidebar-hidden", !open);
         sidebar.style.display = open ? "flex" : "none";
         sidebar.setAttribute("aria-hidden", String(!open));
     }

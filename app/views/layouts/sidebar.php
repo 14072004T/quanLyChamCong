@@ -72,10 +72,10 @@ $roleLabels = [
     'tech' => 'Kỹ thuật',
 ];
 
-$appVersion = 'v2.4.8';
+$appVersion = 'v2.4.9';
 ?>
 
-<nav class="sidebar-nav">
+<nav class="sidebar-nav <?= AuthMiddleware::isMobile() ? 'mobile-sidebar-nav' : '' ?>">
     <div class="sidebar-top-section">
         <i class="fa-solid fa-fingerprint"></i>
         <span>CHẤM CÔNG</span>
