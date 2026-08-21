@@ -2,10 +2,16 @@ if (typeof window.toggleMobileMenu !== "function") {
     window.toggleMobileMenu = function (shouldOpen) {
         const open = typeof shouldOpen === "boolean" ? shouldOpen : true;
         document.body.classList.toggle("mobile-menu-open", open);
+        document.body.classList.toggle("sidebar-collapsed", !open);
 
         const sidebar = document.querySelector(".mobile-view .sidebar-nav");
         if (sidebar) {
             sidebar.setAttribute("aria-hidden", String(!open));
+        }
+
+        const reopenBtn = document.querySelector(".mobile-header .sidebar-reopen-btn");
+        if (reopenBtn) {
+            reopenBtn.setAttribute("aria-hidden", String(open));
         }
     };
 }
@@ -92,6 +98,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const menuTrigger = document.querySelector(".mobile-header .menu-trigger");
+    const reopenBtn = document.querySelector(".mobile-header .sidebar-reopen-btn");
     const closeButton = document.querySelector(".sidebar-close");
 
     if (menuTrigger) {
@@ -99,6 +106,13 @@ document.addEventListener("DOMContentLoaded", function () {
             event.stopPropagation();
             const isOpen = document.body.classList.contains("mobile-menu-open");
             window.toggleMobileMenu(!isOpen);
+        });
+    }
+
+    if (reopenBtn) {
+        reopenBtn.addEventListener("click", function (event) {
+            event.stopPropagation();
+            window.toggleMobileMenu(true);
         });
     }
 
@@ -111,8 +125,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     document.addEventListener("click", function (event) {
         if (!document.body.classList.contains("mobile-menu-open")) return;
-        if (!event.target.closest(".sidebar-nav") && !event.target.closest(".menu-trigger") && !event.target.closest(".sidebar-close")) {
+        if (!event.target.closest(".sidebar-nav") && !event.target.closest(".menu-trigger") && !event.target.closest(".sidebar-close") && !event.target.closest(".sidebar-reopen-btn")) {
             window.toggleMobileMenu(false);
         }
     });
+
+    window.toggleMobileMenu(true);
 });

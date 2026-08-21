@@ -140,12 +140,48 @@ body.mobile-view {
     padding: 4px !important;
 }
 
+.mobile-header .header-brand-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
 .mobile-header .header-logo {
     font-size: 22px !important;
     font-weight: 800 !important;
     letter-spacing: 0.5px !important;
     color: white !important;
     text-transform: uppercase !important;
+}
+
+.mobile-header .sidebar-reopen-btn {
+    display: none !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    width: 30px !important;
+    height: 30px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+}
+
+.mobile-view.sidebar-collapsed .sidebar-nav {
+    display: none !important;
+}
+
+.mobile-view.sidebar-collapsed .mobile-header .menu-trigger {
+    display: none !important;
+}
+
+.mobile-view.sidebar-collapsed .mobile-header .sidebar-reopen-btn {
+    display: inline-flex !important;
+}
+
+.mobile-view:not(.sidebar-collapsed) .mobile-header .sidebar-reopen-btn {
+    display: none !important;
 }
 
 .mobile-header .header-notif {

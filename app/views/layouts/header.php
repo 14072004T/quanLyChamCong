@@ -146,7 +146,12 @@
             <button type="button" class="menu-trigger" title="Menu">
                 <i class="fa-solid fa-bars"></i>
             </button>
-            <div class="header-logo">RFT</div>
+            <div class="header-brand-group">
+                <div class="header-logo">RFT</div>
+                <button type="button" class="sidebar-reopen-btn" title="Mở menu" aria-label="Mở menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
             <div style="display: flex; align-items: center; gap: 14px;">
                 <button type="button" class="header-notif" id="mobileNotifBtn" onclick="toggleMobileNotif()" style="cursor:pointer;position:relative;" title="Thông báo">
                     <i class="fa-regular fa-bell"></i>
