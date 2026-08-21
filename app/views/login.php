@@ -432,12 +432,33 @@
     </style>
     <?php
     require_once 'app/middleware/AuthMiddleware.php';
-    if (AuthMiddleware::isMobile()):
     ?>
     <link rel="stylesheet" href="public/css/mobile.css?v=<?= time() ?>">
-    <?php endif; ?>
 </head>
 <body class="<?= AuthMiddleware::isMobile() ? 'mobile-view mb-login-body' : '' ?>">
+    <script>
+        (function () {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const force = params.get('device');
+                if (force === 'mobile') {
+                    document.body.classList.add('mobile-view');
+                    document.body.classList.add('mb-login-body');
+                    return;
+                }
+                if (force === 'desktop') {
+                    return;
+                }
+                const isTabletOrMobile = window.innerWidth <= 1024 && (
+                    navigator.maxTouchPoints > 0 || /iPad|iPhone|iPod|Android|Mobile|Tablet/i.test(navigator.userAgent)
+                );
+                if (isTabletOrMobile) {
+                    document.body.classList.add('mobile-view');
+                    document.body.classList.add('mb-login-body');
+                }
+            } catch (e) {}
+        })();
+    </script>
 
     <?php if (AuthMiddleware::isMobile()): ?>
         <!-- ========================================== -->

@@ -15,15 +15,31 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="public/css/style.css?v=<?= (int)$styleVersion ?>">
     <link rel="stylesheet" href="public/css/dashboard.css?v=<?= (int)$dashboardStyleVersion ?>">
-    <?php
-    require_once 'app/middleware/AuthMiddleware.php';
-    if (AuthMiddleware::isMobile()):
-    ?>
     <link rel="stylesheet" href="public/css/mobile.css?v=<?= time() ?>">
-    <?php endif; ?>
 </head>
 
 <body class="<?= AuthMiddleware::isMobile() ? 'mobile-view' : '' ?>">
+    <script>
+        (function () {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const force = params.get('device');
+                if (force === 'mobile') {
+                    document.body.classList.add('mobile-view');
+                    return;
+                }
+                if (force === 'desktop') {
+                    return;
+                }
+                const isTabletOrMobile = window.innerWidth <= 1024 && (
+                    navigator.maxTouchPoints > 0 || /iPad|iPhone|iPod|Android|Mobile|Tablet/i.test(navigator.userAgent)
+                );
+                if (isTabletOrMobile) {
+                    document.body.classList.add('mobile-view');
+                }
+            } catch (e) {}
+        })();
+    </script>
     <?php
     $notificationItems = [];
     $notificationCount = 0;
