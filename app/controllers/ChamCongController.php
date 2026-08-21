@@ -35,6 +35,11 @@ class ChamCongController
         
         // Lấy lịch sử chấm công gần đây
         $history = $this->model->getLichSuTheoNhanVien($maND, 5) ?? [];
+
+        // Lấy riêng tổng hợp chấm công hôm nay để dashboard không phụ thuộc
+        // vào số lượng log gần đây được tải ở trên.
+        $todayAttendanceRows = $this->model->getAttendanceByUser($maND, 1);
+        $todayAttendance = $todayAttendanceRows[0] ?? [];
         
         // Lấy các message từ session (thông báo thành công/lỗi)
         $success = $_SESSION['success'] ?? null;

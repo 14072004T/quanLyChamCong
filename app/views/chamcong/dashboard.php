@@ -237,13 +237,12 @@ if (!isset($view) || is_null($view)) {
                         <div class="emp-card">
                             <h3 style="margin-top: 0; font-size: 15px; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">Chi tiết hôm nay</h3>
                             <?php 
-                                $inTime = '--:--'; $outTime = '--:--';
-                                foreach ($history ?? [] as $h) {
-                                    if (substr($h['ngayTao'], 0, 10) === date('Y-m-d')) {
-                                        if ($h['hanhDong'] === 'IN') $inTime = substr($h['ngayTao'], 11, 5);
-                                        if ($h['hanhDong'] === 'OUT') $outTime = substr($h['ngayTao'], 11, 5);
-                                    }
-                                }
+                                $inTime = !empty($todayAttendance['gioVaoDau'])
+                                    ? date('H:i', strtotime($todayAttendance['gioVaoDau']))
+                                    : '--:--';
+                                $outTime = !empty($todayAttendance['gioRaCuoi'])
+                                    ? date('H:i', strtotime($todayAttendance['gioRaCuoi']))
+                                    : '--:--';
                             ?>
                             <div class="detail-row">
                                 <span class="detail-label">Giờ bắt đầu</span>
