@@ -154,22 +154,13 @@ class FaceController extends Controller
         $incomingEmbedding = $this->normalizeEmbedding($incomingEmbedding);
         $embedding = json_encode($incomingEmbedding);
 
-        // 2. Kiểm tra nhân viên này đã đăng ký khuôn mặt chưa (1 user chỉ được 1 face)
-        $existingProfile = $this->faceModel->getFaceProfile($maND);
-        if ($existingProfile) {
-            $userName = $this->faceModel->getUserName($maND);
-            echo json_encode([
-                'success'    => false,
-                'alreadyExists' => true,
-                'message'    => '⚠️ Nhân viên "' . $userName . '" đã có dữ liệu khuôn mặt được đăng ký trước đó. Mỗi nhân viên chỉ được đăng ký 1 khuôn mặt duy nhất. Nếu cần cập nhật, HR phải xóa khuôn mặt cũ trước rồi đăng ký lại.'
-            ]);
-            exit;
-        }
-
-        // 3. Kiểm tra tính độc nhất: Khuôn mặt này có trùng với tài khoản khác không?
+        // 2. Kiểm tra tính độc nhất, bỏ qua profile cũ của chính nhân viên này.
         $allProfiles = $this->faceModel->getAllFaceProfiles($maND);
-        $threshold = 0.55; // Áp dụng sau khi embedding đã được chuẩn hóa L2
-        $cosineThreshold = 0.85;
+        // Face-API descriptors are L2-normalized before comparison. Use a
+        // stricter boundary here so different employees are not treated as
+        // the same face because of a loose cosine-only match.
+        $threshold = 0.45;
+        $cosineThreshold = 0.90;
 
         foreach ($allProfiles as $prof) {
             $otherEmbedding = json_decode($prof['embedding'], true);
