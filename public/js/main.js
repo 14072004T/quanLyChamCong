@@ -1,3 +1,8 @@
+window.toggleMobileMenu = function (shouldOpen) {
+    const open = typeof shouldOpen === "boolean" ? shouldOpen : true;
+    document.body.classList.toggle("mobile-menu-open", open);
+};
+
 document.addEventListener("DOMContentLoaded", function () {
     const sidebarList = document.getElementById("sidebarList");
     if (sidebarList) {
