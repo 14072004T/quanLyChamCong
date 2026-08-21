@@ -143,7 +143,7 @@
     ?>
     <?php if (AuthMiddleware::isMobile()): ?>
         <header class="mobile-header">
-            <button type="button" class="menu-trigger" onclick="toggleMobileMenu()" title="Menu">
+            <button type="button" class="menu-trigger" title="Menu">
                 <i class="fa-solid fa-bars"></i>
             </button>
             <div class="header-logo">RFT</div>

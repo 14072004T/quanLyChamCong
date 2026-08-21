@@ -9,6 +9,11 @@ body.mobile-view {
 }
 
 /* --- MOBILE LAYOUT & CONTAINERS --- */
+.mobile-view {
+    position: relative !important;
+    overflow-x: hidden !important;
+}
+
 .mobile-view .main-layout-wrapper {
     display: block !important;
     margin: 0 !important;
@@ -17,12 +22,14 @@ body.mobile-view {
     width: 100% !important;
     box-shadow: none !important;
     background: transparent !important;
+    transition: transform .2s ease-out !important;
 }
 
 .mobile-view .main-content {
     padding: 16px !important;
     background: #f6f8fc !important;
     min-height: calc(100vh - 60px) !important;
+    transition: transform .2s ease-out !important;
 }
 
 .mobile-view .dashboard-container {
@@ -50,6 +57,14 @@ body.mobile-view {
     z-index: 1100 !important;
     box-shadow: 10px 0 28px rgba(15, 23, 42, .24) !important;
     animation: mobile-menu-in .18s ease-out both;
+}
+
+.mobile-view.mobile-menu-open .main-layout-wrapper,
+.mobile-view.mobile-menu-open .main-content,
+.mobile-view.mobile-menu-open .dashboard-container,
+.mobile-view.mobile-menu-open .main-container {
+    transform: translateX(min(82vw, 300px)) !important;
+    transition: transform .2s ease-out !important;
 }
 
 .mobile-view.mobile-menu-open::before {

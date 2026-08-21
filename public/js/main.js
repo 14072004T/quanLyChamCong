@@ -1,7 +1,30 @@
 window.toggleMobileMenu = function (shouldOpen) {
     const open = typeof shouldOpen === "boolean" ? shouldOpen : true;
     document.body.classList.toggle("mobile-menu-open", open);
+
+    const sidebar = document.querySelector(".mobile-view .sidebar-nav");
+    if (sidebar) {
+        sidebar.setAttribute("aria-hidden", String(!open));
+    }
+
+    if (!open) {
+        document.removeEventListener("click", handleMobileMenuOutsideClick);
+    }
 };
+
+function handleMobileMenuOutsideClick(event) {
+    const sidebar = document.querySelector(".mobile-view .sidebar-nav");
+    const trigger = document.querySelector(".mobile-header .menu-trigger");
+
+    if (!sidebar || !trigger) return;
+
+    const clickedInsideMenu = sidebar.contains(event.target);
+    const clickedTrigger = trigger.contains(event.target);
+
+    if (!clickedInsideMenu && !clickedTrigger) {
+        window.toggleMobileMenu(false);
+    }
+}
 
 document.addEventListener("DOMContentLoaded", function () {
     const sidebarList = document.getElementById("sidebarList");
@@ -15,6 +38,12 @@ document.addEventListener("DOMContentLoaded", function () {
             } else {
                 item.classList.remove("active");
             }
+        });
+
+        sidebarList.querySelectorAll("a.menu-item").forEach((link) => {
+            link.addEventListener("click", function () {
+                window.toggleMobileMenu(false);
+            });
         });
     }
 
@@ -56,9 +85,21 @@ document.addEventListener("DOMContentLoaded", function () {
         document.addEventListener("keydown", function (e) {
             if (e.key === "Escape") {
                 closePanel();
+                window.toggleMobileMenu(false);
             }
         });
 
         closePanel();
+    }
+
+    const menuTrigger = document.querySelector(".mobile-header .menu-trigger");
+    if (menuTrigger) {
+        menuTrigger.addEventListener("click", function () {
+            const isOpen = document.body.classList.contains("mobile-menu-open");
+            window.toggleMobileMenu(!isOpen);
+            if (!isOpen) {
+                document.addEventListener("click", handleMobileMenuOutsideClick);
+            }
+        });
     }
 });
