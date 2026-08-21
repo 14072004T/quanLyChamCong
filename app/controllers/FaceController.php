@@ -147,10 +147,12 @@ class FaceController extends Controller
 
         // 1. Phân tích vector đặc trưng gửi lên
         $incomingEmbedding = json_decode($embedding, true);
-        if (!is_array($incomingEmbedding)) {
+        if (!is_array($incomingEmbedding) || count($incomingEmbedding) !== 128) {
             echo json_encode(['success' => false, 'message' => 'Dữ liệu đặc trưng khuôn mặt không hợp lệ.']);
             exit;
         }
+        $incomingEmbedding = $this->normalizeEmbedding($incomingEmbedding);
+        $embedding = json_encode($incomingEmbedding);
 
         // 2. Kiểm tra nhân viên này đã đăng ký khuôn mặt chưa (1 user chỉ được 1 face)
         $existingProfile = $this->faceModel->getFaceProfile($maND);
@@ -166,12 +168,13 @@ class FaceController extends Controller
 
         // 3. Kiểm tra tính độc nhất: Khuôn mặt này có trùng với tài khoản khác không?
         $allProfiles = $this->faceModel->getAllFaceProfiles($maND);
-        $threshold = 0.6; // Ngưỡng chuẩn cho descriptor FaceAPI: cùng một người thường <= 0.6
+        $threshold = 0.55; // Áp dụng sau khi embedding đã được chuẩn hóa L2
         $cosineThreshold = 0.85;
 
         foreach ($allProfiles as $prof) {
             $otherEmbedding = json_decode($prof['embedding'], true);
-            if (is_array($otherEmbedding)) {
+            if (is_array($otherEmbedding) && count($otherEmbedding) === 128) {
+                $otherEmbedding = $this->normalizeEmbedding($otherEmbedding);
                 $dist = $this->euclideanDistance($incomingEmbedding, $otherEmbedding);
                 $cosine = $this->cosineSimilarity($incomingEmbedding, $otherEmbedding);
 
@@ -181,7 +184,7 @@ class FaceController extends Controller
                 $logMsg = sprintf("[%s] Register target=%s vs existing maND=%s, dist=%.4f, cosine=%.4f, confidence=%.4f (threshold=%s)\n", date('Y-m-d H:i:s'), $maND, $prof['maND'], $dist, $cosine, $confidence, $threshold);
                 @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND);
 
-                if ($dist <= $threshold || $cosine >= $cosineThreshold) {
+                if ($dist <= $threshold && $cosine >= $cosineThreshold) {
                     $otherName = $this->faceModel->getUserName($prof['maND']);
                     echo json_encode([
                         'success' => false,
@@ -566,6 +569,24 @@ class FaceController extends Controller
             $sum += $diff * $diff;
         }
         return sqrt($sum);
+    }
+
+    private function normalizeEmbedding($embedding)
+    {
+        $squaredNorm = 0.0;
+        foreach ($embedding as $value) {
+            $number = (float)$value;
+            $squaredNorm += $number * $number;
+        }
+
+        $norm = sqrt($squaredNorm);
+        if ($norm <= 0.0) {
+            return [];
+        }
+
+        return array_map(static function ($value) use ($norm) {
+            return (float)$value / $norm;
+        }, $embedding);
     }
 
     private function cosineSimilarity($v1, $v2)

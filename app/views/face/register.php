@@ -1652,9 +1652,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
 
         const count = descriptors.length;
-        return averaged.map(function(value) {
+        const average = averaged.map(function(value) {
             return value / count;
         });
+        const norm = Math.sqrt(average.reduce(function(sum, value) {
+            return sum + (value * value);
+        }, 0));
+        return norm > 0 ? average.map(function(value) {
+            return value / norm;
+        }) : null;
     }
 
     // Hàm cập nhật trạng thái trực quan cho Stepper dọc

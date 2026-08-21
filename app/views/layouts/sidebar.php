@@ -77,6 +77,9 @@ $roleLabels = [
     <div class="sidebar-top-section">
         <i class="fa-solid fa-fingerprint"></i>
         <span>CHẤM CÔNG</span>
+        <button type="button" class="sidebar-close" onclick="toggleMobileMenu(false)" aria-label="Đóng menu">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
     </div>
 
     <h3><?= htmlspecialchars($roleLabels[$role] ?? 'Menu') ?></h3>
@@ -84,7 +87,8 @@ $roleLabels = [
         <?php foreach ($filteredMenus as $menu): ?>
             <li>
                 <a href="index.php?page=<?= htmlspecialchars($menu['page']) ?>"
-                   class="menu-item <?= ($menu['page'] === $currentPage) ? 'active' : '' ?>">
+                         class="menu-item <?= ($menu['page'] === $currentPage) ? 'active' : '' ?>"
+                         title="<?= htmlspecialchars($menu['label']) ?>">
                     <i class="fa-solid <?= htmlspecialchars($menu['icon']) ?>"></i>
                     <span><?= htmlspecialchars($menu['label']) ?></span>
                 </a>

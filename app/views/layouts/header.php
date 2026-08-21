@@ -216,7 +216,8 @@
                 }
             }
             function toggleMobileMenu() {
-                window.location.href = 'index.php?page=profile';
+                const shouldOpen = arguments.length === 0 ? true : arguments[0];
+                document.body.classList.toggle('mobile-menu-open', shouldOpen);
             }
         </script>
     <?php else: ?>

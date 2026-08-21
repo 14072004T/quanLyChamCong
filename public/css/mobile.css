@@ -38,6 +38,46 @@ body.mobile-view {
     display: none !important;
 }
 
+/* Compact function menu for phones: open the existing role menu as a drawer. */
+.mobile-view.mobile-menu-open .sidebar-nav {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: min(82vw, 300px) !important;
+    min-height: 100vh !important;
+    z-index: 1100 !important;
+    box-shadow: 10px 0 28px rgba(15, 23, 42, .24) !important;
+    animation: mobile-menu-in .18s ease-out both;
+}
+
+.mobile-view.mobile-menu-open::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    background: rgba(15, 23, 42, .42);
+}
+
+.mobile-view.mobile-menu-open { overflow: hidden !important; }
+
+.mobile-view .sidebar-close {
+    display: block !important;
+    margin-left: auto;
+    padding: 6px 8px;
+    border: 0;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+@keyframes mobile-menu-in {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+
 /* Mobile overrides for .main-container pages (e.g. edit request, face register) */
 .mobile-view .main-container {
     display: block !important;
@@ -144,6 +184,38 @@ body.mobile-view {
 .bottom-nav-item.active {
     color: #1e62ec !important; /* Blue active text/icon */
 }
+
+/* Tablet: keep the full working area and collapse the sidebar to an icon rail. */
+@media (min-width: 641px) and (max-width: 1024px) {
+    .sidebar-nav {
+        width: 72px !important;
+        min-height: calc(100vh - var(--content-top) - 40px) !important;
+    }
+
+    .sidebar-top-section {
+        justify-content: center;
+        padding: 18px 8px;
+    }
+
+    .sidebar-top-section span,
+    .sidebar-nav h3,
+    .sidebar-nav ul li a span {
+        display: none !important;
+    }
+
+    .sidebar-nav ul li a {
+        justify-content: center !important;
+        gap: 0 !important;
+        padding: 13px 8px !important;
+        margin: 0 8px 5px !important;
+    }
+
+    .sidebar-nav ul li a i {
+        font-size: 18px;
+    }
+}
+
+.sidebar-close { display: none; }
 
 /* --- MOBILE LOGIN PAGE (SCREENSHOT 1) --- */
 .mb-login-body {
