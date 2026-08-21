@@ -42,6 +42,10 @@ class KetNoi {
         // Thiết lập UTF-8 để lưu tiếng Việt
         $this->conn->set_charset("utf8mb4");
 
+        // MySQL hosting thường chạy UTC; ứng dụng dùng giờ Việt Nam.
+        // Thiết lập theo session để CURRENT_TIMESTAMP/DATE() nhất quán với PHP.
+        $this->conn->query("SET time_zone = '+07:00'");
+
         // Trả về kết nối
         return $this->conn;
     }

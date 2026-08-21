@@ -242,10 +242,11 @@ class ChamCongModel
             $clientIP = $this->getServerIP();
         }
 
+        $ngayTao = date('Y-m-d H:i:s');
         $sql = "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, anhMinhChung, ngayTao) 
-                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
+            VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("isssss", $maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $anhMinhChung);
+        $stmt->bind_param("issssss", $maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $anhMinhChung, $ngayTao);
         return $stmt->execute();
     }
 
