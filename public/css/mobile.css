@@ -187,9 +187,32 @@ body.mobile-view {
 
 /* Tablet: keep the full working area and collapse the sidebar to an icon rail. */
 @media (min-width: 641px) and (max-width: 1024px) {
-    .sidebar-nav {
+    .mobile-view .main-container {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: stretch !important;
+    }
+
+    .mobile-view .main-layout-wrapper {
+        display: grid !important;
+        grid-template-columns: 72px 1fr !important;
+    }
+
+    .mobile-view .sidebar-nav {
+        display: flex !important;
+        position: static !important;
         width: 72px !important;
         min-height: calc(100vh - var(--content-top) - 40px) !important;
+        box-shadow: none !important;
+        z-index: auto !important;
+    }
+
+    .mobile-view.mobile-menu-open::before {
+        display: none !important;
+    }
+
+    .mobile-view.mobile-menu-open {
+        overflow: auto !important;
     }
 
     .sidebar-top-section {
