@@ -322,6 +322,10 @@ body.mobile-view {
     }
 }
 
+.mobile-view .sidebar-close {
+    display: block !important;
+}
+
 .sidebar-close { display: none; }
 
 /* --- MOBILE LOGIN PAGE (SCREENSHOT 1) --- */

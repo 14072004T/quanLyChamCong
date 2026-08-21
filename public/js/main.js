@@ -33,6 +33,16 @@ function handleMobileMenuOutsideClick(event) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".sidebar-close").forEach(function (btn) {
+        btn.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof window.toggleMobileMenu === "function") {
+                window.toggleMobileMenu(false);
+            }
+        });
+    });
+
     const sidebarList = document.getElementById("sidebarList");
     if (sidebarList) {
         const currentPage = new URLSearchParams(window.location.search).get("page") || "home";
