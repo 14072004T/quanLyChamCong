@@ -72,7 +72,7 @@ $roleLabels = [
     'tech' => 'Kỹ thuật',
 ];
 
-$appVersion = 'v2.4.6';
+$appVersion = 'v2.4.7';
 ?>
 
 <nav class="sidebar-nav">

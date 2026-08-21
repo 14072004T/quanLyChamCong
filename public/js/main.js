@@ -2,7 +2,12 @@ window.toggleMobileMenu = function (shouldOpen) {
     const open = typeof shouldOpen === "boolean" ? shouldOpen : true;
     const body = document.body;
     const sidebar = document.querySelector(".mobile-view .sidebar-nav");
+    const menuTrigger = document.querySelector(".mobile-header .menu-trigger");
     const reopenBtn = document.querySelector(".mobile-header .sidebar-reopen-btn");
+
+    if (!body.classList.contains("mobile-view")) {
+        return;
+    }
 
     body.classList.toggle("mobile-menu-open", open);
     body.classList.toggle("sidebar-collapsed", !open);
@@ -10,6 +15,11 @@ window.toggleMobileMenu = function (shouldOpen) {
     if (sidebar) {
         sidebar.style.display = open ? "flex" : "none";
         sidebar.setAttribute("aria-hidden", String(!open));
+    }
+
+    if (menuTrigger) {
+        menuTrigger.style.display = open ? "none" : "flex";
+        menuTrigger.setAttribute("aria-hidden", String(!open));
     }
 
     if (reopenBtn) {
@@ -121,5 +131,5 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    window.toggleMobileMenu(true);
+    window.toggleMobileMenu(false);
 });
