@@ -159,8 +159,8 @@ class FaceController extends Controller
         // Face-API descriptors are L2-normalized before comparison. Use a
         // stricter boundary here so different employees are not treated as
         // the same face because of a loose cosine-only match.
-        $threshold = 0.45;
-        $cosineThreshold = 0.90;
+        $threshold = 0.40;
+        $cosineThreshold = 0.92;
 
         foreach ($allProfiles as $prof) {
             $otherEmbedding = json_decode($prof['embedding'], true);
