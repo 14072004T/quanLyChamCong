@@ -162,6 +162,8 @@ class FaceController extends Controller
         $threshold = 0.40;
         $cosineThreshold = 0.92;
 
+        $duplicateProbeSessionKey = 'face_duplicate_probe_' . $maND;
+
         foreach ($allProfiles as $prof) {
             $otherEmbedding = json_decode($prof['embedding'], true);
             if (is_array($otherEmbedding) && count($otherEmbedding) === 128) {
@@ -172,19 +174,46 @@ class FaceController extends Controller
                 // Write debug log to workspace file
                 $logDir = __DIR__ . '/../../uploads/liveness_logs/';
                 if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
-                $logMsg = sprintf("[%s] Register target=%s vs existing maND=%s, dist=%.4f, cosine=%.4f, confidence=%.4f (threshold=%s)\n", date('Y-m-d H:i:s'), $maND, $prof['maND'], $dist, $cosine, $confidence, $threshold);
+                $logMsg = sprintf("[%s] Register target=%s vs existing maND=%s, dist=%.4f, cosine=%.4f, confidence=%.4f (dist<=%.2f, cosine>=%.2f)\n", date('Y-m-d H:i:s'), $maND, $prof['maND'], $dist, $cosine, $confidence, $threshold, $cosineThreshold);
                 @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND);
 
                 if ($dist <= $threshold && $cosine >= $cosineThreshold) {
                     $otherName = $this->faceModel->getUserName($prof['maND']);
+                    $now = time();
+                    $pending = $_SESSION[$duplicateProbeSessionKey] ?? null;
+
+                    // Chỉ chặn đăng ký khi phát hiện trùng 2 lần liên tiếp với cùng một nhân viên
+                    // trong cửa sổ thời gian ngắn, giúp giảm báo trùng giả do snapshot nhiễu.
+                    if (
+                        is_array($pending)
+                        && intval($pending['otherMaND'] ?? 0) === intval($prof['maND'])
+                        && ($now - intval($pending['ts'] ?? 0)) <= 300
+                    ) {
+                        unset($_SESSION[$duplicateProbeSessionKey]);
+                        echo json_encode([
+                            'success' => false,
+                            'message' => '🚫 Đăng ký thất bại! Khuôn mặt này trùng khớp với khuôn mặt đã đăng ký của nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Mỗi người chỉ được sở hữu duy nhất 1 tài khoản chấm công khuôn mặt!'
+                        ]);
+                        exit;
+                    }
+
+                    $_SESSION[$duplicateProbeSessionKey] = [
+                        'otherMaND' => intval($prof['maND']),
+                        'ts' => $now,
+                        'dist' => (float)$dist,
+                        'cosine' => (float)$cosine,
+                    ];
+
                     echo json_encode([
                         'success' => false,
-                        'message' => '🚫 Đăng ký thất bại! Khuôn mặt này trùng khớp với khuôn mặt đã đăng ký của nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Mỗi người chỉ được sở hữu duy nhất 1 tài khoản chấm công khuôn mặt!'
+                        'message' => '⚠ Hệ thống phát hiện mức tương đồng cao với nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Vui lòng quét lại lần nữa ở góc nhìn khác/ánh sáng tốt hơn để xác nhận.'
                     ]);
                     exit;
                 }
             }
         }
+
+        unset($_SESSION[$duplicateProbeSessionKey]);
 
         // 4. Lưu khuôn mặt mới (INSERT)
         $ok = $this->faceModel->saveFaceProfile($maND, $embedding);
