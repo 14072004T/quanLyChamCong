@@ -1848,8 +1848,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             faceapi.matchDimensions(canvas, displaySize);
 
             const detection = await faceapi.detectSingleFace(
-                video, 
-                new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.6 })
+                video,
+                new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.7 })
             ).withFaceLandmarks().withFaceDescriptor();
 
             const ctx = canvas.getContext('2d');
@@ -1859,7 +1859,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const resizedDetection = faceapi.resizeResults(detection, displaySize);
                 const box = resizedDetection.detection.box;
                 const detectionScore = Number(detection?.detection?.score || 0);
-                const isFaceConfident = detectionScore >= 0.72;
+                const isFaceConfident = detectionScore >= 0.80;
                 if (isFaceConfident && Array.isArray(detection.descriptor)) {
                     collectedDescriptors.push(Array.from(detection.descriptor));
                     if (collectedDescriptors.length > 12) {
@@ -2008,7 +2008,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             btnRegister.disabled = false;
             return;
         }
-        if (!lastDescriptor || lastDescriptorConfidence < 0.72) {
+        if (!lastDescriptor || lastDescriptorConfidence < 0.80) {
             statusDisplay.className = 'status-banner status-error';
             statusDisplay.innerHTML = '<i class="fas fa-exclamation-circle"></i> Khuôn mặt quét chưa đủ rõ nét. Hãy quay lại và giữ khuôn mặt ở trung tâm khung hình.';
             btnRegister.disabled = false;

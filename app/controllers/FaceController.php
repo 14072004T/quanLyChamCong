@@ -135,7 +135,23 @@ class FaceController extends Controller
         }
 
         $confidence = isset($_POST['confidence']) ? floatval($_POST['confidence']) : 0.0;
-        if ($confidence > 0.0 && $confidence < 0.72) {
+        $logDir = __DIR__ . '/../../uploads/liveness_logs/';
+        if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+        $requestLog = sprintf(
+            "[%s] Register request target=%s confidence=%.4f embeddingBytes=%d\n",
+            date('Y-m-d H:i:s'),
+            $_POST['targetMaND'] ?? 'session',
+            $confidence,
+            strlen($embedding)
+        );
+        @file_put_contents($logDir . 'duplicate_debug.log', $requestLog, FILE_APPEND | LOCK_EX);
+
+        if ($confidence > 0.0 && $confidence < 0.80) {
+            @file_put_contents($logDir . 'duplicate_debug.log', sprintf(
+                "[%s] Register rejected reason=low_confidence confidence=%.4f required=0.80\n",
+                date('Y-m-d H:i:s'),
+                $confidence
+            ), FILE_APPEND | LOCK_EX);
             echo json_encode(['success' => false, 'message' => 'Khuôn mặt quét chưa đủ rõ nét. Hãy giữ khuôn mặt ở trung tâm khung hình và thử lại.']);
             exit;
         }
@@ -163,6 +179,7 @@ class FaceController extends Controller
         $cosineThreshold = 0.92;
 
         $duplicateProbeSessionKey = 'face_duplicate_probe_' . $maND;
+        $duplicateMatchFound = false;
 
         foreach ($allProfiles as $prof) {
             $otherEmbedding = json_decode($prof['embedding'], true);
@@ -171,13 +188,23 @@ class FaceController extends Controller
                 $dist = $this->euclideanDistance($incomingEmbedding, $otherEmbedding);
                 $cosine = $this->cosineSimilarity($incomingEmbedding, $otherEmbedding);
 
-                // Write debug log to workspace file
-                $logDir = __DIR__ . '/../../uploads/liveness_logs/';
-                if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
-                $logMsg = sprintf("[%s] Register target=%s vs existing maND=%s, dist=%.4f, cosine=%.4f, confidence=%.4f (dist<=%.2f, cosine>=%.2f)\n", date('Y-m-d H:i:s'), $maND, $prof['maND'], $dist, $cosine, $confidence, $threshold, $cosineThreshold);
-                @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND);
+                $isDuplicate = $dist <= $threshold && $cosine >= $cosineThreshold;
+                $logMsg = sprintf(
+                    "[%s] Register compare target=%s existing=%s dist=%.4f cosine=%.4f confidence=%.4f thresholdDist=%.2f thresholdCosine=%.2f duplicate=%s\n",
+                    date('Y-m-d H:i:s'),
+                    $maND,
+                    $prof['maND'],
+                    $dist,
+                    $cosine,
+                    $confidence,
+                    $threshold,
+                    $cosineThreshold,
+                    $isDuplicate ? 'YES' : 'NO'
+                );
+                @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND | LOCK_EX);
 
-                if ($dist <= $threshold && $cosine >= $cosineThreshold) {
+                if ($isDuplicate) {
+                    $duplicateMatchFound = true;
                     $otherName = $this->faceModel->getUserName($prof['maND']);
                     $now = time();
                     $pending = $_SESSION[$duplicateProbeSessionKey] ?? null;
@@ -190,6 +217,12 @@ class FaceController extends Controller
                         && ($now - intval($pending['ts'] ?? 0)) <= 300
                     ) {
                         unset($_SESSION[$duplicateProbeSessionKey]);
+                        @file_put_contents($logDir . 'duplicate_debug.log', sprintf(
+                            "[%s] Register decision=BLOCK target=%s existing=%s reason=duplicate_confirmed\n",
+                            date('Y-m-d H:i:s'),
+                            $maND,
+                            $prof['maND']
+                        ), FILE_APPEND | LOCK_EX);
                         echo json_encode([
                             'success' => false,
                             'message' => '🚫 Đăng ký thất bại! Khuôn mặt này trùng khớp với khuôn mặt đã đăng ký của nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Mỗi người chỉ được sở hữu duy nhất 1 tài khoản chấm công khuôn mặt!'
@@ -204,6 +237,13 @@ class FaceController extends Controller
                         'cosine' => (float)$cosine,
                     ];
 
+                    @file_put_contents($logDir . 'duplicate_debug.log', sprintf(
+                        "[%s] Register decision=RETRY target=%s existing=%s reason=duplicate_probe_first_hit\n",
+                        date('Y-m-d H:i:s'),
+                        $maND,
+                        $prof['maND']
+                    ), FILE_APPEND | LOCK_EX);
+
                     echo json_encode([
                         'success' => false,
                         'message' => '⚠ Hệ thống phát hiện mức tương đồng cao với nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Vui lòng quét lại lần nữa ở góc nhìn khác/ánh sáng tốt hơn để xác nhận.'
@@ -214,6 +254,12 @@ class FaceController extends Controller
         }
 
         unset($_SESSION[$duplicateProbeSessionKey]);
+        @file_put_contents($logDir . 'duplicate_debug.log', sprintf(
+            "[%s] Register decision=ALLOW target=%s duplicateFound=%s reason=no_duplicate_match\n",
+            date('Y-m-d H:i:s'),
+            $maND,
+            $duplicateMatchFound ? 'YES' : 'NO'
+        ), FILE_APPEND | LOCK_EX);
 
         // 4. Lưu khuôn mặt mới (INSERT)
         $ok = $this->faceModel->saveFaceProfile($maND, $embedding);
