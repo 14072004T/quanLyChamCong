@@ -15,24 +15,18 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
         * { box-sizing: border-box; }
         body { margin: 0; min-height: 100vh; background: #07111f; color: #f8fafc; }
-        .kiosk { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
-        .topbar { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px; background: #0b1b31; border-bottom: 1px solid #1e3a5f; }
+        .kiosk { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; padding: 18px 28px; background: #0b1b31; border-bottom: 1px solid #1e3a5f; z-index: 2; }
         .topbar h1 { margin: 0; font-size: clamp(20px, 3vw, 32px); }
         .topbar a { color: #bfdbfe; text-decoration: none; }
-        .stage { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 28px; padding: 28px; align-items: center; max-width: 1500px; width: 100%; margin: auto; }
-        .camera-card { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: #020617; border: 2px solid #2563eb; border-radius: 18px; box-shadow: 0 20px 60px #0008; }
+        .stage { position: relative; width: 100%; height: 100%; }
+        .camera-card { position: absolute; inset: 0; overflow: hidden; background: #020617; }
         video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
         video, canvas { transform: scaleX(-1); }
-        .guide { position: absolute; inset: 18% 28%; border: 3px dashed #60a5fa; border-radius: 50%; box-shadow: 0 0 0 999px #0006; pointer-events: none; }
-        .panel { background: #0f2138; border: 1px solid #274568; border-radius: 18px; padding: 24px; }
-        .panel h2 { margin-top: 0; }
-        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
-        button { border: 0; border-radius: 10px; padding: 14px 12px; font: inherit; font-weight: 800; cursor: pointer; color: white; background: #2563eb; }
-        button.active { outline: 3px solid #93c5fd; }
-        #action-in { background: #059669; } #action-out { background: #dc2626; }
-        #status { min-height: 92px; display: grid; place-items: center; text-align: center; padding: 16px; background: #172e4c; border-radius: 12px; color: #bfdbfe; }
-        .bottom { padding: 12px 28px 20px; text-align: center; color: #94a3b8; }
-        @media (max-width: 800px) { .stage { grid-template-columns: 1fr; padding: 14px; } .panel { order: -1; } .topbar { padding: 14px; } }
+        .guide { position: absolute; inset: 10% 30%; border: 3px dashed #60a5fa; border-radius: 50%; box-shadow: 0 0 0 999px #0006; pointer-events: none; }
+        #status { position: absolute; left: 50%; bottom: 32px; transform: translateX(-50%); min-width: min(560px, 90vw); text-align: center; padding: 18px 28px; background: rgba(15, 33, 56, 0.92); border: 1px solid #274568; border-radius: 16px; color: #bfdbfe; font-size: clamp(16px, 2.4vw, 22px); font-weight: 700; box-shadow: 0 10px 40px #0008; }
+        .bottom { display: none; }
+        @media (max-width: 800px) { .topbar { padding: 14px; } }
     </style>
 </head>
 <body>
@@ -40,14 +34,8 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
     <header class="topbar"><h1><i class="fa-solid fa-tablet-screen-button"></i> Tablet chấm công khuôn mặt</h1><a href="index.php?page=quan-ly-ca-lam"><i class="fa-solid fa-arrow-left"></i> Quản lý ca</a></header>
     <main class="stage">
         <div class="camera-card"><video id="kiosk-video" autoplay muted playsinline></video><canvas id="kiosk-canvas"></canvas><div class="guide"></div></div>
-        <section class="panel">
-            <h2>Chấm công</h2>
-            <p>Chọn thao tác, sau đó nhân viên nhìn vào camera và hoàn thành hướng dẫn xác thực.</p>
-            <div class="actions"><button id="action-in" class="active" type="button">CHẤM VÀO</button><button id="action-out" type="button">CHẤM RA</button></div>
-            <div id="status">Đang khởi động camera...</div>
-        </section>
+        <div id="status">Đang khởi động camera...</div>
     </main>
-    <footer class="bottom">Hệ thống sẽ tự nhận diện nhân viên và ghi nhận theo ca làm việc.</footer>
 </div>
 <script src="public/js/face-api.js"></script>
 <script src="public/js/face-liveness.js"></script>
@@ -56,7 +44,6 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
     const video = document.getElementById('kiosk-video');
     const canvas = document.getElementById('kiosk-canvas');
     const status = document.getElementById('status');
-    let action = 'IN';
     let stream = null;
     let detector = null;
     let detecting = false;
@@ -64,8 +51,6 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
     let loaded = false;
 
     function message(text, type) { status.textContent = text; status.style.color = type === 'error' ? '#fecaca' : type === 'success' ? '#bbf7d0' : '#bfdbfe'; }
-    document.getElementById('action-in').onclick = function () { action = 'IN'; this.classList.add('active'); document.getElementById('action-out').classList.remove('active'); restart(); };
-    document.getElementById('action-out').onclick = function () { action = 'OUT'; this.classList.add('active'); document.getElementById('action-in').classList.remove('active'); restart(); };
 
     async function loadModels() {
         if (loaded) return;
@@ -114,7 +99,7 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         snapshot.width = video.videoWidth || 640; snapshot.height = video.videoHeight || 480;
         const ctx = snapshot.getContext('2d'); ctx.translate(snapshot.width, 0); ctx.scale(-1, 1); ctx.drawImage(video, 0, 0, snapshot.width, snapshot.height);
         const data = new FormData();
-        data.append('hanhDong', action); data.append('embedding', JSON.stringify(Array.from(descriptor))); data.append('photo', snapshot.toDataURL('image/jpeg', .85)); data.append('livenessToken', JSON.stringify(token));
+        data.append('embedding', JSON.stringify(Array.from(descriptor))); data.append('photo', snapshot.toDataURL('image/jpeg', .85)); data.append('livenessToken', JSON.stringify(token));
         try {
             const response = await fetch('index.php?page=tablet-face-api-verify', { method: 'POST', body: data });
             const result = await response.json();

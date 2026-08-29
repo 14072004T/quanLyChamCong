@@ -360,7 +360,6 @@ class FaceController extends Controller
         $embedding = json_decode($_POST['embedding'] ?? '', true);
         $token = json_decode($_POST['livenessToken'] ?? '', true);
         $photo = $_POST['photo'] ?? '';
-        $action = strtoupper(trim($_POST['hanhDong'] ?? 'IN')) === 'OUT' ? 'OUT' : 'IN';
         if (!is_array($embedding) || !is_array($token) || $photo === '') {
             echo json_encode(['success' => false, 'message' => 'Thiếu dữ liệu khuôn mặt, liveness hoặc ảnh minh chứng.']);
             exit;
@@ -388,29 +387,32 @@ class FaceController extends Controller
             exit;
         }
 
-        $attendance = $this->chamCongModel->getAttendanceByUser($matchedId, 1);
-        $today = date('Y-m-d');
-        $hasIn = !empty($attendance[0]['ngayLamViec']) && $attendance[0]['ngayLamViec'] === $today && !empty($attendance[0]['gioVaoDau']);
-        $hasOut = !empty($attendance[0]['ngayLamViec']) && $attendance[0]['ngayLamViec'] === $today && !empty($attendance[0]['gioRaCuoi']);
-        if (($action === 'IN' && $hasIn) || ($action === 'OUT' && !$hasIn) || ($action === 'OUT' && $hasOut)) {
-            echo json_encode(['success' => false, 'message' => $action === 'IN' ? 'Nhân viên đã chấm vào hôm nay.' : ($hasOut ? 'Nhân viên đã chấm ra hôm nay.' : 'Nhân viên chưa chấm vào hôm nay.')]);
-            exit;
-        }
-        if ($action === 'IN') {
-            $shift = $this->chamCongModel->getShiftForUser($matchedId);
-            if (!$shift) {
-                echo json_encode(['success' => false, 'message' => 'Nhân viên chưa được gán ca làm việc.']);
-                exit;
-            }
-        }
-
         $photo = str_replace(['data:image/jpeg;base64,', 'data:image/png;base64,', ' '], ['', '', '+'], $photo);
         $photoFilename = $matchedId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.jpg';
         $uploadDir = 'uploads/attendance_faces/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
         file_put_contents($uploadDir . $photoFilename, base64_decode($photo));
-        $ok = $this->chamCongModel->chamCong($matchedId, $action, 'LAN', 'TABLET', 'Chấm ' . ($action === 'IN' ? 'vào' : 'ra') . ' bằng tablet khuôn mặt', 'TABLET', $photoFilename);
-        echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã chấm ' . ($action === 'IN' ? 'vào' : 'ra') . ' cho ' . $this->faceModel->getUserName($matchedId) . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
+
+        // Ghi mọi lần quét vào bảng riêng — nguồn dữ liệu để tính giờ vào/ra.
+        $this->chamCongModel->insertTabletScan($matchedId, $photoFilename);
+        $scanRange = $this->chamCongModel->getTabletScanRangeToday($matchedId);
+        $isFirstScanToday = (int)($scanRange['soLanQuet'] ?? 0) <= 1;
+        $employeeName = $this->faceModel->getUserName($matchedId);
+
+        if ($isFirstScanToday) {
+            $shift = $this->chamCongModel->getShiftForUser($matchedId);
+            if (!$shift) {
+                echo json_encode(['success' => false, 'message' => 'Nhân viên chưa được gán ca làm việc.']);
+                exit;
+            }
+            $ok = $this->chamCongModel->chamCong($matchedId, 'IN', 'LAN', 'TABLET', 'Chấm vào bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+            echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã ghi nhận giờ vào cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Các lần quét sau trong ngày luôn cập nhật giờ ra thành lần quét gần nhất.
+        $ok = $this->chamCongModel->chamCong($matchedId, 'OUT', 'LAN', 'TABLET', 'Cập nhật giờ ra bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+        echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã cập nhật giờ ra cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 

@@ -205,9 +205,7 @@ class LoginController {
             
             $_SESSION['role'] = $role;
 
-            // Trên mobile, HR chỉ được vào 'home'/'tablet-cham-cong' nên không dùng trang mặc định desktop.
-            $defaultPage = (AuthMiddleware::isMobile() && $role === 'hr') ? 'home' : $this->getDefaultPageForRole($role);
-            header("Location: index.php?page=" . $defaultPage);
+            header("Location: index.php?page=" . $this->getDefaultPageForRole($role));
             exit;
         }
 

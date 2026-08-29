@@ -51,6 +51,17 @@ class ChamCongModel
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
+        // Ghi lại MỌI lần quét khuôn mặt trên tablet kiosk (không giới hạn số lần/ngày).
+        // Lần quét đầu tiên trong ngày = giờ vào, lần quét cuối cùng = giờ ra.
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS tablet_face_scans (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                maND INT NOT NULL,
+                thoiGianQuet DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                anhMinhChung VARCHAR(255) DEFAULT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
         $this->conn->query("
             CREATE TABLE IF NOT EXISTS suachamcong (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -374,6 +385,46 @@ class ChamCongModel
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         return $rows;
+    }
+
+    /**
+     * Ghi nhận một lần quét khuôn mặt trên tablet kiosk.
+     */
+    public function insertTabletScan($maND, $anhMinhChung = null)
+    {
+        $maND = (int)$maND;
+        if ($maND <= 0) {
+            return false;
+        }
+        $stmt = $this->conn->prepare("INSERT INTO tablet_face_scans (maND, anhMinhChung) VALUES (?, ?)");
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param("is", $maND, $anhMinhChung);
+        $result = $stmt->execute();
+        $stmt->close();
+        return $result;
+    }
+
+    /**
+     * Giờ vào/ra hôm nay của nhân viên tính từ lần quét đầu tiên/cuối cùng trên tablet.
+     */
+    public function getTabletScanRangeToday($maND)
+    {
+        $maND = (int)$maND;
+        $today = date('Y-m-d');
+        $stmt = $this->conn->prepare(
+            "SELECT MIN(thoiGianQuet) AS gioVaoDau, MAX(thoiGianQuet) AS gioRaCuoi, COUNT(*) AS soLanQuet
+             FROM tablet_face_scans WHERE maND = ? AND DATE(thoiGianQuet) = ?"
+        );
+        if (!$stmt) {
+            return ['gioVaoDau' => null, 'gioRaCuoi' => null, 'soLanQuet' => 0];
+        }
+        $stmt->bind_param("is", $maND, $today);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: ['gioVaoDau' => null, 'gioRaCuoi' => null, 'soLanQuet' => 0];
     }
 
     /**
