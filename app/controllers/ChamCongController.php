@@ -17,14 +17,6 @@ class ChamCongController
     public function dashboard()
     {
         $this->requireLogin();
-
-        // HR trên mobile/tablet dùng tablet kiosk cho nhân viên khác, không tự chấm công
-        // qua dashboard — tránh bắt HR phải đăng ký khuôn mặt cho chính mình.
-        if (AuthMiddleware::isMobile() && ($_SESSION['role'] ?? '') === 'hr') {
-            header('Location: index.php?page=home');
-            exit;
-        }
-
         $maND = $_SESSION['user']['maND'] ?? $_SESSION['user']['maTK'] ?? '';
         
         // Lấy thống kê tổng quan
