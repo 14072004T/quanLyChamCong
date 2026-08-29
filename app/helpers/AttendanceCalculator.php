@@ -114,6 +114,7 @@ class AttendanceCalculator
                 'ot_hours' => 0,
                 'has_attendance' => false,
                 'shift_name' => $shift['tenCa'] ?? 'HC',
+                'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
             ];
         }
 
@@ -127,6 +128,7 @@ class AttendanceCalculator
                 'ot_hours' => 0,
                 'has_attendance' => false,
                 'shift_name' => $shift['tenCa'] ?? 'OFF',
+                'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
             ];
         }
 
@@ -140,6 +142,7 @@ class AttendanceCalculator
                 'ot_hours' => 0,
                 'has_attendance' => false,
                 'shift_name' => $shift['tenCa'] ?? 'HC',
+                'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
             ];
         }
 
@@ -167,6 +170,7 @@ class AttendanceCalculator
                 'ot_hours' => 0,
                 'has_attendance' => false,
                 'shift_name' => $shift['tenCa'] ?? 'HC',
+                'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
             ];
         }
 
@@ -204,6 +208,7 @@ class AttendanceCalculator
                     'ot_hours' => $otHours,
                     'has_attendance' => true,
                     'shift_name' => $shift['tenCa'] ?? 'HC',
+                    'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
                 ];
             }
         }
@@ -218,6 +223,7 @@ class AttendanceCalculator
             'ot_hours' => 0,
             'has_attendance' => false,
             'shift_name' => $shift['tenCa'] ?? 'HC',
+            'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
         ];
     }
 
