@@ -405,14 +405,42 @@ class ChamCongModel
         $stmt->close();
 
         // Fallback to default shift (HÃ nh chÃ­nh) if no explicit assignment exists
+        // Không có phân ca cụ thể: mặc định T7/CN là ca OFF, ngày thường là ca HC.
         if (!$row) {
-            $res = $this->conn->query("SELECT id AS maCa, tenCa, gioBatDau, gioKetThuc FROM calamviec WHERE hoatDong = 1 ORDER BY id ASC LIMIT 1");
-            if ($res && $res->num_rows > 0) {
-                $row = $res->fetch_assoc();
-            }
+            $row = $this->getDefaultShiftForDate($date);
         }
 
         return $row ?: null;
+    }
+
+    /**
+     * Ca làm việc theo ký hiệu (VD: 'HC', 'OFF'), null nếu chưa tạo ca đó.
+     */
+    public function getShiftByCode($kyHieu)
+    {
+        $stmt = $this->conn->prepare("SELECT id AS maCa, tenCa, gioBatDau, gioKetThuc FROM calamviec WHERE kyHieu = ? AND hoatDong = 1 LIMIT 1");
+        if (!$stmt) {
+            return null;
+        }
+        $stmt->bind_param("s", $kyHieu);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
+    }
+
+    /**
+     * Ca mặc định khi nhân viên chưa được phân ca cho ngày cụ thể: T7/CN -> OFF, còn lại -> HC.
+     */
+    public function getDefaultShiftForDate($date)
+    {
+        $dow = (int)date('w', strtotime($date));
+        $isWeekend = ($dow === 0 || $dow === 6);
+        $fallback = $this->getDefaultShift();
+        if ($isWeekend) {
+            return $this->getShiftByCode('OFF') ?: $fallback;
+        }
+        return $this->getShiftByCode('HC') ?: $fallback;
     }
 
     /**
@@ -2309,7 +2337,6 @@ class ChamCongModel
         });
 
         $result = [];
-        $defaultShift = $this->getDefaultShift();
         $year = (int)substr($monthKey, 0, 4);
         $month = (int)substr($monthKey, 5, 2);
         $lastDay = (int)date('t', strtotime($monthStart));
@@ -2333,7 +2360,7 @@ class ChamCongModel
             $shiftsMap = [];
             for ($day = 1; $day <= $lastDay; $day++) {
                 $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
-                $shiftsMap[$dateStr] = $this->resolveShiftFromAssignments($shiftsForMonth, $dateStr, $defaultShift);
+                $shiftsMap[$dateStr] = $this->resolveShiftFromAssignments($shiftsForMonth, $dateStr, $this->getDefaultShiftForDate($dateStr));
             }
 
             // TÃ­nh toÃ¡n chi tiáº¿t
@@ -3045,7 +3072,6 @@ class ChamCongModel
         $leaveInfo = $this->getEmployeeLeaveInfo($maND);
         $leaveRequests = $this->getApprovedLeaveRequests($maND, $monthStart, $monthEnd);
         
-        $defaultShift = $this->getDefaultShift();
         $shiftsForMonth = $this->getShiftAssignmentsForUserInMonth($maND, $monthStart, $monthEnd);
         $year = (int)substr($monthKey, 0, 4);
         $month = (int)substr($monthKey, 5, 2);
@@ -3053,7 +3079,7 @@ class ChamCongModel
         $shiftsMap = [];
         for ($day = 1; $day <= $lastDay; $day++) {
             $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
-            $shiftsMap[$dateStr] = $this->resolveShiftFromAssignments($shiftsForMonth, $dateStr, $defaultShift);
+            $shiftsMap[$dateStr] = $this->resolveShiftFromAssignments($shiftsForMonth, $dateStr, $this->getDefaultShiftForDate($dateStr));
         }
 
         $monthlyCalc = AttendanceCalculator::calculateMonthlyAttendance(
