@@ -63,7 +63,7 @@ function shiftDisplayText($value) {
             </div>
             <div class="alert alert-info" style="margin-bottom:14px;">
                 <i class="fas fa-info-circle"></i>
-                <div>Tất cả nhân viên được gán <strong>ca Hành chính (HC: 08:00 - 17:00)</strong> tự động. Ngày T7, CN tự động OFF. Nhân viên đăng ký OT sẽ hiển thị thêm badge <span class="shift-cell shift-ot" style="padding:2px 8px;font-size:0.75em;">OT</span></div>
+                <div>Tất cả nhân viên được gán <strong>ca Hành chính (HC: 08:00 - 17:00)</strong> tự động. Ngày T7, CN mặc định <strong>OFF</strong> nhưng có thể đổi sang ca làm việc khác trong lịch phân ca. Ngày thường cũng có thể chọn ca <strong>OFF</strong> khi cần cho nhân viên nghỉ. Nhân viên đăng ký OT sẽ hiển thị thêm badge <span class="shift-cell shift-ot" style="padding:2px 8px;font-size:0.75em;">OT</span></div>
             </div>
             <div class="attendance-grid-wrapper">
                 <table class="attendance-grid" id="monthly-shift-grid">
@@ -324,7 +324,17 @@ document.addEventListener('DOMContentLoaded', function () {
                         } else if (isHoliday) {
                             cells += '<span class="shift-cell shift-off" style="background-color:#f59e0b;color:white;border-color:#f59e0b;" title="' + escapeHtml(dayBreakdown.day_type_label || 'Ngày lễ') + '">LỄ</span>';
                         } else if (isWeekend) {
-                            cells += '<span class="shift-cell shift-off">OFF</span>';
+                            totalDays++;
+                            if (shifts.length) {
+                                var weekendDefault = shifts.find(function(shift) { return shift.kyHieu === 'OFF'; }) || shifts[0];
+                                var weekendOptions = shifts.map(function(shift) {
+                                    var selected = shift.id === weekendDefault.id ? ' selected' : '';
+                                    return '<option value="' + shift.id + '" data-color="' + escapeHtml(shift.mauSac || '#3b82f6') + '"' + selected + '>' + escapeHtml(shift.kyHieu || shift.tenCa) + '</option>';
+                                }).join('');
+                                cells += '<select class="shift-cell shift-picker" data-ma-nd="' + emp.maND + '" data-date="' + currentDate + '" title="Đổi ca" style="background:' + escapeHtml(weekendDefault.mauSac || '#94a3b8') + ';color:#fff;border-color:' + escapeHtml(weekendDefault.mauSac || '#94a3b8') + '" onchange="changeMonthlyShift(this)">' + weekendOptions + '</select>';
+                            } else {
+                                cells += '<span class="shift-cell shift-off">OFF</span>';
+                            }
                         } else {
                             totalDays++;
                             if (shifts.length) {

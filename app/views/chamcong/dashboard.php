@@ -221,15 +221,28 @@ if (!isset($view) || is_null($view)) {
 
                                 <div style="margin-top: 10px;">
                                     <?php if ($trangThaiHomNay === null || $trangThaiHomNay === 'OUT'): ?>
-                                        <button onclick="triggerFaceAttendance('IN')" class="btn-hanhDong-mid btn-in" <?= ($trangThaiHomNay === 'OUT') ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' ?>>
+                                        <button onclick="handleAttendanceClick('IN')" class="btn-hanhDong-mid btn-in" <?= ($trangThaiHomNay === 'OUT') ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' ?>>
                                             <i class="fas fa-fingerprint"></i> CHẤM CÔNG VÀO
                                         </button>
                                     <?php else: ?>
-                                        <button onclick="triggerFaceAttendance('OUT')" class="btn-hanhDong-mid btn-out">
+                                        <button onclick="handleAttendanceClick('OUT')" class="btn-hanhDong-mid btn-out">
                                             <i class="fas fa-sign-out-alt"></i> CHẤM CÔNG RA
                                         </button>
                                     <?php endif; ?>
                                 </div>
+
+                                <script>
+                                    // Stub loaded before the large face-api.js bundle finishes; prevents
+                                    // "triggerFaceAttendance is not defined" if the button is clicked early.
+                                    window.__attendanceScriptsReady = window.__attendanceScriptsReady || false;
+                                    window.handleAttendanceClick = function(action) {
+                                        if (!window.__attendanceScriptsReady || typeof window.triggerFaceAttendance !== 'function') {
+                                            alert('Đang tải chức năng chấm công khuôn mặt, vui lòng đợi giây lát rồi thử lại.');
+                                            return;
+                                        }
+                                        window.triggerFaceAttendance(action);
+                                    };
+                                </script>
                             </div>
                         </div>
 
@@ -441,6 +454,7 @@ if (!isset($view) || is_null($view)) {
                         }
                     }
                 }
+                window.__attendanceScriptsReady = true;
 
                 function initLivenessDetector() {
                     const video = document.getElementById('modal-video');

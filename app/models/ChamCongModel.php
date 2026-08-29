@@ -107,6 +107,13 @@ class ChamCongModel
         $this->conn->query("UPDATE calamviec SET tenCa = 'Ca tối' WHERE id = 2 AND tenCa LIKE 'Ca t%'");
         $this->conn->query("UPDATE calamviec SET kyHieu = CASE WHEN id = 1 THEN 'HC' WHEN id = 2 THEN 'OT' ELSE CONCAT('C', id) END WHERE kyHieu = '' OR kyHieu IS NULL");
 
+        // Ca "OFF" cho phép HR gán ngày nghỉ cho nhân viên trong lịch phân ca,
+        // kể cả các ngày trong tuần, và cho phép đổi T7/CN sang ca làm việc khác.
+        $offShift = $this->conn->query("SELECT id FROM calamviec WHERE kyHieu = 'OFF' LIMIT 1");
+        if ($offShift && $offShift->num_rows === 0) {
+            $this->conn->query("INSERT INTO calamviec (tenCa, kyHieu, mauSac, gioBatDau, gioKetThuc, hoatDong) VALUES ('Nghỉ (OFF)', 'OFF', '#94a3b8', '00:00:00', '23:59:00', 1)");
+        }
+
         $this->conn->query(" 
             CREATE TABLE IF NOT EXISTS canhanvien (
                 id INT AUTO_INCREMENT PRIMARY KEY,
