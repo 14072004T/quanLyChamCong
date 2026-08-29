@@ -122,6 +122,19 @@ $user = $_SESSION['user'] ?? [];
             <span class="mb-profile-role-badge">NHÂN VIÊN</span>
         </div>
 
+        <?php if ($role === 'hr'): ?>
+        <a href="index.php?page=tablet-cham-cong" style="display: flex; align-items: center; gap: 12px; background: #1e293b; color: #fff; border-radius: 16px; padding: 16px; margin-bottom: 16px; text-decoration: none; box-shadow: 0 4px 6px rgba(0,0,0,0.08);">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                <i class="fa-solid fa-tablet-screen-button"></i>
+            </div>
+            <div style="flex: 1;">
+                <div style="font-size: 14px; font-weight: 700;">Mở tablet chấm công</div>
+                <div style="font-size: 12px; color: #cbd5e1;">Dùng khuôn mặt để chấm công cho nhân viên</div>
+            </div>
+            <i class="fa-solid fa-chevron-right" style="color: #94a3b8;"></i>
+        </a>
+        <?php endif; ?>
+
         <?php if (!$hasFaceRegistered): ?>
         <div style="background: #fffbeb; border: 1px solid #fde8c3; border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
             <div style="color: #d97706; font-size: 20px; margin-top: 2px;"><i class="fa-solid fa-triangle-exclamation"></i></div>

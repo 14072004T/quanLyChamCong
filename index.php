@@ -158,9 +158,11 @@ if (!isset($_SESSION['user']) && !in_array($page, ['login', 'login-process', 'lo
 }
 
 // MB chỉ role nhân viên thực hiện chấm công, các role còn lại chỉ được thực hiện trên IB
+// Riêng HR được vào trên mobile để mở tablet chấm công.
 if (isset($_SESSION['user'])) {
     $role = $_SESSION['role'] ?? 'nhanvien';
-    if (AuthMiddleware::isMobile() && $role !== 'nhanvien') {
+    $isHrTabletOnMobile = $role === 'hr' && in_array($page, ['home', 'tablet-cham-cong', 'logout'], true);
+    if (AuthMiddleware::isMobile() && $role !== 'nhanvien' && !$isHrTabletOnMobile) {
         session_unset();
         session_destroy();
         header('Location: index.php?page=login&error=ib_only');
