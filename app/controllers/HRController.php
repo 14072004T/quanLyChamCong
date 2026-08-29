@@ -128,7 +128,8 @@ class HRController
         }
         $this->jsonOnly(['POST']);
 
-        $ok = $this->model->assignShift(
+        // Lưới lịch phân ca đổi ca theo từng ô ngày, không được kéo dài sang các ngày khác.
+        $ok = $this->model->assignShiftForDate(
             $_POST['maND'] ?? 0,
             $_POST['maCa'] ?? 0,
             $_POST['hieuLucTu'] ?? date('Y-m-d')

@@ -835,6 +835,10 @@ class ChamCongModel
         return $stmt->execute();
     }
 
+    /**
+     * Gán ca làm việc lâu dài cho nhân viên kể từ một ngày (áp dụng cho mọi ngày sau đó
+     * cho tới khi có thay đổi tiếp theo). Dùng cho form "Gán ca" cố định.
+     */
     public function assignShift($maND, $shiftId, $effectiveFrom)
     {
         $maND = (int)$maND;
@@ -850,6 +854,76 @@ class ChamCongModel
         $insert = $this->conn->prepare("INSERT INTO canhanvien (maND, maCa, hieuLucTu) VALUES (?, ?, ?)");
         $insert->bind_param("iis", $maND, $shiftId, $effectiveFrom);
         return $insert->execute();
+    }
+
+    /**
+     * Gán ca làm việc cho MỘT ngày cụ thể của nhân viên (không ảnh hưởng các ngày khác).
+     * Dùng cho lưới lịch phân ca theo tháng: đổi ca một ô không được kéo dài vô hạn về sau.
+     * Nếu ngày đó nằm trong một khoảng hiệu lực đang mở/kéo dài, khoảng đó được tách làm
+     * hai để giữ nguyên ca cũ ở các ngày trước/sau ngày vừa đổi.
+     */
+    public function assignShiftForDate($maND, $shiftId, $effectiveDate)
+    {
+        $maND = (int)$maND;
+        $shiftId = (int)$shiftId;
+        if ($maND <= 0 || $shiftId <= 0 || !$effectiveDate) {
+            return false;
+        }
+
+        $this->conn->begin_transaction();
+        try {
+            // Tìm các khoảng hiệu lực hiện có có phủ lên ngày cần đổi.
+            $find = $this->conn->prepare(
+                "SELECT id, maCa, hieuLucTu, hieuLucDen FROM canhanvien
+                 WHERE maND = ? AND hieuLucTu <= ? AND (hieuLucDen IS NULL OR hieuLucDen >= ?)"
+            );
+            $find->bind_param("iss", $maND, $effectiveDate, $effectiveDate);
+            $find->execute();
+            $overlapping = $find->get_result()->fetch_all(MYSQLI_ASSOC);
+            $find->close();
+
+            foreach ($overlapping as $range) {
+                $rangeId = (int)$range['id'];
+                $rangeFrom = $range['hieuLucTu'];
+                $rangeTo = $range['hieuLucDen'];
+                $rangeShiftId = (int)$range['maCa'];
+
+                // Phần trước ngày đổi: giữ nguyên ca cũ, chỉ rút ngắn hieuLucDen.
+                if ($rangeFrom < $effectiveDate) {
+                    $shrink = $this->conn->prepare("UPDATE canhanvien SET hieuLucDen = DATE_SUB(?, INTERVAL 1 DAY) WHERE id = ?");
+                    $shrink->bind_param("si", $effectiveDate, $rangeId);
+                    $shrink->execute();
+                    $shrink->close();
+                } else {
+                    // Khoảng bắt đầu đúng ngày đổi: xóa vì sẽ được thay bằng bản ghi 1 ngày mới.
+                    $del = $this->conn->prepare("DELETE FROM canhanvien WHERE id = ?");
+                    $del->bind_param("i", $rangeId);
+                    $del->execute();
+                    $del->close();
+                }
+
+                // Phần sau ngày đổi: khôi phục lại ca cũ cho các ngày tiếp theo (nếu còn).
+                if ($rangeTo === null || $rangeTo > $effectiveDate) {
+                    $nextDay = date('Y-m-d', strtotime($effectiveDate . ' +1 day'));
+                    $resume = $this->conn->prepare("INSERT INTO canhanvien (maND, maCa, hieuLucTu, hieuLucDen) VALUES (?, ?, ?, ?)");
+                    $resume->bind_param("iiss", $maND, $rangeShiftId, $nextDay, $rangeTo);
+                    $resume->execute();
+                    $resume->close();
+                }
+            }
+
+            // Bản ghi cho đúng ngày vừa đổi, chỉ áp dụng cho ngày đó.
+            $insert = $this->conn->prepare("INSERT INTO canhanvien (maND, maCa, hieuLucTu, hieuLucDen) VALUES (?, ?, ?, ?)");
+            $insert->bind_param("iiss", $maND, $shiftId, $effectiveDate, $effectiveDate);
+            $insert->execute();
+            $insert->close();
+
+            $this->conn->commit();
+            return true;
+        } catch (\Throwable $e) {
+            $this->conn->rollback();
+            return false;
+        }
     }
 
     public function isOffShift($shift)
