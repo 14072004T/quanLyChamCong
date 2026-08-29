@@ -188,7 +188,8 @@ class LoginController {
             file_put_contents($debugFile, $debugMsg, FILE_APPEND);
 
             require_once 'app/middleware/AuthMiddleware.php';
-            if (AuthMiddleware::isMobile() && $role !== 'nhanvien') {
+            // HR được phép đăng nhập trên mobile để mở tablet chấm công.
+            if (AuthMiddleware::isMobile() && $role !== 'nhanvien' && $role !== 'hr') {
                 header("Location: index.php?page=login&error=ib_only");
                 exit;
             }
@@ -204,7 +205,9 @@ class LoginController {
             
             $_SESSION['role'] = $role;
 
-            header("Location: index.php?page=" . $this->getDefaultPageForRole($role));
+            // Trên mobile, HR chỉ được vào 'home'/'tablet-cham-cong' nên không dùng trang mặc định desktop.
+            $defaultPage = (AuthMiddleware::isMobile() && $role === 'hr') ? 'home' : $this->getDefaultPageForRole($role);
+            header("Location: index.php?page=" . $defaultPage);
             exit;
         }
 
