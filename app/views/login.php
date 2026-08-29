@@ -449,13 +449,15 @@
                 if (force === 'desktop') {
                     return;
                 }
-                const isTabletOrMobile = window.innerWidth <= 1024 && (
-                    navigator.maxTouchPoints > 0 || /iPad|iPhone|iPod|Android|Mobile|Tablet/i.test(navigator.userAgent)
-                );
+                const isTabletOrMobile = window.innerWidth <= 1024 &&
+                    /iPad|iPhone|iPod|Android|Mobile|Tablet/i.test(navigator.userAgent);
                 if (isTabletOrMobile) {
                     document.body.classList.add('mobile-view');
                     document.body.classList.add('mb-login-body');
                     document.cookie = 'device_hint=mobile; path=/; max-age=2592000; SameSite=Lax';
+                } else {
+                    // Xóa hint cũ để trình duyệt desktop (màn hình cảm ứng/cửa sổ hẹp) không bị kẹt mobile-view.
+                    document.cookie = 'device_hint=; path=/; max-age=0; SameSite=Lax';
                 }
             } catch (e) {}
         })();
