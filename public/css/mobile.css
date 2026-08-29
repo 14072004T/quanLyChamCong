@@ -136,6 +136,48 @@ body.mobile-view.mobile-menu-open .mobile-sidebar-nav,
     to { transform: translateX(0); }
 }
 
+/* Dự phòng: một số tablet không được nhận đúng là "mobile" qua User-Agent, khiến
+   sidebar không có cách nào mở lại. Kích hoạt nút mở menu + drawer dựa hoàn toàn vào
+   độ rộng màn hình thực tế, không phụ thuộc class .mobile-view. */
+@media (max-width: 900px) {
+    .main-container > .sidebar-nav {
+        display: none;
+    }
+    .header > .sidebar-reopen-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        margin-left: 8px;
+        border: 0;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        cursor: pointer;
+    }
+    body.mobile-menu-open .main-container > .sidebar-nav {
+        display: flex !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: min(82vw, 300px) !important;
+        min-height: 100vh !important;
+        z-index: 1100 !important;
+        box-shadow: 10px 0 28px rgba(15, 23, 42, .24) !important;
+        animation: mobile-menu-in .18s ease-out both;
+    }
+    body.mobile-menu-open::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: 1090;
+        background: rgba(15, 23, 42, .42);
+    }
+    body.mobile-menu-open { overflow: hidden !important; }
+}
+
 /* Mobile overrides for .main-container pages (e.g. edit request, face register) */
 .mobile-view .main-container {
     display: block !important;

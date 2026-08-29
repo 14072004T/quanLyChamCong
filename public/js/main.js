@@ -1,14 +1,13 @@
 window.toggleMobileMenu = function (shouldOpen) {
     const open = typeof shouldOpen === "boolean" ? shouldOpen : true;
     const body = document.body;
-    const sidebar = document.querySelector(".mobile-view .sidebar-nav");
+    const sidebar = document.querySelector(".mobile-view .sidebar-nav") || document.querySelector(".main-container > .sidebar-nav");
     const menuTrigger = document.querySelector(".mobile-header .menu-trigger");
     const reopenBtn = document.querySelector(".sidebar-reopen-btn");
 
-    if (!body.classList.contains("mobile-view")) {
-        return;
-    }
-
+    // Không early-return theo class .mobile-view nữa: một số tablet không được nhận đúng
+    // là "mobile" qua User-Agent. CSS (media query theo độ rộng màn hình) sẽ quyết định
+    // việc toggle này có hiệu ứng drawer hay không, nên cứ luôn cho phép gọi hàm.
     body.classList.toggle("mobile-menu-open", open);
     body.classList.toggle("sidebar-collapsed", !open);
 
