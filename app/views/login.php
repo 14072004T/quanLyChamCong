@@ -455,6 +455,7 @@
                 if (isTabletOrMobile) {
                     document.body.classList.add('mobile-view');
                     document.body.classList.add('mb-login-body');
+                    document.cookie = 'device_hint=mobile; path=/; max-age=2592000; SameSite=Lax';
                 }
             } catch (e) {}
         })();

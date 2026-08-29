@@ -36,6 +36,8 @@
                 );
                 if (isTabletOrMobile) {
                     document.body.classList.add('mobile-view');
+                    // Ghi nhớ để PHP dựng đúng layout mobile ngay từ lần điều hướng kế tiếp (vd: iPad).
+                    document.cookie = 'device_hint=mobile; path=/; max-age=2592000; SameSite=Lax';
                 }
             } catch (e) {}
         })();
