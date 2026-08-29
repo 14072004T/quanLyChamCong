@@ -415,6 +415,11 @@ class ChamCongController
                 header('Location: index.php?page=cham-cong');
                 exit;
             }
+            if ($this->model->isOffShift($shift)) {
+                $_SESSION['error'] = 'Hôm nay bạn được xếp ca OFF (nghỉ). Không thể chấm công.';
+                header('Location: index.php?page=cham-cong');
+                exit;
+            }
             if ($shift) {
                 $now   = date('H:i:s');
                 $start = $shift['gioBatDau'];
@@ -579,6 +584,10 @@ class ChamCongController
         $shift = $this->model->getShiftForUser($maND);
         if (!$shift) {
             echo json_encode(['success' => false, 'message' => 'Bạn chưa được phân ca làm việc. Vui lòng liên hệ HR.']);
+            exit;
+        }
+        if ($this->model->isOffShift($shift)) {
+            echo json_encode(['success' => false, 'message' => 'Hôm nay bạn được xếp ca OFF (nghỉ). Không thể chấm công.']);
             exit;
         }
         if ($shift) {

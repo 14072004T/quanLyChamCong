@@ -852,6 +852,58 @@ class ChamCongModel
         return $insert->execute();
     }
 
+    public function isOffShift($shift)
+    {
+        if (!$shift) {
+            return false;
+        }
+        $shiftName = mb_strtolower(trim($shift['tenCa'] ?? ''), 'UTF-8');
+        return $shiftName === 'off' 
+            || strpos($shiftName, 'off') !== false 
+            || strpos($shiftName, 'nghỉ') !== false 
+            || strpos($shiftName, 'nghi') !== false 
+            || ($shift['gioBatDau'] ?? '') === ($shift['gioKetThuc'] ?? '');
+    }
+
+    public function getDefaultShift()
+    {
+        $res = $this->conn->query("SELECT id AS maCa, tenCa, gioBatDau, gioKetThuc FROM calamviec WHERE hoatDong = 1 ORDER BY id ASC LIMIT 1");
+        if ($res && $res->num_rows > 0) {
+            return $res->fetch_assoc();
+        }
+        return null;
+    }
+
+    public function getShiftAssignmentsForUserInMonth($maND, $monthStart, $monthEnd)
+    {
+        $sql = "SELECT aes.maCa, aes.hieuLucTu, aes.hieuLucDen, s.tenCa, s.gioBatDau, s.gioKetThuc
+                FROM canhanvien aes
+                JOIN calamviec s ON s.id = aes.maCa AND s.hoatDong = 1
+                WHERE aes.maND = ?
+                  AND aes.hieuLucTu <= ?
+                  AND (aes.hieuLucDen IS NULL OR aes.hieuLucDen >= ?)
+                ORDER BY aes.hieuLucTu DESC";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+        $stmt->bind_param("iss", $maND, $monthEnd, $monthStart);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $res;
+    }
+
+    public function resolveShiftFromAssignments($assignments, $date, $defaultShift)
+    {
+        foreach ($assignments as $asm) {
+            if ($date >= $asm['hieuLucTu'] && ($asm['hieuLucDen'] === null || $date <= $asm['hieuLucDen'])) {
+                return $asm;
+            }
+        }
+        return $defaultShift;
+    }
+
     public function getMonthlyWorkSummary($monthKey, $phongBan = '')
     {
         $monthStart = $monthKey . '-01';
@@ -2183,6 +2235,10 @@ class ChamCongModel
         });
 
         $result = [];
+        $defaultShift = $this->getDefaultShift();
+        $year = (int)substr($monthKey, 0, 4);
+        $month = (int)substr($monthKey, 5, 2);
+        $lastDay = (int)date('t', strtotime($monthStart));
 
         foreach ($employees as $employee) {
             $maND = (int)($employee['maND'] ?? 0);
@@ -2198,12 +2254,21 @@ class ChamCongModel
             // Láº¥y cÃ¡c yÃªu cáº§u xin phÃ©p Ä‘Ã£ approve
             $leaveRequests = $this->getApprovedLeaveRequests($maND, $monthStart, $monthEnd);
 
+            // Pre-calculate shift assignment map for the user for the whole month
+            $shiftsForMonth = $this->getShiftAssignmentsForUserInMonth($maND, $monthStart, $monthEnd);
+            $shiftsMap = [];
+            for ($day = 1; $day <= $lastDay; $day++) {
+                $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
+                $shiftsMap[$dateStr] = $this->resolveShiftFromAssignments($shiftsForMonth, $dateStr, $defaultShift);
+            }
+
             // TÃ­nh toÃ¡n chi tiáº¿t
             $monthlyCalc = AttendanceCalculator::calculateMonthlyAttendance(
                 $monthKey,
                 $attendanceData,
                 $leaveRequests,
-                $leaveInfo
+                $leaveInfo,
+                $shiftsMap
             );
 
             // Láº¥y sá»‘ ngÃ y lÃ m viá»‡c tiÃªu chuáº©n cá»§a thÃ¡ng
@@ -2906,24 +2971,34 @@ class ChamCongModel
         $leaveInfo = $this->getEmployeeLeaveInfo($maND);
         $leaveRequests = $this->getApprovedLeaveRequests($maND, $monthStart, $monthEnd);
         
-        // Fetch shift assignment
-        $shift = $this->getShiftForUser($maND);
-        $shiftStart = $shift['gioBatDau'] ?? null;
-        $shiftEnd = $shift['gioKetThuc'] ?? null;
+        $defaultShift = $this->getDefaultShift();
+        $shiftsForMonth = $this->getShiftAssignmentsForUserInMonth($maND, $monthStart, $monthEnd);
+        $year = (int)substr($monthKey, 0, 4);
+        $month = (int)substr($monthKey, 5, 2);
+        $lastDay = (int)date('t', strtotime($monthStart));
+        $shiftsMap = [];
+        for ($day = 1; $day <= $lastDay; $day++) {
+            $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
+            $shiftsMap[$dateStr] = $this->resolveShiftFromAssignments($shiftsForMonth, $dateStr, $defaultShift);
+        }
 
         $monthlyCalc = AttendanceCalculator::calculateMonthlyAttendance(
             $monthKey,
             $attendanceData,
             $leaveRequests,
-            $leaveInfo
+            $leaveInfo,
+            $shiftsMap
         );
 
         $dailyRows = [];
         $totalLateMinutes = 0;
         foreach ($monthlyCalc['daily_breakdown'] as $date => $day) {
             $lateMinutes = 0;
-            if ($day['day_type'] === 'working' && !empty($day['check_in']) && $shiftStart && $shiftEnd) {
-                $trangThai = $this->calculateShiftStatus($day['check_in'], $day['check_out'], $shiftStart, $shiftEnd);
+            $dayShift = $shiftsMap[$date] ?? $defaultShift;
+            $dayShiftStart = $dayShift['gioBatDau'] ?? null;
+            $dayShiftEnd = $dayShift['gioKetThuc'] ?? null;
+            if ($day['day_type'] === 'working' && !empty($day['check_in']) && $dayShiftStart && $dayShiftEnd) {
+                $trangThai = $this->calculateShiftStatus($day['check_in'], $day['check_out'], $dayShiftStart, $dayShiftEnd);
                 $lateMinutes = (int)($trangThai['minutes_late'] ?? 0);
                 $totalLateMinutes += $lateMinutes;
             }

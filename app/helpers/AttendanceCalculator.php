@@ -20,7 +20,7 @@ class AttendanceCalculator
      * @param array $employeeInfo - [seniority, jobType, ...]
      * @return array
      */
-    public static function calculateMonthlyAttendance($monthKey, $attendanceData = [], $leaveRequests = [], $employeeInfo = [])
+    public static function calculateMonthlyAttendance($monthKey, $attendanceData = [], $leaveRequests = [], $employeeInfo = [], $shiftsMap = [])
     {
         $monthKey = trim((string)$monthKey);
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
@@ -51,7 +51,8 @@ class AttendanceCalculator
                 $dateStr,
                 $attendanceData[$dateStr] ?? null,
                 $leaveRequests[$dateStr] ?? null,
-                $employeeInfo
+                $employeeInfo,
+                $shiftsMap[$dateStr] ?? null
             );
 
             $dailyBreakdown[$dateStr] = $dayData;
@@ -79,13 +80,27 @@ class AttendanceCalculator
      * @param array $checkInOutData - ['checkIn' => datetime, 'checkOut' => datetime]
      * @param string $leaveType - null, 'annual', 'unpaid', etc.
      * @param array $employeeInfo - thông tin nhân viên
+     * @param array|null $shift - thông tin ca làm việc của ngày
      * @return array
      */
-    public static function calculateDailyAttendance($date, $checkInOutData = null, $leaveType = null, $employeeInfo = [])
+    public static function calculateDailyAttendance($date, $checkInOutData = null, $leaveType = null, $employeeInfo = [], $shift = null)
     {
         $date = trim((string)$date);
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             return self::getEmptyDayData();
+        }
+
+        // Kiểm tra ca OFF
+        $isOffShift = false;
+        if ($shift) {
+            $shiftName = mb_strtolower(trim($shift['tenCa'] ?? ''), 'UTF-8');
+            if ($shiftName === 'off' 
+                || strpos($shiftName, 'off') !== false 
+                || strpos($shiftName, 'nghỉ') !== false 
+                || strpos($shiftName, 'nghi') !== false 
+                || ($shift['gioBatDau'] ?? '') === ($shift['gioKetThuc'] ?? '')) {
+                $isOffShift = true;
+            }
         }
 
         // Kiểm tra loại ngày
@@ -98,6 +113,20 @@ class AttendanceCalculator
                 'work_hours' => 0,
                 'ot_hours' => 0,
                 'has_attendance' => false,
+                'shift_name' => $shift['tenCa'] ?? 'HC',
+            ];
+        }
+
+        if ($isOffShift) {
+            return [
+                'date' => $date,
+                'day_type' => 'off_shift',
+                'day_type_label' => $shift['tenCa'] ?? 'Ca OFF',
+                'work_value' => 0.0,
+                'work_hours' => 0,
+                'ot_hours' => 0,
+                'has_attendance' => false,
+                'shift_name' => $shift['tenCa'] ?? 'OFF',
             ];
         }
 
@@ -110,6 +139,7 @@ class AttendanceCalculator
                 'work_hours' => 0,
                 'ot_hours' => 0,
                 'has_attendance' => false,
+                'shift_name' => $shift['tenCa'] ?? 'HC',
             ];
         }
 
@@ -136,6 +166,7 @@ class AttendanceCalculator
                 'work_hours' => 0,
                 'ot_hours' => 0,
                 'has_attendance' => false,
+                'shift_name' => $shift['tenCa'] ?? 'HC',
             ];
         }
 
@@ -172,6 +203,7 @@ class AttendanceCalculator
                     'work_value' => $workValue,
                     'ot_hours' => $otHours,
                     'has_attendance' => true,
+                    'shift_name' => $shift['tenCa'] ?? 'HC',
                 ];
             }
         }
@@ -185,6 +217,7 @@ class AttendanceCalculator
             'work_hours' => 0,
             'ot_hours' => 0,
             'has_attendance' => false,
+            'shift_name' => $shift['tenCa'] ?? 'HC',
         ];
     }
 

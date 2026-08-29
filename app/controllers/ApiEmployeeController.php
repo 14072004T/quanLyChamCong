@@ -99,6 +99,10 @@ class ApiEmployeeController
             respondError('Bạn chưa được phân ca làm việc. Vui lòng liên hệ HR.');
             return;
         }
+        if ($this->model->isOffShift($shift)) {
+            respondError('Hôm nay bạn được xếp ca OFF (nghỉ). Không thể chấm công.');
+            return;
+        }
 
         // Kiểm tra khung giờ ca làm
         $shiftError = $this->checkShiftTime($shift);
