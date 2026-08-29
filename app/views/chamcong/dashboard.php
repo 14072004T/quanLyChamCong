@@ -40,27 +40,11 @@ if (!isset($view) || is_null($view)) {
 }
 ?>
 <?php include 'app/views/layouts/header.php'; ?>
-<?php if (AuthMiddleware::isMobile()): ?>
+<?php if (AuthMiddleware::isMobile() && $role !== 'hr'): ?>
     <!-- ========================================== -->
     <!-- MOBILE FULL SCREEN CAMERA VIEW            -->
     <!-- ========================================== -->
-    <?php if ($role === 'hr'): ?>
-        <div class="mb-face-body" style="background-color: #0a0a0c; justify-content: center; align-items: center; padding: 20px; text-align: center;">
-            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px 20px; max-width: 320px; width: 100%;">
-                <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(37, 99, 235, 0.12); color: #60a5fa; display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 20px;">
-                    <i class="fa-solid fa-tablet-screen-button"></i>
-                </div>
-                <h3 style="color: white; margin: 0 0 10px 0; font-size: 18px; font-weight: 750;">Chấm công cho nhân viên</h3>
-                <p style="color: #a0aec0; font-size: 13px; line-height: 1.5; margin: 0 0 24px 0;">HR dùng tablet kiosk để chấm công bằng khuôn mặt cho nhân viên, không cần tự đăng ký khuôn mặt riêng.</p>
-                <a href="index.php?page=tablet-cham-cong" class="mb-attendance-btn" style="text-decoration: none; margin: 0 auto; background-color: #2563eb; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);">
-                    <i class="fa-solid fa-tablet-screen-button"></i> Mở tablet chấm công
-                </a>
-                <a href="index.php?page=home" style="display: block; margin-top: 16px; color: #a0aec0; font-size: 13px; text-decoration: none; font-weight: 600;">
-                    <i class="fa-solid fa-arrow-left"></i> Quay lại Trang chủ
-                </a>
-            </div>
-        </div>
-    <?php elseif (!$hasFaceRegistered): ?>
+    <?php if (!$hasFaceRegistered): ?>
         <div class="mb-face-body" style="background-color: #0a0a0c; justify-content: center; align-items: center; padding: 20px; text-align: center;">
             <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px 20px; max-width: 320px; width: 100%;">
                 <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(217, 119, 6, 0.1); color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 20px;">
@@ -809,7 +793,7 @@ if (!isset($view) || is_null($view)) {
                     }
                 }
 
-                // Tự động khởi chạy camera trên thiết bị di động (trừ HR — dùng tablet kiosk riêng)
+                // Tự động khởi chạy camera trên thiết bị di động (HR dùng chung giao diện desktop nên không áp dụng)
                 if (<?= (AuthMiddleware::isMobile() && $hasFaceRegistered && $role !== 'hr') ? 'true' : 'false' ?>) {
                     triggerFaceAttendance(currentAction);
                 }
