@@ -969,6 +969,11 @@ class ChamCongModel
 
     public function getDefaultShift()
     {
+        // Bỏ qua ca OFF khi chọn mặc định, tránh mọi ngày bị fallback về nghỉ.
+        $res = $this->conn->query("SELECT id AS maCa, tenCa, gioBatDau, gioKetThuc FROM calamviec WHERE hoatDong = 1 AND kyHieu != 'OFF' ORDER BY id ASC LIMIT 1");
+        if ($res && $res->num_rows > 0) {
+            return $res->fetch_assoc();
+        }
         $res = $this->conn->query("SELECT id AS maCa, tenCa, gioBatDau, gioKetThuc FROM calamviec WHERE hoatDong = 1 ORDER BY id ASC LIMIT 1");
         if ($res && $res->num_rows > 0) {
             return $res->fetch_assoc();
