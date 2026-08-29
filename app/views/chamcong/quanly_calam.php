@@ -327,11 +327,11 @@ document.addEventListener('DOMContentLoaded', function () {
                             totalDays++;
                             if (shifts.length) {
                                 var weekendDefault = shifts.find(function(shift) { return shift.kyHieu === 'OFF'; }) || shifts[0];
-                                var activeShiftId = (dayBreakdown && dayBreakdown.maCa) ? parseInt(dayBreakdown.maCa, 10) : weekendDefault.id;
-                                var activeShift = shifts.find(function(shift) { return shift.id === activeShiftId; }) || weekendDefault;
+                                var activeShiftId = (dayBreakdown && dayBreakdown.maCa) ? parseInt(dayBreakdown.maCa, 10) : parseInt(weekendDefault.id, 10);
+                                var activeShift = shifts.find(function(shift) { return parseInt(shift.id, 10) === activeShiftId; }) || weekendDefault;
                                 
                                 var weekendOptions = shifts.map(function(shift) {
-                                    var selected = shift.id === activeShiftId ? ' selected' : '';
+                                    var selected = parseInt(shift.id, 10) === activeShiftId ? ' selected' : '';
                                     return '<option value="' + shift.id + '" data-color="' + escapeHtml(shift.mauSac || '#3b82f6') + '"' + selected + '>' + escapeHtml(shift.kyHieu || shift.tenCa) + '</option>';
                                 }).join('');
                                 cells += '<select class="shift-cell shift-picker" data-ma-nd="' + emp.maND + '" data-date="' + currentDate + '" title="Đổi ca" style="background:' + escapeHtml(activeShift.mauSac || '#94a3b8') + ';color:#fff;border-color:' + escapeHtml(activeShift.mauSac || '#94a3b8') + '" onchange="changeMonthlyShift(this)">' + weekendOptions + '</select>';
@@ -342,11 +342,11 @@ document.addEventListener('DOMContentLoaded', function () {
                             totalDays++;
                             if (shifts.length) {
                                 var weekdayDefault = shifts.find(function(shift) { return shift.kyHieu === 'HC'; }) || shifts[0];
-                                var activeShiftId = (dayBreakdown && dayBreakdown.maCa) ? parseInt(dayBreakdown.maCa, 10) : weekdayDefault.id;
-                                var activeShift = shifts.find(function(shift) { return shift.id === activeShiftId; }) || weekdayDefault;
+                                var activeShiftId = (dayBreakdown && dayBreakdown.maCa) ? parseInt(dayBreakdown.maCa, 10) : parseInt(weekdayDefault.id, 10);
+                                var activeShift = shifts.find(function(shift) { return parseInt(shift.id, 10) === activeShiftId; }) || weekdayDefault;
 
                                 var shiftOptions = shifts.map(function(shift) {
-                                    var selected = shift.id === activeShiftId ? ' selected' : '';
+                                    var selected = parseInt(shift.id, 10) === activeShiftId ? ' selected' : '';
                                     return '<option value="' + shift.id + '" data-color="' + escapeHtml(shift.mauSac || '#3b82f6') + '"' + selected + '>' + escapeHtml(shift.kyHieu || shift.tenCa) + '</option>';
                                 }).join('');
                                 cells += '<select class="shift-cell shift-picker" data-ma-nd="' + emp.maND + '" data-date="' + currentDate + '" title="Đổi ca" style="background:' + escapeHtml(activeShift.mauSac || '#3b82f6') + ';color:#fff;border-color:' + escapeHtml(activeShift.mauSac || '#3b82f6') + '" onchange="changeMonthlyShift(this)">' + shiftOptions + '</select>';
