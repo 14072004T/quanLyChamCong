@@ -80,10 +80,12 @@ body.mobile-view.mobile-menu-open .mobile-sidebar-nav,
     gap: 8px !important;
 }
 
-.mobile-view.mobile-menu-open .main-layout-wrapper,
+/* Chỉ dịch chuyển vùng NỘI DUNG (anh em của sidebar), KHÔNG dịch chuyển .main-layout-wrapper/
+   .main-container — vì đó là phần tử cha của sidebar: nếu áp transform lên chúng, sidebar
+   (position:fixed) sẽ bị đổi containing block, phá vỡ so sánh z-index với lớp phủ nền,
+   khiến lớp phủ che mất menu và các link bên trong không bấm được. */
 .mobile-view.mobile-menu-open .main-content,
-.mobile-view.mobile-menu-open .dashboard-container,
-.mobile-view.mobile-menu-open .main-container {
+.mobile-view.mobile-menu-open .dashboard-container {
     transform: translateX(min(82vw, 300px)) !important;
     transition: transform .2s ease-out !important;
 }
