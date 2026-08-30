@@ -23,7 +23,21 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         .camera-card { position: absolute; inset: 0; overflow: hidden; background: #020617; }
         video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
         video, canvas { transform: scaleX(-1); }
-        .guide { position: absolute; inset: 10% 30%; border: 3px dashed #60a5fa; border-radius: 50%; box-shadow: 0 0 0 999px #0006; pointer-events: none; }
+        /* Khung canh khuôn mặt dùng tỷ lệ cố định (không dùng % theo chiều màn hình)
+           để không bị dẹp/méo khi xoay tablet sang chế độ đứng (portrait). */
+        .guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            height: min(78vh, 640px);
+            aspect-ratio: 3 / 4;
+            max-width: 82vw;
+            border: 3px dashed #60a5fa;
+            border-radius: 50%;
+            box-shadow: 0 0 0 999px #0006;
+            pointer-events: none;
+        }
         #status { position: absolute; left: 50%; bottom: 32px; transform: translateX(-50%); min-width: min(560px, 90vw); text-align: center; padding: 18px 28px; background: rgba(15, 33, 56, 0.92); border: 1px solid #274568; border-radius: 16px; color: #bfdbfe; font-size: clamp(16px, 2.4vw, 22px); font-weight: 700; box-shadow: 0 10px 40px #0008; }
         .bottom { display: none; }
         @media (max-width: 800px) { .topbar { padding: 14px; } }
