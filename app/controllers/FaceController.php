@@ -11,6 +11,10 @@ class FaceController extends Controller
 
     public function __construct()
     {
+        // Không để PHP in warning/notice ra output — nếu lọt vào trước json_encode()
+        // sẽ làm hỏng JSON và khiến fetch().json() phía client báo lỗi kết nối.
+        ini_set('display_errors', '0');
+
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }

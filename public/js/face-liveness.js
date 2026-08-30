@@ -129,6 +129,7 @@ class LivenessDetector {
                 return;
             }
         } catch (e) {
+            console.error('Lỗi khởi tạo phiên liveness:', e);
             this._fail('Lỗi kết nối máy chủ khi tạo phiên bảo mật.');
             return;
         }
