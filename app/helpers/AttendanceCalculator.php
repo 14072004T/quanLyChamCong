@@ -122,7 +122,7 @@ class AttendanceCalculator
             return [
                 'date' => $date,
                 'day_type' => 'off_shift',
-                'day_type_label' => $shift['tenCa'] ?? 'Ca OFF',
+                'day_type_label' => 'Không có lịch làm việc',
                 'work_value' => 0.0,
                 'work_hours' => 0,
                 'ot_hours' => 0,
@@ -180,21 +180,26 @@ class AttendanceCalculator
             $checkOut = $checkInOutData['checkOut'] ?? null;
 
             if ($checkIn && $checkOut) {
-                $workMinutes = self::calculateWorkMinutes($checkIn, $checkOut);
-                
-                // Trừ 60 phút nghỉ trưa nếu làm việc trên 5 tiếng (300 phút)
-                if ($workMinutes >= 300) {
-                    $workMinutes -= 60;
+                $shiftStart = $shift['gioBatDau'] ?? null;
+                $shiftEnd = $shift['gioKetThuc'] ?? null;
+
+                if ($shiftStart && $shiftEnd) {
+                    // Kẹp giờ vào/ra trong đúng khung giờ ca đã thiết lập.
+                    $workMinutes = self::calculateClampedWorkMinutes($checkIn, $checkOut, $shiftStart, $shiftEnd);
+                    $shiftMinutes = self::calculateShiftMinutes($shiftStart, $shiftEnd);
+                } else {
+                    // Không có giờ ca (hiếm khi xảy ra) — dùng chênh lệch thô, chuẩn 8h.
+                    $workMinutes = self::calculateWorkMinutes($checkIn, $checkOut);
+                    $shiftMinutes = 480;
                 }
 
                 $workHours = round($workMinutes / 60, 2);
 
-                // Standard work time: 480 minutes (8 soGio)
-                $standardMinutes = 480;
-                $otHours = $workMinutes > $standardMinutes ? round(($workMinutes - $standardMinutes) / 60, 2) : 0;
+                // Tính work value: tỷ lệ giờ làm / tổng giờ ca, làm tròn LÊN tới các mốc 0.25.
+                $workValue = self::calculateWorkValue($workMinutes, $shiftMinutes);
 
-                // Tính work value (1.0 = ngày đầy đủ, 0.5 = nửa ngày)
-                $workValue = self::calculateWorkValue($workMinutes, $standardMinutes);
+                // OT (tăng ca) được tính riêng qua cơ chế đăng ký OT, không tính lẫn vào đây.
+                $otHours = 0;
 
                 return [
                     'date' => $date,
@@ -254,30 +259,77 @@ class AttendanceCalculator
     }
 
     /**
-     * Tính giá trị công trong ngày (1.0 = đầy đủ, 0.5 = nửa, 0 = không)
-     * @param int $workMinutes - số phút làm việc
-     * @param int $standardMinutes - tiêu chuẩn (mặc định 480 = 8h)
-     * @return float - 0.0, 0.5, 1.0
+     * Tính số phút làm việc thực tế, kẹp giờ vào/ra trong đúng khung giờ ca:
+     * - Nếu chấm vào sớm hơn giờ bắt đầu ca → tính từ giờ bắt đầu ca.
+     * - Nếu chấm ra muộn hơn giờ kết thúc ca → chỉ tính đến giờ kết thúc ca.
+     * @param string $checkIn - datetime chấm vào thực tế
+     * @param string $checkOut - datetime chấm ra thực tế
+     * @param string $shiftStart - giờ bắt đầu ca (HH:MM:SS)
+     * @param string $shiftEnd - giờ kết thúc ca (HH:MM:SS)
+     * @return int - số phút làm việc trong khung ca
      */
-    private static function calculateWorkValue($workMinutes, $standardMinutes = 480)
+    private static function calculateClampedWorkMinutes($checkIn, $checkOut, $shiftStart, $shiftEnd)
     {
-        $workMinutes = (int)$workMinutes;
-        $standardMinutes = (int)$standardMinutes;
-
-        // 80% tiêu chuẩn = tính 1 ngày đầy đủ (giáp người lên 1.0)
-        $threshold80Percent = round($standardMinutes * 0.80);
-
-        if ($workMinutes >= $threshold80Percent) {
-            return 1.0;
+        $checkInTime = strtotime((string)$checkIn);
+        $checkOutTime = strtotime((string)$checkOut);
+        if (!$checkInTime || !$checkOutTime) {
+            return 0;
         }
 
-        // 40% tiêu chuẩn = tính 0.5 ngày
-        $threshold50Percent = round($standardMinutes * 0.40);
-        if ($workMinutes >= $threshold50Percent) {
-            return 0.5;
+        $checkInDate = date('Y-m-d', $checkInTime);
+        $shiftStartTime = strtotime($checkInDate . ' ' . $shiftStart);
+        $isOvernight = $shiftEnd < $shiftStart;
+        $shiftEndTime = $isOvernight
+            ? strtotime($checkInDate . ' ' . $shiftEnd . ' +1 day')
+            : strtotime($checkInDate . ' ' . $shiftEnd);
+
+        $effectiveIn = max($checkInTime, $shiftStartTime);
+        $effectiveOut = min($checkOutTime, $shiftEndTime);
+
+        return max(0, (int)round(($effectiveOut - $effectiveIn) / 60));
+    }
+
+    /**
+     * Tổng số phút của một ca làm việc (xử lý cả ca qua đêm).
+     * @param string $shiftStart - HH:MM:SS
+     * @param string $shiftEnd - HH:MM:SS
+     * @return int - số phút, tối thiểu 1 để tránh chia cho 0
+     */
+    private static function calculateShiftMinutes($shiftStart, $shiftEnd)
+    {
+        $start = strtotime('2000-01-01 ' . $shiftStart);
+        $end = strtotime('2000-01-01 ' . $shiftEnd);
+        if ($end <= $start) {
+            $end = strtotime('2000-01-02 ' . $shiftEnd);
+        }
+        return max(1, (int)round(($end - $start) / 60));
+    }
+
+    /**
+     * Tính giá trị công trong ngày: tỷ lệ giờ làm / tổng giờ ca, làm tròn LÊN
+     * tới mốc gần nhất trong {0, 0.25, 0.5, 0.75, 1.0}.
+     * @param int $workMinutes - số phút làm việc (đã kẹp trong khung ca)
+     * @param int $shiftMinutes - tổng số phút của ca làm việc trong ngày
+     * @return float - 0.0, 0.25, 0.5, 0.75, hoặc 1.0
+     */
+    private static function calculateWorkValue($workMinutes, $shiftMinutes = 480)
+    {
+        $workMinutes = max(0, (int)$workMinutes);
+        $shiftMinutes = max(1, (int)$shiftMinutes);
+
+        $ratio = $workMinutes / $shiftMinutes;
+        if ($ratio <= 0) {
+            return 0.0;
         }
 
-        return 0.0;
+        foreach ([0.25, 0.5, 0.75, 1.0] as $milestone) {
+            if ($ratio <= $milestone + 0.0001) {
+                return $milestone;
+            }
+        }
+
+        // Làm quá giờ ca cũng chỉ tính tối đa 1 công (OT tính riêng).
+        return 1.0;
     }
 
     /**

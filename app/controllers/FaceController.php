@@ -404,9 +404,13 @@ class FaceController extends Controller
         $employeeName = $this->faceModel->getUserName($matchedId);
 
         if ($isFirstScanToday) {
-            // getShiftForUser() luôn trả về ca mặc định (HC/OFF) nếu chưa gán ca cụ thể,
-            // nên không chặn ghi giờ vào — tránh trường hợp có OUT mà thiếu IN, làm
-            // trang tính công không tính được giờ làm dù đã có dữ liệu quét.
+            // Ca OFF: không đồng bộ giờ vào, báo rõ hôm nay không có lịch làm việc.
+            // getShiftForUser() luôn trả về ca mặc định (HC/OFF) nếu chưa gán ca cụ thể.
+            $shift = $this->chamCongModel->getShiftForUser($matchedId);
+            if ($shift && $this->chamCongModel->isOffShift($shift)) {
+                echo json_encode(['success' => false, 'message' => 'Hôm nay ' . $employeeName . ' (Mã NV: ' . $matchedId . ') không có lịch làm việc (ca OFF).']);
+                exit;
+            }
             $ok = $this->chamCongModel->chamCong($matchedId, 'IN', 'LAN', 'TABLET', 'Chấm vào bằng tablet khuôn mặt', 'TABLET', $photoFilename);
             echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã ghi nhận giờ vào cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
             exit;

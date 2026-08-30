@@ -630,7 +630,20 @@ class ChamCongModel
         $shiftStart = $shift['gioBatDau'] ?? null;
         $shiftEnd = $shift['gioKetThuc'] ?? null;
 
-        $trangThai = $this->calculateShiftStatus($firstIn, $lastOut, $shiftStart, $shiftEnd);
+        // Ca OFF: không tính trễ/sớm theo khung giờ ca (vô nghĩa với ca nghỉ),
+        // báo rõ hôm nay không có lịch làm việc.
+        if ($this->isOffShift($shift)) {
+            $trangThai = [
+                'statuses' => ['off_day'],
+                'labels' => ['Hôm nay không có lịch làm việc'],
+                'colors' => ['#94a3b8'],
+                'minutes_late' => 0,
+                'minutes_early' => 0,
+                'phutTangCa' => 0,
+            ];
+        } else {
+            $trangThai = $this->calculateShiftStatus($firstIn, $lastOut, $shiftStart, $shiftEnd);
+        }
 
         return [
             'shift' => $shift,
