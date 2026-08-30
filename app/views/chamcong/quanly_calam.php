@@ -260,6 +260,73 @@ document.addEventListener('DOMContentLoaded', function () {
         return ['CN','T2','T3','T4','T5','T6','T7'][dow];
     }
 
+    // Dòng chung: mỗi ngày chọn 1 ca, bấm "Áp dụng cho tất cả NV" sẽ gán ca đó
+    // cho toàn bộ nhân viên đang hoạt động vào đúng ngày tương ứng.
+    function buildCommonRowHtml(month, days, shifts) {
+        if (!shifts.length) return '';
+
+        var cells = '<td style="white-space:nowrap;">'
+            + '<button type="button" id="btn-apply-common-row" class="btn btn-primary" style="padding:6px 10px;font-size:0.8em;" onclick="applyCommonRowToAll()">'
+            + '<i class="fas fa-check-double"></i> Áp dụng cho tất cả NV</button></td>';
+
+        for (var d = 1; d <= days; d++) {
+            var dow = getDayOfWeek(month, d);
+            var isWeekend = (dow === 0 || dow === 6);
+            var currentDate = month + '-' + String(d).padStart(2, '0');
+            var defaultCode = isWeekend ? 'OFF' : 'HC';
+            var defaultShift = shifts.find(function(shift) { return shift.kyHieu === defaultCode; }) || shifts[0];
+
+            var options = shifts.map(function(shift) {
+                var selected = defaultShift && parseInt(shift.id, 10) === parseInt(defaultShift.id, 10) ? ' selected' : '';
+                return '<option value="' + shift.id + '" data-color="' + escapeHtml(shift.mauSac || '#3b82f6') + '"' + selected + '>' + escapeHtml(shift.kyHieu || shift.tenCa) + '</option>';
+            }).join('');
+
+            cells += '<td><select class="shift-cell shift-picker common-shift-picker" data-date="' + currentDate + '" title="Ca chung ngày ' + d + '" style="background:' + escapeHtml((defaultShift && defaultShift.mauSac) || '#3b82f6') + ';color:#fff;">' + options + '</select></td>';
+        }
+
+        return '<tr class="common-shift-row" style="background:#eff6ff;">' + cells + '</tr>';
+    }
+
+    // Danh sách nhân viên đang hiển thị trong lưới — dùng lại khi áp dụng dòng chung.
+    var currentGridEmployees = [];
+
+    window.applyCommonRowToAll = function() {
+        var pickers = document.querySelectorAll('.common-shift-row .common-shift-picker');
+        if (!pickers.length || !currentGridEmployees.length) return;
+
+        var assignments = [];
+        pickers.forEach(function(select) {
+            var maCa = select.value;
+            var hieuLucTu = select.dataset.date;
+            currentGridEmployees.forEach(function(emp) {
+                assignments.push({ maND: emp.maND, maCa: maCa, hieuLucTu: hieuLucTu });
+            });
+        });
+
+        if (!confirm('Áp dụng ca theo dòng chung cho TẤT CẢ ' + currentGridEmployees.length + ' nhân viên đang hoạt động trong tháng này?\n\nHành động này sẽ ghi đè ca đã gán riêng cho từng nhân viên vào các ngày tương ứng.')) {
+            return;
+        }
+
+        var btn = document.getElementById('btn-apply-common-row');
+        if (btn) { btn.disabled = true; btn.textContent = 'Đang áp dụng...'; }
+
+        // Dùng lại đúng API gán ca theo từng ô (hr-api-shift-assignments) đã có sẵn,
+        // chỉ gọi lặp lại cho từng nhân viên × từng ngày — không cần API/permission mới.
+        Promise.all(assignments.map(function(item) {
+            var formData = new FormData();
+            formData.append('maND', item.maND);
+            formData.append('maCa', item.maCa);
+            formData.append('hieuLucTu', item.hieuLucTu);
+            return fetch('index.php?page=hr-api-shift-assignments', { method: 'POST', body: formData })
+                .then(function(r) { return r.json(); })
+                .catch(function() { return { success: false }; });
+        })).then(function(results) {
+            var failed = results.filter(function(r) { return !r.success; }).length;
+            alert('Đã áp dụng xong: ' + (results.length - failed) + ' thành công' + (failed > 0 ? ', ' + failed + ' thất bại' : '') + '.');
+            loadMonthlyShifts();
+        });
+    };
+
     function loadMonthlyShifts() {
         var month = monthPicker.value;
         var days = getDaysInMonth(month);
@@ -281,6 +348,7 @@ document.addEventListener('DOMContentLoaded', function () {
             fetch('index.php?page=hr-api-shifts', { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); })
         ]).then(function(results) {
             var employees = (results[0].data || []).filter(function(e) { return e.trangThai == 1; });
+            currentGridEmployees = employees;
             var payrollData = results[1].data || [];
             var otSchedule = results[1].otSchedule || {};
             var shifts = (results[2].data || []).filter(function(s) { return Number(s.hoatDong) === 1; });
@@ -294,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            gridBody.innerHTML = employees.map(function(emp) {
+            gridBody.innerHTML = buildCommonRowHtml(month, days, shifts) + employees.map(function(emp) {
                 var payroll = payrollMap[emp.maND] || {};
                 var employeeOtSchedule = otSchedule[String(emp.maND)] || otSchedule[emp.maND] || {};
                 var totalDays = 0;

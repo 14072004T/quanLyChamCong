@@ -103,22 +103,12 @@ class AttendanceCalculator
             }
         }
 
-        // Kiểm tra loại ngày
-        if (HolidayCalculator::isHoliday($date)) {
-            return [
-                'date' => $date,
-                'day_type' => 'holiday',
-                'day_type_label' => 'Ngày lễ',
-                'work_value' => 0.0,
-                'work_hours' => 0,
-                'ot_hours' => 0,
-                'has_attendance' => false,
-                'shift_name' => $shift['tenCa'] ?? 'HC',
-                'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
-            ];
-        }
+        // Có dữ liệu chấm công thực tế (ví dụ đi làm vào ngày OFF) thì vẫn tính công,
+        // không bỏ qua chỉ vì hôm đó không có lịch làm việc.
+        $hasRealAttendance = !empty($checkInOutData['checkIn']) && !empty($checkInOutData['checkOut']);
 
-        if ($isOffShift) {
+        // Chỉ dựa vào lịch phân công thực tế của nhân viên, không phân biệt ngày lễ/cuối tuần.
+        if ($isOffShift && !$hasRealAttendance) {
             return [
                 'date' => $date,
                 'day_type' => 'off_shift',
@@ -128,20 +118,6 @@ class AttendanceCalculator
                 'ot_hours' => 0,
                 'has_attendance' => false,
                 'shift_name' => $shift['tenCa'] ?? 'OFF',
-                'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
-            ];
-        }
-
-        if (HolidayCalculator::isWeekend($date)) {
-            return [
-                'date' => $date,
-                'day_type' => 'weekend',
-                'day_type_label' => 'Cuối tuần',
-                'work_value' => 0.0,
-                'work_hours' => 0,
-                'ot_hours' => 0,
-                'has_attendance' => false,
-                'shift_name' => $shift['tenCa'] ?? 'HC',
                 'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
             ];
         }
@@ -183,12 +159,13 @@ class AttendanceCalculator
                 $shiftStart = $shift['gioBatDau'] ?? null;
                 $shiftEnd = $shift['gioKetThuc'] ?? null;
 
-                if ($shiftStart && $shiftEnd) {
+                if ($shiftStart && $shiftEnd && !$isOffShift) {
                     // Kẹp giờ vào/ra trong đúng khung giờ ca đã thiết lập.
                     $workMinutes = self::calculateClampedWorkMinutes($checkIn, $checkOut, $shiftStart, $shiftEnd);
                     $shiftMinutes = self::calculateShiftMinutes($shiftStart, $shiftEnd);
                 } else {
-                    // Không có giờ ca (hiếm khi xảy ra) — dùng chênh lệch thô, chuẩn 8h.
+                    // Không có giờ ca thực (thiếu dữ liệu, hoặc đi làm vào ngày OFF không có khung
+                    // giờ tham chiếu) — dùng chênh lệch giờ vào/ra thô, chuẩn 8h.
                     $workMinutes = self::calculateWorkMinutes($checkIn, $checkOut);
                     $shiftMinutes = 480;
                 }
