@@ -72,7 +72,7 @@ $roleLabels = [
     'tech' => 'Kỹ thuật',
 ];
 
-$appVersion = 'v2.4.22';
+$appVersion = 'v2.4.24';
 ?>
 
 <nav class="sidebar-nav <?= AuthMiddleware::isMobile() ? 'mobile-sidebar-nav' : '' ?>">
