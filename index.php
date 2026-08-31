@@ -5,6 +5,8 @@ ini_set('display_errors', 1);
 // Đặt múi giờ Việt Nam để mọi hàm date() trả về giờ địa phương đúng
 date_default_timezone_set('Asia/Ho_Chi_Minh');
 
+$appVersion = 'v2.4.25';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

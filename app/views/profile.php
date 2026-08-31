@@ -79,7 +79,7 @@ $initials = mb_strtoupper($initials);
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0;">
                 <span style="font-size: 14px; font-weight: 600; color: #334155;"><i class="fa-solid fa-mobile-screen-button" style="width:20px; color:#4a5568"></i> Phiên bản ứng dụng</span>
-                <span style="font-size: 14px; font-weight: 500; color: #64748b;">v1.0.2</span>
+                <span style="font-size: 14px; font-weight: 500; color: #64748b;"><?= htmlspecialchars($appVersion ?? 'v2.4.25') ?></span>
             </div>
         </div>
 
@@ -107,7 +107,7 @@ $initials = mb_strtoupper($initials);
 </div>
 
 <div class="mb-login-footer" style="background: none; border-top: none;">
-    <div>© 2026 RFT HỆ THỐNG QUẢN LÝ CHẤM CÔNG – V1.0.2</div>
+    <div>© 2026 RFT HỆ THỐNG QUẢN LÝ CHẤM CÔNG – <?= htmlspecialchars($appVersion ?? 'v2.4.25') ?></div>
     <div style="margin-top: 4px;">Cần hỗ trợ? <a href="#">Trò chuyện ngay</a></div>
 </div>
 <?php include 'app/views/layouts/footer.php'; ?>
