@@ -556,7 +556,7 @@
 
             <!-- Mobile Footer -->
             <div class="mb-login-footer" style="background: none; border-top: none;">
-                <div>© 2026 RFT HỆ THỐNG QUẢN LÝ CHẤM CÔNG – <?= htmlspecialchars($appVersion ?? 'v2.4.25') ?></div>
+                <div>© 2026 RFT HỆ THỐNG QUẢN LÝ CHẤM CÔNG – <?= htmlspecialchars(defined('APP_VERSION') ? APP_VERSION : 'v2.4.26') ?></div>
                 <div style="margin-top: 4px;">CẦN HỖ TRỢ? <a href="#">Trò chuyện ngay</a> <i class="far fa-comment-dots" style="color: #1b5ed8;"></i></div>
             </div>
 
@@ -735,7 +735,7 @@
 
         <!-- FOOTER -->
         <footer class="footer">
-            <div>© 2026 RFT Hệ Thống Quản Lý Chấm Công — <?= htmlspecialchars($appVersion ?? 'v2.4.25') ?></div>
+            <div>© 2026 RFT Hệ Thống Quản Lý Chấm Công — <?= htmlspecialchars(defined('APP_VERSION') ? APP_VERSION : 'v2.4.26') ?></div>
             <div>Cần hỗ trợ? <a href="#">Trò chuyện ngay</a></div>
         </footer>
     <?php endif; ?>
