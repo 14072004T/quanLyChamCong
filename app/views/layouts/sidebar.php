@@ -95,9 +95,4 @@ $roleLabels = [
             </li>
         <?php endforeach; ?>
     </ul>
-
-    <div class="sidebar-version">
-        <span>RFT</span>
-        <strong><?= htmlspecialchars($appVersion) ?></strong>
-    </div>
 </nav>
