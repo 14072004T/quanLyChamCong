@@ -144,20 +144,32 @@ class LivenessHelper
             ];
         }
 
-        // 6. Frame count check (cần ít nhất 3 frames)
+        // 6. Frame count check
         $frameCount = intval($payload['frameCount'] ?? 0);
-        if ($frameCount < 3) {
+        if ($frameCount < 25) {
             self::logLivenessAttempt('INSUFFICIENT_FRAMES', $payload);
             return [
                 'valid' => false,
-                'message' => 'Không đủ dữ liệu quét (cần tối thiểu 3 frames).',
+                'message' => 'Không đủ dữ liệu quét (cần tối thiểu 25 frames).',
                 'score' => 0
             ];
         }
 
-        // 7. Combined score check (ngưỡng 35%)
+        // 7. Chớp mắt là điều kiện bắt buộc để ảnh tĩnh không thể vượt qua.
+        $blinkDetected = !empty($payload['blinkDetected']);
+        $blinkCount = intval($payload['blinkCount'] ?? 0);
+        if (!$blinkDetected || $blinkCount < 1) {
+            self::logLivenessAttempt('BLINK_NOT_DETECTED', $payload);
+            return [
+                'valid' => false,
+                'message' => 'Chưa phát hiện chớp mắt tự nhiên. Vui lòng thử lại.',
+                'score' => 0
+            ];
+        }
+
+        // 8. Combined score check
         $combinedScore = floatval($payload['combinedScore'] ?? 0);
-        if ($combinedScore < 0.35) {
+        if ($combinedScore < 0.55) {
             self::logLivenessAttempt('LOW_SCORE', $payload);
             return [
                 'valid' => false,

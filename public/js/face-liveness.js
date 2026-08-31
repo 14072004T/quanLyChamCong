@@ -25,8 +25,8 @@ class LivenessDetector {
     //  THRESHOLDS (tightened significantly from v2.0)
     // ═══════════════════════════════════════════════════════════════
 
-    static FRAME_COUNT_REQUIRED = 6; // Cực kỳ nhanh: chỉ cần 6 frames (~0.15 - 0.25 giây)
-    static WARMUP_FRAMES = 1; // Warmup 1 frame
+    static FRAME_COUNT_REQUIRED = 25;
+    static WARMUP_FRAMES = 3;
 
     // Motion & Geometry
     static GEOMETRIC_VARIANCE_MIN = 0.00002;
@@ -405,8 +405,12 @@ class LivenessDetector {
      * Run all passive scoring tests after collecting enough frames.
      */
     async _runFinalPassiveAnalysis() {
-        // Cần ít nhất 3 frame dữ liệu
-        if (this.landmarkHistory.length < 3) {
+        if (this.landmarkHistory.length < LivenessDetector.FRAME_COUNT_REQUIRED) {
+            return;
+        }
+
+        if (!this.blinkDetected || this.blinkCount < LivenessDetector.MIN_BLINKS_REQUIRED) {
+            this._fail('Chưa phát hiện chớp mắt. Vui lòng nhìn vào camera, chớp mắt tự nhiên rồi thử lại.');
             return;
         }
 
