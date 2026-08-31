@@ -376,20 +376,54 @@ class FaceController extends Controller
 
         $matchedId = 0;
         $bestDistance = 999.0;
+        $bestCosine = -1.0;
+        $distanceThreshold = 0.45;
+        $cosineThreshold = 0.90;
+        $logDir = __DIR__ . '/../../uploads/liveness_logs/';
+        if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+
         foreach ($this->faceModel->getAllFaceProfiles() as $profile) {
             $stored = json_decode($profile['embedding'], true);
             if (!is_array($stored)) continue;
-            $distance = $this->euclideanDistance($stored, $embedding);
-            $cosine = $this->cosineSimilarity($stored, $embedding);
-            if (($distance <= 0.8 || $cosine >= 0.75) && $distance < $bestDistance) {
+            $stored = $this->normalizeEmbedding($stored);
+            $incoming = $this->normalizeEmbedding($embedding);
+            $distance = $this->euclideanDistance($stored, $incoming);
+            $cosine = $this->cosineSimilarity($stored, $incoming);
+            $isMatch = $distance <= $distanceThreshold && $cosine >= $cosineThreshold;
+
+            @file_put_contents($logDir . 'tablet_recognition.log', sprintf(
+                "[%s] Tablet compare profile=%s dist=%.4f cosine=%.4f thresholdDist=%.2f thresholdCosine=%.2f match=%s\n",
+                date('Y-m-d H:i:s'),
+                $profile['maND'],
+                $distance,
+                $cosine,
+                $distanceThreshold,
+                $cosineThreshold,
+                $isMatch ? 'YES' : 'NO'
+            ), FILE_APPEND | LOCK_EX);
+
+            if ($isMatch && $distance < $bestDistance) {
                 $matchedId = (int)$profile['maND'];
                 $bestDistance = $distance;
+                $bestCosine = $cosine;
             }
         }
         if ($matchedId <= 0) {
+            @file_put_contents($logDir . 'tablet_recognition.log', sprintf(
+                "[%s] Tablet decision=REJECT reason=no_strict_match\n",
+                date('Y-m-d H:i:s')
+            ), FILE_APPEND | LOCK_EX);
             echo json_encode(['success' => false, 'message' => 'Không nhận diện được nhân viên.']);
             exit;
         }
+
+        @file_put_contents($logDir . 'tablet_recognition.log', sprintf(
+            "[%s] Tablet decision=MATCH maND=%s dist=%.4f cosine=%.4f\n",
+            date('Y-m-d H:i:s'),
+            $matchedId,
+            $bestDistance,
+            $bestCosine
+        ), FILE_APPEND | LOCK_EX);
 
         $photo = str_replace(['data:image/jpeg;base64,', 'data:image/png;base64,', ' '], ['', '', '+'], $photo);
         $photoFilename = $matchedId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.jpg';
