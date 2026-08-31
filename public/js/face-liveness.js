@@ -26,6 +26,7 @@ class LivenessDetector {
     // ═══════════════════════════════════════════════════════════════
 
     static FRAME_COUNT_REQUIRED = 25;
+    static FRAME_COUNT_MAX = 150;
     static WARMUP_FRAMES = 3;
 
     // Motion & Geometry
@@ -191,7 +192,9 @@ class LivenessDetector {
         }
 
         // ─── Progressive feedback ───
-        const progress = Math.min(95, Math.round((this.frameCount / LivenessDetector.FRAME_COUNT_REQUIRED) * 95));
+        const progress = this.blinkDetected
+            ? Math.min(95, Math.round((this.frameCount / LivenessDetector.FRAME_COUNT_REQUIRED) * 95))
+            : Math.min(95, Math.round((this.frameCount / LivenessDetector.FRAME_COUNT_MAX) * 95));
 
         // Show blink status in progress
         const blinkIcon = this.blinkDetected ? '✅' : '👁️';
@@ -205,9 +208,13 @@ class LivenessDetector {
             this._updateStatus('Đã phát hiện chớp mắt! Đang hoàn tất quét bảo mật...', 'info');
         }
 
-        // ─── Check completion (Hoàn tất ngay sau khi thu thập đủ số frame yêu cầu) ───
-        if (this.frameCount >= LivenessDetector.FRAME_COUNT_REQUIRED) {
+        // Chỉ hoàn tất khi đủ dữ liệu VÀ đã phát hiện chớp mắt. 25 frame trên tablet
+        // có thể chưa tới 2 giây, nên không được từ chối người thật quá sớm.
+        if (this.frameCount >= LivenessDetector.FRAME_COUNT_REQUIRED && this.blinkDetected) {
+            this.state = 'analyzing';
             this._runFinalPassiveAnalysis();
+        } else if (this.frameCount >= LivenessDetector.FRAME_COUNT_MAX) {
+            this._fail('Chưa phát hiện chớp mắt sau thời gian quét. Vui lòng nhìn thẳng vào camera và chớp mắt rõ một lần.');
         }
     }
 
@@ -406,11 +413,6 @@ class LivenessDetector {
      */
     async _runFinalPassiveAnalysis() {
         if (this.landmarkHistory.length < LivenessDetector.FRAME_COUNT_REQUIRED) {
-            return;
-        }
-
-        if (!this.blinkDetected || this.blinkCount < LivenessDetector.MIN_BLINKS_REQUIRED) {
-            this._fail('Chưa phát hiện chớp mắt. Vui lòng nhìn vào camera, chớp mắt tự nhiên rồi thử lại.');
             return;
         }
 
