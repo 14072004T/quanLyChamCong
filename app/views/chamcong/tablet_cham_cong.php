@@ -51,8 +51,12 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         <div id="status">Đang khởi động camera...</div>
     </main>
 </div>
-<script src="public/js/face-api.js"></script>
-<script src="public/js/face-liveness.js"></script>
+    <?php
+    $faceApiVersion = @filemtime('public/js/face-api.js') ?: '1';
+    $livenessVersion = @filemtime('public/js/face-liveness.js') ?: '1';
+    ?>
+    <script src="public/js/face-api.js?v=<?= (int)$faceApiVersion ?>"></script>
+    <script src="public/js/face-liveness.js?v=<?= (int)$livenessVersion ?>"></script>
 <script>
 (function () {
     const video = document.getElementById('kiosk-video');
