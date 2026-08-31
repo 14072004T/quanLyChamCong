@@ -26,7 +26,7 @@ class LivenessDetector {
     // ═══════════════════════════════════════════════════════════════
 
     static FRAME_COUNT_REQUIRED = 25;
-    static FRAME_COUNT_MAX = 150;
+    static FRAME_COUNT_MAX = 100;
     static WARMUP_FRAMES = 3;
 
     // Motion & Geometry
@@ -41,8 +41,8 @@ class LivenessDetector {
 
     // ★ Eye Blink Detection (EAR)
     static MIN_BLINKS_REQUIRED = 1;
-    static EAR_BLINK_THRESHOLD_RATIO = 0.75; // Nới lỏng: blink nhẹ cũng nhận
-    static EAR_OPEN_THRESHOLD_RATIO = 0.88; // Mắt mở lại không cần tới 93%
+    static EAR_BLINK_THRESHOLD_RATIO = 0.85;
+    static EAR_OPEN_THRESHOLD_RATIO = 0.80;
     static EAR_VARIANCE_MIN = 0.00002; // Nới lỏng ngưỡng variance        
 
     // Head Pose
@@ -275,35 +275,18 @@ class LivenessDetector {
 
         this.earHistory.push(avgEAR);
 
-        // Dynamically calibrate baseline (open eyes)
-        if (this.frameCount <= 10) {
-            if (avgEAR > this.maxEAR) {
-                this.maxEAR = avgEAR;
-            }
-        } else {
-            // Gradually adjust if eyes open wider
-            if (avgEAR > this.maxEAR && avgEAR < 0.38) {
-                this.maxEAR = avgEAR;
-            }
-        }
-
-        // Baseline chỉ được thiết lập khi EAR hợp lệ (0.18 - 0.45)
-        if (this.frameCount <= 10) {
-            if (avgEAR > 0.18 && avgEAR < 0.45 && avgEAR > this.maxEAR) {
-                this.maxEAR = avgEAR;
-            }
-        } else {
-            if (avgEAR > this.maxEAR && avgEAR < 0.45) {
-                this.maxEAR = avgEAR;
-            }
+        // Chỉ dùng EAR trong dải mắt mở hợp lệ để tạo baseline. Frame landmark lỗi
+        // không được phép đẩy baseline lên cao, làm blink thật không bao giờ đạt ngưỡng.
+        if (avgEAR >= 0.15 && avgEAR <= 0.45 && avgEAR > this.maxEAR) {
+            this.maxEAR = avgEAR;
         }
 
         // Baseline mắt mở: ưu tiên giá trị đo được, fallback 0.26
         const baseline = (this.maxEAR >= 0.18 && this.maxEAR <= 0.45) ? this.maxEAR : 0.26;
 
-        // ★ Ngưỡng siết chặt: mắt phải nhắm tối thiểu 18% (EAR_BLINK_THRESHOLD_RATIO=0.82)
+        // Tablet camera thường nhận EAR nông hơn webcam; mức giảm 15% vẫn phân biệt
+        // được ảnh tĩnh vì ảnh không có chuỗi đóng rồi mở lại.
         const blinkThreshold = baseline * LivenessDetector.EAR_BLINK_THRESHOLD_RATIO;
-        // Mắt phải mở lại đến 93% mới tính là blink hoàn chỉnh
         const openThreshold = baseline * LivenessDetector.EAR_OPEN_THRESHOLD_RATIO;
 
         if (this.blinkState !== 'open' && this.blinkState !== 'closed') {
