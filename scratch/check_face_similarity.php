@@ -1,6 +1,9 @@
 <?php
 // Chạy 1 lần trên production để tìm các cặp nhân viên có embedding khuôn mặt quá giống nhau
 // (nguyên nhân gây nhận nhầm người trên tablet). Xoá file này sau khi dùng xong.
+// FaceModel.php require các file khác bằng đường dẫn tương đối tính từ thư mục gốc dự án
+// (giống khi chạy qua index.php), nên phải chdir về gốc trước khi require nó ở đây.
+chdir(__DIR__ . '/..');
 require_once __DIR__ . '/../app/models/ketNoi.php';
 require_once __DIR__ . '/../app/models/FaceModel.php';
 

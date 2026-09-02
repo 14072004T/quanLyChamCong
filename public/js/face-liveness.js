@@ -225,8 +225,32 @@ class LivenessDetector {
             this.state = 'analyzing';
             this._runFinalPassiveAnalysis();
         } else if (this.frameCount >= LivenessDetector.FRAME_COUNT_MAX) {
-            this._fail('Chưa phát hiện chớp mắt sau thời gian quét. Vui lòng nhìn thẳng vào camera và chớp mắt rõ một lần.');
+            // Camera tablet chậm có thể lấy mẫu quá thưa (vài trăm ms/khung hình) nên
+            // đúng lúc mắt nhắm hoàn toàn không rơi vào khung hình nào cả — máy trạng thái
+            // theo dõi close→open không bao giờ thấy được. Trước khi từ chối, kiểm tra lại
+            // toàn bộ lịch sử EAR xem có dấu hiệu sụt giảm rõ rệt (đủ sâu như một lần chớp
+            // mắt thật) hay không, dù không bắt được đúng khung hình đóng mắt.
+            if (this._hasEarDipEvidence()) {
+                this.blinkDetected = true;
+                this.blinkCount = Math.max(this.blinkCount, 1);
+                this.state = 'analyzing';
+                this._runFinalPassiveAnalysis();
+            } else {
+                this._fail('Chưa phát hiện chớp mắt sau thời gian quét. Vui lòng nhìn thẳng vào camera và chớp mắt rõ một lần.');
+            }
         }
+    }
+
+    /**
+     * Kiểm tra dự phòng: lịch sử EAR có từng sụt giảm đủ sâu so với baseline không,
+     * kể cả khi máy trạng thái close→open không bắt được đúng khung hình nhắm mắt
+     * (camera lấy mẫu thưa hơn tốc độ chớp mắt thật).
+     */
+    _hasEarDipEvidence() {
+        if (this.earHistory.length < 3) return false;
+        const baseline = (this.maxEAR >= 0.08) ? this.maxEAR : 0.26;
+        const minEAR = Math.min(...this.earHistory);
+        return minEAR <= baseline * 0.90;
     }
 
     /**
