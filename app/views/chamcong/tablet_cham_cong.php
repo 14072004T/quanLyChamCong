@@ -67,21 +67,33 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
     let detecting = false;
     let complete = false;
     let loaded = false;
-    let prefetchedSecret = null;
+    let sessionPromise = null;
 
     function message(text, type) { status.textContent = text; status.style.color = type === 'error' ? '#fecaca' : type === 'success' ? '#bbf7d0' : '#bfdbfe'; }
 
-    // Lấy trước session secret trong lúc hiển thị kết quả lần quét trước, để
-    // vòng quét kế tiếp không phải chờ round-trip mạng mới bắt đầu đọc frame.
-    async function prefetchSessionSecret() {
-        try {
-            const res = await fetch('index.php?page=face-liveness-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await res.json();
-            if (data.success && data.sessionSecret) prefetchedSecret = data.sessionSecret;
-        } catch (e) { /* sẽ fetch lại trong start() nếu prefetch thất bại */ }
+    function fetchSessionSecret() {
+        return fetch('index.php?page=face-liveness-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) { return (data.success && data.sessionSecret) ? data.sessionSecret : null; })
+        .catch(function () { return null; });
+    }
+
+    // Chỉ giữ TỐI ĐA 1 request đang chờ tại một thời điểm — server chỉ lưu được
+    // 1 secret/session, nếu bắn 2 fetch song song thì fetch xong sau sẽ ghi đè secret
+    // của fetch kém may mắn hơn, khiến client ký token bằng secret đã bị thay → “chữ
+    // ký không hợp lệ”. Dùng chung 1 promise và tiêu thụ đúng 1 lần để tránh race.
+    function prefetchSessionSecret() {
+        if (!sessionPromise) sessionPromise = fetchSessionSecret();
+    }
+
+    async function consumeSessionSecret() {
+        if (!sessionPromise) sessionPromise = fetchSessionSecret();
+        var promise = sessionPromise;
+        sessionPromise = null;
+        return await promise;
     }
 
     async function loadModels() {
@@ -100,7 +112,7 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         loaded = true;
     }
 
-    function startLiveness() {
+    async function startLiveness() {
         if (detector) detector.destroy();
         complete = false;
         detector = new LivenessDetector(video, canvas, {
@@ -109,7 +121,8 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
             onComplete: function (token, descriptor) { complete = true; submit(token, descriptor); },
             onFail: function (reason) { complete = true; message('Xác thực liveness thất bại: ' + reason, 'error'); setTimeout(restart, 900); }
         });
-        if (prefetchedSecret) { detector.preloadSecret(prefetchedSecret); prefetchedSecret = null; }
+        const secret = await consumeSessionSecret();
+        if (secret) detector.preloadSecret(secret);
         detector.start();
     }
 
@@ -149,9 +162,8 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
             try { await loadModels(); stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } }); video.srcObject = stream; await video.play(); }
             catch (e) { message('Không thể mở camera. Hãy cấp quyền camera cho trình duyệt.', 'error'); return; }
         }
-        startLiveness();
+        await startLiveness();
     }
-    prefetchSessionSecret();
     restart(); requestAnimationFrame(detect);
 })();
 </script>
