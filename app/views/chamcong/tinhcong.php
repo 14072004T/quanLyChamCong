@@ -197,6 +197,20 @@ foreach (($salaryRows ?? []) as $summaryRow) {
     border-radius: 14px;
     overflow: hidden;
     text-align: center;
+    position: relative;
+}
+.scan-card .scan-select {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 20px;
+    height: 20px;
+    z-index: 2;
+    cursor: pointer;
+    accent-color: #2563eb;
+}
+.scan-card.selected {
+    outline: 3px solid #2563eb;
 }
 .scan-card .scan-thumb {
     width: 100%;
@@ -558,7 +572,10 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                     <div class="tab-content" id="tab-lichsuquet">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                             <h3 style="margin:0;">Lịch sử chấm công tablet - Tháng <span id="scan-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
-                            <span id="scan-total-label" style="color:#64748b;font-size:.9em;"></span>
+                            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                                <span id="scan-total-label" style="color:#64748b;font-size:.9em;"></span>
+                                <button type="button" class="btn btn-danger btn-sm" id="scan-delete-btn" disabled><i class="fas fa-trash"></i> Xoá đã chọn (<span id="scan-selected-count">0</span>)</button>
+                            </div>
                         </div>
                         <div class="scan-history-grid" id="scan-history-grid">
                             <div class="empty-state">Đang tải dữ liệu...</div>
@@ -1178,6 +1195,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var scanImageClose = document.getElementById('scan-image-close');
     var scanHistoryLoaded = false;
     var scanCurrentPage = 1;
+    var scanDeleteBtn = document.getElementById('scan-delete-btn');
+    var scanSelectedCountEl = document.getElementById('scan-selected-count');
+    var scanSelectedIds = new Set();
 
     function scanMonth() {
         return monthInputEl ? monthInputEl.value : '<?= htmlspecialchars($selectedMonth) ?>';
@@ -1221,12 +1241,15 @@ document.addEventListener('DOMContentLoaded', function () {
             var thumb = img
                 ? '<img class="scan-thumb" src="' + img + '" loading="lazy" onclick="window.__openScanImage(\'' + img + '\')">'
                 : '<div class="scan-thumb" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;">Không có ảnh</div>';
-            return '<div class="scan-card">' + thumb +
+            return '<div class="scan-card" data-id="' + row.id + '">' +
+                '<input type="checkbox" class="scan-select" data-id="' + row.id + '">' +
+                thumb +
                 '<div class="scan-meta">' +
                 '<div class="scan-name">' + escapeHtmlLocal(row.hoTen || ('NV #' + row.maND)) + '</div>' +
                 '<div class="scan-time">' + escapeHtmlLocal(formatDateTime(row.thoiGianQuet)) + '</div>' +
                 '</div></div>';
         }).join('');
+        updateScanSelectionUI();
     }
 
     function renderScanPagination(page, totalPages) {
@@ -1249,6 +1272,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadScanHistory(page) {
         scanCurrentPage = page || 1;
+        scanSelectedIds.clear();
+        updateScanSelectionUI();
         var url = 'index.php?page=hr-api-tablet-scans&month=' + encodeURIComponent(scanMonth()) + '&pg=' + scanCurrentPage;
 
         if (scanMonthLabel) scanMonthLabel.textContent = scanMonth();
@@ -1296,6 +1321,52 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     window.__openScanImage = openScanImage;
+
+    function updateScanSelectionUI() {
+        if (scanSelectedCountEl) scanSelectedCountEl.textContent = String(scanSelectedIds.size);
+        if (scanDeleteBtn) scanDeleteBtn.disabled = scanSelectedIds.size === 0;
+    }
+
+    if (scanGrid) {
+        scanGrid.addEventListener('change', function (e) {
+            var cb = e.target.closest('.scan-select');
+            if (!cb) return;
+            var id = cb.getAttribute('data-id');
+            var card = cb.closest('.scan-card');
+            if (cb.checked) {
+                scanSelectedIds.add(id);
+                if (card) card.classList.add('selected');
+            } else {
+                scanSelectedIds.delete(id);
+                if (card) card.classList.remove('selected');
+            }
+            updateScanSelectionUI();
+        });
+    }
+
+    if (scanDeleteBtn) {
+        scanDeleteBtn.addEventListener('click', function () {
+            if (scanSelectedIds.size === 0) return;
+            if (!window.confirm('Xoá ' + scanSelectedIds.size + ' bản ghi quét đã chọn? Ảnh minh chứng trên server sẽ bị xoá vĩnh viễn.')) {
+                return;
+            }
+            var form = new FormData();
+            form.append('ids', JSON.stringify(Array.from(scanSelectedIds)));
+            scanDeleteBtn.disabled = true;
+            fetch('index.php?page=hr-api-tablet-scans-delete', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: form
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
+                alert(json.message || (json.success ? 'Đã xoá.' : 'Không thể xoá.'));
+                if (json.success) loadScanHistory(scanCurrentPage);
+            })
+            .catch(function () { alert('Lỗi kết nối máy chủ khi xoá.'); })
+            .finally(function () { updateScanSelectionUI(); });
+        });
+    }
 });
 </script>
 <?php include 'app/views/layouts/footer.php'; ?>

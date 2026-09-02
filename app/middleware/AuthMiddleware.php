@@ -42,6 +42,7 @@ class AuthMiddleware
             'hr-api-payroll',
             'hr-api-payroll-submit',
             'hr-api-tablet-scans',
+            'hr-api-tablet-scans-delete',
             'hr-api-approval-detail',
             'hr-api-timesheet-approval-details',
             'hr-api-corrections',

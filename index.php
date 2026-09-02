@@ -5,7 +5,7 @@ ini_set('display_errors', 1);
 // Đặt múi giờ Việt Nam để mọi hàm date() trả về giờ địa phương đúng
 date_default_timezone_set('Asia/Ho_Chi_Minh');
 
-define('APP_VERSION', 'v2.4.31');
+define('APP_VERSION', 'v2.4.32');
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -110,6 +110,7 @@ $allowedPages = [
     'hr-api-payroll',
     'hr-api-payroll-submit',
     'hr-api-tablet-scans',
+    'hr-api-tablet-scans-delete',
     'hr-api-approval-detail',
     'hr-api-timesheet-approval-details',
     'hr-api-corrections',
@@ -362,6 +363,11 @@ switch ($page) {
     case 'hr-api-tablet-scans':
         require_once 'app/controllers/HRController.php';
         (new HRController())->tabletScanHistoryApi();
+        break;
+
+    case 'hr-api-tablet-scans-delete':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->deleteTabletScansApi();
         break;
 
     case 'hr-api-timesheet-approval-details':

@@ -236,6 +236,40 @@ class HRController
         ]);
     }
 
+    public function deleteTabletScansApi()
+    {
+        AuthMiddleware::requirePermission('hr-api-tablet-scans-delete');
+        $this->jsonOnly(['POST']);
+
+        $ids = $_POST['ids'] ?? [];
+        if (is_string($ids)) {
+            $ids = json_decode($ids, true) ?: [];
+        }
+        if (!is_array($ids) || empty($ids)) {
+            $this->respond([
+                'success' => false,
+                'message' => 'Chưa chọn bản ghi nào để xoá.',
+            ], 422);
+        }
+
+        $photos = $this->model->getTabletScanPhotos($ids);
+        $deleted = $this->model->deleteTabletScans($ids);
+
+        $uploadDir = 'uploads/attendance_faces/';
+        foreach ($photos as $photo) {
+            $path = $uploadDir . $photo;
+            if ($photo !== '' && is_file($path)) {
+                @unlink($path);
+            }
+        }
+
+        $this->respond([
+            'success' => $deleted > 0,
+            'message' => $deleted > 0 ? "Đã xoá {$deleted} bản ghi." : 'Không có bản ghi nào bị xoá.',
+            'deleted' => $deleted,
+        ]);
+    }
+
     public function reports()
     {
         AuthMiddleware::requirePermission('xuat-bao-cao');

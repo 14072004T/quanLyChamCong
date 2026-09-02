@@ -489,6 +489,51 @@ class ChamCongModel
     }
 
     /**
+     * Lấy tên file ảnh minh chứng của các bản ghi quét tablet theo danh sách id.
+     * Dùng trước khi xoá bản ghi để caller xoá luôn file ảnh vật lý trên server.
+     */
+    public function getTabletScanPhotos(array $ids)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), function ($v) { return $v > 0; })));
+        if (empty($ids)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->conn->prepare("SELECT anhMinhChung FROM tablet_face_scans WHERE id IN ($placeholders)");
+        if (!$stmt) {
+            return [];
+        }
+        $types = str_repeat('i', count($ids));
+        $stmt->bind_param($types, ...$ids);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return array_values(array_filter(array_map(function ($r) { return $r['anhMinhChung'] ?? null; }, $rows)));
+    }
+
+    /**
+     * Xoá các bản ghi quét tablet theo danh sách id. Trả về số dòng đã xoá.
+     */
+    public function deleteTabletScans(array $ids)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), function ($v) { return $v > 0; })));
+        if (empty($ids)) {
+            return 0;
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->conn->prepare("DELETE FROM tablet_face_scans WHERE id IN ($placeholders)");
+        if (!$stmt) {
+            return 0;
+        }
+        $types = str_repeat('i', count($ids));
+        $stmt->bind_param($types, ...$ids);
+        $stmt->execute();
+        $affected = $stmt->affected_rows;
+        $stmt->close();
+        return $affected;
+    }
+
+    /**
      * Get the assigned shift for a user on a given date.
      * Returns null if no shift assigned (caller must handle NULL safely).
      */
