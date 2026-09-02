@@ -26,7 +26,7 @@ class LivenessDetector {
     // ═══════════════════════════════════════════════════════════════
 
     static FRAME_COUNT_REQUIRED = 10;
-    static FRAME_COUNT_MAX = 40;
+    static FRAME_COUNT_MAX = 60;
     static WARMUP_FRAMES = 2;
 
     // Motion & Geometry
@@ -111,6 +111,7 @@ class LivenessDetector {
         this.blinkCount = 0;
         this.blinkState = 'open';
         this.blinkDetected = false;
+        this._closedStreak = 0;
         this.yawHistory = [];
         this.pitchHistory = [];
         this.faceSizeHistory = [];
@@ -285,14 +286,15 @@ class LivenessDetector {
 
         this.earHistory.push(avgEAR);
 
-        // Chỉ dùng EAR trong dải mắt mở hợp lệ để tạo baseline. Frame landmark lỗi
-        // không được phép đẩy baseline lên cao, làm blink thật không bao giờ đạt ngưỡng.
-        if (avgEAR >= 0.15 && avgEAR <= 0.45 && avgEAR > this.maxEAR) {
+        // Nới dải thu thập baseline: camera tablet/độ phân giải thấp thường cho EAR
+        // thực tế thấp hơn webcam (có khi <0.15). Giữ dải cũ sẽ khiến maxEAR không bao giờ
+        // được cập nhật, rơi về baseline mặc định sai lệch, làm mắt "kẹt" ở trạng thái đóng mãi.
+        if (avgEAR >= 0.05 && avgEAR <= 0.55 && avgEAR > this.maxEAR) {
             this.maxEAR = avgEAR;
         }
 
         // Baseline mắt mở: ưu tiên giá trị đo được, fallback 0.26
-        const baseline = (this.maxEAR >= 0.18 && this.maxEAR <= 0.45) ? this.maxEAR : 0.26;
+        const baseline = (this.maxEAR >= 0.08) ? this.maxEAR : 0.26;
 
         // Tablet camera thường nhận EAR nông hơn webcam; mức giảm 15% vẫn phân biệt
         // được ảnh tĩnh vì ảnh không có chuỗi đóng rồi mở lại.
@@ -305,6 +307,7 @@ class LivenessDetector {
 
         switch (this.blinkState) {
             case 'open':
+                this._closedStreak = 0;
                 if (avgEAR < blinkThreshold) {
                     this.blinkState = 'closed';
                     this._blinkCloseEAR = avgEAR; // Lưu EAR khi mắt nhắm
@@ -313,6 +316,7 @@ class LivenessDetector {
                 break;
 
             case 'closed':
+                this._closedStreak = (this._closedStreak || 0) + 1;
                 if (avgEAR > openThreshold) {
                     // Kiểm tra blink có đủ sâu không (tránh jitter nhẹ)
                     const blinkDepth = (this._blinkCloseEAR || 0);
@@ -328,6 +332,16 @@ class LivenessDetector {
                     }
                     this.blinkState = 'open';
                     this._blinkCloseEAR = null;
+                    this._closedStreak = 0;
+                } else if (this._closedStreak > 12) {
+                    // Kẹt ở trạng thái "đóng" quá lâu nghĩa là baseline hiệu chỉnh sai (thường do
+                    // camera cho EAR mở mắt thật thấp hơn giả định) — tự hiệu chỉnh lại theo mức
+                    // đang đo để thoát kẹt, không tính đây là một lần chớp mắt.
+                    console.warn(`[Liveness] Kẹt ở trạng thái đóng ${this._closedStreak} frame, hiệu chỉnh lại baseline theo avgEAR=${avgEAR.toFixed(3)}.`);
+                    this.maxEAR = Math.max(avgEAR, 0.05);
+                    this.blinkState = 'open';
+                    this._blinkCloseEAR = null;
+                    this._closedStreak = 0;
                 }
                 break;
         }
