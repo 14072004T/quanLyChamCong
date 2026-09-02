@@ -377,40 +377,63 @@ class FaceController extends Controller
         $matchedId = 0;
         $bestDistance = 999.0;
         $bestCosine = -1.0;
+        // Ưu tiên tuyệt đối là KHÔNG nhận nhầm người — ngưỡng chặt trở lại, chỉ dùng
+        // margin để log/chẩn đoán, không nới lỏng để "dễ nhận diện hơn" như trước
+        // (đã gây nhận nhầm giữa 2 nhân viên có khuôn mặt embedding gần nhau).
         $distanceThreshold = 0.45;
         $cosineThreshold = 0.90;
+        $minMargin = 0.10;
         $logDir = __DIR__ . '/../../uploads/liveness_logs/';
         if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
 
+        $candidates = [];
+        $incoming = $this->normalizeEmbedding($embedding);
         foreach ($this->faceModel->getAllFaceProfiles() as $profile) {
             $stored = json_decode($profile['embedding'], true);
             if (!is_array($stored)) continue;
             $stored = $this->normalizeEmbedding($stored);
-            $incoming = $this->normalizeEmbedding($embedding);
             $distance = $this->euclideanDistance($stored, $incoming);
             $cosine = $this->cosineSimilarity($stored, $incoming);
-            $isMatch = $distance <= $distanceThreshold && $cosine >= $cosineThreshold;
+            $candidates[] = ['maND' => (int)$profile['maND'], 'distance' => $distance, 'cosine' => $cosine];
 
             @file_put_contents($logDir . 'tablet_recognition.log', sprintf(
-                "[%s] Tablet compare profile=%s dist=%.4f cosine=%.4f thresholdDist=%.2f thresholdCosine=%.2f match=%s\n",
+                "[%s] Tablet compare profile=%s dist=%.4f cosine=%.4f thresholdDist=%.2f thresholdCosine=%.2f\n",
                 date('Y-m-d H:i:s'),
                 $profile['maND'],
                 $distance,
                 $cosine,
                 $distanceThreshold,
-                $cosineThreshold,
-                $isMatch ? 'YES' : 'NO'
+                $cosineThreshold
             ), FILE_APPEND | LOCK_EX);
+        }
 
-            if ($isMatch && $distance < $bestDistance) {
-                $matchedId = (int)$profile['maND'];
-                $bestDistance = $distance;
-                $bestCosine = $cosine;
+        usort($candidates, function ($a, $b) { return $a['distance'] <=> $b['distance']; });
+
+        if (!empty($candidates)) {
+            $best = $candidates[0];
+            $isMatch = $best['distance'] <= $distanceThreshold && $best['cosine'] >= $cosineThreshold;
+            if ($isMatch && count($candidates) > 1) {
+                $margin = $candidates[1]['distance'] - $best['distance'];
+                if ($margin < $minMargin) {
+                    $isMatch = false;
+                    @file_put_contents($logDir . 'tablet_recognition.log', sprintf(
+                        "[%s] Tablet decision=REJECT reason=ambiguous_margin best=%s(%.4f) second=%s(%.4f) margin=%.4f\n",
+                        date('Y-m-d H:i:s'),
+                        $best['maND'], $best['distance'],
+                        $candidates[1]['maND'], $candidates[1]['distance'],
+                        $margin
+                    ), FILE_APPEND | LOCK_EX);
+                }
+            }
+            if ($isMatch) {
+                $matchedId = $best['maND'];
+                $bestDistance = $best['distance'];
+                $bestCosine = $best['cosine'];
             }
         }
         if ($matchedId <= 0) {
             @file_put_contents($logDir . 'tablet_recognition.log', sprintf(
-                "[%s] Tablet decision=REJECT reason=no_strict_match\n",
+                "[%s] Tablet decision=REJECT reason=no_match\n",
                 date('Y-m-d H:i:s')
             ), FILE_APPEND | LOCK_EX);
             echo json_encode(['success' => false, 'message' => 'Không nhận diện được nhân viên.']);
