@@ -41,6 +41,7 @@ class AuthMiddleware
             'hr-api-shift-assignments',
             'hr-api-payroll',
             'hr-api-payroll-submit',
+            'hr-api-tablet-scans',
             'hr-api-approval-detail',
             'hr-api-timesheet-approval-details',
             'hr-api-corrections',

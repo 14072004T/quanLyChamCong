@@ -207,6 +207,35 @@ class HRController
         ]);
     }
 
+    public function tabletScanHistoryApi()
+    {
+        AuthMiddleware::requirePermission('hr-api-tablet-scans');
+        $this->jsonOnly(['GET']);
+
+        $monthKey = trim($_GET['month'] ?? date('Y-m'));
+        if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            $this->respond([
+                'success' => false,
+                'message' => 'Kỳ không hợp lệ',
+            ], 422);
+        }
+
+        $page = max(1, (int)($_GET['pg'] ?? 1));
+        $perPage = 24;
+        $keyword = trim($_GET['q'] ?? '');
+
+        $result = $this->model->getTabletScanHistory($monthKey, $page, $perPage, $keyword);
+
+        $this->respond([
+            'success' => true,
+            'data' => $result['rows'],
+            'total' => $result['total'],
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalPages' => $perPage > 0 ? (int)ceil($result['total'] / $perPage) : 0,
+        ]);
+    }
+
     public function reports()
     {
         AuthMiddleware::requirePermission('xuat-bao-cao');

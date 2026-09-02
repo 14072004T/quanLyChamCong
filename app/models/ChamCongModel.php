@@ -428,6 +428,67 @@ class ChamCongModel
     }
 
     /**
+     * Lịch sử quét khuôn mặt trên tablet trong 1 tháng, phân trang, kèm ảnh minh chứng.
+     * Trả về ['rows' => [...], 'total' => int].
+     */
+    public function getTabletScanHistory($monthKey, $page = 1, $perPage = 24, $keyword = '')
+    {
+        $monthKey = trim((string)$monthKey);
+        if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            return ['rows' => [], 'total' => 0];
+        }
+        $page = max(1, (int)$page);
+        $perPage = max(1, min((int)$perPage, 100));
+        $offset = ($page - 1) * $perPage;
+        $monthStart = $monthKey . '-01';
+        $monthEnd = date('Y-m-t', strtotime($monthStart));
+        $keyword = trim((string)$keyword);
+
+        $conditions = ["DATE(t.thoiGianQuet) >= ?", "DATE(t.thoiGianQuet) <= ?"];
+        $types = 'ss';
+        $params = [$monthStart, $monthEnd];
+        if ($keyword !== '') {
+            $conditions[] = "(n.hoTen LIKE CONCAT('%', ?, '%') OR t.maND = ?)";
+            $types .= 'si';
+            $params[] = $keyword;
+            $params[] = (int)$keyword;
+        }
+        $whereSql = implode(' AND ', $conditions);
+
+        $countSql = "SELECT COUNT(*) AS total
+                     FROM tablet_face_scans t
+                     LEFT JOIN nguoidung n ON n.maND = t.maND
+                     WHERE $whereSql";
+        $countStmt = $this->conn->prepare($countSql);
+        if (!$countStmt) {
+            return ['rows' => [], 'total' => 0];
+        }
+        $countStmt->bind_param($types, ...$params);
+        $countStmt->execute();
+        $total = (int)($countStmt->get_result()->fetch_assoc()['total'] ?? 0);
+        $countStmt->close();
+
+        $sql = "SELECT t.id, t.maND, t.thoiGianQuet, t.anhMinhChung, n.hoTen, n.phongBan
+                FROM tablet_face_scans t
+                LEFT JOIN nguoidung n ON n.maND = t.maND
+                WHERE $whereSql
+                ORDER BY t.thoiGianQuet DESC
+                LIMIT ? OFFSET ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return ['rows' => [], 'total' => $total];
+        }
+        $typesWithLimit = $types . 'ii';
+        $paramsWithLimit = array_merge($params, [$perPage, $offset]);
+        $stmt->bind_param($typesWithLimit, ...$paramsWithLimit);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        return ['rows' => $rows, 'total' => $total];
+    }
+
+    /**
      * Get the assigned shift for a user on a given date.
      * Returns null if no shift assigned (caller must handle NULL safely).
      */

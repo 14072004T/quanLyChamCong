@@ -109,6 +109,7 @@ $allowedPages = [
     'hr-api-shift-assignments',
     'hr-api-payroll',
     'hr-api-payroll-submit',
+    'hr-api-tablet-scans',
     'hr-api-approval-detail',
     'hr-api-timesheet-approval-details',
     'hr-api-corrections',
@@ -356,6 +357,11 @@ switch ($page) {
     case 'hr-api-approval-detail':
         require_once 'app/controllers/HRController.php';
         (new HRController())->approvalDetailApi();
+        break;
+
+    case 'hr-api-tablet-scans':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->tabletScanHistoryApi();
         break;
 
     case 'hr-api-timesheet-approval-details':

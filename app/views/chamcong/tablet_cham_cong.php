@@ -67,8 +67,22 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
     let detecting = false;
     let complete = false;
     let loaded = false;
+    let prefetchedSecret = null;
 
     function message(text, type) { status.textContent = text; status.style.color = type === 'error' ? '#fecaca' : type === 'success' ? '#bbf7d0' : '#bfdbfe'; }
+
+    // Lấy trước session secret trong lúc hiển thị kết quả lần quét trước, để
+    // vòng quét kế tiếp không phải chờ round-trip mạng mới bắt đầu đọc frame.
+    async function prefetchSessionSecret() {
+        try {
+            const res = await fetch('index.php?page=face-liveness-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data.success && data.sessionSecret) prefetchedSecret = data.sessionSecret;
+        } catch (e) { /* sẽ fetch lại trong start() nếu prefetch thất bại */ }
+    }
 
     async function loadModels() {
         if (loaded) return;
@@ -93,8 +107,9 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
             onStatusChange: function (text) { if (!complete) message(text); },
             onProgress: function (percent, label) { if (!complete) message(percent + '% - ' + label); },
             onComplete: function (token, descriptor) { complete = true; submit(token, descriptor); },
-            onFail: function (reason) { complete = true; message('Xác thực liveness thất bại: ' + reason, 'error'); setTimeout(restart, 1800); }
+            onFail: function (reason) { complete = true; message('Xác thực liveness thất bại: ' + reason, 'error'); setTimeout(restart, 900); }
         });
+        if (prefetchedSecret) { detector.preloadSecret(prefetchedSecret); prefetchedSecret = null; }
         detector.start();
     }
 
@@ -118,12 +133,13 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         const ctx = snapshot.getContext('2d'); ctx.translate(snapshot.width, 0); ctx.scale(-1, 1); ctx.drawImage(video, 0, 0, snapshot.width, snapshot.height);
         const data = new FormData();
         data.append('embedding', JSON.stringify(Array.from(descriptor))); data.append('photo', snapshot.toDataURL('image/jpeg', .85)); data.append('livenessToken', JSON.stringify(token));
+        prefetchSessionSecret(); // chồng lấp round-trip mạng với thời gian xử lý chấm công
         try {
             const response = await fetch('index.php?page=tablet-face-api-verify', { method: 'POST', body: data });
             const result = await response.json();
-            if (result.success) { message(result.message, 'success'); setTimeout(restart, 2200); }
-            else { message(result.message || 'Không thể ghi nhận chấm công.', 'error'); setTimeout(restart, 2200); }
-        } catch (e) { message('Không thể kết nối máy chủ.', 'error'); setTimeout(restart, 2200); }
+            if (result.success) { message(result.message, 'success'); setTimeout(restart, 1200); }
+            else { message(result.message || 'Không thể ghi nhận chấm công.', 'error'); setTimeout(restart, 1200); }
+        } catch (e) { message('Không thể kết nối máy chủ.', 'error'); setTimeout(restart, 1200); }
     }
 
     async function restart() {
@@ -135,6 +151,7 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         }
         startLiveness();
     }
+    prefetchSessionSecret();
     restart(); requestAnimationFrame(detect);
 })();
 </script>

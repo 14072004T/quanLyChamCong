@@ -25,9 +25,9 @@ class LivenessDetector {
     //  THRESHOLDS (tightened significantly from v2.0)
     // ═══════════════════════════════════════════════════════════════
 
-    static FRAME_COUNT_REQUIRED = 25;
-    static FRAME_COUNT_MAX = 100;
-    static WARMUP_FRAMES = 3;
+    static FRAME_COUNT_REQUIRED = 10;
+    static FRAME_COUNT_MAX = 40;
+    static WARMUP_FRAMES = 2;
 
     // Motion & Geometry
     static GEOMETRIC_VARIANCE_MIN = 0.00002;
@@ -116,27 +116,37 @@ class LivenessDetector {
         this.faceSizeHistory = [];
         this.descriptorSamples = [];
 
-        // Fetch session secret from server
-        try {
-            const res = await fetch('index.php?page=face-liveness-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await res.json();
-            if (data.success && data.sessionSecret) {
-                this.sessionSecret = data.sessionSecret;
-            } else {
-                this._fail('Không thể khởi tạo phiên bảo mật. Vui lòng tải lại trang.');
+        // Nếu đã có sẵn secret (chuẩn bị trước trong lúc hiển thị kết quả lần quét
+        // trước), bỏ qua round-trip mạng để rút ngắn thời gian chờ mỗi lượt quét.
+        if (!this.sessionSecret) {
+            try {
+                const res = await fetch('index.php?page=face-liveness-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success && data.sessionSecret) {
+                    this.sessionSecret = data.sessionSecret;
+                } else {
+                    this._fail('Không thể khởi tạo phiên bảo mật. Vui lòng tải lại trang.');
+                    return;
+                }
+            } catch (e) {
+                console.error('Lỗi khởi tạo phiên liveness:', e);
+                this._fail('Lỗi kết nối máy chủ khi tạo phiên bảo mật.');
                 return;
             }
-        } catch (e) {
-            console.error('Lỗi khởi tạo phiên liveness:', e);
-            this._fail('Lỗi kết nối máy chủ khi tạo phiên bảo mật.');
-            return;
         }
 
         this._updateStatus('Đang xác thực... Vui lòng nhìn camera và chớp mắt tự nhiên.', 'info');
         this._updateProgress(5, 'Khởi tạo');
+    }
+
+    /**
+     * Nạp sẵn session secret lấy trước đó, để start() bỏ qua việc gọi API.
+     */
+    preloadSecret(secret) {
+        if (secret) this.sessionSecret = secret;
     }
 
     /**

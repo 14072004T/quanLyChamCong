@@ -144,13 +144,13 @@ class LivenessHelper
             ];
         }
 
-        // 6. Frame count check
+        // 6. Frame count check (đồng bộ với FRAME_COUNT_REQUIRED phía client)
         $frameCount = intval($payload['frameCount'] ?? 0);
-        if ($frameCount < 25) {
+        if ($frameCount < 10) {
             self::logLivenessAttempt('INSUFFICIENT_FRAMES', $payload);
             return [
                 'valid' => false,
-                'message' => 'Không đủ dữ liệu quét (cần tối thiểu 25 frames).',
+                'message' => 'Không đủ dữ liệu quét (cần tối thiểu 10 frames).',
                 'score' => 0
             ];
         }

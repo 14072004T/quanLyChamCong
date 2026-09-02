@@ -185,6 +185,92 @@ foreach (($salaryRows ?? []) as $summaryRow) {
 .payroll-detail-modal.open {
     display: flex;
 }
+.scan-history-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+.scan-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+    text-align: center;
+}
+.scan-card .scan-thumb {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    cursor: zoom-in;
+    display: block;
+    background: #e2e8f0;
+}
+.scan-card .scan-meta {
+    padding: 8px 10px 10px;
+}
+.scan-card .scan-name {
+    font-weight: 700;
+    font-size: .85em;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.scan-card .scan-time {
+    font-size: .78em;
+    color: #64748b;
+}
+.scan-page-btn {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #1e293b;
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: .85em;
+}
+.scan-page-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+.scan-page-btn.active {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}
+.scan-image-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.85);
+    z-index: 1300;
+    padding: 24px;
+}
+.scan-image-modal.open {
+    display: flex;
+}
+.scan-image-modal img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 12px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+.scan-image-modal .scan-image-close {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    cursor: pointer;
+}
 .payroll-detail-card {
     width: min(1100px, 100%);
     max-height: calc(100vh - 48px);
@@ -360,6 +446,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                     <div class="sub-tabs">
                         <button class="sub-tab active" data-tab="tab-tinhcong"><i class="fas fa-calculator"></i> Tính toán Công & OT</button>
                         <button class="sub-tab" data-tab="tab-bangchamcong"><i class="fas fa-table-list"></i> Bảng Chấm Công</button>
+                        <button class="sub-tab" data-tab="tab-lichsuquet"><i class="fas fa-clock-rotate-left"></i> Lịch sử chấm công</button>
                     </div>
                     <p>Dữ liệu dưới đây phản ánh bảng công của kỳ đã chọn. Bạn nên kiểm tra OT, ngày công và số giờ làm trước khi gửi đến nhân viên.</p>
                 </div>
@@ -467,6 +554,17 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                             </div>
                         </div>
                     </div>
+
+                    <div class="tab-content" id="tab-lichsuquet">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                            <h3 style="margin:0;">Lịch sử chấm công tablet - Tháng <span id="scan-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
+                            <span id="scan-total-label" style="color:#64748b;font-size:.9em;"></span>
+                        </div>
+                        <div class="scan-history-grid" id="scan-history-grid">
+                            <div class="empty-state">Đang tải dữ liệu...</div>
+                        </div>
+                        <div class="scan-history-pagination" id="scan-history-pagination" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -567,6 +665,11 @@ foreach (($salaryRows ?? []) as $summaryRow) {
             </div>
         </div>
     </div>
+</div>
+
+<div class="scan-image-modal" id="scanImageModal" aria-hidden="true">
+    <button type="button" class="scan-image-close" id="scan-image-close" aria-label="Đóng">×</button>
+    <img id="scan-image-full" src="" alt="Ảnh minh chứng chấm công">
 </div>
 
 <div class="payroll-detail-modal" id="employeeApprovalModal" aria-hidden="true">
@@ -1060,6 +1163,139 @@ document.addEventListener('DOMContentLoaded', function () {
     updateExportRange(currentMonth());
     updateExportState(<?= json_encode($exportSummary ?? new stdClass()) ?>);
     loadEmployeeSuggestions(currentEmployeeQuery());
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var scanGrid = document.getElementById('scan-history-grid');
+    var scanPagination = document.getElementById('scan-history-pagination');
+    var scanMonthLabel = document.getElementById('scan-month-label');
+    var scanTotalLabel = document.getElementById('scan-total-label');
+    var scanTab = document.querySelector('.sub-tab[data-tab="tab-lichsuquet"]');
+    var monthInputEl = document.querySelector('#payroll-filter-form [name="month"]');
+    var scanImageModal = document.getElementById('scanImageModal');
+    var scanImageFull = document.getElementById('scan-image-full');
+    var scanImageClose = document.getElementById('scan-image-close');
+    var scanHistoryLoaded = false;
+    var scanCurrentPage = 1;
+
+    function scanMonth() {
+        return monthInputEl ? monthInputEl.value : '<?= htmlspecialchars($selectedMonth) ?>';
+    }
+
+    function escapeHtmlLocal(val) {
+        return String(val ?? '').replace(/[&<>"]/g, function (c) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
+        });
+    }
+
+    function openScanImage(src) {
+        if (!scanImageModal || !scanImageFull) return;
+        scanImageFull.src = src;
+        scanImageModal.classList.add('open');
+    }
+
+    function closeScanImage() {
+        if (!scanImageModal) return;
+        scanImageModal.classList.remove('open');
+        scanImageFull.src = '';
+    }
+
+    if (scanImageClose) scanImageClose.addEventListener('click', closeScanImage);
+    if (scanImageModal) {
+        scanImageModal.addEventListener('click', function (e) {
+            if (e.target === scanImageModal) closeScanImage();
+        });
+    }
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeScanImage();
+    });
+
+    function renderScanCards(rows) {
+        if (!rows || rows.length === 0) {
+            scanGrid.innerHTML = '<div class="empty-state">Không có dữ liệu quét trong tháng này.</div>';
+            return;
+        }
+        scanGrid.innerHTML = rows.map(function (row) {
+            var img = row.anhMinhChung ? ('uploads/attendance_faces/' + encodeURIComponent(row.anhMinhChung)) : '';
+            var thumb = img
+                ? '<img class="scan-thumb" src="' + img + '" loading="lazy" onclick="window.__openScanImage(\'' + img + '\')">'
+                : '<div class="scan-thumb" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;">Không có ảnh</div>';
+            return '<div class="scan-card">' + thumb +
+                '<div class="scan-meta">' +
+                '<div class="scan-name">' + escapeHtmlLocal(row.hoTen || ('NV #' + row.maND)) + '</div>' +
+                '<div class="scan-time">' + escapeHtmlLocal(formatDateTime(row.thoiGianQuet)) + '</div>' +
+                '</div></div>';
+        }).join('');
+    }
+
+    function renderScanPagination(page, totalPages) {
+        if (!scanPagination) return;
+        if (totalPages <= 1) {
+            scanPagination.innerHTML = '';
+            return;
+        }
+        var html = '';
+        html += '<button type="button" class="scan-page-btn" data-page="' + (page - 1) + '" ' + (page <= 1 ? 'disabled' : '') + '><i class="fas fa-chevron-left"></i></button>';
+        var start = Math.max(1, page - 2);
+        var end = Math.min(totalPages, start + 4);
+        start = Math.max(1, end - 4);
+        for (var p = start; p <= end; p++) {
+            html += '<button type="button" class="scan-page-btn ' + (p === page ? 'active' : '') + '" data-page="' + p + '">' + p + '</button>';
+        }
+        html += '<button type="button" class="scan-page-btn" data-page="' + (page + 1) + '" ' + (page >= totalPages ? 'disabled' : '') + '><i class="fas fa-chevron-right"></i></button>';
+        scanPagination.innerHTML = html;
+    }
+
+    function loadScanHistory(page) {
+        scanCurrentPage = page || 1;
+        var url = 'index.php?page=hr-api-tablet-scans&month=' + encodeURIComponent(scanMonth()) + '&pg=' + scanCurrentPage;
+
+        if (scanMonthLabel) scanMonthLabel.textContent = scanMonth();
+        scanGrid.innerHTML = '<div class="empty-state">Đang tải dữ liệu...</div>';
+
+        fetch(url, { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
+                if (!json.success) {
+                    scanGrid.innerHTML = '<div class="empty-state">' + escapeHtmlLocal(json.message || 'Lỗi tải dữ liệu.') + '</div>';
+                    if (scanPagination) scanPagination.innerHTML = '';
+                    return;
+                }
+                renderScanCards(json.data || []);
+                renderScanPagination(json.page || 1, json.totalPages || 1);
+                if (scanTotalLabel) scanTotalLabel.textContent = 'Tổng ' + (json.total || 0) + ' lượt quét';
+            })
+            .catch(function () {
+                scanGrid.innerHTML = '<div class="empty-state">Không thể kết nối máy chủ.</div>';
+            });
+    }
+
+    if (scanPagination) {
+        scanPagination.addEventListener('click', function (e) {
+            var btn = e.target.closest('.scan-page-btn');
+            if (!btn || btn.disabled) return;
+            var page = parseInt(btn.getAttribute('data-page'), 10);
+            if (!isNaN(page) && page >= 1) loadScanHistory(page);
+        });
+    }
+
+    if (scanTab) {
+        scanTab.addEventListener('click', function () {
+            if (!scanHistoryLoaded) {
+                scanHistoryLoaded = true;
+                loadScanHistory(1);
+            }
+        });
+    }
+
+    if (monthInputEl) {
+        monthInputEl.addEventListener('change', function () {
+            if (scanHistoryLoaded) loadScanHistory(1);
+        });
+    }
+
+    window.__openScanImage = openScanImage;
 });
 </script>
 <?php include 'app/views/layouts/footer.php'; ?>
