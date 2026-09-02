@@ -130,7 +130,10 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         if (!complete && video.readyState >= 2 && !detecting) {
             detecting = true;
             try {
-                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.4 })).withFaceLandmarks().withFaceDescriptor();
+                // inputSize khớp với lúc đăng ký khuôn mặt (224) — trước đây quét tablet dùng 128,
+                // descriptor kém chi tiết hơn đăng ký khiến các nhân viên bị co cụm quá gần nhau,
+                // gây nhận nhầm/khó nhận diện dù embedding gốc không hề giống nhau.
+                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptor();
                 if (detection && detector && !complete) detector.processFrame(detection);
                 else if (detector && !complete) detector.processFrame(null);
             } catch (e) { console.error(e); }
