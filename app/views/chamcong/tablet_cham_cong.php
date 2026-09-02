@@ -146,10 +146,13 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         const ctx = snapshot.getContext('2d'); ctx.translate(snapshot.width, 0); ctx.scale(-1, 1); ctx.drawImage(video, 0, 0, snapshot.width, snapshot.height);
         const data = new FormData();
         data.append('embedding', JSON.stringify(Array.from(descriptor))); data.append('photo', snapshot.toDataURL('image/jpeg', .85)); data.append('livenessToken', JSON.stringify(token));
-        prefetchSessionSecret(); // chồng lấp round-trip mạng với thời gian xử lý chấm công
+        // KHÔNG prefetch secret mới trước khi verify xong — server xoá secret hiện tại
+        // ngay khi xác thực chữ ký thành công, nếu prefetch chạy song song và xong trước
+        // thì secret bị thay giữa chừng, khiến request verify so chữ ký sai ("giả mạo token").
         try {
             const response = await fetch('index.php?page=tablet-face-api-verify', { method: 'POST', body: data });
             const result = await response.json();
+            prefetchSessionSecret(); // giờ mới an toàn để lấy trước secret cho vòng quét kế tiếp
             if (result.success) { message(result.message, 'success'); setTimeout(restart, 1200); }
             else { message(result.message || 'Không thể ghi nhận chấm công.', 'error'); setTimeout(restart, 1200); }
         } catch (e) { message('Không thể kết nối máy chủ.', 'error'); setTimeout(restart, 1200); }
