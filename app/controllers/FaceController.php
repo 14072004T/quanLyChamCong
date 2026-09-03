@@ -383,6 +383,11 @@ class FaceController extends Controller
         $distanceThreshold = 0.45;
         $cosineThreshold = 0.90;
         $minMargin = 0.10;
+        // Chỉ bắt buộc margin khi best-match nằm gần ngưỡng (vùng thật sự mập mờ).
+        // Nếu best distance đã rất tốt (vd 0.28 so với ngưỡng 0.45) thì đó là 1 khuôn
+        // mặt tự tin khớp, không nên bị loại chỉ vì người đứng thứ 2 cũng gần — từng
+        // gây REJECT oan cho ca 20:56 (dist=0.28, bị margin=0.05 < 0.10 loại).
+        $ambiguousZoneStart = $distanceThreshold * 0.7; // 0.315
         $logDir = __DIR__ . '/../../uploads/liveness_logs/';
         if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
 
@@ -412,7 +417,7 @@ class FaceController extends Controller
         if (!empty($candidates)) {
             $best = $candidates[0];
             $isMatch = $best['distance'] <= $distanceThreshold && $best['cosine'] >= $cosineThreshold;
-            if ($isMatch && count($candidates) > 1) {
+            if ($isMatch && count($candidates) > 1 && $best['distance'] >= $ambiguousZoneStart) {
                 $margin = $candidates[1]['distance'] - $best['distance'];
                 if ($margin < $minMargin) {
                     $isMatch = false;
