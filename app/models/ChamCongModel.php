@@ -1308,11 +1308,13 @@ class ChamCongModel
         $type = trim((string)$type);
         $requestId = (int)$requestId;
         $managerId = (int)$managerId;
-        if ($requestId <= 0 || !in_array($type, ['leave'], true) || !in_array($hanhDong, ['approve', 'reject'], true)) {
+        $hanhDong = trim((string)$hanhDong);
+
+        if ($requestId <= 0 || !in_array($type, ['leave'], true) || !in_array($hanhDong, ['approve', 'reject', 'approved', 'rejected'], true)) {
             return false;
         }
 
-        $trangThai = $hanhDong === 'approve' ? 'approved' : 'rejected';
+        $trangThai = ($hanhDong === 'approve' || $hanhDong === 'approved') ? 'approved' : 'rejected';
         if ($type === 'leave') {
             $sql = "UPDATE donnghiphep
                     SET trangThai = ?, nguoiDuyet = ?, ngayDuyet = NOW()
@@ -1320,7 +1322,10 @@ class ChamCongModel
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) return false;
             $stmt->bind_param('sii', $trangThai, $managerId, $requestId);
-            return $stmt->execute();
+            $exec = $stmt->execute();
+            $affected = $stmt->affected_rows > 0;
+            $stmt->close();
+            return $exec && $affected;
         }
 
         return false;
@@ -3068,7 +3073,9 @@ class ChamCongModel
     public function updateLeaveRequestStatus($id, $trangThai, $nguoiDuyet = null)
     {
         $id = (int)$id;
-        $trangThai = trim($trangThai);
+        $trangThai = trim((string)$trangThai);
+        if ($trangThai === 'approve') $trangThai = 'approved';
+        if ($trangThai === 'reject')  $trangThai = 'rejected';
         $nguoiDuyet = $nguoiDuyet !== null ? (int)$nguoiDuyet : null;
 
         if ($id <= 0 || !in_array($trangThai, ['approved', 'rejected'], true)) {

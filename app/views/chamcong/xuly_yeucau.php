@@ -478,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!btn) return;
 
         var id = Number(btn.getAttribute('data-id'));
-        var hanhDong = btn.getAttribute('data-hanhDong');
+        var hanhDong = btn.getAttribute('data-action');
         
         // Find row data for modal details directly from the DOM
         var tr = btn.closest('tr');
@@ -507,8 +507,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var btnConfirm = document.getElementById('modalBtnConfirm');
         
         btnConfirm.className = 'btn'; // reset class
-        
-        if (hanhDong === 'approve') {
+        var isApprove = hanhDong === 'approve' || hanhDong === 'approved';
+        var finalAction = isApprove ? 'approve' : 'reject';
+
+        if (isApprove) {
             title.textContent = 'Phê duyệt yêu cầu';
             lbl.textContent = 'Ghi chú phê duyệt (nếu có):';
             btnConfirm.classList.add('btn-success');
@@ -520,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function () {
             btnConfirm.innerHTML = '<i class="fas fa-times"></i> Từ chối';
         }
 
-        activeActionData = { id: id, hanhDong: hanhDong };
+        activeActionData = { id: id, hanhDong: finalAction };
         modalNoteInput.value = '';
         modalOverlay.classList.add('show');
         setTimeout(function() { modalNoteInput.focus(); }, 100);

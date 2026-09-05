@@ -889,8 +889,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function openActionModal(row, hanhDong) {
-        activeAction = { id: Number(row.id), type: row._type.key, hanhDong: hanhDong };
-        var isApprove = hanhDong === 'approve';
+        var isApprove = hanhDong === 'approve' || hanhDong === 'approved';
+        activeAction = { id: Number(row.id), type: row._type.key, hanhDong: isApprove ? 'approve' : (hanhDong === 'detail' ? 'detail' : 'reject') };
         var readOnly = hanhDong === 'detail' || row.trangThai !== 'pending';
         document.getElementById('mgrreq-modal-title').textContent = readOnly ? 'Chi tiết yêu cầu' : (isApprove ? 'Phê duyệt yêu cầu' : 'Từ chối yêu cầu');
         document.getElementById('mgrreq-ghiChu-label').textContent = readOnly ? 'Ghi chú xử lý' : (isApprove ? 'Ghi chú phê duyệt (nếu có)' : 'Lý do từ chối');

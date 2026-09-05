@@ -321,12 +321,12 @@ $countTotal = count($leaveRequests);
                                     <?php if ($st === 'pending'): ?>
                                         <div class="ll-actions">
                                             <button type="button" class="ll-btn ll-btn-approve"
-                                                    onclick="confirmAction(<?= $rowId ?>, 'approved', '<?= $empName ?>')"
+                                                    onclick="confirmAction(<?= $rowId ?>, 'approved', '<?= htmlspecialchars($empName, ENT_QUOTES) ?>')"
                                                     title="Phê duyệt">
                                                 <i class="fas fa-check"></i> Duyệt
                                             </button>
                                             <button type="button" class="ll-btn ll-btn-reject"
-                                                    onclick="confirmAction(<?= $rowId ?>, 'rejected', '<?= $empName ?>')"
+                                                    onclick="confirmAction(<?= $rowId ?>, 'rejected', '<?= htmlspecialchars($empName, ENT_QUOTES) ?>')"
                                                     title="Từ chối">
                                                 <i class="fas fa-xmark"></i> Từ chối
                                             </button>
@@ -386,10 +386,13 @@ function confirmAction(id, trangThai, name) {
     var msg = document.getElementById('dialogMsg');
     var btn = document.getElementById('confirmBtn');
 
-    document.getElementById('confirmId').value = id;
-    document.getElementById('confirmStatus').value = trangThai;
+    var isApprove = (trangThai === 'approve' || trangThai === 'approved');
+    var finalStatus = isApprove ? 'approved' : 'rejected';
 
-    if (trangThai === 'approved') {
+    document.getElementById('confirmId').value = id;
+    document.getElementById('confirmStatus').value = finalStatus;
+
+    if (isApprove) {
         icon.className = 'll-dialog-icon approve-icon';
         icon.innerHTML = '<i class="fas fa-circle-check"></i>';
         title.textContent = 'Phê duyệt đơn nghỉ phép?';

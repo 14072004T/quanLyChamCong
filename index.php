@@ -115,6 +115,8 @@ $allowedPages = [
     'hr-api-timesheet-approval-details',
     'hr-api-corrections',
     'hr-api-correction-hanhDong',
+    'manager-api-requests',
+    'manager-api-request-hanhDong',
     // Manager
     'bao-cao-tong-hop',
     'thong-ke-bieu-do',
@@ -399,6 +401,16 @@ switch ($page) {
     case 'hr-api-correction-hanhDong':
         require_once 'app/controllers/ManagerController.php';
         (new ManagerController())->processCorrection();
+        break;
+
+    case 'manager-api-requests':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->requestsApi();
+        break;
+
+    case 'manager-api-request-hanhDong':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->processRequestApi();
         break;
 
     // === TECH PANEL ===

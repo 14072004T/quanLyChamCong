@@ -67,6 +67,8 @@ class AuthMiddleware
             'xuly-yeucau',
             'hr-api-corrections',
             'hr-api-correction-hanhDong',
+            'manager-api-requests',
+            'manager-api-request-hanhDong',
             'lich-su-cham-cong',
             'yeu-cau-chinh-sua-cham-cong',
             'store-edit-request',
