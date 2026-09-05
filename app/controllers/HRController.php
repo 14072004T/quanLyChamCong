@@ -23,8 +23,14 @@ class HRController
         AuthMiddleware::requirePermission('quan-ly-nhanvien');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $ok = $this->model->saveEmployee($_POST);
-            $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Lưu thông tin nhân viên thành công' : 'Không thể lưu thông tin nhân viên';
+            if (isset($_POST['action']) && $_POST['action'] === 'reset_password') {
+                $maND = (int)($_POST['maND'] ?? 0);
+                $ok = $this->model->resetEmployeePassword($maND);
+                $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đặt lại mật khẩu thành công (Mật khẩu mặc định: 123456)' : 'Không thể đặt lại mật khẩu';
+            } else {
+                $ok = $this->model->saveEmployee($_POST);
+                $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Lưu thông tin nhân viên thành công' : 'Không thể lưu thông tin nhân viên';
+            }
             header('Location: index.php?page=quan-ly-nhanvien');
             exit;
         }
