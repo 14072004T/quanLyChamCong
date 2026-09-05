@@ -1,5 +1,5 @@
 <?php
-if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
+if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'manager') {
     header('Location: index.php?page=home');
     exit();
 }
@@ -60,11 +60,9 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
         <div class="panel">
             <div class="panel-header">
                 <div>
-                    <h2 style="border:none;padding:0;margin:0;">TRUNG TÂM XỬ LÝ YÊU CẦU</h2>
+                    <h2 style="border:none;padding:0;margin:0;">QUẢN LÝ ĐIỀU CHỈNH CÔNG</h2>
                 </div>
                 <div class="panel-header-actions">
-                    <a href="index.php?page=tinh-cong" class="btn btn-success btn-sm"><i class="fas fa-paper-plane"></i> GỬI PHÊ DUYỆT</a>
-                    <a href="index.php?page=quan-ly-nhanvien" class="btn btn-warning btn-sm"><i class="fas fa-pen"></i> CHỈNH SỬA</a>
                 </div>
             </div>
         </div>
@@ -245,7 +243,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                 <div class="modal-detail-row"><strong>Từ -> Mới:</strong> <span id="histModalTimeDetail"></span></div>
                 <div class="modal-detail-row"><strong>Lý do gửi:</strong> <span id="histModalReason"></span></div>
                 <div class="modal-detail-row"><strong>Minh chứng:</strong> <span id="histModalEvidence"></span></div>
-                <div class="modal-detail-row" style="margin-bottom:0;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:8px;"><strong>Ghi chú HR:</strong> <span id="histModalHRNote" style="color:#0f172a;font-weight:700;"></span></div>
+                <div class="modal-detail-row" style="margin-bottom:0;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:8px;"><strong>Ghi chú QL:</strong> <span id="histModalHRNote" style="color:#0f172a;font-weight:700;"></span></div>
             </div>
             <div class="btn-group" style="display:flex;justify-content:center;margin-top:10px;">
                 <button type="button" class="btn btn-secondary" onclick="document.getElementById('historyModal').classList.remove('show');" style="width:120px;">Đóng</button>
@@ -270,7 +268,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                 <div class="modal-detail-row" style="margin-bottom:0;"><strong>Minh chứng:</strong> <span id="modalEvidence"></span></div>
             </div>
             <div class="form-group">
-                <label id="modalNoteLabel" style="font-weight:600;margin-bottom:6px;display:block;color:#334155;">Ghi chú HR</label>
+                <label id="modalNoteLabel" style="font-weight:600;margin-bottom:6px;display:block;color:#334155;">Ghi chú Quản lý</label>
                 <textarea id="modalNoteInput" rows="3" style="width:100%;border-radius:8px;border:1.5px solid #cbd5e1;padding:10px;font-family:'Inter', sans-serif;font-size:0.9em;outline:none;" placeholder="Nhập ghi chú..."></textarea>
             </div>
             <div class="btn-group" style="display:flex;gap:12px;margin-top:20px;">
