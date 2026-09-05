@@ -133,13 +133,47 @@ $countTotal = count($leaveRequests);
     text-decoration: none; white-space: nowrap;
 }
 .ll-btn-approve {
-    background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 700;
+    font-size: 0.8em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
-.ll-btn-approve:hover { background: #10b981; color: #fff; }
+.ll-btn-approve:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16,185,129,.3);
+}
 .ll-btn-reject {
-    background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;
+    background: linear-gradient(135deg, #64748b, #475569);
+    color: white;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 700;
+    font-size: 0.8em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
-.ll-btn-reject:hover { background: #ef4444; color: #fff; }
+.ll-btn-reject:hover {
+    background: linear-gradient(135deg, #475569, #334155);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(100,116,139,.3);
+}
 .ll-btn-done {
     background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0;
     cursor: default; pointer-events: none;
@@ -328,7 +362,7 @@ $countTotal = count($leaveRequests);
                                             <button type="button" class="ll-btn ll-btn-reject"
                                                     onclick="confirmAction(<?= $rowId ?>, 'rejected', '<?= htmlspecialchars($empName, ENT_QUOTES) ?>')"
                                                     title="Từ chối">
-                                                <i class="fas fa-xmark"></i> Từ chối
+                                                 <i class="fas fa-times"></i> Từ chối
                                             </button>
                                         </div>
                                     <?php else: ?>

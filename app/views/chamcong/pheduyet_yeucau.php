@@ -344,13 +344,22 @@ $toDate = date('Y-m-d', strtotime('+7 days'));
     cursor: pointer;
 }
 .mgrreq-hanhDong.approve {
-    background: #10b981;
+    background: linear-gradient(135deg, #10b981, #059669);
     color: #fff;
+    border: none;
+}
+.mgrreq-hanhDong.approve:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    box-shadow: 0 4px 12px rgba(16,185,129,.3);
 }
 .mgrreq-hanhDong.reject {
-    border-color: #fecaca;
-    background: #fff;
-    color: #ef4444;
+    background: linear-gradient(135deg, #64748b, #475569);
+    color: #fff;
+    border: none;
+}
+.mgrreq-hanhDong.reject:hover {
+    background: linear-gradient(135deg, #475569, #334155);
+    box-shadow: 0 4px 12px rgba(100,116,139,.3);
 }
 .mgrreq-hanhDong.more {
     width: 32px;
