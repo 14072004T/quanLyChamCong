@@ -167,7 +167,7 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
             <div class="header-brand-group">
-                <div class="header-logo">RFT</div>
+                <a href="index.php?" class="header-logo" style="text-decoration:none;color:inherit;" title="Trang chủ">RFT</a>
                 <button type="button" class="sidebar-reopen-btn" title="Mở menu" aria-label="Mở menu">
                     <i class="fa-solid fa-bars"></i>
                 </button>
@@ -243,11 +243,11 @@
         </script>
     <?php else: ?>
         <header class="header">
-            <div class="brand-logo" title="RFT Hệ thống Chấm công">
+            <a href="index.php?" class="brand-logo" title="RFT Hệ thống Chấm công" style="text-decoration:none;">
                 <span class="logo-r">R</span>
                 <span class="logo-f">F</span>
                 <span class="logo-t">T</span>
-            </div>
+            </a>
             <button type="button" class="sidebar-reopen-btn" title="Danh sách chức năng" aria-label="Danh sách chức năng">
                 <i class="fa-solid fa-bars"></i>
             </button>
