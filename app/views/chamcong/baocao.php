@@ -390,6 +390,8 @@ usort($topEarlyRows, function ($left, $right) {
 });
 $topLate = array_slice($topLateRows, 0, $topLimit);
 $topEarly = array_slice($topEarlyRows, 0, $topLimit);
+$hasLateRows = count($topLate) > 0;
+$hasEarlyRows = count($topEarly) > 0;
 $updatedAt = date('H:i, d/m/Y');
 ?>
 
@@ -557,14 +559,8 @@ $updatedAt = date('H:i, d/m/Y');
 }
 .mgrr-bottom {
     display: grid;
-    grid-template-columns: 1.15fr .85fr;
+    grid-template-columns: 1.4fr .9fr 1fr;
     gap: 14px;
-}
-.mgrr-rank-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 14px;
 }
 .mgrr-panel {
     padding: 16px;
@@ -656,6 +652,15 @@ $updatedAt = date('H:i, d/m/Y');
     text-transform: uppercase;
     font-size: .68rem;
 }
+.mgrr-top-table thead tr:first-child th {
+    padding-bottom: 6px;
+}
+.mgrr-top-table thead tr:last-child th {
+    color: #475569;
+}
+.mgrr-top-group td {
+    vertical-align: middle;
+}
 .mgrr-table strong {
     color: #0f172a;
 }
@@ -700,7 +705,6 @@ $updatedAt = date('H:i, d/m/Y');
 @media (max-width: 1280px) {
     .mgrr-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .mgrr-grid,
-    .mgrr-rank-grid,
     .mgrr-bottom { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
@@ -810,71 +814,74 @@ $updatedAt = date('H:i, d/m/Y');
             </section>
         </div>
 
-        <div class="mgrr-rank-grid">
+        <div class="mgrr-bottom">
             <section class="mgrr-panel">
                 <div class="mgrr-panel-head">
-                    <div class="mgrr-panel-title">Top nhân viên đi trễ</div>
+                    <div class="mgrr-panel-title">Top nhân viên đi trễ, về sớm</div>
                     <form method="GET" action="index.php" style="display:flex;align-items:center;gap:6px">
                         <input type="hidden" name="page" value="<?= htmlspecialchars($reportActionPage) ?>">
                         <input type="hidden" name="tuNgay" value="<?= htmlspecialchars($fromDate) ?>">
                         <input type="hidden" name="denNgay" value="<?= htmlspecialchars($toDate) ?>">
                         <input type="hidden" name="phongBan" value="<?= htmlspecialchars($phongBan) ?>">
-                        <label for="top-limit" style="font-size:.78rem;color:#64748b">Số dòng</label>
+                        <label for="top-limit" style="font-size:.78rem;color:#64748b">Top</label>
                         <input id="top-limit" name="top_limit" type="number" min="1" max="50" value="<?= $topLimit ?>" style="width:62px;padding:6px 8px;border:1px solid #dbe4f0;border-radius:6px">
                         <button type="submit" class="mgrr-btn primary" style="padding:7px 10px;font-size:.78rem"><i class="fas fa-filter"></i> Lọc</button>
                     </form>
                 </div>
-                <table class="mgrr-table">
-                    <thead><tr><th>#</th><th>Nhân viên</th><th>Số lần</th><th>Tổng phút</th></tr></thead>
+                <table class="mgrr-table mgrr-top-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">STT</th>
+                            <th colspan="3">Đi trễ</th>
+                            <th colspan="3">Về sớm</th>
+                        </tr>
+                        <tr>
+                            <th>Nhân viên</th>
+                            <th>Số lần</th>
+                            <th>Số phút</th>
+                            <th>Nhân viên</th>
+                            <th>Số lần</th>
+                            <th>Số phút</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <?php if ($topLate): ?>
-                            <?php foreach ($topLate as $idx => $row):
-                                $name = $row['hoTen'] ?? 'Nhân viên';
-                                $initials = mb_substr($name, 0, 1);
+                        <?php for ($idx = 0; $idx < $topLimit; $idx++): ?>
+                            <?php
+                            $lateRow = $topLate[$idx] ?? null;
+                            $earlyRow = $topEarly[$idx] ?? null;
+                            $lateName = $lateRow['hoTen'] ?? 'Nhân viên';
+                            $earlyName = $earlyRow['hoTen'] ?? 'Nhân viên';
                             ?>
-                                <tr>
-                                    <td><span class="mgrr-rank"><?= $idx + 1 ?></span></td>
-                                    <td><div class="mgrr-person"><span class="mgrr-avatar"><?= htmlspecialchars($initials) ?></span><strong><?= htmlspecialchars($name) ?></strong></div></td>
-                                    <td><?= (int)($row['late_count'] ?? 0) ?></td>
-                                    <td style="color:#ef4444;font-weight:800"><?= (int)($row['late_minutes'] ?? 0) ?> phút</td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr><td colspan="4" style="text-align:center;color:#64748b">Không có dữ liệu</td></tr>
-                        <?php endif; ?>
+                            <tr class="mgrr-top-group">
+                                <td><span class="mgrr-rank"><?= $idx + 1 ?></span></td>
+                                <?php if ($lateRow): ?>
+                                    <td><div class="mgrr-person"><span class="mgrr-avatar"><?= htmlspecialchars(mb_substr($lateName, 0, 1)) ?></span><strong><?= htmlspecialchars($lateName) ?></strong></div></td>
+                                    <td><?= (int)($lateRow['late_count'] ?? 0) ?></td>
+                                    <td style="color:#ef4444;font-weight:800"><?= (int)($lateRow['late_minutes'] ?? 0) ?> phút</td>
+                                <?php elseif (!$hasLateRows && $idx === 0): ?>
+                                    <td colspan="3" style="text-align:center;color:#64748b">Không có dữ liệu</td>
+                                <?php else: ?>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                <?php endif; ?>
+                                <?php if ($earlyRow): ?>
+                                    <td><div class="mgrr-person"><span class="mgrr-avatar"><?= htmlspecialchars(mb_substr($earlyName, 0, 1)) ?></span><strong><?= htmlspecialchars($earlyName) ?></strong></div></td>
+                                    <td><?= (int)($earlyRow['early_count'] ?? 0) ?></td>
+                                    <td style="color:#ef4444;font-weight:800"><?= (int)($earlyRow['early_minutes'] ?? 0) ?> phút</td>
+                                <?php elseif (!$hasEarlyRows && $idx === 0): ?>
+                                    <td colspan="3" style="text-align:center;color:#64748b">Không có dữ liệu</td>
+                                <?php else: ?>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                <?php endif; ?>
+                            </tr>
+                        <?php endfor; ?>
                     </tbody>
                 </table>
             </section>
 
-            <section class="mgrr-panel">
-                <div class="mgrr-panel-head">
-                    <div class="mgrr-panel-title">Top nhân viên về sớm</div>
-                    <span style="font-size:.78rem;color:#64748b">Top <?= $topLimit ?></span>
-                </div>
-                <table class="mgrr-table">
-                    <thead><tr><th>#</th><th>Nhân viên</th><th>Số lần</th><th>Tổng phút</th></tr></thead>
-                    <tbody>
-                        <?php if ($topEarly): ?>
-                            <?php foreach ($topEarly as $idx => $row):
-                                $name = $row['hoTen'] ?? 'Nhân viên';
-                                $initials = mb_substr($name, 0, 1);
-                            ?>
-                                <tr>
-                                    <td><span class="mgrr-rank"><?= $idx + 1 ?></span></td>
-                                    <td><div class="mgrr-person"><span class="mgrr-avatar"><?= htmlspecialchars($initials) ?></span><strong><?= htmlspecialchars($name) ?></strong></div></td>
-                                    <td><?= (int)($row['early_count'] ?? 0) ?></td>
-                                    <td style="color:#ef4444;font-weight:800"><?= (int)($row['early_minutes'] ?? 0) ?> phút</td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr><td colspan="4" style="text-align:center;color:#64748b">Không có dữ liệu</td></tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </section>
-        </div>
-
-        <div class="mgrr-bottom">
             <section class="mgrr-panel">
                 <div class="mgrr-panel-head"><div class="mgrr-panel-title">Tình hình chấm công của <?= htmlspecialchars($selectedDept) ?></div></div>
                 <table class="mgrr-table">
