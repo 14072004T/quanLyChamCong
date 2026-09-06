@@ -1,13 +1,16 @@
 window.toggleMobileMenu = function (shouldOpen) {
-    const open = typeof shouldOpen === "boolean" ? shouldOpen : true;
     const body = document.body;
-    const sidebar = document.querySelector(".mobile-view .sidebar-nav") || document.querySelector(".main-container > .sidebar-nav");
-    const menuTrigger = document.querySelector(".mobile-header .menu-trigger");
+    const sidebar = document.querySelector(".sidebar-nav");
     const reopenBtn = document.querySelector(".sidebar-reopen-btn");
+    const menuTrigger = document.querySelector(".mobile-header .menu-trigger");
 
-    // Không early-return theo class .mobile-view nữa: một số tablet không được nhận đúng
-    // là "mobile" qua User-Agent. CSS (media query theo độ rộng màn hình) sẽ quyết định
-    // việc toggle này có hiệu ứng drawer hay không, nên cứ luôn cho phép gọi hàm.
+    let isCurrentlyVisible = false;
+    if (sidebar) {
+        isCurrentlyVisible = (sidebar.style.display === "flex" || (window.getComputedStyle(sidebar).display !== "none" && sidebar.style.display !== "none")) && !sidebar.classList.contains("mobile-sidebar-hidden") && !body.classList.contains("sidebar-collapsed");
+    }
+
+    const open = typeof shouldOpen === "boolean" ? shouldOpen : !isCurrentlyVisible;
+
     body.classList.toggle("mobile-menu-open", open);
     body.classList.toggle("sidebar-collapsed", !open);
 
@@ -24,8 +27,12 @@ window.toggleMobileMenu = function (shouldOpen) {
     }
 
     if (reopenBtn) {
-        reopenBtn.style.display = open ? "none" : "inline-flex";
-        reopenBtn.setAttribute("aria-hidden", String(open));
+        reopenBtn.setAttribute("aria-expanded", String(open));
+        if (open) {
+            reopenBtn.classList.add("active");
+        } else {
+            reopenBtn.classList.remove("active");
+        }
     }
 };
 
@@ -34,6 +41,9 @@ window.closeMobileMenu = function () {
 };
 
 document.addEventListener("DOMContentLoaded", function () {
+    // Mặc định ẩn menu bên trái khi vừa vào trang, chỉ hiện khi người dùng click vào nút menu
+    window.toggleMobileMenu(false);
+
     document.querySelectorAll(".sidebar-close").forEach(function (btn) {
         btn.addEventListener("click", function (event) {
             event.preventDefault();
@@ -113,15 +123,14 @@ document.addEventListener("DOMContentLoaded", function () {
     if (menuTrigger) {
         menuTrigger.addEventListener("click", function (event) {
             event.stopPropagation();
-            const isOpen = document.body.classList.contains("mobile-menu-open");
-            window.toggleMobileMenu(!isOpen);
+            window.toggleMobileMenu();
         });
     }
 
     if (reopenBtn) {
         reopenBtn.addEventListener("click", function (event) {
             event.stopPropagation();
-            window.toggleMobileMenu(true);
+            window.toggleMobileMenu();
         });
     }
 
@@ -131,6 +140,4 @@ document.addEventListener("DOMContentLoaded", function () {
             window.toggleMobileMenu(false);
         }
     });
-
-    window.toggleMobileMenu(false);
 });

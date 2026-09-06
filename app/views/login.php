@@ -726,11 +726,11 @@
         <div class="main-content" style="padding: 40px 16px 20px;">
             
             <!-- Logo boxes: R, F, T -->
-            <div class="mb-login-logo-container">
+            <a href="index.php?" class="mb-login-logo-container" style="text-decoration:none;" title="Trang chủ">
                 <div class="mb-login-logo-box r">R</div>
                 <div class="mb-login-logo-box f">F</div>
                 <div class="mb-login-logo-box t">T</div>
-            </div>
+            </a>
 
             <h1 class="mb-login-title">Chào mừng trở lại!</h1>
             <p class="mb-login-subtitle">Hệ thống quản lý chấm công kỹ thuật số dành cho doanh nghiệp hiện đại.</p>
@@ -845,11 +845,11 @@
         <div class="main-content">
             <!-- TOP HEADER -->
             <div class="header-section">
-                <div class="brand-logo-pills">
+                <a href="index.php?" class="brand-logo-pills" style="text-decoration:none;" title="Trang chủ">
                     <div class="logo-pill r">R</div>
                     <div class="logo-pill f">F</div>
                     <div class="logo-pill t">T</div>
-                </div>
+                </a>
                 <h1 class="header-title">Hệ thống Quản lý Chấm công</h1>
                 <p class="header-subtitle">Giải pháp số hoá chấm công thông minh ứng dụng nhận diện khuôn mặt AI cho doanh nghiệp hiện đại.</p>
             </div>

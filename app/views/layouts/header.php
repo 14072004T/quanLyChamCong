@@ -49,62 +49,53 @@
     $notificationCount = 0;
 
     if (isset($_SESSION['user'])) {
-        /**
-         * Helper to format minutes into "X giờ Y phút"
-         */
-        if (!function_exists('formatMinutes')) {
-            function formatMinutes($minutes) {
-                $minutes = (int)$minutes;
-                if ($minutes <= 0) return '0 phút';
-                $soGio = floor($minutes / 60);
-                $remMinutes = $minutes % 60;
-                
-                $result = '';
-                if ($soGio > 0) {
-                    $result .= $soGio . ' giờ ';
-                }
-                if ($remMinutes > 0 || $soGio == 0) {
-                    $result .= $remMinutes . ' phút';
-                }
-                return trim($result);
-            }
-        }
-        
         require_once 'app/models/ChamCongModel.php';
         $notificationModel = new ChamCongModel();
         $role = $_SESSION['role'] ?? 'nhanvien';
         $maND = (int)($_SESSION['user']['maND'] ?? 0);
 
         if ($role === 'nhanvien' && $maND > 0) {
-            $requests = $notificationModel->getYeuCauTheoNhanVien($maND);
-            foreach ($requests as $req) {
-                // Limit to 6 latest notifications max
-                if (count($notificationItems) >= 6) {
-                    break;
-                }
+            // 1. Bảng công tháng HR gửi chờ nhân viên xác nhận
+            $pendingTimesheets = $notificationModel->getPendingTimesheets($maND, 5);
+            foreach ($pendingTimesheets as $ts) {
+                $notificationCount++;
+                $parts = explode('-', $ts['thangNam'] ?? '');
+                $monthText = count($parts) === 2 ? "Tháng {$parts[1]}/{$parts[0]}" : ($ts['thangNam'] ?? '');
+                $notificationItems[] = [
+                    'title' => 'Bảng công ' . $monthText . ' chờ xác nhận',
+                    'meta' => 'HR (' . ($ts['hr_name'] ?? 'Nhân sự') . ') đã gửi bảng công tháng',
+                    'time' => $ts['ngayGui'] ?? '',
+                    'link' => 'index.php?page=bang-cong-thang',
+                    'sort_time' => strtotime($ts['ngayGui'] ?? '') ?: time(),
+                ];
+            }
 
+            // 2. Yêu cầu chỉnh sửa chấm công của nhân viên
+            $corrections = $notificationModel->getYeuCauTheoNhanVien($maND);
+            foreach ($corrections as $req) {
                 $trangThai = $req['trangThai'] ?? 'pending';
                 $updatedTimeStr = $req['ngayCapNhat'] ?? $req['ngayTao'] ?? date('Y-m-d H:i:s');
                 $updatedTime = strtotime($updatedTimeStr);
                 $daysAgo = (time() - $updatedTime) / 86400;
 
-                // Stop populating older handled requests (e.g., > 3 days old)
-                if ($trangThai !== 'pending' && $daysAgo > 3) {
+                if ($trangThai !== 'pending' && $daysAgo > 7) {
                     continue;
                 }
 
-                $notificationCount++;
-                
-                $titleMsg = 'Yêu cầu đang chờ duyệt';
-                if ($trangThai === 'approved') {
-                    $titleMsg = 'Yêu cầu đã ĐƯỢC DUYỆT';
-                } elseif ($trangThai === 'rejected') {
-                    $titleMsg = 'Yêu cầu BỊ TỪ CHỐI';
+                if ($trangThai === 'pending') {
+                    $notificationCount++;
+                    $titleMsg = 'Yêu cầu sửa công: Đang chờ duyệt';
+                } elseif ($trangThai === 'approved') {
+                    $titleMsg = 'Yêu cầu sửa công: ĐÃ ĐƯỢC DUYỆT ✓';
+                } else {
+                    $titleMsg = 'Yêu cầu sửa công: BỊ TỪ CHỐI ✕';
                 }
 
-                $meta = 'Ngày: ' . ($req['ngayChamCong'] ?? '');
-                if ($trangThai !== 'pending') {
-                    $meta .= ' - ' . htmlspecialchars($req['ghiChuNS'] ?: 'Không có ghi chú');
+                $meta = 'Ngày ' . date('d/m/Y', strtotime($req['ngayChamCong'] ?? ''));
+                if (!empty($req['ghiChuNS'])) {
+                    $meta .= ' - ' . htmlspecialchars($req['ghiChuNS']);
+                } elseif (!empty($req['lyDo'])) {
+                    $meta .= ' - ' . htmlspecialchars($req['lyDo']);
                 }
 
                 $notificationItems[] = [
@@ -112,52 +103,204 @@
                     'meta' => $meta,
                     'time' => $updatedTimeStr,
                     'link' => 'index.php?page=yeu-cau-chinh-sua-cham-cong',
+                    'sort_time' => $updatedTime,
                 ];
             }
 
-            // Bảng công tháng chờ nhân viên duyệt
-            $pendingTimesheets = $notificationModel->getPendingTimesheets($maND, 4);
-            $notificationCount += count($pendingTimesheets);
-            foreach ($pendingTimesheets as $ts) {
-                $parts = explode('-', $ts['thangNam'] ?? '');
-                $monthText = count($parts) === 2 ? "Tháng {$parts[1]}/{$parts[0]}" : ($ts['thangNam'] ?? '');
+            // 3. Đơn xin nghỉ phép của nhân viên
+            $leaveRequests = $notificationModel->getLeaveRequestsByUser($maND);
+            foreach ($leaveRequests as $leave) {
+                $trangThai = $leave['trangThai'] ?? 'pending';
+                $updatedTimeStr = $leave['ngayDuyet'] ?? $leave['ngayTao'] ?? date('Y-m-d H:i:s');
+                $updatedTime = strtotime($updatedTimeStr);
+                $daysAgo = (time() - $updatedTime) / 86400;
+
+                if ($trangThai !== 'pending' && $daysAgo > 7) {
+                    continue;
+                }
+
+                if ($trangThai === 'pending') {
+                    $notificationCount++;
+                    $titleMsg = 'Đơn nghỉ phép: Đang chờ quản lý duyệt';
+                } elseif ($trangThai === 'approved') {
+                    $titleMsg = 'Đơn nghỉ phép: ĐÃ ĐƯỢC DUYỆT ✓';
+                } else {
+                    $titleMsg = 'Đơn nghỉ phép: BỊ TỪ CHỐI ✕';
+                }
+
+                $meta = date('d/m', strtotime($leave['tuNgay'] ?? '')) . ' - ' . date('d/m/Y', strtotime($leave['denNgay'] ?? ''));
+                if (!empty($leave['approver_name']) && $trangThai !== 'pending') {
+                    $meta .= ' (Duyệt: ' . htmlspecialchars($leave['approver_name']) . ')';
+                } elseif (!empty($leave['lyDo'])) {
+                    $meta .= ' (' . htmlspecialchars($leave['lyDo']) . ')';
+                }
+
                 $notificationItems[] = [
-                    'title' => 'Bảng công ' . $monthText . ' chờ xác nhận',
-                    'meta' => 'HR gửi: ' . ($ts['hr_name'] ?? 'HR'),
-                    'time' => $ts['ngayGui'] ?? '',
-                    'link' => 'index.php?page=bang-cong-thang',
+                    'title' => $titleMsg,
+                    'meta' => $meta,
+                    'time' => $updatedTimeStr,
+                    'link' => 'index.php?page=create-leave-request',
+                    'sort_time' => $updatedTime,
                 ];
             }
-        } elseif ($role === 'hr') {
+
+        } elseif ($role === 'manager') {
+            // 1. Đơn nghỉ phép của nhân viên đang chờ Quản lý duyệt
+            $allLeaves = $notificationModel->getAllLeaveRequests();
+            foreach ($allLeaves as $leave) {
+                if (($leave['trangThai'] ?? '') === 'pending') {
+                    $notificationCount++;
+                    $updatedTimeStr = $leave['ngayTao'] ?? date('Y-m-d H:i:s');
+                    $notificationItems[] = [
+                        'title' => 'Đơn nghỉ phép chờ duyệt: ' . ($leave['hoTen'] ?? 'Nhân viên'),
+                        'meta' => ($leave['phongBan'] ? $leave['phongBan'] . ' • ' : '') . date('d/m', strtotime($leave['tuNgay'] ?? '')) . ' - ' . date('d/m/Y', strtotime($leave['denNgay'] ?? '')) . ' (' . ($leave['lyDo'] ?? '') . ')',
+                        'time' => $updatedTimeStr,
+                        'link' => 'index.php?page=list-leave-requests',
+                        'sort_time' => strtotime($updatedTimeStr),
+                    ];
+                }
+            }
+
+            // 2. Yêu cầu điều chỉnh công đang chờ Quản lý duyệt
             $pendingCorrections = $notificationModel->getCorrectionRequests('pending');
-            $timesheetSummary = $notificationModel->getTimesheetApprovalSummary();
-            $notificationCount = count($pendingCorrections);
-
-            foreach (array_slice($pendingCorrections, 0, 3) as $row) {
+            foreach ($pendingCorrections as $corr) {
+                $notificationCount++;
+                $updatedTimeStr = $corr['ngayTao'] ?? date('Y-m-d H:i:s');
                 $notificationItems[] = [
-                    'title' => 'Có yêu cầu chỉnh sửa chờ xử lý',
-                    'meta' => ($row['hoTen'] ?? 'Nhân viên') . ' - ' . ($row['ngayChamCong'] ?? ''),
-                    'time' => $row['ngayTao'] ?? '',
-                    'link' => 'index.php?page=xuly-yeucau&request_id=' . (int)($row['id'] ?? 0) . '#request-' . (int)($row['id'] ?? 0),
+                    'title' => 'Yêu cầu sửa công: ' . ($corr['hoTen'] ?? 'Nhân viên'),
+                    'meta' => ($corr['phongBan'] ? $corr['phongBan'] . ' • ' : '') . 'Ngày ' . date('d/m/Y', strtotime($corr['ngayChamCong'] ?? '')) . ' - ' . ($corr['lyDo'] ?? ''),
+                    'time' => $updatedTimeStr,
+                    'link' => 'index.php?page=xuly-yeucau&request_id=' . (int)($corr['id'] ?? 0) . '#request-' . (int)($corr['id'] ?? 0),
+                    'sort_time' => strtotime($updatedTimeStr),
                 ];
             }
+
+            // 3. Bảng công đã gửi chờ Manager xem xét/tổng hợp
+            $approvals = $notificationModel->getMonthlyApprovals('submitted');
+            foreach ($approvals as $app) {
+                $notificationCount++;
+                $notificationItems[] = [
+                    'title' => 'Kỳ công ' . ($app['thangNam'] ?? '') . ' chờ phê duyệt',
+                    'meta' => 'Bảng công & lương tổng hợp tháng ' . ($app['thangNam'] ?? ''),
+                    'time' => $app['ngayGui'] ?? date('Y-m-d H:i:s'),
+                    'link' => 'index.php?page=bao-cao-tong-hop',
+                    'sort_time' => strtotime($app['ngayGui'] ?? '') ?: time(),
+                ];
+            }
+
+        } elseif ($role === 'hr') {
+            // 1. Tiến độ nhân viên duyệt bảng công tháng
+            $timesheetSummary = $notificationModel->getTimesheetApprovalSummary();
             foreach (array_slice($timesheetSummary, 0, 3) as $row) {
                 $total = (int)($row['total'] ?? 0);
                 $pending = (int)($row['pending'] ?? 0);
                 $approved = (int)($row['approved'] ?? 0);
-                if ($total > 0) {
+                if ($total > 0 && $pending > 0) {
                     $notificationCount++;
                     $notificationItems[] = [
-                        'title' => 'Bảng công kỳ ' . ($row['thangNam'] ?? '') . ': ' . $approved . '/' . $total . ' NV đã duyệt',
-                        'meta' => $pending > 0 ? 'Còn ' . $pending . ' nhân viên chưa duyệt' : 'Tất cả nhân viên đã duyệt ✓',
-                        'time' => $row['last_submitted'] ?? '',
+                        'title' => 'Kỳ công ' . ($row['thangNam'] ?? '') . ': ' . $approved . '/' . $total . ' NV đã duyệt',
+                        'meta' => 'Còn ' . $pending . ' nhân viên chưa xác nhận bảng công',
+                        'time' => $row['last_submitted'] ?? date('Y-m-d H:i:s'),
                         'link' => 'index.php?page=tinh-cong&month=' . urlencode((string)($row['thangNam'] ?? '')),
+                        'sort_time' => strtotime($row['last_submitted'] ?? '') ?: time(),
                     ];
                 }
             }
-        } elseif ($role === 'manager') {
-            // Manager chỉ còn yêu cầu chỉnh sửa/nghỉ phép
-            $notificationCount = 0;
+
+            // 2. Trạng thái phê duyệt bảng công tháng từ Quản lý
+            $monthlyApprovals = $notificationModel->getMonthlyApprovals();
+            foreach (array_slice($monthlyApprovals, 0, 5) as $app) {
+                $status = $app['trangThai'] ?? '';
+                $updatedTimeStr = $app['ngayDuyet'] ?? $app['ngayGui'] ?? date('Y-m-d H:i:s');
+                $updatedTime = strtotime($updatedTimeStr);
+                $daysAgo = (time() - $updatedTime) / 86400;
+
+                if ($status === 'submitted') {
+                    $notificationCount++;
+                    $notificationItems[] = [
+                        'title' => 'Kỳ công ' . ($app['thangNam'] ?? '') . ': Đang chờ Quản lý duyệt',
+                        'meta' => 'Đã gửi bảng công lên Quản lý',
+                        'time' => $updatedTimeStr,
+                        'link' => 'index.php?page=tinh-cong&month=' . urlencode((string)($app['thangNam'] ?? '')),
+                        'sort_time' => $updatedTime,
+                    ];
+                } elseif ($status === 'approved' && $daysAgo <= 7) {
+                    $notificationItems[] = [
+                        'title' => 'Kỳ công ' . ($app['thangNam'] ?? '') . ': Quản lý ĐÃ DUYỆT ✓',
+                        'meta' => 'Duyệt bởi: ' . ($app['approver_name'] ?? 'Quản lý'),
+                        'time' => $updatedTimeStr,
+                        'link' => 'index.php?page=tinh-cong&month=' . urlencode((string)($app['thangNam'] ?? '')),
+                        'sort_time' => $updatedTime,
+                    ];
+                } elseif ($status === 'rejected' && $daysAgo <= 7) {
+                    $notificationCount++;
+                    $notificationItems[] = [
+                        'title' => 'Kỳ công ' . ($app['thangNam'] ?? '') . ': Quản lý TỪ CHỐI ✕',
+                        'meta' => 'Ghi chú: ' . ($app['ghiChu'] ?? 'Cần kiểm tra lại dữ liệu'),
+                        'time' => $updatedTimeStr,
+                        'link' => 'index.php?page=tinh-cong&month=' . urlencode((string)($app['thangNam'] ?? '')),
+                        'sort_time' => $updatedTime,
+                    ];
+                }
+            }
+
+            // 3. Đơn nghỉ phép cá nhân của HR (nếu có)
+            if ($maND > 0) {
+                $leaveRequests = $notificationModel->getLeaveRequestsByUser($maND);
+                foreach ($leaveRequests as $leave) {
+                    $trangThai = $leave['trangThai'] ?? 'pending';
+                    $updatedTimeStr = $leave['ngayDuyet'] ?? $leave['ngayTao'] ?? date('Y-m-d H:i:s');
+                    $updatedTime = strtotime($updatedTimeStr);
+                    $daysAgo = (time() - $updatedTime) / 86400;
+
+                    if ($trangThai !== 'pending' && $daysAgo > 7) {
+                        continue;
+                    }
+
+                    if ($trangThai === 'pending') {
+                        $notificationCount++;
+                        $titleMsg = 'Đơn nghỉ phép cá nhân: Đang chờ duyệt';
+                    } elseif ($trangThai === 'approved') {
+                        $titleMsg = 'Đơn nghỉ phép cá nhân: ĐÃ ĐƯỢC DUYỆT ✓';
+                    } else {
+                        $titleMsg = 'Đơn nghỉ phép cá nhân: BỊ TỪ CHỐI ✕';
+                    }
+
+                    $notificationItems[] = [
+                        'title' => $titleMsg,
+                        'meta' => date('d/m', strtotime($leave['tuNgay'] ?? '')) . ' - ' . date('d/m/Y', strtotime($leave['denNgay'] ?? '')),
+                        'time' => $updatedTimeStr,
+                        'link' => 'index.php?page=create-leave-request',
+                        'sort_time' => $updatedTime,
+                    ];
+                }
+            }
+
+        } elseif ($role === 'tech') {
+            // WiFi & cấu hình
+            $wifiList = $notificationModel->getAllWifi() ?? [];
+            $activeCount = 0;
+            foreach ($wifiList as $w) {
+                if (!empty($w['trangThai'])) $activeCount++;
+            }
+            if ($activeCount > 0) {
+                $notificationItems[] = [
+                    'title' => 'Hệ thống WiFi chấm công: ' . $activeCount . ' điểm hoạt động',
+                    'meta' => 'Cấu hình mạng LAN / BSSID ổn định',
+                    'time' => date('Y-m-d H:i:s'),
+                    'link' => 'index.php?page=tech-wifi',
+                    'sort_time' => time(),
+                ];
+            }
+        }
+
+        // Sắp xếp thông báo mới nhất lên đầu
+        if (!empty($notificationItems)) {
+            usort($notificationItems, function ($a, $b) {
+                return ($b['sort_time'] ?? 0) <=> ($a['sort_time'] ?? 0);
+            });
+            // Giới hạn tối đa 10 thông báo hiển thị
+            $notificationItems = array_slice($notificationItems, 0, 10);
         }
     }
     ?>
@@ -167,7 +310,7 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
             <div class="header-brand-group">
-                <div class="header-logo">RFT</div>
+                <a href="index.php?" class="header-logo" style="text-decoration:none;color:inherit;" title="Trang chủ">RFT</a>
                 <button type="button" class="sidebar-reopen-btn" title="Mở menu" aria-label="Mở menu">
                     <i class="fa-solid fa-bars"></i>
                 </button>
@@ -243,12 +386,12 @@
         </script>
     <?php else: ?>
         <header class="header">
-            <div class="brand-logo" title="RFT Hệ thống Chấm công">
+            <a href="index.php?" class="brand-logo" title="RFT Hệ thống Chấm công" style="text-decoration:none;">
                 <span class="logo-r">R</span>
                 <span class="logo-f">F</span>
                 <span class="logo-t">T</span>
-            </div>
-            <button type="button" class="sidebar-reopen-btn" title="Mở menu" aria-label="Mở menu">
+            </a>
+            <button type="button" class="sidebar-reopen-btn" title="Danh sách chức năng" aria-label="Danh sách chức năng">
                 <i class="fa-solid fa-bars"></i>
             </button>
             <h1>HỆ THỐNG QUẢN LÝ CHẤM CÔNG</h1>
