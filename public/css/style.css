@@ -2149,13 +2149,25 @@ body {
 
 .menu-item-btn.active i { color: #60a5fa; }
 
-/* Force desktop sidebar to stay permanently expanded and hide reopen button on desktop */
-@media (min-width: 901px) {
-    .sidebar-reopen-btn {
-        display: none !important;
-    }
-    .main-container > .sidebar-nav,
-    .sidebar-nav {
-        display: flex !important;
-    }
+/* Interactive Menu Toggle Button Styling in Header */
+.sidebar-reopen-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin-left: 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sidebar-reopen-btn:hover,
+.sidebar-reopen-btn.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
 }
