@@ -324,17 +324,17 @@ $toTs = strtotime($toDate) ?: strtotime(date('Y-m-d'));
 $dayCount = max(1, (int)floor(($toTs - $fromTs) / 86400) + 1);
 $totalEmployees = count(array_unique(array_map(function ($row) { return (int)($row['maND'] ?? 0); }, $reportRows)));
 $totalEmployees = $totalEmployees ?: count($reportRows);
-$actualWorkDays = array_sum(array_map(function ($row) { return (float)($row['work_days'] ?? 0); }, $reportRows));
-$plannedWorkDays = max($totalEmployees * $dayCount, 1);
-$payrollOtHours = array_sum(array_map(function ($row) { return (float)($row['overtime_hours'] ?? 0); }, $payrollRows));
+$attendanceMetrics = $attendanceMetrics ?? [];
+$plannedWorkDays = max((int)($attendanceMetrics['scheduled_days'] ?? 0), 1);
+$actualWorkDays = (float)($attendanceMetrics['work_days'] ?? 0);
 $dailyPunctuality = $dailyPunctuality ?? [];
 $lateDays = array_sum(array_column($dailyPunctuality, 'late'));
 $earlyDays = array_sum(array_column($dailyPunctuality, 'early'));
 $onTimeDays = max(0, $actualWorkDays - $lateDays);
 $absentDays = max(0, round($plannedWorkDays - $actualWorkDays, 1));
-$onTimeRate = $actualWorkDays > 0 ? round(($onTimeDays / $actualWorkDays) * 100, 1) : 0;
-$absentRate = $plannedWorkDays > 0 ? round(($absentDays / $plannedWorkDays) * 100, 1) : 0;
-$totalOtHours = round($payrollOtHours, 1);
+$onTimeRate = (float)($attendanceMetrics['attendance_rate'] ?? 0);
+$absentRate = (float)($attendanceMetrics['absent_rate'] ?? 0);
+$totalOtHours = (float)($attendanceMetrics['total_ot_hours'] ?? 0);
 
 $labels = array_map(function ($row) { return date('d/m', strtotime($row['date'])); }, $dailyPunctuality);
 $lateLineValues = array_map(function ($row) { return (int)$row['late']; }, $dailyPunctuality);
@@ -367,10 +367,11 @@ $workdayPercentages = array_map(function ($value) use ($workdayEmployeeTotal) {
     return $workdayEmployeeTotal > 0 ? round(($value / $workdayEmployeeTotal) * 100, 1) : 0;
 }, $workdayValues);
 
-$weekLabels = ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4', 'Tuần 5'];
-$weekOt = [];
-for ($i = 0; $i < 5; $i++) {
-    $weekOt[] = max(0, round(($totalOtHours / 5) * (0.7 + ($i * 0.14)), 1));
+$weekLabels = array_map(function ($week) { return $week['label']; }, $attendanceMetrics['weekly_ot'] ?? []);
+$weekOt = array_map(function ($week) { return (float)$week['hours']; }, $attendanceMetrics['weekly_ot'] ?? []);
+if (empty($weekLabels)) {
+    $weekLabels = ['Không có dữ liệu'];
+    $weekOt = [0];
 }
 $employeePunctuality = $employeePunctuality ?? [];
 $topLimit = max(1, min(50, (int)($_GET['top_limit'] ?? 5)));
@@ -767,7 +768,7 @@ $updatedAt = date('H:i, d/m/Y');
             </div>
             <div class="mgrr-card">
                 <span class="mgrr-icon mgrr-orange"><i class="fas fa-clock"></i></span>
-                <div><small>Tỷ lệ đi làm đúng giờ</small><strong><?= number_format($onTimeRate, 1) ?>%</strong><small class="mgrr-trend up"><i class="fas fa-arrow-up"></i> 4.3% so với kỳ trước</small></div>
+                <div><small>Tỷ lệ đi làm</small><strong><?= number_format($onTimeRate, 1) ?>%</strong><small class="mgrr-trend up"><i class="fas fa-arrow-up"></i> 4.3% so với kỳ trước</small></div>
             </div>
             <div class="mgrr-card">
                 <span class="mgrr-icon mgrr-red"><i class="fas fa-user-times"></i></span>

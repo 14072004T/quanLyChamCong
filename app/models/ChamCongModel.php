@@ -1498,6 +1498,129 @@ class ChamCongModel
         return array_values($daily);
     }
 
+    public function getAttendanceMetrics($fromDate, $toDate, $phongBan = '')
+    {
+        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
+        $sql = "SELECT u.maND, DATE(l.ngayTao) AS ngayChamCong,
+                       MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END) AS gioVao,
+                       MAX(CASE WHEN l.hanhDong = 'OUT' THEN l.ngayTao END) AS gioRa
+                FROM nguoidung u
+                INNER JOIN lichsuchamcong l ON l.maND = u.maND
+                    AND DATE(l.ngayTao) >= ?
+                    AND DATE(l.ngayTao) <= ?
+                WHERE u.trangThai = 1
+                  AND u.chucVu = 'Nhân viên'
+                  AND u.phongBan IN ($placeholders)";
+
+        $params = [$fromDate, $toDate];
+        $types = 'ss';
+        foreach ($validDepts as $dept) {
+            $params[] = $dept;
+            $types .= 's';
+        }
+        if ($phongBan !== '') {
+            $sql .= " AND u.phongBan = ?";
+            $params[] = $phongBan;
+            $types .= 's';
+        }
+        $sql .= " GROUP BY u.maND, DATE(l.ngayTao)";
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+        $stmt->bind_param($types, ...$params);
+        if (!$stmt->execute()) {
+            $stmt->close();
+            return [];
+        }
+        $attendanceRows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        $attendanceByEmployee = [];
+        foreach ($attendanceRows as $row) {
+            $maND = (int)$row['maND'];
+            $attendanceByEmployee[$maND][$row['ngayChamCong']] = $row;
+        }
+
+        $employeeIds = array_map('intval', array_keys($attendanceByEmployee));
+        if (empty($employeeIds)) {
+            return [
+                'scheduled_days' => 0,
+                'work_days' => 0,
+                'absent_days' => 0,
+                'present_days' => 0,
+                'attendance_rate' => 0,
+                'absent_rate' => 0,
+                'total_ot_hours' => 0,
+            ];
+        }
+
+        $scheduledDays = 0;
+        $workDays = 0;
+        $absentDays = 0;
+        $presentDays = 0;
+        $totalOtMinutes = 0;
+        $weeklyOt = [];
+
+        $cursor = strtotime($fromDate);
+        $end = strtotime($toDate);
+        if ($cursor === false || $end === false || $cursor > $end) {
+            return [];
+        }
+        while ($cursor <= $end) {
+            $date = date('Y-m-d', $cursor);
+            $weekKey = date('o-W', $cursor);
+            if (!isset($weeklyOt[$weekKey])) {
+                $weeklyOt[$weekKey] = ['start' => $date, 'end' => $date, 'ot_minutes' => 0];
+            }
+            $weeklyOt[$weekKey]['end'] = $date;
+            foreach ($employeeIds as $maND) {
+                $shift = $this->getShiftForUser($maND, $date);
+                if (!$shift || $this->isOffShift($shift)) {
+                    continue;
+                }
+                $scheduledDays++;
+                $attendance = $attendanceByEmployee[$maND][$date] ?? null;
+                $checkIn = $attendance['gioVao'] ?? null;
+                $checkOut = $attendance['gioRa'] ?? null;
+                if ($checkIn === null && $checkOut === null) {
+                    $absentDays++;
+                    continue;
+                }
+                $presentDays++;
+                $status = $this->calculateShiftStatus($checkIn, $checkOut, $shift['gioBatDau'] ?? null, $shift['gioKetThuc'] ?? null);
+                if (!in_array('no_shift', $status['statuses'], true) && $checkIn !== null && $checkOut !== null) {
+                    $workDays += 1;
+                    $otMinutes = (int)($status['phutTangCa'] ?? 0);
+                    $totalOtMinutes += $otMinutes;
+                    $weeklyOt[$weekKey]['ot_minutes'] += $otMinutes;
+                }
+            }
+            $cursor = strtotime('+1 day', $cursor);
+        }
+
+        $attendanceRate = $scheduledDays > 0 ? round(($presentDays / $scheduledDays) * 100, 1) : 0;
+        $absentRate = $scheduledDays > 0 ? round(($absentDays / $scheduledDays) * 100, 1) : 0;
+
+        return [
+            'scheduled_days' => $scheduledDays,
+            'work_days' => $workDays,
+            'absent_days' => $absentDays,
+            'present_days' => $presentDays,
+            'attendance_rate' => $attendanceRate,
+            'absent_rate' => $absentRate,
+            'total_ot_hours' => round($totalOtMinutes / 60, 1),
+            'weekly_ot' => array_values(array_map(function ($week) {
+                return [
+                    'label' => date('d/m', strtotime($week['start'])) . ' - ' . date('d/m', strtotime($week['end'])),
+                    'hours' => round($week['ot_minutes'] / 60, 1),
+                ];
+            }, $weeklyOt)),
+        ];
+    }
+
     public function getEmployeePunctualityReport($fromDate, $toDate, $phongBan = '')
     {
         $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];

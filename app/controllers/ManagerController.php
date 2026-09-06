@@ -75,6 +75,7 @@ class ManagerController
 
         $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $phongBan);
         $dailyPunctuality = $this->model->getDailyPunctualityReport($fromDate, $toDate, $phongBan);
+        $attendanceMetrics = $this->model->getAttendanceMetrics($fromDate, $toDate, $phongBan);
         $employeePunctuality = $this->model->getEmployeePunctualityReport($fromDate, $toDate, $phongBan);
         $departments = $this->model->getValidDepartments();
         $monthKey = substr($fromDate, 0, 7);
