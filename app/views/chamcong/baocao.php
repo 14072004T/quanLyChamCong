@@ -904,6 +904,8 @@ $updatedAt = date('H:i, d/m/Y');
                     <thead><tr><th>Loại yêu cầu</th><th>Đã duyệt</th><th>Từ chối</th><th>Đang chờ</th></tr></thead>
                     <tbody id="mgrr-request-summary">
                         <tr><td>Nghỉ phép</td><td>0</td><td>0</td><td>0</td></tr>
+                        <tr><td>Tăng ca</td><td>0</td><td>0</td><td>0</td></tr>
+                        <tr><td>Điều chỉnh công</td><td>0</td><td>0</td><td>0</td></tr>
                         <tr><td><strong>Tổng</strong></td><td><strong>0</strong></td><td><strong>0</strong></td><td><strong>0</strong></td></tr>
                     </tbody>
                 </table>
@@ -1025,7 +1027,7 @@ document.addEventListener('DOMContentLoaded', function () {
     fetch('index.php?' + params.toString(), { headers: { Accept: 'application/json' } })
         .then(function (res) { return res.json(); })
         .then(function (json) { renderRequestSummary(json.data || []); })
-        .catch(function () {});
+        .catch(function () { renderRequestSummary([]); });
 });
 </script>
 
