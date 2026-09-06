@@ -1019,7 +1019,8 @@ document.addEventListener('DOMContentLoaded', function () {
         page: 'manager-api-requests',
         limit: '300',
         date_from: <?= json_encode($fromDate) ?>,
-        date_to: <?= json_encode($toDate) ?>
+        date_to: <?= json_encode($toDate) ?>,
+        phongBan: <?= json_encode($phongBan) ?>
     });
     fetch('index.php?' + params.toString(), { headers: { Accept: 'application/json' } })
         .then(function (res) { return res.json(); })

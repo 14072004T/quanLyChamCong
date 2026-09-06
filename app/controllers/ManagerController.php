@@ -536,6 +536,8 @@ class ManagerController
             'type' => trim($_GET['type'] ?? ''),
             'trangThai' => trim($_GET['trangThai'] ?? ''),
             'phongBan' => trim($_GET['phongBan'] ?? ''),
+            'date_from' => trim($_GET['date_from'] ?? ''),
+            'date_to' => trim($_GET['date_to'] ?? ''),
         ];
         $limit = (int)($_GET['limit'] ?? 300);
 
