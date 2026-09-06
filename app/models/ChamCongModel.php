@@ -1280,6 +1280,17 @@ class ChamCongModel
                       c.ngayCapNhat, n.hoTen, n.chucVu, n.phongBan
                   FROM suachamcong c
                   LEFT JOIN nguoidung n ON n.maND = c.maND
+                  UNION ALL
+                  SELECT CONCAT('ot:', a.id) AS uid, a.id, 'ot' AS request_type,
+                      a.maND, a.hieuLucTu AS ngayYeuCau, 'ot' AS loaiNghiPhep,
+                      0 AS laNuaNgay, s.gioBatDau, s.gioKetThuc, NULL AS soGio,
+                      NULL AS tenCaHienTai, s.tenCa AS tenCaMoi, CONCAT('Ca ', s.tenCa) AS lyDo,
+                      'approved' AS trangThai, NULL AS ghiChuQL, a.ngayTao,
+                      a.ngayTao AS ngayCapNhat, n.hoTen, n.chucVu, n.phongBan
+                  FROM canhanvien a
+                  JOIN calamviec s ON s.id = a.maCa AND s.hoatDong = 1
+                  LEFT JOIN nguoidung n ON n.maND = a.maND
+                  WHERE s.kyHieu = 'OT'
               ) q";
 
         $conditions = [];

@@ -997,7 +997,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var map = {
             leave: { label: 'Nghỉ phép', approved: 0, rejected: 0, pending: 0 },
             correction: { label: 'Điều chỉnh công', approved: 0, rejected: 0, pending: 0 },
-            ot: { label: 'OT', approved: 0, rejected: 0, pending: 0 }
+            ot: { label: 'Tăng ca', approved: 0, rejected: 0, pending: 0 }
         };
         rows.forEach(function (row) {
             var type = row.request_type || 'leave';
