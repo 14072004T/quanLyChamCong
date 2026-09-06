@@ -545,7 +545,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                             <td><?= htmlspecialchars((string)($row['overtime_hours'] ?? 0)) ?></td>
                                             <td>
                                                 <button type="button" class="btn btn-info btn-xs"
-                                                    onclick="showEmployeeDetailById(<?= (int)($row['maND'] ?? 0) ?>, <?= json_encode($selectedMonth, JSON_UNESCAPED_UNICODE) ?>)">
+                                                    onclick="showEmployeeDetailById(<?= (int)($row['maND'] ?? 0) ?>, '<?= htmlspecialchars($selectedMonth, ENT_QUOTES) ?>')">
                                                     <i class="fas fa-eye"></i> Xem chi tiết
                                                 </button>
                                             </td>
@@ -894,7 +894,6 @@ foreach (($salaryRows ?? []) as $summaryRow) {
     </div>
 </div>
 
-</script>
 <script>
     function escapeHtml(val) {
         return String(val ?? '').replace(/[&<>\"]/g, function (c) {
@@ -917,6 +916,195 @@ foreach (($salaryRows ?? []) as $summaryRow) {
         }
         return { label: 'Chờ duyệt', cls: 'trangThai-pending' };
     }
+
+    var VN_DAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+    function fmtTime(datetimeStr) {
+        if (!datetimeStr) return '--:--';
+        var s = String(datetimeStr);
+        var timePart = s.length >= 19 ? s.substring(11, 16) : (s.length >= 8 ? s.substring(0, 5) : s);
+        return timePart;
+    }
+
+    function fmtDate(dateStr) {
+        if (!dateStr || dateStr.length < 10) return dateStr;
+        return dateStr.substring(8, 10) + '/' + dateStr.substring(5, 7);
+    }
+
+    function getDow(dateStr) {
+        var d = new Date(dateStr + 'T00:00:00');
+        return VN_DAYS[d.getDay()];
+    }
+
+    function calcWorkHours(checkIn, checkOut) {
+        if (!checkIn || !checkOut) return 0;
+        var inTs = new Date(checkIn.replace(' ', 'T')).getTime();
+        var outTs = new Date(checkOut.replace(' ', 'T')).getTime();
+        if (isNaN(inTs) || isNaN(outTs) || outTs <= inTs) return 0;
+        return Math.round((outTs - inTs) / 36000) / 100;
+    }
+
+    function renderEmployeeDetailModal(maND, hoTen, phongBan, dailyBreakdown, monthKey) {
+        var modal = document.getElementById('employeeDetailModal');
+        if (!modal) return;
+        var title = document.getElementById('emp-detail-title');
+        var subtitle = document.getElementById('emp-detail-subtitle');
+        var summaryEl = document.getElementById('emp-detail-summary');
+        var tbody = document.getElementById('emp-daily-tbody');
+
+        if (title) title.textContent = 'Chi tiết chấm công: ' + (hoTen || ('#' + maND));
+        if (subtitle) subtitle.textContent = 'Phòng ban: ' + (phongBan || '-') + ' | Tháng: ' + monthKey;
+
+        var parts = (monthKey || '').split('-');
+        var year  = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10);
+        if (!year || !month) { 
+            if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Không xác định được tháng.</td></tr>'; 
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            return; 
+        }
+        var lastDay = new Date(year, month, 0).getDate();
+
+        var totalWorkDays = 0, totalWorkHours = 0, totalOT = 0;
+        var lateDays = 0;
+        var rows = [];
+        var bd = dailyBreakdown || {};
+
+        for (var d = 1; d <= lastDay; d++) {
+            var dateStr = year + '-' + (month < 10 ? '0' : '') + month + '-' + (d < 10 ? '0' : '') + d;
+            var dayData = bd[dateStr] || null;
+            var dayType = dayData ? (dayData.day_type || 'absent') : 'absent';
+
+            var checkIn  = (dayData && dayData.check_in)  ? dayData.check_in  : null;
+            var checkOut = (dayData && dayData.check_out) ? dayData.check_out : null;
+
+            var workHours = calcWorkHours(checkIn, checkOut);
+            var otHours   = dayData ? (parseFloat(dayData.ot_hours || 0)) : 0;
+            var workValue = dayData ? (parseFloat(dayData.work_value || 0)) : 0;
+
+            var lateMinutes = 0;
+            if (checkIn) {
+                var shiftStart = dayData && dayData.shift_start ? dayData.shift_start : '08:00:00';
+                var inTs = new Date(checkIn.replace(' ', 'T')).getTime();
+                var shiftStartTs = new Date(checkIn.substring(0, 10) + 'T' + shiftStart).getTime();
+                if (!isNaN(inTs) && !isNaN(shiftStartTs) && inTs > shiftStartTs + 60000) {
+                    lateMinutes = Math.round((inTs - shiftStartTs) / 60000);
+                }
+            }
+
+            if (dayType === 'working' || workValue > 0) {
+                totalWorkDays += workValue;
+                totalWorkHours += workHours;
+                totalOT += otHours;
+                if (lateMinutes > 0) lateDays++;
+            }
+
+            var badgeCls, badgeTxt;
+            if (dayType === 'missing_checkout' || (checkIn && !checkOut)) {
+                badgeCls = 'late'; badgeTxt = 'Chưa ra';
+            } else if (!checkIn && !checkOut) {
+                if (dayType === 'off_shift' || dayType === 'weekend') {
+                    badgeCls = 'off'; badgeTxt = dayType === 'weekend' ? 'Cuối tuần' : 'Ngày nghỉ';
+                } else if (dayType === 'leave') {
+                    badgeCls = 'leave'; badgeTxt = 'Nghỉ phép';
+                } else {
+                    badgeCls = 'absent'; badgeTxt = 'Không CC';
+                }
+            } else if (lateMinutes > 0) {
+                badgeCls = 'late'; badgeTxt = 'Đi trễ';
+            } else {
+                badgeCls = 'normal'; badgeTxt = 'Bình thường';
+            }
+
+            var dow = getDow(dateStr);
+            var isWeekend = (dow === 'CN' || dow === 'T7');
+            var rowStyle = isWeekend ? ' style="background:#f8fafc;color:#94a3b8;"' : '';
+
+            rows.push(
+                '<tr' + rowStyle + '>' +
+                '<td>' + fmtDate(dateStr) + '</td>' +
+                '<td>' + dow + '</td>' +
+                '<td class="' + (checkIn ? 'time-in' : 'time-na') + '">' + fmtTime(checkIn) + '</td>' +
+                '<td class="' + (checkOut ? 'time-out' : 'time-na') + '">' + fmtTime(checkOut) + '</td>' +
+                '<td>' + (workHours > 0 ? workHours.toFixed(1) + 'h' : (checkIn && !checkOut ? '(chưa ra)' : '-')) + '</td>' +
+                '<td>' + (otHours > 0 ? otHours + 'h' : '0h') + '</td>' +
+                '<td>' + (lateMinutes > 0 ? lateMinutes + 'p' : '0p') + '</td>' +
+                '<td><span class="emp-daily-badge ' + badgeCls + '">' + badgeTxt + '</span></td>' +
+                '</tr>'
+            );
+        }
+
+        if (tbody) tbody.innerHTML = rows.join('');
+
+        if (summaryEl) {
+            summaryEl.innerHTML = [
+                { label: 'Ngày công', value: totalWorkDays.toFixed(1) },
+                { label: 'Giờ làm', value: totalWorkHours.toFixed(1) + 'h' },
+                { label: 'Giờ OT', value: totalOT.toFixed(1) + 'h' },
+                { label: 'Số ngày trễ', value: lateDays + ' ngày' }
+            ].map(function(s) {
+                return '<div class="emp-detail-stat"><span>' + escapeHtml(s.label) + '</span><strong>' + escapeHtml(String(s.value)) + '</strong></div>';
+            }).join('');
+        }
+
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    window.showEmployeeDetail = function(maND, hoTen, phongBan, dailyBreakdown, monthKey) {
+        renderEmployeeDetailModal(maND, hoTen, phongBan, dailyBreakdown, monthKey);
+    };
+
+    window.showEmployeeDetailFromJson = function(maND, hoTen, phongBan, breakdownJsonStr, monthKey) {
+        var breakdown = {};
+        try {
+            var decoded = (breakdownJsonStr || '').replace(/&quot;/g, '"').replace(/&#039;/g, "'");
+            breakdown = JSON.parse(decoded);
+        } catch(e) {
+            breakdown = {};
+        }
+        renderEmployeeDetailModal(maND, hoTen, phongBan, breakdown, monthKey);
+    };
+
+    window.showEmployeeDetailById = function(maND, monthKey) {
+        var breakdown = (window._empBreakdowns && window._empBreakdowns[maND]) ? window._empBreakdowns[maND] : {};
+        var meta = (window._empMeta && window._empMeta[maND]) ? window._empMeta[maND] : {};
+        var month = monthKey;
+        if (!month) {
+            var filterForm = document.getElementById('payroll-filter-form');
+            var mInput = filterForm ? filterForm.querySelector('[name="month"]') : null;
+            month = mInput ? mInput.value : '';
+        }
+        renderEmployeeDetailModal(maND, meta.hoTen || '', meta.phongBan || '-', breakdown, month);
+    };
+
+    window.closeEmployeeDetailModal = function() {
+        var modal = document.getElementById('employeeDetailModal');
+        if (modal) {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+    };
+
+    window.showDailyDetail = function(name, date, checkIn, checkOut) {
+        var modal = document.getElementById('dailyDetailModal');
+        if (!modal) return;
+        var nameEl = document.getElementById('daily-detail-name');
+        var dateEl = document.getElementById('daily-detail-date-label');
+        var inEl = document.getElementById('daily-detail-in');
+        var outEl = document.getElementById('daily-detail-out');
+        if (nameEl) nameEl.textContent = name;
+        if (dateEl) dateEl.textContent = 'Ngày: ' + date;
+        if (inEl) inEl.textContent = checkIn ? checkIn.substring(11, 19) : '--:--';
+        if (outEl) outEl.textContent = checkOut ? checkOut.substring(11, 19) : '--:--';
+        modal.classList.add('open');
+    };
+
+    window.closeDailyDetailModal = function() {
+        var modal = document.getElementById('dailyDetailModal');
+        if (modal) modal.classList.remove('open');
+    };
 
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.sub-tab').forEach(function (tab) {
@@ -1156,189 +1344,7 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.classList.add('open');
     };
 
-    window.closeDailyDetailModal = function() {
-        document.getElementById('dailyDetailModal').classList.remove('open');
-    };
-
-    // ============================================================
-    // CHI TIẾT GIỜ VÀO/RA TỪNG NGÀY CỦA NHÂN VIÊN
-    // Quy tắc: giờ vào = lần chấm công ĐẦU TIÊN trong ngày (MIN IN)
-    //          giờ ra  = lần chấm công CUỐI CÙNG trong ngày (MAX OUT)
-    //          đã được tính đúng trong getMonthlyAttendanceRaw() per ngày
-    // ============================================================
-
-    var VN_DAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-
-    function fmtTime(datetimeStr) {
-        if (!datetimeStr) return '--:--';
-        var s = String(datetimeStr);
-        // Format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS
-        var timePart = s.length >= 19 ? s.substring(11, 16) : (s.length >= 8 ? s.substring(0, 5) : s);
-        return timePart;
-    }
-
-    function fmtDate(dateStr) {
-        // dateStr: YYYY-MM-DD → DD/MM
-        if (!dateStr || dateStr.length < 10) return dateStr;
-        return dateStr.substring(8, 10) + '/' + dateStr.substring(5, 7);
-    }
-
-    function getDow(dateStr) {
-        // dateStr: YYYY-MM-DD
-        var d = new Date(dateStr + 'T00:00:00');
-        return VN_DAYS[d.getDay()];
-    }
-
-    function calcWorkHours(checkIn, checkOut) {
-        if (!checkIn || !checkOut) return 0;
-        var inTs = new Date(checkIn.replace(' ', 'T')).getTime();
-        var outTs = new Date(checkOut.replace(' ', 'T')).getTime();
-        if (isNaN(inTs) || isNaN(outTs) || outTs <= inTs) return 0;
-        return Math.round((outTs - inTs) / 36000) / 100; // giờ, 2 chữ số thập phân
-    }
-
-    function renderEmployeeDetailModal(maND, hoTen, phongBan, dailyBreakdown, monthKey) {
-        var modal = document.getElementById('employeeDetailModal');
-        var title = document.getElementById('emp-detail-title');
-        var subtitle = document.getElementById('emp-detail-subtitle');
-        var summaryEl = document.getElementById('emp-detail-summary');
-        var tbody = document.getElementById('emp-daily-tbody');
-
-        title.textContent = 'Chi tiết chấm công: ' + hoTen;
-        subtitle.textContent = 'Phòng ban: ' + phongBan + ' | Tháng: ' + monthKey;
-
-        // Lấy danh sách ngày trong tháng từ monthKey (YYYY-MM)
-        var parts = (monthKey || '').split('-');
-        var year  = parseInt(parts[0], 10);
-        var month = parseInt(parts[1], 10);
-        if (!year || !month) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Không xác định được tháng.</td></tr>'; return; }
-        var lastDay = new Date(year, month, 0).getDate();
-
-        var totalWorkDays = 0, totalWorkHours = 0, totalOT = 0;
-        var lateDays = 0;
-        var rows = [];
-
-        for (var d = 1; d <= lastDay; d++) {
-            var dateStr = year + '-' + (month < 10 ? '0' : '') + month + '-' + (d < 10 ? '0' : '') + d;
-            var dayData = dailyBreakdown[dateStr];
-            var dayType = dayData ? (dayData.day_type || 'absent') : 'absent';
-
-            // Bỏ qua ngày nghỉ ca (off_shift) và cuối tuần nếu muốn hiện đầy đủ
-            // Ở đây hiển thị tất cả ngày, để HR thấy toàn bộ
-            var checkIn  = (dayData && dayData.check_in)  ? dayData.check_in  : null;
-            var checkOut = (dayData && dayData.check_out) ? dayData.check_out : null;
-
-            var workHours = calcWorkHours(checkIn, checkOut);
-            var otHours   = dayData ? (parseFloat(dayData.ot_hours || 0)) : 0;
-            var workValue = dayData ? (parseFloat(dayData.work_value || 0)) : 0;
-
-            // Tính trễ: so sánh check_in với giờ ca (nếu có shift info)
-            // Quy tắc đơn giản: nếu check_in sau 08:00 thì tính trễ
-            var lateMinutes = 0;
-            if (checkIn) {
-                var inTime = new Date(checkIn.replace(' ', 'T'));
-                var shiftStart = dayData && dayData.shift_start ? dayData.shift_start : null;
-                if (!shiftStart) { shiftStart = '08:00:00'; } // mặc định ca HC
-                var shiftStartTs = new Date(checkIn.substring(0, 10) + 'T' + shiftStart).getTime();
-                var inTs = inTime.getTime();
-                if (inTs > shiftStartTs + 60000) { // > 1 phút
-                    lateMinutes = Math.round((inTs - shiftStartTs) / 60000);
-                }
-            }
-
-            // Tính tổng
-            if (dayType === 'working' || workValue > 0) {
-                totalWorkDays += workValue;
-                totalWorkHours += workHours;
-                totalOT += otHours;
-                if (lateMinutes > 0) lateDays++;
-            }
-
-            // Badge trạng thái
-            var badgeCls, badgeTxt;
-            if (dayType === 'missing_checkout' || (checkIn && !checkOut)) {
-                badgeCls = 'late'; badgeTxt = 'Chưa ra';
-            } else if (!checkIn && !checkOut) {
-                if (dayType === 'off_shift' || dayType === 'weekend') {
-                    badgeCls = 'off'; badgeTxt = dayType === 'weekend' ? 'Cuối tuần' : 'Ngày nghỉ';
-                } else if (dayType === 'leave') {
-                    badgeCls = 'leave'; badgeTxt = 'Nghỉ phép';
-                } else {
-                    badgeCls = 'absent'; badgeTxt = 'Không CC';
-                }
-            } else if (lateMinutes > 0) {
-                badgeCls = 'late'; badgeTxt = 'Đi trễ';
-            } else {
-                badgeCls = 'normal'; badgeTxt = 'Bình thường';
-            }
-
-            var dow = getDow(dateStr);
-            var isWeekend = (dow === 'CN' || dow === 'T7');
-            var rowStyle = isWeekend ? ' style="background:#f8fafc;color:#94a3b8;"' : '';
-
-            rows.push(
-                '<tr' + rowStyle + '>' +
-                '<td>' + fmtDate(dateStr) + '</td>' +
-                '<td>' + dow + '</td>' +
-                '<td class="' + (checkIn ? 'time-in' : 'time-na') + '">' + fmtTime(checkIn) + '</td>' +
-                '<td class="' + (checkOut ? 'time-out' : 'time-na') + '">' + fmtTime(checkOut) + '</td>' +
-                '<td>' + (workHours > 0 ? workHours.toFixed(1) + 'h' : (checkIn && !checkOut ? '(chưa ra)' : '-')) + '</td>' +
-                '<td>' + (otHours > 0 ? otHours + 'h' : '0h') + '</td>' +
-                '<td>' + (lateMinutes > 0 ? lateMinutes + 'p' : '0p') + '</td>' +
-                '<td><span class="emp-daily-badge ' + badgeCls + '">' + badgeTxt + '</span></td>' +
-                '</tr>'
-            );
-        }
-
-        tbody.innerHTML = rows.join('');
-
-        // Thống kê tổng
-        summaryEl.innerHTML = [
-            { label: 'Ngày công', value: totalWorkDays.toFixed(1) },
-            { label: 'Giờ làm', value: totalWorkHours.toFixed(1) + 'h' },
-            { label: 'Giờ OT', value: totalOT.toFixed(1) + 'h' },
-            { label: 'Số ngày trễ', value: lateDays + ' ngày' }
-        ].map(function(s) {
-            return '<div class="emp-detail-stat"><span>' + escapeHtml(s.label) + '</span><strong>' + escapeHtml(String(s.value)) + '</strong></div>';
-        }).join('');
-
-        modal.classList.add('open');
-        modal.setAttribute('aria-hidden', 'false');
-    }
-
-    // Gọi từ PHP-rendered buttons (daily_breakdown được nhúng trực tiếp từ PHP)
-    window.showEmployeeDetail = function(maND, hoTen, phongBan, dailyBreakdown, monthKey) {
-        renderEmployeeDetailModal(maND, hoTen, phongBan, dailyBreakdown, monthKey);
-    };
-
-    // Gọi từ JS-rendered buttons (daily_breakdown được truyền dưới dạng JSON string)
-    window.showEmployeeDetailFromJson = function(maND, hoTen, phongBan, breakdownJsonStr, monthKey) {
-        var breakdown = {};
-        try {
-            var decoded = breakdownJsonStr.replace(/&quot;/g, '"').replace(/&#039;/g, "'");
-            breakdown = JSON.parse(decoded);
-        } catch(e) {
-            breakdown = {};
-        }
-        renderEmployeeDetailModal(maND, hoTen, phongBan, breakdown, monthKey);
-    };
-
-    // Gọi từ JS-rendered buttons (dùng global store window._empBreakdowns để lookup)
-    window.showEmployeeDetailById = function(maND, monthKey) {
-        var breakdown = (window._empBreakdowns && window._empBreakdowns[maND]) || {};
-        var meta = (window._empMeta && window._empMeta[maND]) || {};
-        renderEmployeeDetailModal(maND, meta.hoTen || '', meta.phongBan || '-', breakdown, monthKey);
-    };
-
-    window.closeEmployeeDetailModal = function() {
-        var modal = document.getElementById('employeeDetailModal');
-        if (modal) {
-            modal.classList.remove('open');
-            modal.setAttribute('aria-hidden', 'true');
-        }
-    };
-
-    // Đóng modal khi click ngoài
+    // Đóng modal chi tiết nhân viên khi click ngoài
     var empDetailModal = document.getElementById('employeeDetailModal');
     if (empDetailModal) {
         empDetailModal.addEventListener('click', function(e) {
