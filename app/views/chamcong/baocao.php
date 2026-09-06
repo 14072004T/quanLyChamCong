@@ -374,7 +374,22 @@ for ($i = 0; $i < 5; $i++) {
 }
 $employeePunctuality = $employeePunctuality ?? [];
 $topLimit = max(1, min(50, (int)($_GET['top_limit'] ?? 5)));
-$topLate = array_slice($employeePunctuality, 0, $topLimit);
+$topLateRows = $employeePunctuality;
+$topEarlyRows = $employeePunctuality;
+usort($topLateRows, function ($left, $right) {
+    if ((int)$left['late_count'] !== (int)$right['late_count']) {
+        return (int)$right['late_count'] <=> (int)$left['late_count'];
+    }
+    return (int)$right['late_minutes'] <=> (int)$left['late_minutes'];
+});
+usort($topEarlyRows, function ($left, $right) {
+    if ((int)$left['early_count'] !== (int)$right['early_count']) {
+        return (int)$right['early_count'] <=> (int)$left['early_count'];
+    }
+    return (int)$right['early_minutes'] <=> (int)$left['early_minutes'];
+});
+$topLate = array_slice($topLateRows, 0, $topLimit);
+$topEarly = array_slice($topEarlyRows, 0, $topLimit);
 $updatedAt = date('H:i, d/m/Y');
 ?>
 
@@ -542,7 +557,7 @@ $updatedAt = date('H:i, d/m/Y');
 }
 .mgrr-bottom {
     display: grid;
-    grid-template-columns: 1.15fr .85fr 1fr;
+    grid-template-columns: 1.15fr .85fr .85fr 1fr;
     gap: 14px;
 }
 .mgrr-panel {
@@ -807,7 +822,7 @@ $updatedAt = date('H:i, d/m/Y');
 
             <section class="mgrr-panel">
                 <div class="mgrr-panel-head">
-                    <div class="mgrr-panel-title">Top nhân viên đi trễ, về sớm</div>
+                    <div class="mgrr-panel-title">Top nhân viên đi trễ</div>
                     <form method="GET" action="index.php" style="display:flex;align-items:center;gap:6px">
                         <input type="hidden" name="page" value="<?= htmlspecialchars($reportActionPage) ?>">
                         <input type="hidden" name="tuNgay" value="<?= htmlspecialchars($fromDate) ?>">
@@ -819,24 +834,49 @@ $updatedAt = date('H:i, d/m/Y');
                     </form>
                 </div>
                 <table class="mgrr-table">
-                    <thead><tr><th>#</th><th>Nhân viên</th><th>Đi trễ</th><th>Về sớm</th><th>Tổng phút</th></tr></thead>
+                    <thead><tr><th>#</th><th>Nhân viên</th><th>Số lần</th><th>Tổng phút</th></tr></thead>
                     <tbody>
                         <?php if ($topLate): ?>
                             <?php foreach ($topLate as $idx => $row):
                                 $name = $row['hoTen'] ?? 'Nhân viên';
                                 $initials = mb_substr($name, 0, 1);
-                                $totalMinutes = (int)($row['late_minutes'] ?? 0) + (int)($row['early_minutes'] ?? 0);
                             ?>
                                 <tr>
                                     <td><span class="mgrr-rank"><?= $idx + 1 ?></span></td>
                                     <td><div class="mgrr-person"><span class="mgrr-avatar"><?= htmlspecialchars($initials) ?></span><strong><?= htmlspecialchars($name) ?></strong></div></td>
                                     <td><?= (int)($row['late_count'] ?? 0) ?></td>
-                                    <td><?= (int)($row['early_count'] ?? 0) ?></td>
-                                    <td style="color:#ef4444;font-weight:800"><?= $totalMinutes ?> phút</td>
+                                    <td style="color:#ef4444;font-weight:800"><?= (int)($row['late_minutes'] ?? 0) ?> phút</td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="5" style="text-align:center;color:#64748b">Không có dữ liệu</td></tr>
+                            <tr><td colspan="4" style="text-align:center;color:#64748b">Không có dữ liệu</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="mgrr-panel">
+                <div class="mgrr-panel-head">
+                    <div class="mgrr-panel-title">Top nhân viên về sớm</div>
+                    <span style="font-size:.78rem;color:#64748b">Top <?= $topLimit ?></span>
+                </div>
+                <table class="mgrr-table">
+                    <thead><tr><th>#</th><th>Nhân viên</th><th>Số lần</th><th>Tổng phút</th></tr></thead>
+                    <tbody>
+                        <?php if ($topEarly): ?>
+                            <?php foreach ($topEarly as $idx => $row):
+                                $name = $row['hoTen'] ?? 'Nhân viên';
+                                $initials = mb_substr($name, 0, 1);
+                            ?>
+                                <tr>
+                                    <td><span class="mgrr-rank"><?= $idx + 1 ?></span></td>
+                                    <td><div class="mgrr-person"><span class="mgrr-avatar"><?= htmlspecialchars($initials) ?></span><strong><?= htmlspecialchars($name) ?></strong></div></td>
+                                    <td><?= (int)($row['early_count'] ?? 0) ?></td>
+                                    <td style="color:#ef4444;font-weight:800"><?= (int)($row['early_minutes'] ?? 0) ?> phút</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="4" style="text-align:center;color:#64748b">Không có dữ liệu</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -939,7 +979,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderRequestSummary(rows) {
         var map = {
-            leave: { label: 'Nghỉ phép', approved: 0, rejected: 0, pending: 0 }
+            leave: { label: 'Nghỉ phép', approved: 0, rejected: 0, pending: 0 },
+            correction: { label: 'Điều chỉnh công', approved: 0, rejected: 0, pending: 0 },
+            ot: { label: 'OT', approved: 0, rejected: 0, pending: 0 }
         };
         rows.forEach(function (row) {
             var type = row.request_type || 'leave';
@@ -947,7 +989,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (map[type] && map[type][trangThai] !== undefined) map[type][trangThai]++;
         });
         var total = { approved: 0, rejected: 0, pending: 0 };
-        var html = ['leave'].map(function (type) {
+        var html = ['leave', 'correction', 'ot'].map(function (type) {
             total.approved += map[type].approved;
             total.rejected += map[type].rejected;
             total.pending += map[type].pending;

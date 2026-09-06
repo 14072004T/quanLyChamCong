@@ -1258,27 +1258,42 @@ class ChamCongModel
         $dateTo = trim($filters['date_to'] ?? '');
         $phongBan = trim($filters['phongBan'] ?? '');
 
-        $sql = "SELECT CONCAT('leave:', r.id) AS uid, r.id, 'leave' AS request_type,
-                       r.maND, r.tuNgay AS ngayYeuCau, r.loaiNghiPhep, 0 AS laNuaNgay,
-                       NULL AS gioBatDau, NULL AS gioKetThuc, NULL AS soGio,
-                       NULL AS tenCaHienTai, NULL AS tenCaMoi,
-                       r.lyDo, r.trangThai, NULL AS ghiChuQL, r.ngayTao, r.ngayDuyet AS ngayCapNhat,
-                       n.hoTen, n.chucVu, n.phongBan
-                FROM donnghiphep r
-                LEFT JOIN nguoidung n ON n.maND = r.maND";
+         $sql = "SELECT q.uid, q.id, q.request_type, q.maND, q.ngayYeuCau,
+                  q.loaiNghiPhep, q.laNuaNgay, q.gioBatDau, q.gioKetThuc, q.soGio,
+                  q.tenCaHienTai, q.tenCaMoi, q.lyDo, q.trangThai, q.ghiChuQL,
+                  q.ngayTao, q.ngayCapNhat, q.hoTen, q.chucVu, q.phongBan
+              FROM (
+                  SELECT CONCAT('leave:', r.id) AS uid, r.id, 'leave' AS request_type,
+                      r.maND, r.tuNgay AS ngayYeuCau, r.loaiNghiPhep, 0 AS laNuaNgay,
+                      NULL AS gioBatDau, NULL AS gioKetThuc, NULL AS soGio,
+                      NULL AS tenCaHienTai, NULL AS tenCaMoi, r.lyDo, r.trangThai,
+                      NULL AS ghiChuQL, r.ngayTao, r.ngayDuyet AS ngayCapNhat,
+                      n.hoTen, n.chucVu, n.phongBan
+                  FROM donnghiphep r
+                  LEFT JOIN nguoidung n ON n.maND = r.maND
+                  UNION ALL
+                  SELECT CONCAT('correction:', c.id) AS uid, c.id, 'correction' AS request_type,
+                      c.maND, c.ngayChamCong AS ngayYeuCau, 'attendance' AS loaiNghiPhep,
+                      0 AS laNuaNgay, c.gioVaoDeXuat AS gioBatDau, c.gioRaDeXuat AS gioKetThuc,
+                      NULL AS soGio, NULL AS tenCaHienTai, NULL AS tenCaMoi, c.lyDo,
+                      c.trangThai, c.ghiChuNS AS ghiChuQL, c.ngayTao,
+                      c.ngayCapNhat, n.hoTen, n.chucVu, n.phongBan
+                  FROM suachamcong c
+                  LEFT JOIN nguoidung n ON n.maND = c.maND
+              ) q";
 
         $conditions = [];
         $types = '';
         $params = [];
 
         if ($trangThai !== '' && in_array($trangThai, ['pending', 'approved', 'rejected'], true)) {
-            $conditions[] = "r.trangThai = ?";
+            $conditions[] = "q.trangThai = ?";
             $types .= 's';
             $params[] = $trangThai;
         }
 
         if ($keyword !== '') {
-            $conditions[] = "(n.hoTen LIKE CONCAT('%', ?, '%') OR n.phongBan LIKE CONCAT('%', ?, '%') OR r.lyDo LIKE CONCAT('%', ?, '%'))";
+            $conditions[] = "(q.hoTen LIKE CONCAT('%', ?, '%') OR q.phongBan LIKE CONCAT('%', ?, '%') OR q.lyDo LIKE CONCAT('%', ?, '%'))";
             $types .= 'sss';
             $params[] = $keyword;
             $params[] = $keyword;
@@ -1286,25 +1301,25 @@ class ChamCongModel
         }
 
         if ($phongBan !== '') {
-            $conditions[] = "n.phongBan = ?";
+            $conditions[] = "q.phongBan = ?";
             $types .= 's';
             $params[] = $phongBan;
         }
 
         if ($date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-            $conditions[] = "r.tuNgay = ?";
+            $conditions[] = "q.ngayYeuCau = ?";
             $types .= 's';
             $params[] = $date;
         }
 
         if ($dateFrom !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) {
-            $conditions[] = "r.tuNgay >= ?";
+            $conditions[] = "q.ngayYeuCau >= ?";
             $types .= 's';
             $params[] = $dateFrom;
         }
 
         if ($dateTo !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
-            $conditions[] = "r.tuNgay <= ?";
+            $conditions[] = "q.ngayYeuCau <= ?";
             $types .= 's';
             $params[] = $dateTo;
         }
@@ -1312,7 +1327,7 @@ class ChamCongModel
         if ($conditions) {
             $sql .= " WHERE " . implode(' AND ', $conditions);
         }
-        $sql .= " ORDER BY r.ngayTao DESC LIMIT " . (int)$limit;
+        $sql .= " ORDER BY q.ngayTao DESC LIMIT " . (int)$limit;
 
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
