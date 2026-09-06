@@ -191,6 +191,29 @@ class AttendanceCalculator
                     'has_attendance' => true,
                     'shift_name' => $shift['tenCa'] ?? 'HC',
                     'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
+                    // Giờ ca thực tế — dùng cho modal "Xem chi tiết" tính đi trễ/về sớm
+                    'shift_start' => $shiftStart,
+                    'shift_end' => $shiftEnd,
+                ];
+            }
+            // Chỉ có checkIn, không có checkOut → chưa chấm ra
+            // Vẫn cần hiển thị giờ vào thực tế cho HR, tính công = 0
+            if ($checkIn) {
+                return [
+                    'date' => $date,
+                    'day_type' => 'missing_checkout',
+                    'day_type_label' => 'Chưa chấm ra',
+                    'check_in' => $checkIn,
+                    'check_out' => null,
+                    'phutLamViec' => 0,
+                    'work_hours' => 0,
+                    'work_value' => 0.0,
+                    'ot_hours' => 0,
+                    'has_attendance' => true,
+                    'shift_name' => $shift['tenCa'] ?? 'HC',
+                    'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
+                    'shift_start' => $shift['gioBatDau'] ?? null,
+                    'shift_end' => $shift['gioKetThuc'] ?? null,
                 ];
             }
         }

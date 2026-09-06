@@ -529,6 +529,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                     <th>Ngày Công</th>
                                     <th>Giờ Làm</th>
                                     <th>Giờ OT</th>
+                                    <th>Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody id="payroll-table-body">
@@ -542,13 +543,32 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                             <td><?= htmlspecialchars((string)($row['work_days'] ?? 0)) ?></td>
                                             <td><?= htmlspecialchars((string)($row['work_hours'] ?? 0)) ?></td>
                                             <td><?= htmlspecialchars((string)($row['overtime_hours'] ?? 0)) ?></td>
+                                            <td>
+                                                <button type="button" class="btn btn-info btn-xs"
+                                                    onclick="showEmployeeDetailById(<?= (int)($row['maND'] ?? 0) ?>, <?= json_encode($selectedMonth, JSON_UNESCAPED_UNICODE) ?>)">
+                                                    <i class="fas fa-eye"></i> Xem chi tiết
+                                                </button>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="7" class="empty-state">Không có dữ liệu.</td></tr>
+                                    <tr><td colspan="8" class="empty-state">Không có dữ liệu.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
+                        <?php if (!empty($salaryRows)): ?>
+                        <script>
+                        // Inject dữ liệu daily_breakdown cho PHP-rendered rows vào global store
+                        (function() {
+                            window._empBreakdowns = window._empBreakdowns || {};
+                            window._empMeta = window._empMeta || {};
+                            <?php foreach ($salaryRows as $row): ?>
+                            window._empBreakdowns[<?= (int)($row['maND'] ?? 0) ?>] = <?= json_encode($row['daily_breakdown'] ?? [], JSON_UNESCAPED_UNICODE) ?>;
+                            window._empMeta[<?= (int)($row['maND'] ?? 0) ?>] = { hoTen: <?= json_encode($row['hoTen'] ?? '', JSON_UNESCAPED_UNICODE) ?>, phongBan: <?= json_encode($row['phongBan'] ?? '-', JSON_UNESCAPED_UNICODE) ?> };
+                            <?php endforeach; ?>
+                        })();
+                        </script>
+                        <?php endif; ?>
                         
                         <div class="payroll-hanhDong-panel" style="margin-top: 24px;">
                             <div class="payroll-hanhDong-row">
@@ -747,6 +767,133 @@ foreach (($salaryRows ?? []) as $summaryRow) {
     </div>
 </div>
 
+<!-- Modal chi tiết giờ vào/ra từng ngày của nhân viên -->
+<style>
+.emp-detail-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.60);
+    z-index: 1400;
+    padding: 24px;
+}
+.emp-detail-modal.open {
+    display: flex;
+}
+.emp-detail-card {
+    width: min(920px, 100%);
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28);
+}
+.emp-detail-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 22px 26px 16px;
+    border-bottom: 1px solid #dbe7f5;
+    background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+}
+.emp-detail-head h3 { margin: 0 0 4px; color: #0f172a; }
+.emp-detail-head p  { margin: 0; color: #64748b; font-size:.9em; }
+.emp-detail-body {
+    padding: 18px 24px 24px;
+}
+.emp-detail-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.emp-detail-stat {
+    padding: 12px 14px;
+    border: 1px solid #dbe7f5;
+    border-radius: 14px;
+    background: #f8fbff;
+}
+.emp-detail-stat span {
+    display: block;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+.emp-detail-stat strong {
+    font-size: 1.25rem;
+    color: #0f172a;
+}
+.emp-daily-table th, .emp-daily-table td {
+    padding: 9px 12px;
+    font-size: .87em;
+}
+.emp-daily-table th {
+    background: #f1f5f9;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    font-size: .76em;
+    letter-spacing: .05em;
+}
+.emp-daily-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 99px;
+    font-size: .78em;
+    font-weight: 700;
+}
+.emp-daily-badge.normal  { background: #dcfce7; color: #166534; }
+.emp-daily-badge.late    { background: #fee2e2; color: #991b1b; }
+.emp-daily-badge.absent  { background: #f1f5f9; color: #64748b; }
+.emp-daily-badge.leave   { background: #fef9c3; color: #92400e; }
+.emp-daily-badge.off     { background: #f1f5f9; color: #94a3b8; }
+.time-in  { color: #16a34a; font-weight: 700; }
+.time-out { color: #2563eb; font-weight: 700; }
+.time-na  { color: #cbd5e1; }
+@media (max-width: 600px) {
+    .emp-detail-summary { grid-template-columns: 1fr 1fr; }
+}
+</style>
+<div class="emp-detail-modal" id="employeeDetailModal" aria-hidden="true">
+    <div class="emp-detail-card">
+        <div class="emp-detail-head">
+            <div>
+                <h3 id="emp-detail-title">Chi tiết chấm công</h3>
+                <p id="emp-detail-subtitle"></p>
+            </div>
+            <button type="button" class="payroll-detail-close" onclick="closeEmployeeDetailModal()" aria-label="Đóng">×</button>
+        </div>
+        <div class="emp-detail-body">
+            <div class="emp-detail-summary" id="emp-detail-summary"></div>
+            <div class="table-responsive">
+                <table class="table emp-daily-table" id="emp-daily-table">
+                    <thead>
+                        <tr>
+                            <th>Ngày</th>
+                            <th>Thứ</th>
+                            <th>Giờ vào</th>
+                            <th>Giờ ra</th>
+                            <th>Giờ làm</th>
+                            <th>OT</th>
+                            <th>Đi trễ</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="emp-daily-tbody">
+                        <tr><td colspan="8" class="empty-state">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 </script>
 <script>
     function escapeHtml(val) {
@@ -884,20 +1031,31 @@ document.addEventListener('DOMContentLoaded', function () {
         }).join('');
     }
 
-    function renderTableRows(rows) {
+    function renderTableRows(rows, monthKey) {
         if (!rows.length) {
-            tableBody.innerHTML = '<tr><td colspan="7" class="empty-state">Không có dữ liệu.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" class="empty-state">Không có dữ liệu.</td></tr>';
             return;
         }
+        var month = monthKey || currentMonth();
+        window._empBreakdowns = window._empBreakdowns || {};
+        window._empMeta = window._empMeta || {};
         tableBody.innerHTML = rows.map(function (row, i) {
+            var maND = Number(row.maND || 0);
+            window._empBreakdowns[maND] = row.daily_breakdown || {};
+            window._empMeta[maND] = { hoTen: row.hoTen || '', phongBan: row.phongBan || '-' };
             return '<tr>' +
                 '<td>' + (i + 1) + '</td>' +
-                '<td>' + Number(row.maND || 0) + '</td>' +
-                '<td>' + escapeHtml(row.hoTen) + '</td>' +
+                '<td>' + maND + '</td>' +
+                '<td>' + escapeHtml(row.hoTen || '') + '</td>' +
                 '<td>' + escapeHtml(row.phongBan || '-') + '</td>' +
                 '<td>' + Number(row.work_days || 0) + '</td>' +
                 '<td>' + Number(row.work_hours || 0) + '</td>' +
                 '<td>' + Number(row.overtime_hours || 0) + '</td>' +
+                '<td>' +
+                    '<button type="button" class="btn btn-info btn-xs" ' +
+                    'onclick="showEmployeeDetailById(' + maND + ',\'' + escapeHtml(month) + '\')">' +
+                    '<i class="fas fa-eye"></i> Xem chi tiết</button>' +
+                '</td>' +
                 '</tr>';
         }).join('');
     }
@@ -1002,6 +1160,196 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('dailyDetailModal').classList.remove('open');
     };
 
+    // ============================================================
+    // CHI TIẾT GIỜ VÀO/RA TỪNG NGÀY CỦA NHÂN VIÊN
+    // Quy tắc: giờ vào = lần chấm công ĐẦU TIÊN trong ngày (MIN IN)
+    //          giờ ra  = lần chấm công CUỐI CÙNG trong ngày (MAX OUT)
+    //          đã được tính đúng trong getMonthlyAttendanceRaw() per ngày
+    // ============================================================
+
+    var VN_DAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+    function fmtTime(datetimeStr) {
+        if (!datetimeStr) return '--:--';
+        var s = String(datetimeStr);
+        // Format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS
+        var timePart = s.length >= 19 ? s.substring(11, 16) : (s.length >= 8 ? s.substring(0, 5) : s);
+        return timePart;
+    }
+
+    function fmtDate(dateStr) {
+        // dateStr: YYYY-MM-DD → DD/MM
+        if (!dateStr || dateStr.length < 10) return dateStr;
+        return dateStr.substring(8, 10) + '/' + dateStr.substring(5, 7);
+    }
+
+    function getDow(dateStr) {
+        // dateStr: YYYY-MM-DD
+        var d = new Date(dateStr + 'T00:00:00');
+        return VN_DAYS[d.getDay()];
+    }
+
+    function calcWorkHours(checkIn, checkOut) {
+        if (!checkIn || !checkOut) return 0;
+        var inTs = new Date(checkIn.replace(' ', 'T')).getTime();
+        var outTs = new Date(checkOut.replace(' ', 'T')).getTime();
+        if (isNaN(inTs) || isNaN(outTs) || outTs <= inTs) return 0;
+        return Math.round((outTs - inTs) / 36000) / 100; // giờ, 2 chữ số thập phân
+    }
+
+    function renderEmployeeDetailModal(maND, hoTen, phongBan, dailyBreakdown, monthKey) {
+        var modal = document.getElementById('employeeDetailModal');
+        var title = document.getElementById('emp-detail-title');
+        var subtitle = document.getElementById('emp-detail-subtitle');
+        var summaryEl = document.getElementById('emp-detail-summary');
+        var tbody = document.getElementById('emp-daily-tbody');
+
+        title.textContent = 'Chi tiết chấm công: ' + hoTen;
+        subtitle.textContent = 'Phòng ban: ' + phongBan + ' | Tháng: ' + monthKey;
+
+        // Lấy danh sách ngày trong tháng từ monthKey (YYYY-MM)
+        var parts = (monthKey || '').split('-');
+        var year  = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10);
+        if (!year || !month) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Không xác định được tháng.</td></tr>'; return; }
+        var lastDay = new Date(year, month, 0).getDate();
+
+        var totalWorkDays = 0, totalWorkHours = 0, totalOT = 0;
+        var lateDays = 0;
+        var rows = [];
+
+        for (var d = 1; d <= lastDay; d++) {
+            var dateStr = year + '-' + (month < 10 ? '0' : '') + month + '-' + (d < 10 ? '0' : '') + d;
+            var dayData = dailyBreakdown[dateStr];
+            var dayType = dayData ? (dayData.day_type || 'absent') : 'absent';
+
+            // Bỏ qua ngày nghỉ ca (off_shift) và cuối tuần nếu muốn hiện đầy đủ
+            // Ở đây hiển thị tất cả ngày, để HR thấy toàn bộ
+            var checkIn  = (dayData && dayData.check_in)  ? dayData.check_in  : null;
+            var checkOut = (dayData && dayData.check_out) ? dayData.check_out : null;
+
+            var workHours = calcWorkHours(checkIn, checkOut);
+            var otHours   = dayData ? (parseFloat(dayData.ot_hours || 0)) : 0;
+            var workValue = dayData ? (parseFloat(dayData.work_value || 0)) : 0;
+
+            // Tính trễ: so sánh check_in với giờ ca (nếu có shift info)
+            // Quy tắc đơn giản: nếu check_in sau 08:00 thì tính trễ
+            var lateMinutes = 0;
+            if (checkIn) {
+                var inTime = new Date(checkIn.replace(' ', 'T'));
+                var shiftStart = dayData && dayData.shift_start ? dayData.shift_start : null;
+                if (!shiftStart) { shiftStart = '08:00:00'; } // mặc định ca HC
+                var shiftStartTs = new Date(checkIn.substring(0, 10) + 'T' + shiftStart).getTime();
+                var inTs = inTime.getTime();
+                if (inTs > shiftStartTs + 60000) { // > 1 phút
+                    lateMinutes = Math.round((inTs - shiftStartTs) / 60000);
+                }
+            }
+
+            // Tính tổng
+            if (dayType === 'working' || workValue > 0) {
+                totalWorkDays += workValue;
+                totalWorkHours += workHours;
+                totalOT += otHours;
+                if (lateMinutes > 0) lateDays++;
+            }
+
+            // Badge trạng thái
+            var badgeCls, badgeTxt;
+            if (dayType === 'missing_checkout' || (checkIn && !checkOut)) {
+                badgeCls = 'late'; badgeTxt = 'Chưa ra';
+            } else if (!checkIn && !checkOut) {
+                if (dayType === 'off_shift' || dayType === 'weekend') {
+                    badgeCls = 'off'; badgeTxt = dayType === 'weekend' ? 'Cuối tuần' : 'Ngày nghỉ';
+                } else if (dayType === 'leave') {
+                    badgeCls = 'leave'; badgeTxt = 'Nghỉ phép';
+                } else {
+                    badgeCls = 'absent'; badgeTxt = 'Không CC';
+                }
+            } else if (lateMinutes > 0) {
+                badgeCls = 'late'; badgeTxt = 'Đi trễ';
+            } else {
+                badgeCls = 'normal'; badgeTxt = 'Bình thường';
+            }
+
+            var dow = getDow(dateStr);
+            var isWeekend = (dow === 'CN' || dow === 'T7');
+            var rowStyle = isWeekend ? ' style="background:#f8fafc;color:#94a3b8;"' : '';
+
+            rows.push(
+                '<tr' + rowStyle + '>' +
+                '<td>' + fmtDate(dateStr) + '</td>' +
+                '<td>' + dow + '</td>' +
+                '<td class="' + (checkIn ? 'time-in' : 'time-na') + '">' + fmtTime(checkIn) + '</td>' +
+                '<td class="' + (checkOut ? 'time-out' : 'time-na') + '">' + fmtTime(checkOut) + '</td>' +
+                '<td>' + (workHours > 0 ? workHours.toFixed(1) + 'h' : (checkIn && !checkOut ? '(chưa ra)' : '-')) + '</td>' +
+                '<td>' + (otHours > 0 ? otHours + 'h' : '0h') + '</td>' +
+                '<td>' + (lateMinutes > 0 ? lateMinutes + 'p' : '0p') + '</td>' +
+                '<td><span class="emp-daily-badge ' + badgeCls + '">' + badgeTxt + '</span></td>' +
+                '</tr>'
+            );
+        }
+
+        tbody.innerHTML = rows.join('');
+
+        // Thống kê tổng
+        summaryEl.innerHTML = [
+            { label: 'Ngày công', value: totalWorkDays.toFixed(1) },
+            { label: 'Giờ làm', value: totalWorkHours.toFixed(1) + 'h' },
+            { label: 'Giờ OT', value: totalOT.toFixed(1) + 'h' },
+            { label: 'Số ngày trễ', value: lateDays + ' ngày' }
+        ].map(function(s) {
+            return '<div class="emp-detail-stat"><span>' + escapeHtml(s.label) + '</span><strong>' + escapeHtml(String(s.value)) + '</strong></div>';
+        }).join('');
+
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    // Gọi từ PHP-rendered buttons (daily_breakdown được nhúng trực tiếp từ PHP)
+    window.showEmployeeDetail = function(maND, hoTen, phongBan, dailyBreakdown, monthKey) {
+        renderEmployeeDetailModal(maND, hoTen, phongBan, dailyBreakdown, monthKey);
+    };
+
+    // Gọi từ JS-rendered buttons (daily_breakdown được truyền dưới dạng JSON string)
+    window.showEmployeeDetailFromJson = function(maND, hoTen, phongBan, breakdownJsonStr, monthKey) {
+        var breakdown = {};
+        try {
+            var decoded = breakdownJsonStr.replace(/&quot;/g, '"').replace(/&#039;/g, "'");
+            breakdown = JSON.parse(decoded);
+        } catch(e) {
+            breakdown = {};
+        }
+        renderEmployeeDetailModal(maND, hoTen, phongBan, breakdown, monthKey);
+    };
+
+    // Gọi từ JS-rendered buttons (dùng global store window._empBreakdowns để lookup)
+    window.showEmployeeDetailById = function(maND, monthKey) {
+        var breakdown = (window._empBreakdowns && window._empBreakdowns[maND]) || {};
+        var meta = (window._empMeta && window._empMeta[maND]) || {};
+        renderEmployeeDetailModal(maND, meta.hoTen || '', meta.phongBan || '-', breakdown, monthKey);
+    };
+
+    window.closeEmployeeDetailModal = function() {
+        var modal = document.getElementById('employeeDetailModal');
+        if (modal) {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+    };
+
+    // Đóng modal khi click ngoài
+    var empDetailModal = document.getElementById('employeeDetailModal');
+    if (empDetailModal) {
+        empDetailModal.addEventListener('click', function(e) {
+            if (e.target === empDetailModal) closeEmployeeDetailModal();
+        });
+    }
+    // Đóng bằng Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeEmployeeDetailModal();
+    });
+
     function loadApprovalDetail(approvalId) {
         if (!approvalId) return;
         detailTitle.textContent = 'Chi tiết kỳ công';
@@ -1088,7 +1436,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function (json) {
             if (!json.success) { alert(json.message || 'Lỗi'); return; }
             renderGridRows(json.data || []);
-            renderTableRows(json.data || []);
+            renderTableRows(json.data || [], currentMonth());
             updateExportRange(currentMonth());
             updateExportState(json.approvalSummary || []);
             
