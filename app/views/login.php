@@ -182,17 +182,17 @@
         /* AI CAMERA FRAME */
         .ai-camera-card {
             flex: 1.25;
-            background: #080f24;
-            border-radius: 16px;
-            padding: 14px 16px;
+            background: radial-gradient(ellipse at center, #0e2246 0%, #081226 70%, #050b18 100%);
+            border-radius: 18px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 205px;
+            min-height: 220px;
             position: relative;
             overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.06);
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
+            border: 1px solid rgba(0, 210, 255, 0.18);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 0 40px rgba(0, 210, 255, 0.05);
         }
 
         .camera-header {
@@ -202,27 +202,29 @@
             z-index: 2;
         }
         .cam-status {
-            font-size: 10.5px;
+            font-size: 11.5px;
             font-weight: 700;
-            color: #cbd5e1;
+            color: #ffffff;
             display: flex;
             align-items: center;
-            gap: 6px;
-            letter-spacing: 0.3px;
+            gap: 7px;
+            letter-spacing: 0.2px;
         }
         .cam-status-dot {
-            width: 6px; height: 6px;
-            background: #ef4444;
+            width: 7px; height: 7px;
+            background: #00d2ff;
             border-radius: 50%;
+            box-shadow: 0 0 8px #00d2ff;
         }
         .faceid-badge {
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            background: rgba(14, 165, 233, 0.15);
-            color: #38bdf8;
-            font-size: 10px;
+            border: 1px solid rgba(0, 210, 255, 0.45);
+            background: rgba(0, 210, 255, 0.12);
+            color: #00d2ff;
+            font-size: 11px;
             font-weight: 700;
-            padding: 3px 10px;
+            padding: 4px 12px;
             border-radius: 100px;
+            letter-spacing: 0.3px;
         }
 
         /* Face Scanner Center Frame */
@@ -231,73 +233,91 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin: 6px 0;
+            margin: 4px 0;
             z-index: 2;
         }
         .scanner-box {
             position: relative;
-            width: 90px;
-            height: 90px;
+            width: 106px;
+            height: 106px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
+        .scanner-box-inner-dashed {
+            position: absolute;
+            inset: 3px;
+            border: 1px dashed rgba(0, 210, 255, 0.35);
+            border-radius: 12px;
+            pointer-events: none;
+        }
         .scanner-corner {
             position: absolute;
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             border-color: #00d2ff;
             border-style: solid;
         }
-        .corner-tl { top: 0; left: 0; border-width: 2px 0 0 2px; border-top-left-radius: 4px; }
-        .corner-tr { top: 0; right: 0; border-width: 2px 2px 0 0; border-top-right-radius: 4px; }
-        .corner-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; border-bottom-left-radius: 4px; }
-        .corner-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; border-bottom-right-radius: 4px; }
+        .corner-tl { top: 0; left: 0; border-width: 2.5px 0 0 2.5px; border-top-left-radius: 4px; }
+        .corner-tr { top: 0; right: 0; border-width: 2.5px 2.5px 0 0; border-top-right-radius: 4px; }
+        .corner-bl { bottom: 0; left: 0; border-width: 0 0 2.5px 2.5px; border-bottom-left-radius: 4px; }
+        .corner-br { bottom: 0; right: 0; border-width: 0 2.5px 2.5px 0; border-bottom-right-radius: 4px; }
         
         .face-avatar-icon {
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            border: 2px solid #00d2ff;
+            border: 2.5px solid #00d2ff;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #00d2ff;
-            font-size: 20px;
+            font-size: 22px;
             background: rgba(0, 210, 255, 0.08);
-            box-shadow: 0 0 16px rgba(0, 210, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.25);
+            margin-top: -8px;
         }
         
         .auto-recognize-pill {
-            background: #10b981;
+            background: #00c853;
             color: #ffffff;
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: 700;
-            padding: 3px 12px;
+            padding: 4px 14px;
             border-radius: 100px;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            margin-top: -8px;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+            gap: 5px;
+            margin-top: -12px;
+            box-shadow: 0 4px 16px rgba(0, 200, 83, 0.45);
             z-index: 3;
+            text-align: center;
+            line-height: 1.2;
         }
 
         .camera-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 10.5px;
+            font-size: 11px;
             z-index: 2;
         }
         .cam-foot-left {
             color: #cbd5e1;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .cam-foot-left .foot-dot {
+            width: 6px; height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #10b981;
         }
         .cam-foot-right {
             color: #00d2ff;
             font-weight: 700;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
 
         /* STATS CARD */
@@ -838,13 +858,14 @@
                             <div class="ai-camera-card">
                                 <div class="camera-header">
                                     <span class="cam-status">
-                                        <span class="cam-status-dot"></span> REC 60FPS • 4K AI
+                                        <span class="cam-status-dot"></span> Sẵn sàng nhận diện
                                     </span>
-                                    <span class="faceid-badge">Liveness: 99.98%</span>
+                                    <span class="faceid-badge">AI FaceID 3D</span>
                                 </div>
 
                                 <div class="scanner-frame-wrapper">
                                     <div class="scanner-box">
+                                        <div class="scanner-box-inner-dashed"></div>
                                         <div class="scanner-corner corner-tl"></div>
                                         <div class="scanner-corner corner-tr"></div>
                                         <div class="scanner-corner corner-bl"></div>
@@ -854,15 +875,16 @@
                                         </div>
                                     </div>
                                     <div class="auto-recognize-pill">
-                                        <i class="fas fa-check" style="font-size:9px"></i> &lt; 0.3s MATCH
+                                        <i class="fas fa-check" style="font-size:8.5px"></i>
+                                        <span>Tự động<br>nhận diện</span>
                                     </div>
                                 </div>
 
                                 <div class="camera-footer">
                                     <span class="cam-foot-left">
-                                        NV: Nguyễn Hoàng Nam - IT
+                                        <span class="foot-dot"></span> Hệ thống hoạt động ổn định
                                     </span>
-                                    <span class="cam-foot-right">08:29:41 AM</span>
+                                    <span class="cam-foot-right">Chính xác &amp; Bảo mật</span>
                                 </div>
                             </div>
 
