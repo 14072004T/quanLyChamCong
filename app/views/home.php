@@ -115,8 +115,8 @@ $user = $_SESSION['user'] ?? [];
                     <span class="status-dot"></span>
                 </div>
                 <div class="mb-profile-meta">
-                    <h3>Xin chào, <?= htmlspecialchars($user['hoTen'] ?? 'Do Thi Nam') ?></h3>
-                    <p><?= htmlspecialchars($user['phongBan'] ?? 'Sản xuất') ?> • ID: #<?= htmlspecialchars($user['maND'] ?? '17') ?></p>
+                    <h3>Xin chào, <?= htmlspecialchars($user['hoTen'] ?? 'Hội viên') ?></h3>
+                    <p><?= htmlspecialchars($user['phongBan'] ?? '-') ?> • ID: #<?= htmlspecialchars($user['maND'] ?? '1') ?></p>
                 </div>
             </div>
             <span class="mb-profile-role-badge">NHÂN VIÊN</span>
@@ -307,7 +307,7 @@ $user = $_SESSION['user'] ?? [];
                     </div>
                     <div class="user-meta">
                         <h2><?= htmlspecialchars($user['hoTen'] ?? 'Hội viên') ?></h2>
-                        <p><i class="fas fa-building"></i> <?= htmlspecialchars($user['phongBan'] ?? 'Sản xuất') ?> • ID: #<?= htmlspecialchars($user['maND'] ?? '1') ?></p>
+                        <p><i class="fas fa-building"></i> <?= htmlspecialchars($user['phongBan'] ?? '-') ?> • ID: #<?= htmlspecialchars($user['maND'] ?? '1') ?></p>
                     </div>
                 </div>
                 <div>

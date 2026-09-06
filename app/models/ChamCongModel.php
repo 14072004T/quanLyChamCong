@@ -1383,7 +1383,7 @@ class ChamCongModel
 
     public function getAttendanceReport($fromDate, $toDate, $phongBan = '')
     {
-        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        $validDepts = $this->getAllValidDepartmentsWithAliases();
         $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
         
         $sql = "SELECT u.maND, u.hoTen, u.phongBan,
@@ -1422,7 +1422,7 @@ class ChamCongModel
 
     public function getDailyPunctualityReport($fromDate, $toDate, $phongBan = '')
     {
-        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        $validDepts = $this->getAllValidDepartmentsWithAliases();
         $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
         $sql = "SELECT u.maND, DATE(l.ngayTao) AS ngayChamCong,
                        MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END) AS gioVao,
@@ -1500,7 +1500,7 @@ class ChamCongModel
 
     public function getEmployeePunctualityReport($fromDate, $toDate, $phongBan = '')
     {
-        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        $validDepts = $this->getAllValidDepartmentsWithAliases();
         $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
         $sql = "SELECT u.maND, u.hoTen, DATE(l.ngayTao) AS ngayChamCong,
                        MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END) AS gioVao,
@@ -1597,14 +1597,43 @@ class ChamCongModel
     {
         $result = $this->conn->query("SELECT DISTINCT phongBan FROM nguoidung WHERE phongBan IS NOT NULL AND phongBan <> '' ORDER BY phongBan");
         $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
-        return array_map(function ($r) {
+        $dbDepts = array_map(function ($r) {
             return $r['phongBan'];
         }, $rows);
+        $valid = $this->getValidDepartments();
+        return array_values(array_unique(array_merge($valid, $dbDepts)));
     }
 
     public function getValidDepartments()
     {
-        return ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        return [
+            'Ban Điều hành',
+            'Phòng Nhân sự',
+            'Phòng Kế toán',
+            'Phòng Kinh doanh & Marketing',
+            'Phòng Công nghệ thông tin (IT)',
+            'Phòng Sản xuất',
+            'Phòng Kiểm soát chất lượng (QC)',
+            'Phòng Hành chính'
+        ];
+    }
+
+    public function getAllValidDepartmentsWithAliases()
+    {
+        return [
+            'Ban Điều hành',
+            'Phòng Nhân sự',
+            'Phòng Kế toán',
+            'Phòng Kinh doanh & Marketing',
+            'Phòng Công nghệ thông tin (IT)',
+            'Phòng Sản xuất',
+            'Phòng Kiểm soát chất lượng (QC)',
+            'Phòng Hành chính',
+            'Sản xuất',
+            'Kho',
+            'QC',
+            'Bảo trì'
+        ];
     }
 
     public function submitMonthlyApproval($monthKey, $hrSenderId, $phongBan = '')
@@ -2700,7 +2729,7 @@ class ChamCongModel
 
         $monthKey = trim((string)$monthKey);
         $phongBan = trim((string)$phongBan);
-        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        $validDepts = $this->getAllValidDepartmentsWithAliases();
         
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
             return [];

@@ -59,10 +59,22 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                     <select name="phongBan">
                         <option value="">-- Chọn phòng ban --</option>
                         <?php
-                        $departments = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+                        $departments = [
+                            'Ban Điều hành',
+                            'Phòng Nhân sự',
+                            'Phòng Kế toán',
+                            'Phòng Kinh doanh & Marketing',
+                            'Phòng Công nghệ thông tin (IT)',
+                            'Phòng Sản xuất',
+                            'Phòng Kiểm soát chất lượng (QC)',
+                            'Phòng Hành chính'
+                        ];
                         $selectedDept = $editing['phongBan'] ?? '';
-                        foreach ($departments as $deptLabel):
+                        if (!empty($selectedDept) && !in_array($selectedDept, $departments, true)):
                         ?>
+                            <option value="<?= htmlspecialchars($selectedDept) ?>" selected><?= htmlspecialchars($selectedDept) ?> (Hiện tại)</option>
+                        <?php endif; ?>
+                        <?php foreach ($departments as $deptLabel): ?>
                             <option value="<?= htmlspecialchars($deptLabel) ?>" <?= $selectedDept === $deptLabel ? 'selected' : '' ?>><?= htmlspecialchars($deptLabel) ?></option>
                         <?php endforeach; ?>
                     </select>

@@ -59,7 +59,7 @@ $initials = mb_strtoupper($initials);
             
             <div class="mb-profile-meta">
                 <h3 style="font-size: 20px;"><?= htmlspecialchars($user['hoTen'] ?? 'Hội viên') ?></h3>
-                <p style="font-size: 13px; margin-top: 4px;"><?= htmlspecialchars($user['phongBan'] ?? 'Sản xuất') ?> • ID: #<?= htmlspecialchars($user['maND'] ?? '1') ?></p>
+                <p style="font-size: 13px; margin-top: 4px;"><?= htmlspecialchars($user['phongBan'] ?? '-') ?> • ID: #<?= htmlspecialchars($user['maND'] ?? '1') ?></p>
             </div>
 
             <span class="mb-profile-role-badge">
@@ -71,7 +71,7 @@ $initials = mb_strtoupper($initials);
         <div class="mb-request-card" style="padding: 8px 16px;">
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f1f3f5;">
                 <span style="font-size: 14px; font-weight: 600; color: #334155;"><i class="fa-solid fa-building-shield" style="width:20px; color:#4a5568"></i> Phòng ban</span>
-                <span style="font-size: 14px; font-weight: 500; color: #64748b;"><?= htmlspecialchars($user['phongBan'] ?? 'Sản xuất') ?></span>
+                <span style="font-size: 14px; font-weight: 500; color: #64748b;"><?= htmlspecialchars($user['phongBan'] ?? '-') ?></span>
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f1f3f5;">
                 <span style="font-size: 14px; font-weight: 600; color: #334155;"><i class="fa-solid fa-signature" style="width:20px; color:#4a5568"></i> Chức vụ</span>
