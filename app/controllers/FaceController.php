@@ -63,7 +63,7 @@ class FaceController extends Controller
             // Lấy tất cả nhân viên đang hoạt động để hiển thị danh sách đầy đủ.
             // Không khóa theo 4 phòng ban cố định vì dữ liệu thực tế trong DB có thể khác nhau hoặc bị mojibake.
             $rawList = $this->chamCongModel->getEmployees('', true) ?? [];
-            $departmentsList = [];
+            $departmentsList = $this->chamCongModel->getValidDepartments();
             $allEmployees = [];
             $unregisteredList = [];
             $registeredList = [];
