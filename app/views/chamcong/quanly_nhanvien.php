@@ -107,6 +107,7 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                     <tr>
                         <th>MÃ NV</th>
                         <th>HỌ TÊN</th>
+                        <th>TÀI KHOẢN</th>
                         <th>EMAIL</th>
                         <th>PHÒNG BAN</th>
                         <th>CHỨC VỤ</th>
@@ -124,6 +125,11 @@ if (!empty($_GET['edit']) && !empty($employees)) {
             <td><?= (int)$emp['maND'] ?></td>
             <td><?= htmlspecialchars($emp['hoTen']) ?></td>
             <td>
+                <code style="background:#e0f2fe;color:#0369a1;padding:3px 8px;border-radius:4px;font-weight:600;font-size:0.9em;">
+                    <?= htmlspecialchars($emp['tenDangNhap'] ?? ('user' . $emp['maND'])) ?>
+                </code>
+            </td>
+            <td>
                 <a href="mailto:<?= htmlspecialchars($emp['email'] ?? '') ?>" style="color:#3b82f6;">
                     <?= htmlspecialchars($emp['email'] ?? '') ?>
                 </a>
@@ -136,17 +142,26 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                 </span>
             </td>
             <td>
-                <a class="btn btn-sm btn-primary"
-                   href="index.php?page=quan-ly-nhanvien&edit=<?= (int)$emp['maND'] ?>">
-                    Sửa
-                </a>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <a class="btn btn-sm btn-primary"
+                       href="index.php?page=quan-ly-nhanvien&edit=<?= (int)$emp['maND'] ?>">
+                        Sửa
+                    </a>
+                    <form method="POST" action="index.php?page=quan-ly-nhanvien" style="display:inline;margin:0;" onsubmit="return confirm('Bạn có chắc chắn muốn đặt lại mật khẩu cho nhân viên <?= htmlspecialchars(addslashes($emp['hoTen'])) ?> về mặc định (123456)?');">
+                        <input type="hidden" name="action" value="reset_password">
+                        <input type="hidden" name="maND" value="<?= (int)$emp['maND'] ?>">
+                        <button type="submit" class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;display:inline-flex;align-items:center;gap:4px;">
+                            <i class="fas fa-key"></i> Reset pass
+                        </button>
+                    </form>
+                </div>
             </td>
         </tr>
 
     <?php endforeach; ?>
 <?php else: ?>
     <tr>
-        <td colspan="7" class="empty-state">
+        <td colspan="8" class="empty-state">
             Không có nhân viên phù hợp.
         </td>
     </tr>

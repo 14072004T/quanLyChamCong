@@ -378,6 +378,97 @@ class ManagerController
         ]);
     }
 
+    // ============================
+    // QUẢN LÝ ĐIỀU CHỈNH CÔNG - Chuyển từ HR sang Manager
+    // ============================
+
+    /**
+     * Trang trung tâm xử lý yêu cầu điều chỉnh công
+     */
+    public function requestCenter()
+    {
+        AuthMiddleware::requirePermission('xuly-yeucau');
+
+        $filters = [
+            'q' => trim($_GET['q'] ?? ''),
+            'date' => trim($_GET['date'] ?? ''),
+            'type' => trim($_GET['type'] ?? ''),
+        ];
+        $pendingCorrections = $this->model->getCorrectionRequests('pending', $filters);
+        $processedCorrections = $this->model->getCorrectionRequests(null, $filters, 20, true);
+        require __DIR__ . '/../views/chamcong/xuly_yeucau.php';
+    }
+
+    /**
+     * API: Lấy danh sách yêu cầu điều chỉnh công
+     */
+    public function correctionsApi()
+    {
+        AuthMiddleware::requirePermission('hr-api-corrections');
+        $this->jsonOnly(['GET']);
+
+        $filters = [
+            'q' => trim($_GET['q'] ?? ''),
+            'date' => trim($_GET['date'] ?? ''),
+            'type' => trim($_GET['type'] ?? ''),
+        ];
+        $scope = trim($_GET['scope'] ?? 'pending');
+        $trangThai = $scope === 'history' ? null : 'pending';
+        $historyOnly = $scope === 'history';
+
+        $this->respond([
+            'success' => true,
+            'data' => $this->model->getCorrectionRequests($trangThai, $filters, 50, $historyOnly),
+        ]);
+    }
+
+    /**
+     * Xử lý duyệt/từ chối yêu cầu điều chỉnh công
+     */
+    public function processCorrection()
+    {
+        AuthMiddleware::requirePermission('hr-api-correction-hanhDong');
+
+        if ($this->expectsJson()) {
+            $this->jsonOnly(['POST']);
+            $correctionId = (int)($_POST['correction_id'] ?? 0);
+            $hanhDong = trim($_POST['hanhDong'] ?? '');
+            $ghiChu = trim($_POST['ghiChu'] ?? '');
+
+            if ($correctionId <= 0 || !in_array($hanhDong, ['approve', 'reject'], true)) {
+                $this->respond([
+                    'success' => false,
+                    'message' => 'Dữ liệu xử lý yêu cầu không hợp lệ',
+                ], 422);
+            }
+
+            $ok = $this->model->processCorrection($correctionId, $hanhDong, $ghiChu);
+            $this->respond([
+                'success' => $ok,
+                'message' => $ok ? 'Đã xử lý yêu cầu chỉnh sửa' : 'Không thể xử lý yêu cầu chỉnh sửa',
+            ], $ok ? 200 : 500);
+        }
+
+        $redirectPage = 'xuly-yeucau';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $correctionId = (int)($_POST['correction_id'] ?? $_GET['id'] ?? 0);
+            $hanhDong = $_POST['hanhDong'] ?? (isset($_POST['approve']) ? 'approve' : 'reject');
+            $ghiChu = trim($_POST['ghiChu'] ?? '');
+
+            if ($correctionId <= 0 || !in_array($hanhDong, ['approve', 'reject'], true)) {
+                $_SESSION['error'] = 'Dữ liệu xử lý yêu cầu không hợp lệ';
+                header('Location: index.php?page=' . $redirectPage);
+                exit;
+            }
+
+            $ok = $this->model->processCorrection($correctionId, $hanhDong, $ghiChu);
+            $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đã xử lý yêu cầu chỉnh sửa' : 'Không thể xử lý yêu cầu chỉnh sửa';
+        }
+
+        header('Location: index.php?page=' . $redirectPage);
+        exit;
+    }
+
     /* ---- helpers ---- */
 
     // ============================
@@ -408,7 +499,9 @@ class ManagerController
         }
 
         $id          = (int)($_POST['id'] ?? 0);
-        $trangThai      = trim($_POST['trangThai'] ?? '');
+        $trangThai   = trim($_POST['trangThai'] ?? '');
+        if ($trangThai === 'approve') $trangThai = 'approved';
+        if ($trangThai === 'reject')  $trangThai = 'rejected';
         $approvedBy  = (int)($_SESSION['user']['maND'] ?? 0);
 
         if ($id <= 0 || !in_array($trangThai, ['approved', 'rejected'], true)) {
@@ -425,6 +518,58 @@ class ManagerController
 
         header('Location: index.php?page=list-leave-requests');
         exit;
+    }
+
+    /**
+     * API: Lấy danh sách tất cả yêu cầu (đơn nghỉ phép) cho Manager
+     */
+    public function requestsApi()
+    {
+        AuthMiddleware::requirePermission('manager-api-requests');
+        $this->jsonOnly(['GET']);
+
+        $filters = [
+            'q' => trim($_GET['q'] ?? ''),
+            'date' => trim($_GET['date'] ?? ''),
+            'type' => trim($_GET['type'] ?? ''),
+            'trangThai' => trim($_GET['trangThai'] ?? ''),
+            'phongBan' => trim($_GET['phongBan'] ?? ''),
+        ];
+        $limit = (int)($_GET['limit'] ?? 300);
+
+        $this->respond([
+            'success' => true,
+            'data' => $this->model->getManagerEmployeeRequests($filters, $limit),
+        ]);
+    }
+
+    /**
+     * API: Phê duyệt / Từ chối đơn nghỉ phép cho Manager
+     */
+    public function processRequestApi()
+    {
+        AuthMiddleware::requirePermission('manager-api-request-hanhDong');
+        $this->jsonOnly(['POST']);
+
+        $requestId = (int)($_POST['request_id'] ?? $_POST['id'] ?? 0);
+        $type = trim($_POST['type'] ?? 'leave');
+        $hanhDong = trim($_POST['hanhDong'] ?? $_POST['trangThai'] ?? '');
+        $ghiChu = trim($_POST['ghiChu'] ?? '');
+        $managerId = (int)($_SESSION['user']['maND'] ?? 0);
+
+        if ($requestId <= 0 || !in_array($hanhDong, ['approve', 'reject', 'approved', 'rejected'], true)) {
+            $this->respond([
+                'success' => false,
+                'message' => 'Dữ liệu xử lý yêu cầu không hợp lệ',
+            ], 422);
+        }
+
+        $ok = $this->model->processManagerEmployeeRequest($type, $requestId, $hanhDong, $managerId, $ghiChu);
+        $label = ($hanhDong === 'approve' || $hanhDong === 'approved') ? 'phê duyệt' : 'từ chối';
+        $this->respond([
+            'success' => $ok,
+            'message' => $ok ? "Đã $label đơn nghỉ phép thành công" : "Không thể $label đơn nghỉ phép (có thể đã được xử lý)",
+        ], $ok ? 200 : 500);
     }
 
     /* ---- helpers ---- */

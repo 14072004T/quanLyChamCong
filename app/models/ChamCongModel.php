@@ -811,29 +811,31 @@ class ChamCongModel
 
     public function getEmployees($keyword = '', $activeOnly = false, $limit = 0)
     {
-        $sql = "SELECT maND, maTK, hoTen, email, soDienThoai, chucVu, phongBan, trangThai, ngayTao
-                FROM nguoidung";
+        $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap
+                FROM nguoidung nd
+                LEFT JOIN taikhoan tk ON nd.maTK = tk.maTK";
         $conditions = [];
         $types = '';
         $params = [];
 
         if ($keyword !== '') {
-            $conditions[] = "(hoTen LIKE CONCAT('%', ?, '%') OR email LIKE CONCAT('%', ?, '%') OR phongBan LIKE CONCAT('%', ?, '%'))";
-            $types .= 'sss';
+            $conditions[] = "(nd.hoTen LIKE CONCAT('%', ?, '%') OR nd.email LIKE CONCAT('%', ?, '%') OR nd.phongBan LIKE CONCAT('%', ?, '%') OR tk.tenDangNhap LIKE CONCAT('%', ?, '%'))";
+            $types .= 'ssss';
+            $params[] = $keyword;
             $params[] = $keyword;
             $params[] = $keyword;
             $params[] = $keyword;
         }
 
         if ($activeOnly) {
-            $conditions[] = "trangThai = 1";
+            $conditions[] = "nd.trangThai = 1";
         }
 
         if (!empty($conditions)) {
             $sql .= " WHERE " . implode(' AND ', $conditions);
         }
 
-        $sql .= " ORDER BY maND DESC";
+        $sql .= " ORDER BY nd.maND DESC";
         if ((int)$limit > 0) {
             $sql .= " LIMIT " . (int)$limit;
         }
@@ -854,29 +856,31 @@ class ChamCongModel
         $phongBan = trim((string)$phongBan);
         $keyword = trim((string)$keyword);
         
-        $sql = "SELECT maND, maTK, hoTen, email, soDienThoai, chucVu, phongBan, trangThai, ngayTao
-                FROM nguoidung
-                WHERE trangThai = 1
-                  AND chucVu = 'Nhân viên'";
+        $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap
+                FROM nguoidung nd
+                LEFT JOIN taikhoan tk ON nd.maTK = tk.maTK
+                WHERE nd.trangThai = 1
+                  AND nd.chucVu = 'Nhân viên'";
         $types = '';
         $params = [];
 
         // Filter by phongBan
         if ($phongBan !== '') {
-            $sql .= " AND phongBan = ?";
+            $sql .= " AND nd.phongBan = ?";
             $types .= 's';
             $params[] = $phongBan;
         }
 
         // Filter by keyword
         if ($keyword !== '') {
-            $sql .= " AND (hoTen LIKE CONCAT('%', ?, '%') OR email LIKE CONCAT('%', ?, '%'))";
-            $types .= 'ss';
+            $sql .= " AND (nd.hoTen LIKE CONCAT('%', ?, '%') OR nd.email LIKE CONCAT('%', ?, '%') OR tk.tenDangNhap LIKE CONCAT('%', ?, '%'))";
+            $types .= 'sss';
+            $params[] = $keyword;
             $params[] = $keyword;
             $params[] = $keyword;
         }
 
-        $sql .= " ORDER BY hoTen ASC";
+        $sql .= " ORDER BY nd.hoTen ASC";
 
         if ($types !== '') {
             $stmt = $this->conn->prepare($sql);
@@ -887,6 +891,26 @@ class ChamCongModel
 
         $result = $this->conn->query($sql);
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    }
+
+    public function resetEmployeePassword($maND)
+    {
+        $maND = (int)$maND;
+        if ($maND <= 0) {
+            return false;
+        }
+
+        $defaultPassword = md5('123456');
+        $sql = "UPDATE taikhoan tk
+                INNER JOIN nguoidung nd ON nd.maTK = tk.maTK
+                SET tk.matKhau = ?
+                WHERE nd.maND = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param("si", $defaultPassword, $maND);
+        return $stmt->execute();
     }
 
     public function saveEmployee(array $payload)
@@ -1308,11 +1332,13 @@ class ChamCongModel
         $type = trim((string)$type);
         $requestId = (int)$requestId;
         $managerId = (int)$managerId;
-        if ($requestId <= 0 || !in_array($type, ['leave'], true) || !in_array($hanhDong, ['approve', 'reject'], true)) {
+        $hanhDong = trim((string)$hanhDong);
+
+        if ($requestId <= 0 || !in_array($type, ['leave'], true) || !in_array($hanhDong, ['approve', 'reject', 'approved', 'rejected'], true)) {
             return false;
         }
 
-        $trangThai = $hanhDong === 'approve' ? 'approved' : 'rejected';
+        $trangThai = ($hanhDong === 'approve' || $hanhDong === 'approved') ? 'approved' : 'rejected';
         if ($type === 'leave') {
             $sql = "UPDATE donnghiphep
                     SET trangThai = ?, nguoiDuyet = ?, ngayDuyet = NOW()
@@ -1320,7 +1346,10 @@ class ChamCongModel
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) return false;
             $stmt->bind_param('sii', $trangThai, $managerId, $requestId);
-            return $stmt->execute();
+            $exec = $stmt->execute();
+            $affected = $stmt->affected_rows > 0;
+            $stmt->close();
+            return $exec && $affected;
         }
 
         return false;
@@ -3068,7 +3097,9 @@ class ChamCongModel
     public function updateLeaveRequestStatus($id, $trangThai, $nguoiDuyet = null)
     {
         $id = (int)$id;
-        $trangThai = trim($trangThai);
+        $trangThai = trim((string)$trangThai);
+        if ($trangThai === 'approve') $trangThai = 'approved';
+        if ($trangThai === 'reject')  $trangThai = 'rejected';
         $nguoiDuyet = $nguoiDuyet !== null ? (int)$nguoiDuyet : null;
 
         if ($id <= 0 || !in_array($trangThai, ['approved', 'rejected'], true)) {

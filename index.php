@@ -115,6 +115,8 @@ $allowedPages = [
     'hr-api-timesheet-approval-details',
     'hr-api-corrections',
     'hr-api-correction-hanhDong',
+    'manager-api-requests',
+    'manager-api-request-hanhDong',
     // Manager
     'bao-cao-tong-hop',
     'thong-ke-bieu-do',
@@ -325,11 +327,6 @@ switch ($page) {
         (new HRController())->attendance();
         break;
 
-    case 'xuly-yeucau':
-        require_once 'app/controllers/HRController.php';
-        (new HRController())->requestCenter();
-        break;
-
     case 'hr-api-employees':
         require_once 'app/controllers/HRController.php';
         (new HRController())->employeesApi();
@@ -375,16 +372,6 @@ switch ($page) {
         (new HRController())->timesheetApprovalDetailsApi();
         break;
 
-    case 'hr-api-corrections':
-        require_once 'app/controllers/HRController.php';
-        (new HRController())->correctionsApi();
-        break;
-
-    case 'hr-api-correction-hanhDong':
-        require_once 'app/controllers/HRController.php';
-        (new HRController())->processCorrection();
-        break;
-
     // === MANAGER PANEL ===
     case 'quan-ly-cham-cong':
         require_once 'app/controllers/ChamCongController.php';
@@ -399,6 +386,31 @@ switch ($page) {
     case 'thong-ke-bieu-do':
         require_once 'app/controllers/ManagerController.php';
         (new ManagerController())->statistics();
+        break;
+
+    case 'xuly-yeucau':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->requestCenter();
+        break;
+
+    case 'hr-api-corrections':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->correctionsApi();
+        break;
+
+    case 'hr-api-correction-hanhDong':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->processCorrection();
+        break;
+
+    case 'manager-api-requests':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->requestsApi();
+        break;
+
+    case 'manager-api-request-hanhDong':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->processRequestApi();
         break;
 
     // === TECH PANEL ===

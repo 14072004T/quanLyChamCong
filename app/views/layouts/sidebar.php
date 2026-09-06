@@ -13,12 +13,12 @@ $menus = [
     'hr' => [
         ['page' => 'quan-ly-nhanvien', 'label' => 'Quản lý Nhân viên', 'icon' => 'fa-users'],
         ['page' => 'quan-ly-ca-lam', 'label' => 'Quản lý Ca làm việc', 'icon' => 'fa-business-time'],
-        ['page' => 'xuly-yeucau', 'label' => 'Xử lý Yêu cầu', 'icon' => 'fa-clipboard-check'],
         ['page' => 'tinh-cong', 'label' => 'Tính công & Báo cáo', 'icon' => 'fa-calculator'],
         ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
     ],
     'manager' => [
         ['page' => 'bao-cao-tong-hop', 'label' => 'Báo cáo tổng hợp', 'icon' => 'fa-file-lines'],
+        ['page' => 'xuly-yeucau', 'label' => 'Quản lý điều chỉnh công', 'icon' => 'fa-clipboard-check'],
         ['page' => 'list-leave-requests', 'label' => 'Quản lý Đơn phép', 'icon' => 'fa-calendar-check'],
     ],
     'tech' => [
