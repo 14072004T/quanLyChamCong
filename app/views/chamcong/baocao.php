@@ -557,8 +557,14 @@ $updatedAt = date('H:i, d/m/Y');
 }
 .mgrr-bottom {
     display: grid;
-    grid-template-columns: 1.15fr .85fr .85fr 1fr;
+    grid-template-columns: 1.15fr .85fr;
     gap: 14px;
+}
+.mgrr-rank-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
 }
 .mgrr-panel {
     padding: 16px;
@@ -694,6 +700,7 @@ $updatedAt = date('H:i, d/m/Y');
 @media (max-width: 1280px) {
     .mgrr-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .mgrr-grid,
+    .mgrr-rank-grid,
     .mgrr-bottom { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
@@ -803,23 +810,7 @@ $updatedAt = date('H:i, d/m/Y');
             </section>
         </div>
 
-        <div class="mgrr-bottom">
-            <section class="mgrr-panel">
-                <div class="mgrr-panel-head"><div class="mgrr-panel-title">Tình hình chấm công của <?= htmlspecialchars($selectedDept) ?></div></div>
-                <table class="mgrr-table">
-                    <thead><tr><th>Chỉ số</th><th>Giá trị</th><th>Tỷ lệ</th><th>So với trước</th></tr></thead>
-                    <tbody>
-                        <tr><td>Ngày công theo kế hoạch</td><td><strong><?= number_format($plannedWorkDays, 0) ?></strong></td><td>-</td><td>-</td></tr>
-                        <tr><td>Ngày công thực tế</td><td><strong><?= number_format($actualWorkDays, 0) ?></strong></td><td><?= number_format(($actualWorkDays / $plannedWorkDays) * 100, 1) ?>%</td><td style="color:#12b76a">↑ 8.7%</td></tr>
-                        <tr><td>Đi làm đủ giờ</td><td><strong><?= number_format($onTimeDays, 0) ?></strong></td><td><?= number_format($onTimeRate, 1) ?>%</td><td style="color:#12b76a">↑ 9.2%</td></tr>
-                        <tr><td>Đi trễ</td><td><strong><?= number_format($lateDays, 0) ?></strong></td><td><?= $actualWorkDays > 0 ? number_format(($lateDays / $actualWorkDays) * 100, 1) : '0.0' ?>%</td><td style="color:#ef4444">↓ 0.9%</td></tr>
-                        <tr><td>Về sớm</td><td><strong><?= number_format($earlyDays, 0) ?></strong></td><td><?= $actualWorkDays > 0 ? number_format(($earlyDays / $actualWorkDays) * 100, 1) : '0.0' ?>%</td><td style="color:#ef4444">↓ 0.3%</td></tr>
-                        <tr><td>Vắng mặt</td><td><strong><?= number_format($absentDays, 0) ?></strong></td><td><?= number_format($absentRate, 1) ?>%</td><td style="color:#ef4444">↓ 0.6%</td></tr>
-                        <tr><td>Tổng giờ OT</td><td><strong><?= number_format($totalOtHours, 1) ?> giờ</strong></td><td>-</td><td style="color:#12b76a">↑ 12.5%</td></tr>
-                    </tbody>
-                </table>
-            </section>
-
+        <div class="mgrr-rank-grid">
             <section class="mgrr-panel">
                 <div class="mgrr-panel-head">
                     <div class="mgrr-panel-title">Top nhân viên đi trễ</div>
@@ -878,6 +869,24 @@ $updatedAt = date('H:i, d/m/Y');
                         <?php else: ?>
                             <tr><td colspan="4" style="text-align:center;color:#64748b">Không có dữ liệu</td></tr>
                         <?php endif; ?>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+
+        <div class="mgrr-bottom">
+            <section class="mgrr-panel">
+                <div class="mgrr-panel-head"><div class="mgrr-panel-title">Tình hình chấm công của <?= htmlspecialchars($selectedDept) ?></div></div>
+                <table class="mgrr-table">
+                    <thead><tr><th>Chỉ số</th><th>Giá trị</th><th>Tỷ lệ</th><th>So với trước</th></tr></thead>
+                    <tbody>
+                        <tr><td>Ngày công theo kế hoạch</td><td><strong><?= number_format($plannedWorkDays, 0) ?></strong></td><td>-</td><td>-</td></tr>
+                        <tr><td>Ngày công thực tế</td><td><strong><?= number_format($actualWorkDays, 0) ?></strong></td><td><?= number_format(($actualWorkDays / $plannedWorkDays) * 100, 1) ?>%</td><td style="color:#12b76a">↑ 8.7%</td></tr>
+                        <tr><td>Đi làm đủ giờ</td><td><strong><?= number_format($onTimeDays, 0) ?></strong></td><td><?= number_format($onTimeRate, 1) ?>%</td><td style="color:#12b76a">↑ 9.2%</td></tr>
+                        <tr><td>Đi trễ</td><td><strong><?= number_format($lateDays, 0) ?></strong></td><td><?= $actualWorkDays > 0 ? number_format(($lateDays / $actualWorkDays) * 100, 1) : '0.0' ?>%</td><td style="color:#ef4444">↓ 0.9%</td></tr>
+                        <tr><td>Về sớm</td><td><strong><?= number_format($earlyDays, 0) ?></strong></td><td><?= $actualWorkDays > 0 ? number_format(($earlyDays / $actualWorkDays) * 100, 1) : '0.0' ?>%</td><td style="color:#ef4444">↓ 0.3%</td></tr>
+                        <tr><td>Vắng mặt</td><td><strong><?= number_format($absentDays, 0) ?></strong></td><td><?= number_format($absentRate, 1) ?>%</td><td style="color:#ef4444">↓ 0.6%</td></tr>
+                        <tr><td>Tổng giờ OT</td><td><strong><?= number_format($totalOtHours, 1) ?> giờ</strong></td><td>-</td><td style="color:#12b76a">↑ 12.5%</td></tr>
                     </tbody>
                 </table>
             </section>
