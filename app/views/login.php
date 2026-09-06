@@ -320,61 +320,61 @@
             font-weight: 700;
         }
 
-        /* STATS CARD */
+        /* SYSTEM STATUS CARD (CARD 2) */
         .system-status-card {
             flex: 0.85;
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 16px;
-            padding: 16px 14px;
+            padding: 18px 16px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
         .status-icon-box {
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
             background: #eff6ff;
+            border: 1px solid #bfdbfe;
             color: #2563eb;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 15px;
-            margin-bottom: 10px;
+            font-size: 14px;
+            margin-bottom: 12px;
         }
         .status-sub {
-            font-size: 11.5px;
+            font-size: 11px;
             color: #64748b;
-            font-weight: 600;
+            font-weight: 500;
         }
-        .status-metric {
-            font-size: 30px;
+        .status-main-title {
+            font-size: 16px;
             font-weight: 800;
             color: #0f172a;
-            margin: 2px 0 8px;
-            line-height: 1.1;
+            margin: 4px 0 6px;
+            line-height: 1.25;
         }
-        .status-bottom-row {
-            border-top: 1px solid #f1f5f9;
-            padding-top: 10px;
-            margin-top: 6px;
-        }
-        .status-counts {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11.5px;
+        .status-desc-text {
+            font-size: 11px;
             color: #64748b;
-        }
-        .status-counts strong {
-            color: #0f172a;
-            font-weight: 700;
+            line-height: 1.45;
         }
         .status-active-tag {
-            font-size: 11px;
-            font-weight: 600;
-            color: #10b981;
-            margin-top: 4px;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #059669;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 14px;
+        }
+        .status-active-tag .active-dot {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
         }
 
         /* FEATURES BULLETS GRID */
@@ -888,23 +888,19 @@
                                 </div>
                             </div>
 
-                            <!-- Card 2: Stat Card -->
+                            <!-- Card 2: System Status Card -->
                             <div class="system-status-card">
                                 <div>
                                     <div class="status-icon-box">
-                                        <i class="fas fa-chart-simple"></i>
+                                        <i class="far fa-circle-check"></i>
                                     </div>
-                                    <div class="status-sub">Tỉ lệ đúng giờ</div>
-                                    <div class="status-metric">99.4%</div>
+                                    <div class="status-sub">Trạng thái hệ thống</div>
+                                    <div class="status-main-title">Chấm công tự<br>động</div>
+                                    <div class="status-desc-text">Ghi nhận dữ liệu ra vào tức thì không cần chạm.</div>
                                 </div>
-                                <div class="status-bottom-row">
-                                    <div class="status-counts">
-                                        <span>Hôm nay</span>
-                                        <strong>428 / 430</strong>
-                                    </div>
-                                    <div class="status-active-tag">
-                                        Đã ghi nhận tự động
-                                    </div>
+                                <div class="status-active-tag">
+                                    <span class="active-dot"></span>
+                                    <span>Đang hoạt động 24/7</span>
                                 </div>
                             </div>
                         </div>
