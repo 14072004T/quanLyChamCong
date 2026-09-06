@@ -1,13 +1,30 @@
 window.toggleMobileMenu = function (shouldOpen) {
-    const open = typeof shouldOpen === "boolean" ? shouldOpen : true;
     const body = document.body;
-    const sidebar = document.querySelector(".mobile-view .sidebar-nav") || document.querySelector(".main-container > .sidebar-nav");
+    const sidebar = document.querySelector(".mobile-view .sidebar-nav") || document.querySelector(".main-container > .sidebar-nav") || document.querySelector(".sidebar-nav");
     const menuTrigger = document.querySelector(".mobile-header .menu-trigger");
     const reopenBtn = document.querySelector(".sidebar-reopen-btn");
 
-    // Không early-return theo class .mobile-view nữa: một số tablet không được nhận đúng
-    // là "mobile" qua User-Agent. CSS (media query theo độ rộng màn hình) sẽ quyết định
-    // việc toggle này có hiệu ứng drawer hay không, nên cứ luôn cho phép gọi hàm.
+    const isMobileDevice = body.classList.contains("mobile-view") || window.innerWidth <= 900;
+
+    if (!isMobileDevice) {
+        // Desktop view: Always keep sidebar open and visible on the left
+        body.classList.remove("mobile-menu-open", "sidebar-collapsed");
+        if (sidebar) {
+            sidebar.style.display = "flex";
+            sidebar.classList.remove("mobile-sidebar-open", "mobile-sidebar-hidden");
+            sidebar.removeAttribute("aria-hidden");
+        }
+        if (reopenBtn) {
+            reopenBtn.style.display = "none";
+        }
+        if (menuTrigger) {
+            menuTrigger.style.display = "none";
+        }
+        return;
+    }
+
+    // Mobile view: Toggle drawer
+    const open = typeof shouldOpen === "boolean" ? shouldOpen : true;
     body.classList.toggle("mobile-menu-open", open);
     body.classList.toggle("sidebar-collapsed", !open);
 
@@ -24,8 +41,7 @@ window.toggleMobileMenu = function (shouldOpen) {
     }
 
     if (reopenBtn) {
-        reopenBtn.style.display = open ? "none" : "inline-flex";
-        reopenBtn.setAttribute("aria-hidden", String(open));
+        reopenBtn.style.display = "none";
     }
 };
 
@@ -57,7 +73,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         sidebarList.querySelectorAll("a.menu-item").forEach((link) => {
             link.addEventListener("click", function () {
-                window.toggleMobileMenu(false);
+                if (document.body.classList.contains("mobile-view") || window.innerWidth <= 900) {
+                    window.toggleMobileMenu(false);
+                }
             });
         });
     }
@@ -100,7 +118,9 @@ document.addEventListener("DOMContentLoaded", function () {
         document.addEventListener("keydown", function (e) {
             if (e.key === "Escape") {
                 closePanel();
-                window.toggleMobileMenu(false);
+                if (document.body.classList.contains("mobile-view") || window.innerWidth <= 900) {
+                    window.toggleMobileMenu(false);
+                }
             }
         });
 
@@ -132,5 +152,10 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    window.toggleMobileMenu(false);
+    // Initialize layout state based on screen size
+    if (document.body.classList.contains("mobile-view") || window.innerWidth <= 900) {
+        window.toggleMobileMenu(false);
+    } else {
+        window.toggleMobileMenu(true);
+    }
 });

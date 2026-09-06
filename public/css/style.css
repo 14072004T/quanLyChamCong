@@ -2148,3 +2148,14 @@ body {
 }
 
 .menu-item-btn.active i { color: #60a5fa; }
+
+/* Desktop Persistent Sidebar & Remove Menu Button */
+@media (min-width: 901px) {
+    .sidebar-reopen-btn {
+        display: none !important;
+    }
+    body:not(.mobile-view) .main-container > .sidebar-nav,
+    body:not(.mobile-view) .sidebar-nav {
+        display: flex !important;
+    }
+}
