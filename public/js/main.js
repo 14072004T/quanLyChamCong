@@ -6,7 +6,7 @@ window.toggleMobileMenu = function (shouldOpen) {
 
     let isCurrentlyVisible = false;
     if (sidebar) {
-        isCurrentlyVisible = window.getComputedStyle(sidebar).display !== "none" && !sidebar.classList.contains("mobile-sidebar-hidden");
+        isCurrentlyVisible = (sidebar.style.display === "flex" || (window.getComputedStyle(sidebar).display !== "none" && sidebar.style.display !== "none")) && !sidebar.classList.contains("mobile-sidebar-hidden") && !body.classList.contains("sidebar-collapsed");
     }
 
     const open = typeof shouldOpen === "boolean" ? shouldOpen : !isCurrentlyVisible;
@@ -41,6 +41,9 @@ window.closeMobileMenu = function () {
 };
 
 document.addEventListener("DOMContentLoaded", function () {
+    // Mặc định ẩn menu bên trái khi vừa vào trang, chỉ hiện khi người dùng click vào nút menu
+    window.toggleMobileMenu(false);
+
     document.querySelectorAll(".sidebar-close").forEach(function (btn) {
         btn.addEventListener("click", function (event) {
             event.preventDefault();
@@ -64,9 +67,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         sidebarList.querySelectorAll("a.menu-item").forEach((link) => {
             link.addEventListener("click", function () {
-                if (document.body.classList.contains("mobile-view") || window.innerWidth <= 900) {
-                    window.toggleMobileMenu(false);
-                }
+                window.toggleMobileMenu(false);
             });
         });
     }
@@ -109,9 +110,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document.addEventListener("keydown", function (e) {
             if (e.key === "Escape") {
                 closePanel();
-                if (document.body.classList.contains("mobile-view") || window.innerWidth <= 900) {
-                    window.toggleMobileMenu(false);
-                }
+                window.toggleMobileMenu(false);
             }
         });
 
