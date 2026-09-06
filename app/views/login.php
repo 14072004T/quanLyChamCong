@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng Nhập — RFT Hệ thống Chấm Công</title>
+    <title>Hệ thống Quản lý Chấm công — RFT</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Quicksand:wght@700;800&display=swap" rel="stylesheet">
@@ -12,73 +12,47 @@
         :root {
             --primary-blue: #2563eb;
             --primary-hover: #1d4ed8;
-            --cyan-accent: #38bdf8;
-            --cyan-glow: rgba(56, 189, 248, 0.25);
-            --bg-canvas: #edf2f9;
+            --cyan-accent: #00d2ff;
+            --bg-radial: radial-gradient(circle at 50% 8%, #dbeafe 0%, #ebf5ff 35%, #f4f8fc 70%, #f0f6fc 100%);
             --text-dark: #0f172a;
             --text-muted: #64748b;
-            --card-dark-bg: #111827;
-            --input-dark-bg: #1e293b;
-            --input-dark-border: #334155;
+            --card-dark-bg: #11192e;
+            --input-dark-bg: #1c263c;
+            --input-dark-border: #2d3b56;
         }
 
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-canvas);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-radial);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            position: relative;
-            overflow-x: hidden;
+            justify-content: space-between;
             color: var(--text-dark);
+            overflow-x: hidden;
         }
 
-        /* Ambient Glowing Background Orbs */
-        .bg-glow {
-            position: absolute;
-            border-radius: 50%;
-            z-index: 0;
-            filter: blur(100px);
-            pointer-events: none;
-        }
-        .bg-glow-1 {
-            width: 600px; height: 600px;
-            background: rgba(191, 219, 254, 0.65);
-            top: -100px; left: 50%;
-            transform: translateX(-50%);
-        }
-        .bg-glow-2 {
-            width: 500px; height: 500px;
-            background: rgba(224, 242, 254, 0.7);
-            bottom: -100px; left: -100px;
-        }
-        .bg-glow-3 {
-            width: 550px; height: 550px;
-            background: rgba(219, 234, 254, 0.6);
-            bottom: -150px; right: -100px;
-        }
-
-        .main-content {
+        .main-wrapper {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 40px 20px 40px;
-            z-index: 1;
+            justify-content: center;
+            padding: 40px 24px 30px;
         }
 
         /* HEADER SECTION */
         .header-section {
             text-align: center;
-            margin-bottom: 36px;
-            max-width: 720px;
+            margin-bottom: 38px;
+            max-width: 760px;
         }
 
         .brand-logo-pills {
             display: inline-flex;
-            gap: 6px;
+            gap: 8px;
             margin-bottom: 20px;
         }
         .logo-pill {
@@ -92,48 +66,51 @@
             font-size: 22px;
             font-weight: 800;
             color: white;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
         }
-        .logo-pill.r { background: #0f172a; }
-        .logo-pill.f { background: #0ea5e9; }
-        .logo-pill.t { background: #2563eb; }
+        .logo-pill.r { background: #1e293b; }
+        .logo-pill.f { background: #0284c7; }
+        .logo-pill.t { background: #0066ff; }
 
         .header-title {
-            font-size: 32px;
+            font-size: 34px;
             font-weight: 800;
             color: #0f172a;
-            letter-spacing: -0.5px;
-            margin-bottom: 10px;
+            letter-spacing: -0.6px;
+            margin-bottom: 12px;
+            line-height: 1.2;
         }
         .header-subtitle {
             font-size: 15px;
-            color: #64748b;
+            color: #475569;
             font-weight: 400;
-            line-height: 1.5;
+            line-height: 1.55;
+            max-width: 620px;
+            margin: 0 auto;
         }
 
-        /* CONTENT CONTAINER */
+        /* TWO COLUMNS CONTAINER */
         .content-container {
             display: flex;
             gap: 36px;
-            max-width: 1040px;
+            max-width: 1060px;
             width: 100%;
-            align-items: flex-start;
+            align-items: center;
             justify-content: center;
         }
 
-        /* LEFT PANEL - AI ATTENDANCE CONSOLE MOCKUP */
+        /* LEFT PANEL: CONSOLE MOCKUP + BULLETS */
         .console-panel {
-            flex: 1.1;
+            flex: 1.15;
             min-width: 0;
         }
 
         .mockup-card {
             background: #ffffff;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02);
-            border: 1px solid rgba(226, 232, 240, 0.9);
-            padding: 20px;
+            border-radius: 24px;
+            box-shadow: 0 20px 48px -12px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(0, 0, 0, 0.02);
+            border: 1px solid #f1f5f9;
+            padding: 24px;
             margin-bottom: 24px;
         }
 
@@ -142,7 +119,6 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 18px;
-            padding-bottom: 4px;
         }
         .mockup-nav-left {
             display: flex;
@@ -153,69 +129,70 @@
             background: #0f172a;
             color: white;
             font-weight: 800;
-            font-size: 10px;
-            padding: 4px 6px;
-            border-radius: 5px;
+            font-size: 11px;
+            padding: 5px 8px;
+            border-radius: 6px;
             letter-spacing: 0.5px;
         }
         .mockup-nav-title {
             font-weight: 700;
-            font-size: 14px;
+            font-size: 14.5px;
             color: #1e293b;
         }
 
         .mockup-nav-right {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
         .live-status-pill {
             display: flex;
             align-items: center;
             gap: 6px;
-            background: #dcfce7;
-            color: #16a34a;
+            background: #ecfdf5;
+            color: #059669;
             font-size: 12px;
             font-weight: 600;
-            padding: 4px 10px;
+            padding: 4px 12px;
             border-radius: 100px;
         }
         .pulse-dot {
             width: 7px;
             height: 7px;
-            background-color: #16a34a;
+            background-color: #10b981;
             border-radius: 50%;
-            animation: pulse 1.8s infinite;
+            animation: livePulse 1.8s infinite;
         }
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+        @keyframes livePulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
         .bell-icon {
-            color: #64748b;
+            color: #94a3b8;
             font-size: 14px;
         }
 
-        /* MOCKUP INNER SUB-PANELS */
+        /* MOCKUP BODY GRID */
         .mockup-body {
             display: flex;
-            gap: 14px;
+            gap: 16px;
         }
 
-        /* SUB-PANEL 1: AI CAMERA SCREEN */
+        /* AI CAMERA FRAME */
         .ai-camera-card {
-            flex: 1.2;
-            background: #0b1329;
-            border-radius: 14px;
-            padding: 14px;
+            flex: 1.25;
+            background: radial-gradient(ellipse at center, #0e2246 0%, #081226 70%, #050b18 100%);
+            border-radius: 18px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             min-height: 220px;
             position: relative;
             overflow: hidden;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            border: 1px solid rgba(0, 210, 255, 0.18);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 0 40px rgba(0, 210, 255, 0.05);
         }
 
         .camera-header {
@@ -225,118 +202,136 @@
             z-index: 2;
         }
         .cam-status {
-            font-size: 11px;
-            font-weight: 600;
-            color: #e0f2fe;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #ffffff;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 7px;
+            letter-spacing: 0.2px;
         }
         .cam-status-dot {
-            width: 6px; height: 6px;
-            background: #38bdf8;
+            width: 7px; height: 7px;
+            background: #00d2ff;
             border-radius: 50%;
+            box-shadow: 0 0 8px #00d2ff;
         }
         .faceid-badge {
-            border: 1px solid rgba(56, 189, 248, 0.4);
-            background: rgba(56, 189, 248, 0.1);
-            color: #38bdf8;
-            font-size: 10px;
+            border: 1px solid rgba(0, 210, 255, 0.45);
+            background: rgba(0, 210, 255, 0.12);
+            color: #00d2ff;
+            font-size: 11px;
             font-weight: 700;
-            padding: 3px 10px;
+            padding: 4px 12px;
             border-radius: 100px;
+            letter-spacing: 0.3px;
         }
 
-        /* Face Scanner Frame Target */
+        /* Face Scanner Center Frame */
         .scanner-frame-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin: 12px 0;
+            margin: 4px 0;
             z-index: 2;
         }
         .scanner-box {
             position: relative;
-            width: 100px;
-            height: 100px;
+            width: 106px;
+            height: 106px;
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        .scanner-box-inner-dashed {
+            position: absolute;
+            inset: 3px;
+            border: 1px dashed rgba(0, 210, 255, 0.35);
+            border-radius: 12px;
+            pointer-events: none;
         }
         .scanner-corner {
             position: absolute;
             width: 16px;
             height: 16px;
-            border-color: #38bdf8;
+            border-color: #00d2ff;
             border-style: solid;
         }
-        .corner-tl { top: 0; left: 0; border-width: 2px 0 0 2px; border-top-left-radius: 4px; }
-        .corner-tr { top: 0; right: 0; border-width: 2px 2px 0 0; border-top-right-radius: 4px; }
-        .corner-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; border-bottom-left-radius: 4px; }
-        .corner-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; border-bottom-right-radius: 4px; }
+        .corner-tl { top: 0; left: 0; border-width: 2.5px 0 0 2.5px; border-top-left-radius: 4px; }
+        .corner-tr { top: 0; right: 0; border-width: 2.5px 2.5px 0 0; border-top-right-radius: 4px; }
+        .corner-bl { bottom: 0; left: 0; border-width: 0 0 2.5px 2.5px; border-bottom-left-radius: 4px; }
+        .corner-br { bottom: 0; right: 0; border-width: 0 2.5px 2.5px 0; border-bottom-right-radius: 4px; }
         
         .face-avatar-icon {
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            border: 2px solid #38bdf8;
+            border: 2.5px solid #00d2ff;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #38bdf8;
+            color: #00d2ff;
             font-size: 22px;
-            background: rgba(56, 189, 248, 0.08);
+            background: rgba(0, 210, 255, 0.08);
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.25);
+            margin-top: -8px;
         }
         
         .auto-recognize-pill {
-            background: #00d285;
-            color: #042f1a;
+            background: #00c853;
+            color: #ffffff;
             font-size: 10px;
             font-weight: 700;
-            padding: 4px 12px;
+            padding: 4px 14px;
             border-radius: 100px;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            margin-top: -10px;
-            box-shadow: 0 4px 12px rgba(0, 210, 133, 0.4);
+            gap: 5px;
+            margin-top: -12px;
+            box-shadow: 0 4px 16px rgba(0, 200, 83, 0.45);
             z-index: 3;
+            text-align: center;
+            line-height: 1.2;
         }
 
         .camera-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 10px;
+            font-size: 11px;
             z-index: 2;
         }
         .cam-foot-left {
             color: #cbd5e1;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
         }
-        .cam-foot-left .dot {
-            width: 5px; height: 5px; background: #10b981; border-radius: 50%;
+        .cam-foot-left .foot-dot {
+            width: 6px; height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #10b981;
         }
         .cam-foot-right {
-            color: #38bdf8;
-            font-weight: 600;
+            color: #00d2ff;
+            font-weight: 700;
         }
 
-        /* SUB-PANEL 2: SYSTEM STATUS */
+        /* SYSTEM STATUS CARD (CARD 2) */
         .system-status-card {
             flex: 0.85;
-            background: #f8fafc;
+            background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 16px 14px;
+            border-radius: 16px;
+            padding: 18px 16px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
-        .status-icon-circle {
+        .status-icon-box {
             width: 32px;
             height: 32px;
             border-radius: 50%;
@@ -346,46 +341,47 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 13px;
-        }
-        .status-content {
-            margin-top: 10px;
+            font-size: 14px;
+            margin-bottom: 12px;
         }
         .status-sub {
             font-size: 11px;
             color: #64748b;
             font-weight: 500;
         }
-        .status-main {
-            font-size: 15px;
-            font-weight: 700;
+        .status-main-title {
+            font-size: 16px;
+            font-weight: 800;
             color: #0f172a;
-            margin: 4px 0;
-            line-height: 1.3;
+            margin: 4px 0 6px;
+            line-height: 1.25;
         }
-        .status-desc {
+        .status-desc-text {
             font-size: 11px;
             color: #64748b;
-            line-height: 1.4;
+            line-height: 1.45;
         }
-        .status-active-badge {
+        .status-active-tag {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #059669;
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            color: #059669;
-            margin-top: 10px;
+            margin-top: 14px;
         }
-        .active-dot {
-            width: 6px; height: 6px; background: #059669; border-radius: 50%;
+        .status-active-tag .active-dot {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
         }
 
-        /* FEATURES GRID */
+        /* FEATURES BULLETS GRID */
         .features-grid-wrapper {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px 20px;
+            gap: 16px 24px;
             padding: 0 4px;
         }
         .feature-box {
@@ -394,8 +390,8 @@
             gap: 8px;
         }
         .feature-bullet-dot {
-            width: 6px;
-            height: 6px;
+            width: 6.5px;
+            height: 6.5px;
             background: #2563eb;
             border-radius: 50%;
             margin-top: 6px;
@@ -404,31 +400,26 @@
         .feature-desc-text {
             font-size: 12.5px;
             color: #475569;
-            line-height: 1.45;
+            line-height: 1.5;
         }
         .feature-desc-text strong {
             color: #0f172a;
             font-weight: 700;
         }
 
-        /* RIGHT PANEL - DARK LOGIN CARD */
+        /* RIGHT PANEL: SLEEK DARK LOGIN CARD */
         .login-card-panel {
             width: 420px;
             background: var(--card-dark-bg);
             border-radius: 24px;
             padding: 36px 32px;
-            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            box-shadow: 0 24px 64px -12px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
             color: white;
-            animation: slideUp 0.4s ease-out;
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
+            flex-shrink: 0;
         }
 
         .login-card-header {
-            margin-bottom: 26px;
+            margin-bottom: 24px;
         }
         .login-card-header h2 {
             font-size: 26px;
@@ -442,7 +433,7 @@
             color: #94a3b8;
         }
 
-        /* ALERTS inside dark card */
+        /* ALERTS */
         .alert-box {
             padding: 12px 14px;
             border-radius: 10px;
@@ -466,14 +457,14 @@
 
         /* FORM CONTROLS */
         .form-group-item {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
         .form-group-item label {
             display: block;
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             color: #94a3b8;
             margin-bottom: 8px;
         }
@@ -491,13 +482,14 @@
         }
         .input-control-field {
             width: 100%;
-            padding: 13px 16px 13px 44px;
+            height: 46px;
+            padding: 0 16px 0 44px;
             background: var(--input-dark-bg);
             border: 1px solid var(--input-dark-border);
             border-radius: 10px;
             color: white;
             font-family: 'Inter', sans-serif;
-            font-size: 14px;
+            font-size: 13.5px;
             transition: all 0.2s ease;
         }
         .input-control-field.has-right-icon {
@@ -506,10 +498,9 @@
         .input-control-field:focus {
             outline: none;
             border-color: #3b82f6;
-            background: #1e293b;
+            background: #212c44;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
         }
-        .input-control-field:focus + i.left-icon,
         .input-relative-wrapper:focus-within i.left-icon {
             color: #38bdf8;
         }
@@ -530,7 +521,7 @@
             color: #cbd5e1;
         }
 
-        /* CHECKBOX & FORGOT LINK ROW */
+        /* CHECKBOX & FORGOT */
         .form-options-row {
             display: flex;
             justify-content: space-between;
@@ -556,26 +547,26 @@
         }
         .forgot-password-link {
             font-size: 13px;
-            color: #38bdf8;
+            color: #60a5fa;
             text-decoration: none;
             font-weight: 500;
             transition: color 0.2s;
         }
         .forgot-password-link:hover {
-            color: #7dd3fc;
+            color: #93c5fd;
             text-decoration: underline;
         }
 
-        /* PRIMARY SUBMIT BUTTON */
+        /* SUBMIT BUTTON */
         .btn-primary-submit {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            height: 48px;
+            background: #2563eb;
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 15px;
-            font-weight: 600;
+            font-size: 14.5px;
+            font-weight: 700;
             font-family: 'Inter', sans-serif;
             cursor: pointer;
             display: flex;
@@ -586,9 +577,9 @@
             box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
         }
         .btn-primary-submit:hover {
-            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+            background: #1d4ed8;
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
         }
         .btn-primary-submit:active {
             transform: translateY(1px);
@@ -598,15 +589,15 @@
         .divider-container {
             display: flex;
             align-items: center;
-            margin: 24px 0 20px;
+            margin: 22px 0 18px;
         }
         .divider-line {
             flex: 1;
             height: 1px;
-            background: #334155;
+            background: #2d3b56;
         }
         .divider-text {
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: 700;
             letter-spacing: 0.8px;
             color: #64748b;
@@ -617,13 +608,13 @@
         /* BIOMETRIC BUTTON */
         .btn-biometric-auth {
             width: 100%;
-            padding: 13px;
-            background: #1e293b;
-            border: 1px solid #334155;
+            height: 44px;
+            background: #1c263c;
+            border: 1px solid #2d3b56;
             border-radius: 10px;
-            color: #cbd5e1;
+            color: #e2e8f0;
             font-size: 13px;
-            font-weight: 500;
+            font-weight: 600;
             font-family: 'Inter', sans-serif;
             cursor: pointer;
             display: flex;
@@ -637,29 +628,37 @@
             font-size: 14px;
         }
         .btn-biometric-auth:hover {
-            background: #27354a;
+            background: #25334e;
             border-color: #38bdf8;
             color: white;
         }
 
         /* FOOTER */
         .footer-bar {
-            padding: 20px 40px;
+            padding: 18px 48px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 13px;
+            font-size: 12.5px;
             color: #64748b;
             width: 100%;
-            z-index: 10;
         }
         .footer-bar a {
             color: #2563eb;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
         }
         .footer-bar a:hover {
             text-decoration: underline;
+        }
+        .online-dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            background: #10b981;
+            border-radius: 50%;
+            margin-left: 4px;
+            vertical-align: middle;
         }
 
         /* RESPONSIVE LAYOUT */
@@ -677,14 +676,13 @@
                 width: 100%;
                 max-width: 440px;
             }
-            .bg-glow { display: none; }
         }
-        @media (max-width: 520px) {
-            .header-title { font-size: 24px; }
+        @media (max-width: 540px) {
+            .header-title { font-size: 26px; }
             .header-subtitle { font-size: 14px; }
             .mockup-body { flex-direction: column; }
             .features-grid-wrapper { grid-template-columns: 1fr; }
-            .footer-bar { flex-direction: column; gap: 8px; text-align: center; }
+            .footer-bar { flex-direction: column; gap: 8px; text-align: center; padding: 16px; }
         }
     </style>
     <?php
@@ -812,37 +810,17 @@
 
             <!-- Mobile Footer -->
             <div class="mb-login-footer" style="background: none; border-top: none;">
-                <div>© 2026 RFT HỆ THỐNG QUẢN LÝ CHẤM CÔNG – <?= htmlspecialchars(defined('APP_VERSION') ? APP_VERSION : 'v2.4.26') ?></div>
+                <div>© 2026 RFT HỆ THỐNG QUẢN LÝ CHẤM CÔNG — <?= htmlspecialchars(defined('APP_VERSION') ? APP_VERSION : 'v2.4.34') ?></div>
                 <div style="margin-top: 4px;">CẦN HỖ TRỢ? <a href="#">Trò chuyện ngay</a> <i class="far fa-comment-dots" style="color: #1b5ed8;"></i></div>
             </div>
 
         </div>
 
-        <script>
-            function togglePasswordVisibility(fieldId, iconEl) {
-                const field = document.getElementById(fieldId);
-                if (field.type === 'password') {
-                    field.type = 'text';
-                    iconEl.classList.remove('fa-eye');
-                    iconEl.classList.add('fa-eye-slash');
-                } else {
-                    field.type = 'password';
-                    iconEl.classList.remove('fa-eye-slash');
-                    iconEl.classList.add('fa-eye');
-                }
-            }
-        </script>
-
     <?php else: ?>
         <!-- ========================================== -->
-        <!-- DESKTOP LOGIN VIEW (REDESIGNED TO IMAGE)   -->
+        <!-- DESKTOP LOGIN VIEW (PIXEL PERFECT)         -->
         <!-- ========================================== -->
-        <!-- Ambient Background Glow Orbs -->
-        <div class="bg-glow bg-glow-1"></div>
-        <div class="bg-glow bg-glow-2"></div>
-        <div class="bg-glow bg-glow-3"></div>
-
-        <div class="main-content">
+        <div class="main-wrapper">
             <!-- TOP HEADER -->
             <div class="header-section">
                 <a href="index.php?" class="brand-logo-pills" style="text-decoration:none;" title="Trang chủ">
@@ -887,6 +865,7 @@
 
                                 <div class="scanner-frame-wrapper">
                                     <div class="scanner-box">
+                                        <div class="scanner-box-inner-dashed"></div>
                                         <div class="scanner-corner corner-tl"></div>
                                         <div class="scanner-corner corner-tr"></div>
                                         <div class="scanner-corner corner-bl"></div>
@@ -896,32 +875,32 @@
                                         </div>
                                     </div>
                                     <div class="auto-recognize-pill">
-                                        <i class="fas fa-check"></i> Tự động nhận diện
+                                        <i class="fas fa-check" style="font-size:8.5px"></i>
+                                        <span>Tự động<br>nhận diện</span>
                                     </div>
                                 </div>
 
                                 <div class="camera-footer">
                                     <span class="cam-foot-left">
-                                        <span class="dot"></span> Hệ thống hoạt động ổn định
+                                        <span class="foot-dot"></span> Hệ thống hoạt động ổn định
                                     </span>
-                                    <span class="cam-foot-right">Chính xác & Bảo mật</span>
+                                    <span class="cam-foot-right">Chính xác &amp; Bảo mật</span>
                                 </div>
                             </div>
 
-                            <!-- Card 2: Light System Status -->
+                            <!-- Card 2: System Status Card -->
                             <div class="system-status-card">
                                 <div>
-                                    <div class="status-icon-circle">
-                                        <i class="fas fa-check"></i>
+                                    <div class="status-icon-box">
+                                        <i class="far fa-circle-check"></i>
                                     </div>
-                                    <div class="status-content">
-                                        <div class="status-sub">Trạng thái hệ thống</div>
-                                        <div class="status-main">Chấm công tự động</div>
-                                        <div class="status-desc">Ghi nhận dữ liệu ra vào tức thì không cần chạm.</div>
-                                    </div>
+                                    <div class="status-sub">Trạng thái hệ thống</div>
+                                    <div class="status-main-title">Chấm công tự<br>động</div>
+                                    <div class="status-desc-text">Ghi nhận dữ liệu ra vào tức thì không cần chạm.</div>
                                 </div>
-                                <div class="status-active-badge">
-                                    <span class="active-dot"></span> Đang hoạt động 24/7
+                                <div class="status-active-tag">
+                                    <span class="active-dot"></span>
+                                    <span>Đang hoạt động 24/7</span>
                                 </div>
                             </div>
                         </div>
@@ -932,7 +911,7 @@
                         <div class="feature-box">
                             <span class="feature-bullet-dot"></span>
                             <div class="feature-desc-text">
-                                <strong>Nhận diện khuôn mặt</strong> chính xác, hỗ trợ nhận diện khi đeo khẩu trang.
+                                <strong>AI Face Recognition:</strong> Nhận diện khuôn mặt chính xác, tự động và nhanh chóng.
                             </div>
                         </div>
                         <div class="feature-box">
@@ -997,7 +976,7 @@
                         <div class="form-group-item">
                             <label for="username">TÊN ĐĂNG NHẬP / EMAIL</label>
                             <div class="input-relative-wrapper">
-                                <i class="fas fa-user left-icon"></i>
+                                <i class="far fa-user left-icon"></i>
                                 <input type="text" id="username" name="username" class="input-control-field" placeholder="Nhập tên đăng nhập hoặc email" autocomplete="username" autofocus required>
                             </div>
                         </div>
@@ -1007,7 +986,7 @@
                             <div class="input-relative-wrapper">
                                 <i class="fas fa-lock left-icon"></i>
                                 <input type="password" id="matKhau" name="matKhau" class="input-control-field has-right-icon" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
-                                <i class="fas fa-eye eye-toggle-btn" onclick="togglePasswordVisibility('matKhau', this)"></i>
+                                <i class="far fa-eye eye-toggle-btn" onclick="togglePasswordVisibility('matKhau', this)"></i>
                             </div>
                         </div>
 
@@ -1040,8 +1019,8 @@
 
         <!-- FOOTER -->
         <footer class="footer-bar">
-            <div>© 2026 RFT Hệ Thống Quản Lý Chấm Công — <?= htmlspecialchars(defined('APP_VERSION') ? APP_VERSION : 'v2.4.26') ?></div>
-            <div>Cần hỗ trợ? <a href="#">Trò chuyện ngay</a></div>
+            <div>© 2026 RFT Hệ Thống Quản Lý Chấm Công — <?= htmlspecialchars(defined('APP_VERSION') ? APP_VERSION : 'v2.4.34') ?></div>
+            <div>Cần hỗ trợ? <a href="#">Trò chuyện ngay <span class="online-dot"></span></a></div>
         </footer>
     <?php endif; ?>
 
