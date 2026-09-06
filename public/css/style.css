@@ -2149,13 +2149,13 @@ body {
 
 .menu-item-btn.active i { color: #60a5fa; }
 
-/* Desktop Persistent Sidebar & Remove Menu Button */
+/* Force desktop sidebar to stay permanently expanded and hide reopen button on desktop */
 @media (min-width: 901px) {
     .sidebar-reopen-btn {
         display: none !important;
     }
-    body:not(.mobile-view) .main-container > .sidebar-nav,
-    body:not(.mobile-view) .sidebar-nav {
+    .main-container > .sidebar-nav,
+    .sidebar-nav {
         display: flex !important;
     }
 }
