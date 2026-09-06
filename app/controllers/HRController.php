@@ -288,6 +288,8 @@ class HRController
         $monthKey = substr($fromDate, 0, 7);
 
         $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $phongBan);
+        $dailyPunctuality = $this->model->getDailyPunctualityReport($fromDate, $toDate, $phongBan);
+        $employeePunctuality = $this->model->getEmployeePunctualityReport($fromDate, $toDate, $phongBan);
         $departments = $this->model->getDistinctDepartments();
 
         $summaryRows = $this->model->getTimesheetApprovalSummary($monthKey);

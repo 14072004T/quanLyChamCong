@@ -544,7 +544,7 @@ class ChamCongModel
             $date = date('Y-m-d');
         }
 
-        $sql = "SELECT s.id AS maCa, s.tenCa, s.gioBatDau, s.gioKetThuc
+        $sql = "SELECT s.id AS maCa, s.tenCa, s.kyHieu, s.gioBatDau, s.gioKetThuc
                 FROM canhanvien aes
                 JOIN calamviec s ON s.id = aes.maCa AND s.hoatDong = 1
                 WHERE aes.maND = ?
@@ -1392,6 +1392,179 @@ class ChamCongModel
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    public function getDailyPunctualityReport($fromDate, $toDate, $phongBan = '')
+    {
+        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
+        $sql = "SELECT u.maND, DATE(l.ngayTao) AS ngayChamCong,
+                       MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END) AS gioVao,
+                       MAX(CASE WHEN l.hanhDong = 'OUT' THEN l.ngayTao END) AS gioRa
+                FROM nguoidung u
+                INNER JOIN lichsuchamcong l ON l.maND = u.maND
+                    AND DATE(l.ngayTao) >= ?
+                    AND DATE(l.ngayTao) <= ?
+                WHERE u.trangThai = 1
+                  AND u.chucVu = 'Nhân viên'
+                  AND u.phongBan IN ($placeholders)";
+
+        $params = [$fromDate, $toDate];
+        $types = 'ss';
+        foreach ($validDepts as $dept) {
+            $params[] = $dept;
+            $types .= 's';
+        }
+        if ($phongBan !== '') {
+            $sql .= " AND u.phongBan = ?";
+            $params[] = $phongBan;
+            $types .= 's';
+        }
+        $sql .= " GROUP BY u.maND, DATE(l.ngayTao) ORDER BY ngayChamCong, u.maND";
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+        $stmt->bind_param($types, ...$params);
+        if (!$stmt->execute()) {
+            $stmt->close();
+            return [];
+        }
+        $attendanceRows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        $daily = [];
+        $cursor = strtotime($fromDate);
+        $end = strtotime($toDate);
+        if ($cursor === false || $end === false || $cursor > $end) {
+            return [];
+        }
+        while ($cursor <= $end) {
+            $date = date('Y-m-d', $cursor);
+            $daily[$date] = ['date' => $date, 'late' => 0, 'early' => 0];
+            $cursor = strtotime('+1 day', $cursor);
+        }
+
+        foreach ($attendanceRows as $row) {
+            $date = $row['ngayChamCong'];
+            if (!isset($daily[$date])) {
+                continue;
+            }
+            $shift = $this->getShiftForUser((int)$row['maND'], $date);
+            if (!$shift || $this->isOffShift($shift)) {
+                continue;
+            }
+            $status = $this->calculateShiftStatus(
+                $row['gioVao'] ?: null,
+                $row['gioRa'] ?: null,
+                $shift['gioBatDau'] ?? null,
+                $shift['gioKetThuc'] ?? null
+            );
+            if (in_array('late', $status['statuses'], true)) {
+                $daily[$date]['late']++;
+            }
+            if (in_array('early_leave', $status['statuses'], true)) {
+                $daily[$date]['early']++;
+            }
+        }
+
+        return array_values($daily);
+    }
+
+    public function getEmployeePunctualityReport($fromDate, $toDate, $phongBan = '')
+    {
+        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
+        $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
+        $sql = "SELECT u.maND, u.hoTen, DATE(l.ngayTao) AS ngayChamCong,
+                       MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END) AS gioVao,
+                       MAX(CASE WHEN l.hanhDong = 'OUT' THEN l.ngayTao END) AS gioRa
+                FROM nguoidung u
+                INNER JOIN lichsuchamcong l ON l.maND = u.maND
+                    AND DATE(l.ngayTao) >= ?
+                    AND DATE(l.ngayTao) <= ?
+                WHERE u.trangThai = 1
+                  AND u.chucVu = 'Nhân viên'
+                  AND u.phongBan IN ($placeholders)";
+
+        $params = [$fromDate, $toDate];
+        $types = 'ss';
+        foreach ($validDepts as $dept) {
+            $params[] = $dept;
+            $types .= 's';
+        }
+        if ($phongBan !== '') {
+            $sql .= " AND u.phongBan = ?";
+            $params[] = $phongBan;
+            $types .= 's';
+        }
+        $sql .= " GROUP BY u.maND, u.hoTen, DATE(l.ngayTao) ORDER BY u.hoTen, ngayChamCong";
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+        $stmt->bind_param($types, ...$params);
+        if (!$stmt->execute()) {
+            $stmt->close();
+            return [];
+        }
+        $attendanceRows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        $employees = [];
+        foreach ($attendanceRows as $row) {
+            $maND = (int)$row['maND'];
+            if (!isset($employees[$maND])) {
+                $employees[$maND] = [
+                    'maND' => $maND,
+                    'hoTen' => $row['hoTen'],
+                    'late_count' => 0,
+                    'early_count' => 0,
+                    'late_minutes' => 0,
+                    'early_minutes' => 0,
+                ];
+            }
+
+            $date = $row['ngayChamCong'];
+            $shift = $this->getShiftForUser($maND, $date);
+            if (!$shift || $this->isOffShift($shift)) {
+                continue;
+            }
+            $status = $this->calculateShiftStatus(
+                $row['gioVao'] ?: null,
+                $row['gioRa'] ?: null,
+                $shift['gioBatDau'] ?? null,
+                $shift['gioKetThuc'] ?? null
+            );
+            if (in_array('late', $status['statuses'], true)) {
+                $employees[$maND]['late_count']++;
+                $employees[$maND]['late_minutes'] += (int)$status['minutes_late'];
+            }
+            if (in_array('early_leave', $status['statuses'], true)) {
+                $employees[$maND]['early_count']++;
+                $employees[$maND]['early_minutes'] += (int)$status['minutes_early'];
+            }
+        }
+
+        $rows = array_values(array_filter($employees, function ($employee) {
+            return ($employee['late_count'] + $employee['early_count']) > 0;
+        }));
+        usort($rows, function ($left, $right) {
+            $leftEvents = $left['late_count'] + $left['early_count'];
+            $rightEvents = $right['late_count'] + $right['early_count'];
+            if ($leftEvents !== $rightEvents) {
+                return $rightEvents <=> $leftEvents;
+            }
+            $leftMinutes = $left['late_minutes'] + $left['early_minutes'];
+            $rightMinutes = $right['late_minutes'] + $right['early_minutes'];
+            if ($leftMinutes !== $rightMinutes) {
+                return $rightMinutes <=> $leftMinutes;
+            }
+            return strcasecmp($left['hoTen'], $right['hoTen']);
+        });
+
+        return $rows;
     }
 
     public function getDistinctDepartments()

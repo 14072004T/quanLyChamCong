@@ -327,36 +327,54 @@ $totalEmployees = $totalEmployees ?: count($reportRows);
 $actualWorkDays = array_sum(array_map(function ($row) { return (float)($row['work_days'] ?? 0); }, $reportRows));
 $plannedWorkDays = max($totalEmployees * $dayCount, 1);
 $payrollOtHours = array_sum(array_map(function ($row) { return (float)($row['overtime_hours'] ?? 0); }, $payrollRows));
-$onTimeDays = round($actualWorkDays * 0.815, 1);
-$lateDays = max(0, round($actualWorkDays * 0.051, 1));
-$earlyDays = max(0, round($actualWorkDays * 0.052, 1));
+$dailyPunctuality = $dailyPunctuality ?? [];
+$lateDays = array_sum(array_column($dailyPunctuality, 'late'));
+$earlyDays = array_sum(array_column($dailyPunctuality, 'early'));
+$onTimeDays = max(0, $actualWorkDays - $lateDays);
 $absentDays = max(0, round($plannedWorkDays - $actualWorkDays, 1));
 $onTimeRate = $actualWorkDays > 0 ? round(($onTimeDays / $actualWorkDays) * 100, 1) : 0;
 $absentRate = $plannedWorkDays > 0 ? round(($absentDays / $plannedWorkDays) * 100, 1) : 0;
 $totalOtHours = round($payrollOtHours, 1);
 
-$labels = [];
-$lineValues = [];
-$cursor = $fromTs;
-$step = max(1, (int)floor($dayCount / 10));
-$baseRate = max(60, min(98, $onTimeRate ?: 82));
-while ($cursor <= $toTs) {
-    $labels[] = date('d/m', $cursor);
-    $i = count($labels);
-    $lineValues[] = max(55, min(98, round($baseRate + sin($i * 1.7) * 7 + (($i % 3) - 1) * 3, 1)));
-    $cursor = strtotime('+' . $step . ' day', $cursor);
+$labels = array_map(function ($row) { return date('d/m', strtotime($row['date'])); }, $dailyPunctuality);
+$lateLineValues = array_map(function ($row) { return (int)$row['late']; }, $dailyPunctuality);
+$earlyLineValues = array_map(function ($row) { return (int)$row['early']; }, $dailyPunctuality);
+
+$workdayDistribution = ['0' => 0, '0.25' => 0, '0.5' => 0, '0.75' => 0, '1' => 0];
+foreach ($payrollRows as $row) {
+    foreach (($row['daily_breakdown'] ?? []) as $day) {
+        $date = $day['date'] ?? '';
+        if ($date < $fromDate || $date > $toDate) {
+            continue;
+        }
+        $workValue = max(0, min(1, (float)($day['work_value'] ?? 0)));
+        $bucket = number_format(round($workValue * 4) / 4, 2, '.', '');
+        $bucket = rtrim(rtrim($bucket, '0'), '.');
+        $workdayDistribution[$bucket]++;
+    }
 }
-if (end($labels) !== date('d/m', $toTs)) {
-    $labels[] = date('d/m', $toTs);
-    $lineValues[] = $baseRate;
-}
+$workdayEmployeeTotal = array_sum($workdayDistribution);
+$workdayLabels = ['1 công', '0,75 công', '0,5 công', '0,25 công', '0 công'];
+$workdayValues = [
+    $workdayDistribution['1'],
+    $workdayDistribution['0.75'],
+    $workdayDistribution['0.5'],
+    $workdayDistribution['0.25'],
+    $workdayDistribution['0'],
+];
+$workdayColors = ['#12b76a', '#2f7cf6', '#f59e0b', '#ef4444', '#94a3b8'];
+$workdayPercentages = array_map(function ($value) use ($workdayEmployeeTotal) {
+    return $workdayEmployeeTotal > 0 ? round(($value / $workdayEmployeeTotal) * 100, 1) : 0;
+}, $workdayValues);
 
 $weekLabels = ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4', 'Tuần 5'];
 $weekOt = [];
 for ($i = 0; $i < 5; $i++) {
     $weekOt[] = max(0, round(($totalOtHours / 5) * (0.7 + ($i * 0.14)), 1));
 }
-$topLate = array_slice($reportRows, 0, 5);
+$employeePunctuality = $employeePunctuality ?? [];
+$topLimit = max(1, min(50, (int)($_GET['top_limit'] ?? 5)));
+$topLate = array_slice($employeePunctuality, 0, $topLimit);
 $updatedAt = date('H:i, d/m/Y');
 ?>
 
@@ -738,7 +756,7 @@ $updatedAt = date('H:i, d/m/Y');
         <div class="mgrr-grid">
             <section class="mgrr-panel">
                 <div class="mgrr-panel-head">
-                    <div class="mgrr-panel-title">Tỷ lệ đi làm đúng giờ theo ngày</div>
+                    <div class="mgrr-panel-title">Số lượng đi trễ, về sớm theo ngày</div>
                     <select class="mgrr-mini-select"><option>Theo ngày</option></select>
                 </div>
                 <div class="mgrr-chart"><canvas id="mgrrLineChart"></canvas></div>
@@ -746,18 +764,17 @@ $updatedAt = date('H:i, d/m/Y');
 
             <section class="mgrr-panel">
                 <div class="mgrr-panel-head">
-                    <div class="mgrr-panel-title">Cơ cấu trạng thái chấm công</div>
+                    <div class="mgrr-panel-title">Tỷ lệ lượt nhân viên theo mức ngày công</div>
                 </div>
                 <div class="mgrr-donut-wrap">
                     <div class="mgrr-donut">
                         <canvas id="mgrrDonutChart"></canvas>
-                        <div class="mgrr-donut-center"><div><strong><?= number_format($actualWorkDays, 0) ?></strong><span>Ngày công</span></div></div>
+                        <div class="mgrr-donut-center"><div><strong><?= number_format($workdayEmployeeTotal, 0) ?></strong><span>Lượt ngày công</span></div></div>
                     </div>
                     <div class="mgrr-legend">
-                        <div><span class="mgrr-dot" style="background:#12b76a"></span>Đi làm đủ giờ <strong><?= number_format($onTimeDays, 0) ?></strong></div>
-                        <div><span class="mgrr-dot" style="background:#f59e0b"></span>Đi trễ <strong><?= number_format($lateDays, 0) ?></strong></div>
-                        <div><span class="mgrr-dot" style="background:#ef4444"></span>Về sớm <strong><?= number_format($earlyDays, 0) ?></strong></div>
-                        <div><span class="mgrr-dot" style="background:#8b5cf6"></span>Vắng mặt <strong><?= number_format($absentDays, 0) ?></strong></div>
+                        <?php foreach ($workdayLabels as $index => $label): ?>
+                            <div><span class="mgrr-dot" style="background:<?= $workdayColors[$index] ?>"></span><?= $label ?> <strong><?= (int)$workdayValues[$index] ?></strong> <small>(<?= number_format($workdayPercentages[$index], 1) ?>%)</small></div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </section>
@@ -789,26 +806,37 @@ $updatedAt = date('H:i, d/m/Y');
             </section>
 
             <section class="mgrr-panel">
-                <div class="mgrr-panel-head"><div class="mgrr-panel-title">Top nhân viên đi trễ nhiều nhất</div></div>
+                <div class="mgrr-panel-head">
+                    <div class="mgrr-panel-title">Top nhân viên đi trễ, về sớm</div>
+                    <form method="GET" action="index.php" style="display:flex;align-items:center;gap:6px">
+                        <input type="hidden" name="page" value="<?= htmlspecialchars($reportActionPage) ?>">
+                        <input type="hidden" name="tuNgay" value="<?= htmlspecialchars($fromDate) ?>">
+                        <input type="hidden" name="denNgay" value="<?= htmlspecialchars($toDate) ?>">
+                        <input type="hidden" name="phongBan" value="<?= htmlspecialchars($phongBan) ?>">
+                        <label for="top-limit" style="font-size:.78rem;color:#64748b">Số dòng</label>
+                        <input id="top-limit" name="top_limit" type="number" min="1" max="50" value="<?= $topLimit ?>" style="width:62px;padding:6px 8px;border:1px solid #dbe4f0;border-radius:6px">
+                        <button type="submit" class="mgrr-btn primary" style="padding:7px 10px;font-size:.78rem"><i class="fas fa-filter"></i> Lọc</button>
+                    </form>
+                </div>
                 <table class="mgrr-table">
-                    <thead><tr><th>#</th><th>Nhân viên</th><th>Số lần</th><th>Tổng phút</th></tr></thead>
+                    <thead><tr><th>#</th><th>Nhân viên</th><th>Đi trễ</th><th>Về sớm</th><th>Tổng phút</th></tr></thead>
                     <tbody>
                         <?php if ($topLate): ?>
                             <?php foreach ($topLate as $idx => $row):
-                                $lateCount = max(1, 6 - $idx);
-                                $lateMinutes = $lateCount * (18 + $idx * 3);
                                 $name = $row['hoTen'] ?? 'Nhân viên';
                                 $initials = mb_substr($name, 0, 1);
+                                $totalMinutes = (int)($row['late_minutes'] ?? 0) + (int)($row['early_minutes'] ?? 0);
                             ?>
                                 <tr>
                                     <td><span class="mgrr-rank"><?= $idx + 1 ?></span></td>
                                     <td><div class="mgrr-person"><span class="mgrr-avatar"><?= htmlspecialchars($initials) ?></span><strong><?= htmlspecialchars($name) ?></strong></div></td>
-                                    <td><?= (int)$lateCount ?></td>
-                                    <td style="color:#ef4444;font-weight:800"><?= (int)$lateMinutes ?> phút</td>
+                                    <td><?= (int)($row['late_count'] ?? 0) ?></td>
+                                    <td><?= (int)($row['early_count'] ?? 0) ?></td>
+                                    <td style="color:#ef4444;font-weight:800"><?= $totalMinutes ?> phút</td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="4" style="text-align:center;color:#64748b">Không có dữ liệu</td></tr>
+                            <tr><td colspan="5" style="text-align:center;color:#64748b">Không có dữ liệu</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -835,8 +863,9 @@ $updatedAt = date('H:i, d/m/Y');
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var lineLabels = <?= json_encode($labels, JSON_UNESCAPED_UNICODE) ?>;
-    var lineValues = <?= json_encode($lineValues, JSON_UNESCAPED_UNICODE) ?>;
-    var donutValues = [<?= (float)$onTimeDays ?>, <?= (float)$lateDays ?>, <?= (float)$earlyDays ?>, <?= (float)$absentDays ?>];
+    var lateLineValues = <?= json_encode($lateLineValues, JSON_UNESCAPED_UNICODE) ?>;
+    var earlyLineValues = <?= json_encode($earlyLineValues, JSON_UNESCAPED_UNICODE) ?>;
+    var donutValues = <?= json_encode($workdayValues, JSON_UNESCAPED_UNICODE) ?>;
     var weekLabels = <?= json_encode($weekLabels, JSON_UNESCAPED_UNICODE) ?>;
     var weekOt = <?= json_encode($weekOt, JSON_UNESCAPED_UNICODE) ?>;
 
@@ -845,20 +874,30 @@ document.addEventListener('DOMContentLoaded', function () {
         data: {
             labels: lineLabels,
             datasets: [{
-                data: lineValues,
-                borderColor: '#2f7cf6',
-                backgroundColor: 'rgba(47,124,246,.08)',
+                label: 'Đi trễ',
+                data: lateLineValues,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245,158,11,.08)',
                 fill: true,
                 tension: .35,
                 pointRadius: 3,
-                pointBackgroundColor: '#2f7cf6'
+                pointBackgroundColor: '#f59e0b'
+            }, {
+                label: 'Về sớm',
+                data: earlyLineValues,
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239,68,68,.08)',
+                fill: false,
+                tension: .35,
+                pointRadius: 3,
+                pointBackgroundColor: '#ef4444'
             }]
         },
         options: {
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: { legend: { display: true, position: 'bottom' } },
             scales: {
-                y: { min: 0, max: 100, ticks: { callback: function(v) { return v + '%'; }, color: '#64748b' }, grid: { color: '#edf2f7' } },
+                y: { beginAtZero: true, ticks: { precision: 0, color: '#64748b' }, grid: { color: '#edf2f7' } },
                 x: { ticks: { color: '#64748b' }, grid: { display: false } }
             }
         }
@@ -869,7 +908,7 @@ document.addEventListener('DOMContentLoaded', function () {
         data: {
             datasets: [{
                 data: donutValues,
-                backgroundColor: ['#12b76a', '#f59e0b', '#ef4444', '#8b5cf6'],
+                backgroundColor: <?= json_encode($workdayColors, JSON_UNESCAPED_UNICODE) ?>,
                 borderWidth: 3,
                 borderColor: '#fff'
             }]

@@ -74,6 +74,8 @@ class ManagerController
         $export = (int)($_POST['export'] ?? 0);
 
         $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $phongBan);
+        $dailyPunctuality = $this->model->getDailyPunctualityReport($fromDate, $toDate, $phongBan);
+        $employeePunctuality = $this->model->getEmployeePunctualityReport($fromDate, $toDate, $phongBan);
         $departments = $this->model->getValidDepartments();
         $monthKey = substr($fromDate, 0, 7);
         
