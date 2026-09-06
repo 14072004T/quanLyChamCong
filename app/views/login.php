@@ -893,7 +893,7 @@
                         <div class="feature-box">
                             <span class="feature-bullet-dot"></span>
                             <div class="feature-desc-text">
-                                <strong>AI Face Recognition:</strong> Nhận diện siêu tốc &lt;0.5s, chính xác 99.9%, hỗ trợ khẩu trang.
+                                <strong>AI Face Recognition:</strong> Nhận diện khuôn mặt chính xác, tự động và nhanh chóng.
                             </div>
                         </div>
                         <div class="feature-box">
