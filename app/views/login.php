@@ -748,6 +748,12 @@
                         <span>Sai tên đăng nhập hoặc mật khẩu.</span>
                     </div>
                 <?php endif; ?>
+                <?php if ($loi === 'pending'): ?>
+                    <div class="mb-alert mb-alert--warning">
+                        <i class="fas fa-user-clock"></i>
+                        <span>Tài khoản chưa được kích hoạt. Vui lòng liên hệ IT/Tech.</span>
+                    </div>
+                <?php endif; ?>
                 <?php if ($loi === 'inactive'): ?>
                     <div class="mb-alert mb-alert--warning">
                         <i class="fas fa-lock"></i>
@@ -963,6 +969,16 @@
                         <div class="alert-box alert-error">
                             <i class="fas fa-exclamation-circle" style="margin-top: 2px;"></i>
                             <span>Sai tên đăng nhập hoặc mật khẩu. Vui lòng thử lại.</span>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($loi === 'pending'): ?>
+                        <div class="alert-box alert-warning">
+                            <i class="fas fa-user-clock" style="margin-top: 2px;"></i>
+                            <div>
+                                <strong>Tài khoản chưa được kích hoạt</strong><br>
+                                <span>Tài khoản của bạn đang chờ IT kích hoạt và phân quyền.</span>
+                            </div>
                         </div>
                     <?php endif; ?>
 
