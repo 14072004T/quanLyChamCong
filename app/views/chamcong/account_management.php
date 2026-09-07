@@ -227,10 +227,19 @@
         }
 
         .accounts-table td {
-            padding: 14px 16px;
+            padding: 12px 16px;
             border-bottom: 1px solid #f1f5f9;
             color: #334155;
             vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* Allow only name/username/dept columns to wrap if needed */
+        .accounts-table td.col-name,
+        .accounts-table td.col-dept {
+            white-space: normal;
+            min-width: 120px;
+            max-width: 200px;
         }
 
         .accounts-table tbody tr:hover {
@@ -309,20 +318,39 @@
             background: #dcfce7 !important;
         }
 
-        /* Action buttons */
+        /* Action buttons cell */
+        .action-cell {
+            white-space: nowrap;
+        }
+
+        .action-btn-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        /* Fixed-width toggle button wrapper so layout doesn't shift */
+        .toggle-btn-wrapper {
+            display: inline-flex;
+            width: 110px;
+            justify-content: center;
+        }
+
         .btn-action-role {
             background: #3b82f6;
             color: white;
             border: none;
-            padding: 7px 12px;
+            padding: 6px 11px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
         .btn-action-role:hover {
@@ -334,15 +362,18 @@
             background: #f1f5f9;
             color: #475569;
             border: 1px solid #cbd5e1;
-            padding: 7px 12px;
+            padding: 6px 11px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             transition: all 0.2s;
+            white-space: nowrap;
+            width: 100%;
+            justify-content: center;
         }
 
         .btn-action-toggle:hover {
@@ -897,20 +928,24 @@ function renderAccountsTable(data) {
         html += `
             <tr>
                 <td style="font-weight: 600; color: #64748b;">${index + 1}</td>
-                <td>
+                <td class="col-name">
                     <strong style="color: #0f172a;">${escapeHtml(hoTen)}</strong>
                     ${item.maND ? `<br><small style="color: #94a3b8;">Mã ND: ${item.maND}</small>` : ''}
                 </td>
                 <td><code style="background: #f1f5f9; padding: 3px 6px; border-radius: 6px; color: #0f172a; font-weight: 600;">${escapeHtml(item.tenDangNhap)}</code></td>
-                <td>${escapeHtml(phongBan)}</td>
+                <td class="col-dept">${escapeHtml(phongBan)}</td>
                 <td>${roleBadge}</td>
                 <td>${statusBadge}</td>
                 <td><small style="color: #64748b;">${createdDate}</small></td>
-                <td style="text-align: right; white-space: nowrap;">
-                    <button class="btn-action-role" onclick="openRoleModal(${item.maTK})">
-                        <i class="fas fa-user-shield"></i> Phân quyền
-                    </button>
-                    ${actionToggleBtn}
+                <td class="action-cell">
+                    <div class="action-btn-group">
+                        <button class="btn-action-role" onclick="openRoleModal(${item.maTK})">
+                            <i class="fas fa-user-shield"></i> Phân quyền
+                        </button>
+                        <div class="toggle-btn-wrapper">
+                            ${actionToggleBtn}
+                        </div>
+                    </div>
                 </td>
             </tr>
         `;
