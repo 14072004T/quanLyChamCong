@@ -530,6 +530,107 @@ body.mobile-view.mobile-menu-open .mobile-sidebar-nav,
     font-weight: 700 !important;
 }
 
+/* --- MOBILE ALT AUTH DIVIDER & BUTTONS --- */
+.mb-alt-divider {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin: 4px 0 16px !important;
+}
+
+.mb-alt-divider-line {
+    flex: 1 !important;
+    height: 1px !important;
+    background: #e2e8f0 !important;
+}
+
+.mb-alt-divider-text {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: #94a3b8 !important;
+    letter-spacing: 0.7px !important;
+    white-space: nowrap !important;
+}
+
+.mb-alt-buttons {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    margin-bottom: 28px !important;
+}
+
+.mb-alt-btn {
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+    background: #11192e !important;
+    border-radius: 14px !important;
+    padding: 14px 16px !important;
+    text-decoration: none !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    transition: all 0.2s !important;
+    box-shadow: 0 4px 12px rgba(15,23,42,0.15) !important;
+}
+
+.mb-alt-btn:active {
+    transform: scale(0.98) !important;
+    opacity: 0.9 !important;
+}
+
+.mb-alt-btn-icon {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 18px !important;
+    flex-shrink: 0 !important;
+}
+
+.mb-alt-btn--wifi .mb-alt-btn-icon {
+    background: rgba(0, 210, 255, 0.12) !important;
+    color: #00d2ff !important;
+    border: 1px solid rgba(0,210,255,0.2) !important;
+}
+
+.mb-alt-btn--faceid .mb-alt-btn-icon {
+    background: rgba(59, 130, 246, 0.15) !important;
+    color: #60a5fa !important;
+    border: 1px solid rgba(59,130,246,0.2) !important;
+}
+
+.mb-alt-btn-text {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    min-width: 0 !important;
+}
+
+.mb-alt-btn-title {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #f1f5f9 !important;
+    display: block !important;
+}
+
+.mb-alt-btn-sub {
+    font-size: 11px !important;
+    color: #64748b !important;
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.mb-alt-btn-arrow {
+    color: #475569 !important;
+    font-size: 13px !important;
+    flex-shrink: 0 !important;
+}
+
 /* --- MOBILE HOME VIEW (SCREENSHOT 2) --- */
 .mb-profile-card {
     background-color: white !important;

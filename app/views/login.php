@@ -796,15 +796,33 @@
                 </form>
             </div>
 
-            <!-- Quick option cards -->
-            <div class="mb-quick-options">
-                <a href="#" class="mb-quick-option-card">
-                    <i class="fas fa-wifi"></i>
-                    <span>WIFI CHẤM CÔNG</span>
+            <!-- Divider + Alternative Auth -->
+            <div class="mb-alt-divider">
+                <div class="mb-alt-divider-line"></div>
+                <span class="mb-alt-divider-text">HOẶC PHƯƠNG THỨC KHÁC</span>
+                <div class="mb-alt-divider-line"></div>
+            </div>
+
+            <div class="mb-alt-buttons">
+                <a href="index.php?page=tablet-cham-cong" class="mb-alt-btn mb-alt-btn--wifi">
+                    <div class="mb-alt-btn-icon">
+                        <i class="fas fa-wifi"></i>
+                    </div>
+                    <div class="mb-alt-btn-text">
+                        <span class="mb-alt-btn-title">WiFi Chấm Công</span>
+                        <span class="mb-alt-btn-sub">Chấm công bằng khuôn mặt qua thiết bị</span>
+                    </div>
+                    <i class="fas fa-chevron-right mb-alt-btn-arrow"></i>
                 </a>
-                <a href="index.php?page=tablet-cham-cong" class="mb-quick-option-card">
-                    <i class="far fa-face-smile"></i>
-                    <span>FACEID</span>
+                <a href="index.php?page=tablet-cham-cong" class="mb-alt-btn mb-alt-btn--faceid">
+                    <div class="mb-alt-btn-icon">
+                        <i class="far fa-face-smile"></i>
+                    </div>
+                    <div class="mb-alt-btn-text">
+                        <span class="mb-alt-btn-title">FaceID</span>
+                        <span class="mb-alt-btn-sub">Nhận diện khuôn mặt tự động</span>
+                    </div>
+                    <i class="fas fa-chevron-right mb-alt-btn-arrow"></i>
                 </a>
             </div>
 
