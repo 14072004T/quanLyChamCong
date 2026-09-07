@@ -689,7 +689,6 @@
                         <th>Họ & Tên</th>
                         <th>Tên đăng nhập</th>
                         <th>Phòng ban</th>
-                        <th>Chức vụ hiện tại</th>
                         <th>Role hệ thống</th>
                         <th>Trạng thái</th>
                         <th>Ngày tạo</th>
@@ -698,7 +697,7 @@
                 </thead>
                 <tbody id="accountsTableBody">
                     <tr>
-                        <td colspan="9" class="empty-state">
+                        <td colspan="8" class="empty-state">
                             <i class="fas fa-spinner fa-spin"></i>
                             <p>Đang tải dữ liệu tài khoản...</p>
                         </td>
@@ -853,7 +852,7 @@ function renderAccountsTable(data) {
     if (!data || data.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="empty-state">
+                <td colspan="8" class="empty-state">
                     <i class="fas fa-user-slash"></i>
                     <p>Không tìm thấy tài khoản phù hợp với điều kiện lọc</p>
                 </td>
@@ -882,7 +881,6 @@ function renderAccountsTable(data) {
         const createdDate = item.ngayTaoTK ? new Date(item.ngayTaoTK).toLocaleDateString('vi-VN') : '--';
         const hoTen = item.hoTen || '(Chưa cập nhật)';
         const phongBan = item.phongBan || '--';
-        const chucVu = item.chucVu || 'Nhân viên';
 
         html += `
             <tr>
@@ -893,7 +891,6 @@ function renderAccountsTable(data) {
                 </td>
                 <td><code style="background: #f1f5f9; padding: 3px 6px; border-radius: 6px; color: #0f172a; font-weight: 600;">${escapeHtml(item.tenDangNhap)}</code></td>
                 <td>${escapeHtml(phongBan)}</td>
-                <td><small style="color: #475569;">${escapeHtml(chucVu)}</small></td>
                 <td>${roleBadge}</td>
                 <td>${statusBadge}</td>
                 <td><small style="color: #64748b;">${createdDate}</small></td>
