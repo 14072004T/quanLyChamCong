@@ -10,7 +10,7 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-// Define setting metadata with icons and accent colors
+// Define setting metadata with icons and accent colors (4 main system parameters)
 $settingsMetadata = [
     'LATE_THRESHOLD_MINUTES' => [
         'name'    => 'Ngưỡng đi trễ',
@@ -37,19 +37,6 @@ $settingsMetadata = [
         'border'  => '#ddd6fe',
         'min'     => 0,
         'max'     => 240,
-    ],
-    'MAX_CORRECTION_DAYS' => [
-        'name'    => 'Thời gian điều chỉnh công',
-        'type'    => 'number',
-        'moTa'    => 'Số ngày tối đa kể từ ngày làm việc mà nhân viên được phép gửi yêu cầu chỉnh sửa chấm công.',
-        'unit'    => 'ngày',
-        'default' => '7',
-        'icon'    => 'fa-calendar-check',
-        'color'   => '#10b981',
-        'bg'      => '#f0fdf4',
-        'border'  => '#bbf7d0',
-        'min'     => 1,
-        'max'     => 90,
     ],
     'SESSION_TIMEOUT_MINUTES' => [
         'name'    => 'Thời gian hết phiên',
@@ -97,7 +84,7 @@ foreach ($settingsMetadata as $key => $meta) {
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 .sett-wrap {
-    max-width: 1100px;
+    max-width: 1000px;
     margin: 0 auto;
     padding: 24px 20px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -179,9 +166,9 @@ foreach ($settingsMetadata as $key => $meta) {
 
 /* ── SECTION LABEL ── */
 .sett-section-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase; color: #94a3b8;
-    margin-bottom: 14px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.8px;
+    text-transform: uppercase; color: #64748b;
+    margin-bottom: 18px;
     display: flex; align-items: center; gap: 8px;
 }
 .sett-section-label::after {
@@ -190,20 +177,28 @@ foreach ($settingsMetadata as $key => $meta) {
     background: #e2e8f0;
 }
 
-/* ── SETTINGS GRID ── */
+/* ── SETTINGS GRID (SYMMETRICAL 2x2 GRID) ── */
 .sett-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 18px;
-    margin-bottom: 32px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
 }
 
-/* ── SETTING CARD ── */
+@media (max-width: 768px) {
+    .sett-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── SETTING CARD (UNIFORM DESIGN) ── */
 .sett-card {
     background: #fff;
     border: 1.5px solid #e2e8f0;
     border-radius: 16px;
-    padding: 22px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     transition: all 0.25s ease;
     position: relative;
     overflow: hidden;
@@ -234,35 +229,37 @@ foreach ($settingsMetadata as $key => $meta) {
     box-shadow: 0 0 0 3px rgba(239,68,68,.12);
 }
 
-/* Card top row */
+/* Card top section */
 .sett-card-top {
     display: flex; align-items: flex-start; gap: 14px;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
 }
 .sett-card-icon {
-    width: 44px; height: 44px;
+    width: 46px; height: 46px;
     border-radius: 12px;
     background: var(--card-bg, #eff6ff);
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
+    font-size: 19px;
     color: var(--card-color, #3b82f6);
     flex-shrink: 0;
 }
 .sett-card-info { flex: 1; min-width: 0; }
 .sett-card-name {
-    font-size: 15px; font-weight: 700;
+    font-size: 16px; font-weight: 700;
     color: #0f172a;
     margin-bottom: 4px;
     line-height: 1.3;
 }
 .sett-card-desc {
-    font-size: 12px; color: #64748b;
+    font-size: 12.5px; color: #64748b;
     line-height: 1.5;
+    min-height: 38px;
 }
 
 /* Input row */
 .sett-input-row {
     display: flex; align-items: center; gap: 10px;
+    margin-top: auto;
 }
 .sett-input-wrap {
     flex: 1;
@@ -270,7 +267,7 @@ foreach ($settingsMetadata as $key => $meta) {
 }
 .sett-input {
     width: 100%;
-    padding: 10px 50px 10px 14px;
+    padding: 10px 52px 10px 14px;
     border: 1.5px solid #e2e8f0;
     border-radius: 10px;
     font-size: 16px;
@@ -303,8 +300,8 @@ foreach ($settingsMetadata as $key => $meta) {
 
 /* Save button */
 .sett-save-btn {
-    width: 42px; height: 42px;
-    border-radius: 11px;
+    width: 44px; height: 44px;
+    border-radius: 10px;
     border: none;
     background: var(--card-color, #3b82f6);
     color: #fff;
@@ -313,62 +310,42 @@ foreach ($settingsMetadata as $key => $meta) {
     display: flex; align-items: center; justify-content: center;
     transition: all 0.2s ease;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
 }
 .sett-save-btn:hover:not(:disabled) {
     filter: brightness(1.1);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,.18);
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
 }
 .sett-save-btn:disabled {
     opacity: 0.7;
     cursor: default;
 }
 
+/* Bottom footer of card */
+.sett-card-footer {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 24px;
+}
+
+/* Range hint */
+.sett-range-hint {
+    font-size: 11.5px; color: #94a3b8;
+    display: flex; align-items: center; gap: 4px;
+}
+
 /* Status message */
 .sett-status {
-    margin-top: 10px;
-    min-height: 20px;
+    min-height: 18px;
     font-size: 12px; font-weight: 600;
     display: flex; align-items: center; gap: 6px;
     transition: all 0.3s ease;
 }
 .sett-status.ok   { color: #10b981; }
 .sett-status.fail { color: #ef4444; }
-
-/* Range hint */
-.sett-range-hint {
-    margin-top: 8px;
-    font-size: 11px; color: #94a3b8;
-    display: flex; align-items: center; gap: 4px;
-}
-
-/* ── INFO PANEL ── */
-.sett-info-panel {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border: 1px solid #bae6fd;
-    border-radius: 14px;
-    padding: 18px 22px;
-    display: flex; gap: 14px; align-items: flex-start;
-}
-.sett-info-icon {
-    width: 36px; height: 36px;
-    background: #0ea5e9;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 16px;
-    flex-shrink: 0;
-}
-.sett-info-text h4 {
-    margin: 0 0 4px;
-    font-size: 14px; font-weight: 700;
-    color: #0c4a6e;
-}
-.sett-info-text p {
-    margin: 0;
-    font-size: 13px; color: #0369a1;
-    line-height: 1.55;
-}
 </style>
 
 <div class="sett-wrap">
@@ -403,10 +380,10 @@ foreach ($settingsMetadata as $key => $meta) {
 
     <!-- Section Label -->
     <div class="sett-section-label">
-        <i class="fas fa-cog"></i> Tham số hệ thống
+        <i class="fas fa-cog"></i> Tham số cấu hình chính
     </div>
 
-    <!-- Settings Cards Grid -->
+    <!-- Settings Cards Grid (Uniform 2x2 Grid) -->
     <div class="sett-grid">
         <?php foreach ($settingsMetadata as $key => $meta): ?>
         <div class="sett-card"
@@ -445,27 +422,17 @@ foreach ($settingsMetadata as $key => $meta) {
                 </button>
             </div>
 
-            <?php if (isset($meta['min']) || isset($meta['max'])): ?>
-            <div class="sett-range-hint">
-                <i class="fas fa-info-circle"></i>
-                Khoảng cho phép: <?= $meta['min'] ?? 0 ?> – <?= $meta['max'] ?? '∞' ?> <?= htmlspecialchars($meta['unit']) ?>
+            <div class="sett-card-footer">
+                <?php if (isset($meta['min']) || isset($meta['max'])): ?>
+                <div class="sett-range-hint">
+                    <i class="fas fa-info-circle"></i>
+                    Khoảng cho phép: <?= $meta['min'] ?? 0 ?> – <?= $meta['max'] ?? '∞' ?> <?= htmlspecialchars($meta['unit']) ?>
+                </div>
+                <?php endif; ?>
+                <div class="sett-status" id="status_<?= htmlspecialchars($key) ?>"></div>
             </div>
-            <?php endif; ?>
-
-            <div class="sett-status" id="status_<?= htmlspecialchars($key) ?>"></div>
         </div>
         <?php endforeach; ?>
-    </div>
-
-    <!-- Info Panel -->
-    <div class="sett-info-panel">
-        <div class="sett-info-icon">
-            <i class="fas fa-info"></i>
-        </div>
-        <div class="sett-info-text">
-            <h4>Lưu ý khi thay đổi cài đặt</h4>
-            <p>Các tham số được áp dụng ngay lập tức sau khi lưu. Thay đổi ngưỡng đi trễ và OT ảnh hưởng đến cách tính công từ lần chấm công tiếp theo. Thay đổi số lần đăng nhập sai và thời gian hết phiên có hiệu lực ngay với tất cả phiên đăng nhập hiện tại.</p>
-        </div>
     </div>
 
 </div>
@@ -487,11 +454,11 @@ foreach ($settingsMetadata as $key => $meta) {
     });
 
     function saveSetting(key) {
-        var input   = document.getElementById('sett_' + key);
-        var card    = document.getElementById('card_' + key);
+        var input    = document.getElementById('sett_' + key);
+        var card     = document.getElementById('card_' + key);
         var statusEl = document.getElementById('status_' + key);
-        var btn     = card.querySelector('.sett-save-btn');
-        var value   = input ? input.value.trim() : '';
+        var btn      = card.querySelector('.sett-save-btn');
+        var value    = input ? input.value.trim() : '';
 
         if (value === '') {
             showStatus(statusEl, 'fail', 'Không được để trống');

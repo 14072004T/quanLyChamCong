@@ -153,49 +153,7 @@
             color: #334155;
         }
 
-        /* Matrix Reference Card */
-        .matrix-info-card {
-            background: #f8fafc;
-            border: 1px dashed #cbd5e1;
-            border-radius: 12px;
-            padding: 14px 18px;
-            margin-bottom: 24px;
-            font-size: 13px;
-            color: #475569;
-        }
 
-        .matrix-info-header {
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-
-        .matrix-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            font-size: 12px;
-        }
-
-        .matrix-table th, .matrix-table td {
-            border: 1px solid #e2e8f0;
-            padding: 6px 10px;
-            text-align: center;
-        }
-
-        .matrix-table th {
-            background: #edf2f7;
-            color: #334155;
-            font-weight: 600;
-        }
-
-        .matrix-table tr:nth-child(even) {
-            background: #ffffff;
-        }
 
         /* Table Area */
         .table-card {
@@ -637,57 +595,7 @@
         </div>
     </div>
 
-    <!-- Reference Matrix Card -->
-    <div class="matrix-info-card">
-        <div class="matrix-info-header" onclick="toggleMatrixTable()">
-            <i class="fas fa-info-circle" style="color: #3b82f6;"></i>
-            <span>Bảng tham chiếu phân quyền theo Phòng ban</span>
-            <i class="fas fa-chevron-down" id="matrixToggleIcon" style="margin-left: auto; font-size: 12px;"></i>
-        </div>
-        <div id="matrixTableWrapper" style="display: none;">
-            <table class="matrix-table">
-                <thead>
-                    <tr>
-                        <th style="text-align: left;">Phòng ban</th>
-                        <th>HR (Nhân sự)</th>
-                        <th>Tech (Kỹ thuật)</th>
-                        <th>Quản lý / Ban lãnh đạo</th>
-                        <th>Nhân viên</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="text-align: left; font-weight: 600;">Ban Điều hành</td>
-                        <td></td>
-                        <td></td>
-                        <td><i class="fas fa-check-circle" style="color: #16a34a;"></i></td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: left; font-weight: 600;">Phòng Nhân sự</td>
-                        <td><i class="fas fa-check-circle" style="color: #16a34a;"></i></td>
-                        <td></td>
-                        <td></td>
-                        <td><i class="fas fa-check-circle" style="color: #16a34a;"></i></td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: left; font-weight: 600;">Phòng CNTT (IT)</td>
-                        <td></td>
-                        <td><i class="fas fa-check-circle" style="color: #16a34a;"></i></td>
-                        <td></td>
-                        <td><i class="fas fa-check-circle" style="color: #16a34a;"></i></td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: left; font-weight: 600;">Các phòng ban khác (Kế toán, Kinh doanh, Sản xuất, QC...)</td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td><i class="fas fa-check-circle" style="color: #16a34a;"></i></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+
 
     <!-- Filter Card -->
     <div class="filter-card">
@@ -830,17 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAccounts();
 });
 
-function toggleMatrixTable() {
-    const wrapper = document.getElementById('matrixTableWrapper');
-    const icon = document.getElementById('matrixToggleIcon');
-    if (wrapper.style.display === 'none') {
-        wrapper.style.display = 'block';
-        icon.className = 'fas fa-chevron-up';
-    } else {
-        wrapper.style.display = 'none';
-        icon.className = 'fas fa-chevron-down';
-    }
-}
+
 
 function loadAccounts() {
     const refreshIcon = document.getElementById('refreshIcon');
