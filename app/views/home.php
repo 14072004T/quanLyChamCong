@@ -94,6 +94,7 @@ $user = $_SESSION['user'] ?? [];
 </style>
 
 <?php if (AuthMiddleware::isMobile()): ?>
+    <?php include 'app/views/layouts/sidebar.php'; ?>
     <!-- ========================================== -->
     <!-- MOBILE HOME VIEW                          -->
     <!-- ========================================== -->

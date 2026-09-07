@@ -41,6 +41,7 @@ if (!isset($view) || is_null($view)) {
 ?>
 <?php include 'app/views/layouts/header.php'; ?>
 <?php if (AuthMiddleware::isMobile() && $role !== 'hr'): ?>
+    <?php include 'app/views/layouts/sidebar.php'; ?>
     <!-- ========================================== -->
     <!-- MOBILE FULL SCREEN CAMERA VIEW            -->
     <!-- ========================================== -->

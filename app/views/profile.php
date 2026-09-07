@@ -47,6 +47,7 @@ $initials = mb_strtoupper($initials);
 <?php include 'app/views/layouts/nav.php'; ?>
 
 <div class="main-container">
+    <?php include 'app/views/layouts/sidebar.php'; ?>
     <div class="dashboard-container" style="padding: 16px;">
         
         <h2 class="mb-request-title" style="margin-bottom: 20px;"><i class="fa-solid fa-user-gear"></i> Tài khoản</h2>
