@@ -834,7 +834,7 @@ class ChamCongModel
         $days = max(1, min(31, (int)$days));
         $fromDate = date('Y-m-d', strtotime($today . ' -' . ($days - 1) . ' days'));
         $employeeIds = [];
-        $employeeResult = $this->conn->query("SELECT maND FROM nguoidung WHERE trangThai = 1 AND chucVu = 'Nhân viên'");
+        $employeeResult = $this->conn->query("SELECT maND FROM nguoidung WHERE trangThai = 1 AND TRIM(chucVu) LIKE '%Nhân viên%'");
         if ($employeeResult) {
             while ($employee = $employeeResult->fetch_assoc()) {
                 $employeeIds[] = (int)$employee['maND'];
@@ -847,6 +847,17 @@ class ChamCongModel
         for ($cursor = strtotime($fromDate); $cursor <= strtotime($today); $cursor = strtotime('+1 day', $cursor)) {
             $date = date('Y-m-d', $cursor);
             $daily[$date] = $emptyDay($date);
+        }
+        if (empty($employeeIds)) {
+            $fallback = $this->conn->query("SELECT DISTINCT l.maND
+                                           FROM lichsuchamcong l
+                                           JOIN nguoidung n ON n.maND = l.maND
+                                           WHERE n.trangThai = 1 AND DATE(l.ngayTao) BETWEEN '" . $this->conn->real_escape_string($fromDate) . "' AND '" . $this->conn->real_escape_string($today) . "'");
+            if ($fallback) {
+                while ($employee = $fallback->fetch_assoc()) {
+                    $employeeIds[] = (int)$employee['maND'];
+                }
+            }
         }
         if (empty($employeeIds)) {
             return ['total_employees' => 0, 'today' => $daily[$today] ?? $emptyDay($today), 'daily' => array_values($daily)];
