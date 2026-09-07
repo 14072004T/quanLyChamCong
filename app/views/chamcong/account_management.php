@@ -757,43 +757,26 @@
             <div class="role-option-list">
                 <label class="role-option-card" id="card_nhanvien" onclick="selectRoleRadio('nhanvien')">
                     <input type="radio" name="selectedRole" value="nhanvien" id="role_nhanvien">
-                    <div class="role-option-info">
-                        <h4><span class="badge-role role-nhanvien"><i class="fas fa-user"></i> Nhân viên</span></h4>
-                        <p>Quyền xem lịch sử chấm công, gửi yêu cầu sửa công, làm đơn xin nghỉ phép.</p>
-                    </div>
+                    <span class="badge-role role-nhanvien"><i class="fas fa-user"></i> Nhân viên</span>
                 </label>
 
                 <label class="role-option-card" id="card_hr" onclick="selectRoleRadio('hr')">
                     <input type="radio" name="selectedRole" value="hr" id="role_hr">
-                    <div class="role-option-info">
-                        <h4><span class="badge-role role-hr"><i class="fas fa-user-tie"></i> Bộ phận nhân sự (HR)</span></h4>
-                        <p>Quyền quản lý nhân viên, ca làm việc, chấm công kiosk tablet, duyệt bảng công.</p>
-                    </div>
+                    <span class="badge-role role-hr"><i class="fas fa-user-tie"></i> Bộ phận nhân sự (HR)</span>
                 </label>
 
                 <label class="role-option-card" id="card_tech" onclick="selectRoleRadio('tech')">
                     <input type="radio" name="selectedRole" value="tech" id="role_tech">
-                    <div class="role-option-info">
-                        <h4><span class="badge-role role-tech"><i class="fas fa-laptop-code"></i> Bộ phận kỹ thuật (Tech/IT)</span></h4>
-                        <p>Quyền cấu hình WiFi, cài đặt tham số hệ thống, quản lý tài khoản & phân quyền.</p>
-                    </div>
+                    <span class="badge-role role-tech"><i class="fas fa-laptop-code"></i> Bộ phận kỹ thuật (Tech/IT)</span>
                 </label>
 
                 <label class="role-option-card" id="card_manager" onclick="selectRoleRadio('manager')">
                     <input type="radio" name="selectedRole" value="manager" id="role_manager">
-                    <div class="role-option-info">
-                        <h4><span class="badge-role role-manager"><i class="fas fa-briefcase"></i> Quản lý / Ban lãnh đạo</span></h4>
-                        <p>Quyền xem báo cáo tổng hợp, thổng kê biểu đồ, phê duyệt đơn phép & sửa công.</p>
-                    </div>
+                    <span class="badge-role role-manager"><i class="fas fa-briefcase"></i> Quản lý / Ban lãnh đạo</span>
                 </label>
             </div>
 
-            <div class="modal-alert">
-                <i class="fas fa-exclamation-triangle" style="margin-top: 2px;"></i>
-                <div>
-                    <strong>Lưu ý quan trọng:</strong> Khi thay đổi role, cột <code>chucVu</code> trong hồ sơ người dùng sẽ được cập nhật tương ứng. Người dùng sẽ cần <strong>đăng xuất và đăng nhập lại</strong> để hệ thống áp dụng menu và quyền hạn mới.
-                </div>
-            </div>
+
         </div>
 
         <div class="modal-footer">
