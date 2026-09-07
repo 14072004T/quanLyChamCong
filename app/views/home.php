@@ -152,42 +152,19 @@ $user = $_SESSION['user'] ?? [];
         </div>
         <?php endif; ?>
 
-        <!-- Current time attendance card -->
+        <!-- Current status card -->
         <div class="mb-attendance-card">
-            <div class="label-time">THỜI GIAN HIỆN TẠI</div>
+            <div class="label-time">TRẠNG THÁI HÔM NAY</div>
             <div class="time-value" id="mb-realtime-clock">19:26:30</div>
             <div class="date-value" id="mb-realtime-date">Thứ Hai, 24 Tháng 6 2024</div>
-            <div class="location-info">
-                <i class="fa-solid fa-location-dot"></i>
-                <span>Trụ sở chính (Cách 15m)</span>
-            </div>
-            <?php if ($hasFaceRegistered): ?>
-                <a href="index.php?page=cham-cong-dashboard" class="mb-attendance-btn" style="text-decoration: none;">
-                    <i class="fa-solid fa-fingerprint"></i>
-                    <span>Chấm công ngay</span>
-                </a>
-            <?php else: ?>
-                <?php if ($role === 'hr'): ?>
-                    <a href="index.php?page=face-register" class="mb-attendance-btn" style="text-decoration: none; background-color: #d97706; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25);">
-                        <i class="fa-solid fa-portrait"></i>
-                        <span>Đăng ký khuôn mặt ngay</span>
-                    </a>
-                <?php else: ?>
-                    <button class="mb-attendance-btn" style="background-color: #64748b; box-shadow: none; cursor: not-allowed; text-decoration: none;" disabled>
-                        <i class="fa-solid fa-user-lock"></i>
-                        <span>Chưa đăng ký khuôn mặt (Liên hệ HR)</span>
-                    </button>
-                <?php endif; ?>
-            <?php endif; ?>
-            <div class="status-text">
-                Trạng thái: 
+            <div class="status-text" style="margin-top: 12px; font-size: 15px; font-weight: 600;">
                 <?php
                 if ($todayStatus['out']) {
-                    echo 'Đã chấm công ra';
+                    echo '<span style="color:#10b981;">✓ Đã chấm công ra</span>';
                 } elseif ($todayStatus['in']) {
-                    echo 'Đang trong ca làm việc';
+                    echo '<span style="color:#3b82f6;">● Đang trong ca làm việc</span>';
                 } else {
-                    echo 'Chưa chấm công vào';
+                    echo '<span style="color:#94a3b8;">○ Chưa chấm công vào</span>';
                 }
                 ?>
             </div>
@@ -333,12 +310,7 @@ $user = $_SESSION['user'] ?? [];
                 $inTime = $todayStatus['in'] ? date('H:i', strtotime($todayStatus['in'])) : null;
                 ?>
 
-                <div class="grid-4">
-                    <a href="index.php?page=cham-cong-dashboard" class="m-card" style="background: #3b82f6; color: white !important; border: none;">
-                        <div style="font-size: 24px; margin-bottom: 10px;"><i class="fas fa-fingerprint"></i></div>
-                        <div style="font-size: 18px; font-weight: 800;">Chấm công ngay</div>
-                        <div style="font-size: 13px; opacity: 0.8;">Vào ca hoặc Ra ca</div>
-                    </a>
+                <div class="grid-4" style="grid-template-columns: repeat(3,1fr);">
                     <a href="index.php?page=lich-su-cham-cong" class="m-card">
                         <div class="stat-label">Ngày công (Tháng <?= date('m') ?>)</div>
                         <div class="stat-value"><?= $workedDays ?></div>

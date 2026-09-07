@@ -14,6 +14,7 @@ $menus = [
         ['page' => 'quan-ly-ca-lam', 'label' => 'Quản lý Ca làm việc', 'icon' => 'fa-business-time'],
         ['page' => 'tinh-cong', 'label' => 'Tính công & Báo cáo', 'icon' => 'fa-calculator'],
         ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
+        ['divider' => true, 'label' => 'Cá nhân'],
     ],
     'manager' => [
         ['page' => 'bao-cao-tong-hop', 'label' => 'Báo cáo tổng hợp', 'icon' => 'fa-file-lines'],
@@ -23,6 +24,7 @@ $menus = [
     'tech' => [
         ['page' => 'tech-wifi', 'label' => 'Mạng & WiFi', 'icon' => 'fa-wifi'],
         ['page' => 'tech-settings', 'label' => 'Cấu hình Hệ thống', 'icon' => 'fa-server'],
+        ['divider' => true, 'label' => 'Cá nhân'],
     ],
 ];
 
@@ -63,7 +65,7 @@ if ($hasFace) {
 
 $filteredMenus = [];
 foreach ($roleMenus as $menu) {
-    if ($menu['page'] === 'face-register' && !$showFaceRegisterMenu) {
+    if (empty($menu['divider']) && ($menu['page'] === 'face-register') && !$showFaceRegisterMenu) {
         continue;
     }
     $filteredMenus[] = $menu;
@@ -89,6 +91,11 @@ $roleLabels = [
     <h3><?= htmlspecialchars($roleLabels[$role] ?? 'Menu') ?></h3>
     <ul id="sidebarList">
         <?php foreach ($filteredMenus as $menu): ?>
+            <?php if (!empty($menu['divider'])): ?>
+                <li class="sidebar-divider">
+                    <span><?= htmlspecialchars($menu['label']) ?></span>
+                </li>
+            <?php else: ?>
             <li>
                 <a href="index.php?page=<?= htmlspecialchars($menu['page']) ?>"
                          class="menu-item <?= ($menu['page'] === $currentPage) ? 'active' : '' ?>"
@@ -97,6 +104,7 @@ $roleLabels = [
                     <span><?= htmlspecialchars($menu['label']) ?></span>
                 </a>
             </li>
+            <?php endif; ?>
         <?php endforeach; ?>
     </ul>
 </nav>

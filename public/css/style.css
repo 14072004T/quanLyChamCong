@@ -684,6 +684,31 @@ body {
     cursor: default;
 }
 
+/* Divider phân tách nhóm menu */
+.sidebar-nav ul li.sidebar-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 15px 6px 15px;
+    cursor: default;
+}
+.sidebar-nav ul li.sidebar-divider::before,
+.sidebar-nav ul li.sidebar-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+}
+.sidebar-nav ul li.sidebar-divider span {
+    font-size: 10px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 .sidebar-nav h3 {
     padding: 20px 20px 10px 20px !important;
     color: #475569 !important;
