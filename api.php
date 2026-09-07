@@ -201,19 +201,17 @@ function handleAuth($phuongThuc, $hanhDong) {
                 respondError('Sai tên đăng nhập hoặc mật khẩu', 401);
             }
 
-            $trangThaiTK = $user['trangThaiTK'] ?? '';
+            $trangThaiTK = trim((string)($user['trangThaiTK'] ?? ''));
             $trangThaiND = $user['trangThaiND'] ?? 1;
-            $activeStatusValues = [
-                'hoạt động',
-                'hoat dong',
-                'hoáº¡t ä»™ng',
-                'hoáº¡t Ä‘á»™ng',
-                'hoạt dộng'
-            ];
-            $statusNormalized = mb_strtolower(trim($trangThaiTK), 'UTF-8');
 
-            if (!in_array($statusNormalized, $activeStatusValues, true) || $trangThaiND != 1) {
-                respondError('Tài khoản đã bị ngưng hoạt động', 403);
+            $statusNormalized = mb_strtolower($trangThaiTK, 'UTF-8');
+            $isActive = ($trangThaiTK === '1' || strpos($statusNormalized, 'hoạt động') !== false || strpos($statusNormalized, 'hoat dong') !== false);
+
+            if (!$isActive || $trangThaiND != 1) {
+                if ($statusNormalized === 'pending' || $statusNormalized === 'chua_kich_hoat' || strpos($statusNormalized, 'pending') !== false || strpos($statusNormalized, 'chua') !== false || $trangThaiTK === '') {
+                    respondError('Tài khoản chưa được kích hoạt. Vui lòng liên hệ IT/Tech để kích hoạt và phân quyền.', 403);
+                }
+                respondError('Tài khoản đã bị ngưng hoạt động hoặc đã khóa.', 403);
             }
 
             $roleMapping = [

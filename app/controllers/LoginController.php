@@ -161,20 +161,19 @@ class LoginController {
 
             $statusLower = mb_strtolower($trangThaiTK, 'UTF-8');
             
-            // Pending / Unactivated account check
-            if ($statusLower === 'pending' || $statusLower === 'chua_kich_hoat' || strpos($statusLower, 'pending') !== false) {
-                header("Location: index.php?page=login&error=pending");
+            $isActive = ($trangThaiTK === '1' || strpos($statusLower, 'hoạt động') !== false || strpos($statusLower, 'hoat dong') !== false);
+            
+            if (!$isActive) {
+                if ($statusLower === 'pending' || $statusLower === 'chua_kich_hoat' || strpos($statusLower, 'pending') !== false || strpos($statusLower, 'chua') !== false || $trangThaiTK === '') {
+                    header("Location: index.php?page=login&error=pending");
+                    exit;
+                }
+                
+                header("Location: index.php?page=login&error=inactive");
                 exit;
             }
 
-            // Locked / Inactive account check
-            $isBlocked = ($trangThaiTK === '0' || 
-                         $statusLower === '0' ||
-                         strpos($statusLower, 'khoa') !== false || 
-                         strpos($statusLower, 'inactive') !== false ||
-                         strpos($statusLower, 'suspended') !== false);
-            
-            if ($trangThaiND != 1 || $isBlocked) {
+            if ($trangThaiND != 1) {
                 header("Location: index.php?page=login&error=inactive");
                 exit;
             }
