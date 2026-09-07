@@ -8,6 +8,7 @@ $stats = $stats ?? [];
 $hrDashboardMetrics = $hrDashboardMetrics ?? [];
 $hrRequestMetrics = $hrRequestMetrics ?? [];
 $todayMetrics = $hrDashboardMetrics['today'] ?? [];
+$periodMetrics = $hrDashboardMetrics['period'] ?? $todayMetrics;
 $userName = htmlspecialchars($_SESSION['user']['hoTen'] ?? 'HR');
 $today = date('d/m/Y');
 $inToday = (int)($todayMetrics['present'] ?? 0);
@@ -71,8 +72,8 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
 <div class="hrd-row2">
     <div class="hrd-panel hrd-chart-panel">
         <div class="hrd-panel-head">
-            <span>Tình hình chấm công 7 ngày gần nhất</span>
-            <span class="hrd-badge">7 ngày</span>
+            <span>Tình hình chấm công đến hôm nay</span>
+            <span class="hrd-badge">Từ đầu tháng</span>
         </div>
         <canvas id="hrdLineChart" height="120"></canvas>
         <div class="hrd-chart-legend">
@@ -83,7 +84,7 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
     </div>
 
     <div class="hrd-panel hrd-donut-panel">
-        <div class="hrd-panel-head"><span>Tổng quan chấm công hôm nay</span></div>
+        <div class="hrd-panel-head"><span>Tổng quan chấm công đến hôm nay</span></div>
         <div class="hrd-donut-wrap">
             <canvas id="hrdDonutChart" width="160" height="160"></canvas>
             <div class="hrd-donut-center">
@@ -120,7 +121,6 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
                 </div>
             </div>
         <?php endforeach; ?>
-        <a href="index.php?page=xuly-yeucau" class="hrd-see-all">Xem yêu cầu điều chỉnh công <i class="fas fa-arrow-right"></i></a>
     </div>
 </div>
 
@@ -146,21 +146,6 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
         </div>
     </div>
 
-    <div class="hrd-panel">
-        <div class="hrd-panel-head"><span>Yêu cầu sửa chấm công đang chờ</span></div>
-        <div id="hrd-abnormal-list">
-            <div class="empty-state" style="padding:24px"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>
-        </div>
-        <a href="index.php?page=xuly-yeucau" class="hrd-see-all">Xem tất cả <i class="fas fa-arrow-right"></i></a>
-    </div>
-
-    <div class="hrd-panel">
-        <div class="hrd-panel-head"><span>Hoạt động xử lý gần đây</span></div>
-        <div id="hrd-activity-list">
-            <div class="empty-state" style="padding:24px"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>
-        </div>
-        <a href="index.php?page=xuly-yeucau" class="hrd-see-all">Xem tất cả hoạt động <i class="fas fa-arrow-right"></i></a>
-    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -168,6 +153,7 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
 (function() {
     var hrMetrics = <?= json_encode($hrDashboardMetrics, JSON_UNESCAPED_UNICODE) ?>;
     var todayMetrics = hrMetrics.today || {};
+    var periodMetrics = hrMetrics.period || todayMetrics;
     var dailyMetrics = hrMetrics.daily || [];
     var inToday = Number(todayMetrics.present || 0);
     var late = Number(todayMetrics.late || 0);
@@ -187,17 +173,20 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
     }
 
     function updateCharts() {
-        var onTime = Number(todayMetrics.on_time || 0);
-        var totalDonut = Math.max(1, Number(todayMetrics.scheduled || 0));
+        var onTime = Number(periodMetrics.on_time || 0);
+        var periodLate = Number(periodMetrics.late || 0);
+        var periodAbsent = Number(periodMetrics.absent || 0);
+        var periodLeave = Number(periodMetrics.leave || 0);
+        var totalDonut = Math.max(1, Number(periodMetrics.scheduled || 0));
         document.getElementById('hrd-donut-total').textContent = totalEmployees;
         document.getElementById('dl-cnt').textContent = onTime + ' (' + Math.round(onTime / totalDonut * 100) + '%)';
-        document.getElementById('dt-cnt').textContent = late + ' (' + Math.round(late / totalDonut * 100) + '%)';
-        document.getElementById('vm-cnt').textContent = absent + ' (' + Math.round(absent / totalDonut * 100) + '%)';
-        document.getElementById('np-cnt').textContent = leave + ' (' + Math.round(leave / totalDonut * 100) + '%)';
+        document.getElementById('dt-cnt').textContent = periodLate + ' (' + Math.round(periodLate / totalDonut * 100) + '%)';
+        document.getElementById('vm-cnt').textContent = periodAbsent + ' (' + Math.round(periodAbsent / totalDonut * 100) + '%)';
+        document.getElementById('np-cnt').textContent = periodLeave + ' (' + Math.round(periodLeave / totalDonut * 100) + '%)';
 
         new Chart(document.getElementById('hrdDonutChart'), {
             type: 'doughnut',
-            data: { datasets: [{ data: [onTime, late, absent, leave], backgroundColor: ['#22c55e','#f59e0b','#ef4444','#3b82f6'], borderWidth: 2, borderColor: '#fff' }] },
+            data: { datasets: [{ data: [onTime, periodLate, periodAbsent, periodLeave], backgroundColor: ['#22c55e','#f59e0b','#ef4444','#3b82f6'], borderWidth: 2, borderColor: '#fff' }] },
             options: { cutout: '68%', plugins: { legend: { display: false } } }
         });
 
@@ -244,48 +233,5 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
             document.getElementById('hrd-shifts-body').innerHTML = '<tr><td colspan="4" class="empty-state" style="padding:16px">Không thể tải dữ liệu ca làm việc</td></tr>';
         });
 
-    fetch('index.php?page=hr-api-corrections&scope=pending', { headers: { Accept: 'application/json' } })
-        .then(function(r) { return r.json(); })
-        .then(function(json) {
-            var list = document.getElementById('hrd-abnormal-list');
-            var rows = (json.data || []).slice(0, 5);
-            if (!rows.length) {
-                list.innerHTML = '<div class="empty-state" style="padding:20px"><i class="fas fa-check-circle"></i> Không có yêu cầu chờ xử lý</div>';
-                return;
-            }
-            list.innerHTML = rows.map(function(row) {
-                return '<div class="hrd-abnormal-item"><div class="hrd-av">' + escHtml((row.hoTen || 'NV').slice(0, 2).toUpperCase()) + '</div>'
-                    + '<div class="hrd-abnormal-info"><div class="hrd-abnormal-name">' + escHtml(row.hoTen || 'Nhân viên') + '</div><div class="hrd-abnormal-dept">' + escHtml(row.ngayChamCong || '') + '</div></div>'
-                    + '<span class="hrd-abnormal-tag" style="background:#fef3c7;color:#d97706">Chờ HR xử lý</span>'
-                    + '<a href="index.php?page=xuly-yeucau&request_id=' + encodeURIComponent(row.id) + '" style="color:#94a3b8;margin-left:4px"><i class="fas fa-chevron-right"></i></a></div>';
-            }).join('');
-        })
-        .catch(function() {
-            document.getElementById('hrd-abnormal-list').innerHTML = '<div class="empty-state" style="padding:20px">Không thể tải dữ liệu</div>';
-        });
-
-    fetch('index.php?page=hr-api-corrections&scope=history', { headers: { Accept: 'application/json' } })
-        .then(function(r) { return r.json(); })
-        .then(function(json) {
-            var list = document.getElementById('hrd-activity-list');
-            var rows = (json.data || []).slice(0, 5);
-            if (!rows.length) {
-                list.innerHTML = '<div class="empty-state" style="padding:20px">Chưa có hoạt động</div>';
-                return;
-            }
-            list.innerHTML = rows.map(function(row) {
-                var approved = row.trangThai === 'approved';
-                var rejected = row.trangThai === 'rejected';
-                var icon = approved ? 'fa-check-circle' : (rejected ? 'fa-times-circle' : 'fa-clock');
-                var color = approved ? '#22c55e' : (rejected ? '#ef4444' : '#94a3b8');
-                var hanhDong = approved ? 'đã được duyệt' : (rejected ? 'đã bị từ chối' : 'đang chờ xử lý');
-                return '<div class="hrd-activity-item"><div class="hrd-activity-icon" style="color:' + color + '"><i class="fas ' + icon + '"></i></div>'
-                    + '<div class="hrd-activity-body"><div class="hrd-activity-text"><strong>' + escHtml(row.hoTen || 'Nhân viên') + '</strong> ' + hanhDong + '</div>'
-                    + '<div class="hrd-activity-time">' + escHtml(String(row.ngayTao || '').slice(0, 16)) + '</div></div></div>';
-            }).join('');
-        })
-        .catch(function() {
-            document.getElementById('hrd-activity-list').innerHTML = '<div class="empty-state" style="padding:20px">Không thể tải dữ liệu</div>';
-        });
 })();
 </script>

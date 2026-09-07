@@ -828,11 +828,10 @@ class ChamCongModel
         return $data;
     }
 
-    public function getHrDashboardMetrics($today = null, $days = 7)
+    public function getHrDashboardMetrics($today = null, $days = null)
     {
         $today = $today ?: date('Y-m-d');
-        $days = max(1, min(31, (int)$days));
-        $fromDate = date('Y-m-d', strtotime($today . ' -' . ($days - 1) . ' days'));
+        $fromDate = date('Y-m-01', strtotime($today));
         $employeeIds = [];
                 $employeeResult = $this->conn->query("SELECT DISTINCT nd.maND
                                                             FROM nguoidung nd
@@ -863,7 +862,8 @@ class ChamCongModel
             }
         }
         if (empty($employeeIds)) {
-            return ['total_employees' => 0, 'today' => $daily[$today] ?? $emptyDay($today), 'daily' => array_values($daily)];
+            $period = $emptyDay($fromDate);
+            return ['total_employees' => 0, 'today' => $daily[$today] ?? $emptyDay($today), 'period' => $period, 'daily' => array_values($daily)];
         }
 
         $placeholders = implode(',', array_fill(0, count($employeeIds), '?'));
@@ -915,10 +915,16 @@ class ChamCongModel
         }
         unset($day);
 
+        $periodMetrics = $emptyDay($fromDate);
+        foreach ($daily as $day) {
+            foreach (['scheduled', 'present', 'on_time', 'late', 'early', 'absent', 'leave'] as $key) {
+                $periodMetrics[$key] += (int)($day[$key] ?? 0);
+            }
+        }
         $todayMetrics = $daily[$today] ?? $emptyDay($today);
         $todayMetrics['absent'] = max(0, count($employeeIds) - (int)$todayMetrics['present']);
 
-        return ['total_employees' => count($employeeIds), 'today' => $todayMetrics, 'daily' => array_values($daily)];
+        return ['total_employees' => count($employeeIds), 'today' => $todayMetrics, 'period' => $periodMetrics, 'daily' => array_values($daily)];
     }
 
     public function getEmployees($keyword = '', $activeOnly = false, $limit = 0)
