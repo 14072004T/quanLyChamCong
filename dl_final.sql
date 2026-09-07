@@ -1,4 +1,4 @@
-﻿-- phpMyAdmin SQL Dump
+-- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
@@ -7989,7 +7989,7 @@ CREATE TABLE `taikhoan` (
   `maTK` int(11) NOT NULL,
   `tenDangNhap` varchar(50) NOT NULL,
   `matKhau` varchar(255) NOT NULL,
-  `trangThai` enum('Hoạt Động','Ngừng Hoạt Động') NOT NULL DEFAULT 'Hoạt Động',
+  `trangThai` varchar(50) NOT NULL DEFAULT 'pending',
   `lanDangNhapCuoi` datetime DEFAULT NULL,
   `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
   `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp()

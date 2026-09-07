@@ -869,9 +869,9 @@ function renderAccountsTable(data) {
 
     let html = '';
     data.forEach((item, index) => {
-        const statusRaw = String(item.trangThaiTK || '').toLowerCase();
-        const isPending = (statusRaw === 'pending' || statusRaw === 'chua_kich_hoat' || statusRaw.includes('pending') || statusRaw.includes('chưa'));
-        const isBlocked = !isPending && (item.trangThaiTK == 0 || statusRaw.includes('khoa') || statusRaw.includes('inactive'));
+        const statusRaw = String(item.trangThaiTK || '').trim().toLowerCase();
+        const isPending = (statusRaw === 'pending' || statusRaw === 'chua_kich_hoat' || statusRaw.includes('pending') || statusRaw.includes('chưa') || statusRaw === '');
+        const isBlocked = !isPending && (item.trangThaiTK === 0 || item.trangThaiTK === '0' || statusRaw.includes('khoa') || statusRaw.includes('inactive') || statusRaw === 'ngừng hoạt động');
 
         let statusBadge = '';
         let actionToggleBtn = '';

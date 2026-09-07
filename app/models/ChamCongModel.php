@@ -100,6 +100,14 @@ class ChamCongModel
         $this->addColumnIfMissing('wifichamcong', 'matKhau', 'VARCHAR(120) DEFAULT NULL');
         $this->addColumnIfMissing('wifichamcong', 'viTri', 'VARCHAR(255) DEFAULT NULL');
 
+        // Automatically convert taikhoan.trangThai column from ENUM to VARCHAR(50) to allow 'pending'
+        $colCheck = $this->conn->query("SHOW COLUMNS FROM taikhoan LIKE 'trangThai'");
+        if ($colCheck && $colRow = $colCheck->fetch_assoc()) {
+            if (strpos(strtolower($colRow['Type'] ?? ''), 'enum') !== false) {
+                $this->conn->query("ALTER TABLE taikhoan MODIFY COLUMN trangThai VARCHAR(50) NOT NULL DEFAULT 'pending'");
+            }
+        }
+
         $this->conn->query("
             CREATE TABLE IF NOT EXISTS calamviec (
                 id INT AUTO_INCREMENT PRIMARY KEY,
