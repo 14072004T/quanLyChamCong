@@ -828,141 +828,81 @@ class ChamCongModel
         return $data;
     }
 
+    public function getHrDashboardMetrics($today = null, $days = 7)
+    {
+        $today = $today ?: date('Y-m-d');
+        $days = max(1, min(31, (int)$days));
+        $fromDate = date('Y-m-d', strtotime($today . ' -' . ($days - 1) . ' days'));
+        $employees = array_values(array_filter($this->getEmployees('', true, 0), function ($employee) {
+            return mb_strtolower(trim($employee['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
+        }));
+        $employeeIds = array_values(array_filter(array_map(function ($employee) {
+            return (int)($employee['maND'] ?? 0);
+        }, $employees)));
+        $emptyDay = function ($date) {
+            return ['date' => $date, 'scheduled' => 0, 'present' => 0, 'on_time' => 0, 'late' => 0, 'early' => 0, 'absent' => 0, 'leave' => 0];
+        };
+        $daily = [];
+        for ($cursor = strtotime($fromDate); $cursor <= strtotime($today); $cursor = strtotime('+1 day', $cursor)) {
+            $date = date('Y-m-d', $cursor);
+            $daily[$date] = $emptyDay($date);
+        }
+        if (empty($employeeIds)) {
+            return ['total_employees' => 0, 'today' => $daily[$today] ?? $emptyDay($today), 'daily' => array_values($daily)];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($employeeIds), '?'));
+        $types = str_repeat('i', count($employeeIds)) . 'ss';
+        $params = array_merge($employeeIds, [$fromDate, $today]);
+        $sql = "SELECT maND, DATE(ngayTao) AS ngayChamCong,
+                       MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) AS gioVao,
+                       MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) AS gioRa
+                FROM lichsuchamcong
+                WHERE maND IN ($placeholders) AND DATE(ngayTao) BETWEEN ? AND ?
+                GROUP BY maND, DATE(ngayTao)";
+        $stmt = $this->conn->prepare($sql);
+        $attendance = [];
+        if ($stmt) {
+            $stmt->bind_param($types, ...$params);
+            $stmt->execute();
+            foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
+                $attendance[(int)$row['maND']][$row['ngayChamCong']] = $row;
+            }
+            $stmt->close();
+        }
+
+        foreach ($daily as $date => &$day) {
+            foreach ($employeeIds as $maND) {
+                $shift = $this->getShiftForUser($maND, $date);
+                if (!$shift || $this->isOffShift($shift)) {
+                    continue;
+                }
+                $day['scheduled']++;
+                $row = $attendance[$maND][$date] ?? null;
+                if (!$row || empty($row['gioVao'])) {
+                    $day['absent']++;
+                    continue;
+                }
+                $day['present']++;
+                $status = $this->calculateShiftStatus($row['gioVao'], $row['gioRa'] ?? null, $shift['gioBatDau'] ?? null, $shift['gioKetThuc'] ?? null);
+                if (in_array('late', $status['statuses'], true)) {
+                    $day['late']++;
+                } else {
+                    $day['on_time']++;
+                }
+                if (in_array('early_leave', $status['statuses'], true)) {
+                    $day['early']++;
+                }
+            }
+        }
+        unset($day);
+
+        return ['total_employees' => count($employeeIds), 'today' => $daily[$today] ?? $emptyDay($today), 'daily' => array_values($daily)];
+    }
+
     public function getEmployees($keyword = '', $activeOnly = false, $limit = 0)
     {
         $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap
-
-            public function getHrDashboardMetrics($today = null, $days = 7)
-            {
-                $today = $today ?: date('Y-m-d');
-                $days = max(1, min(31, (int)$days));
-                $fromDate = date('Y-m-d', strtotime($today . ' -' . ($days - 1) . ' days'));
-                $employees = array_values(array_filter($this->getEmployees('', true, 0), function ($employee) {
-                    return mb_strtolower(trim($employee['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
-                }));
-
-                $employeeIds = array_map(function ($employee) {
-                    return (int)($employee['maND'] ?? 0);
-                }, $employees);
-                $employeeIds = array_values(array_filter($employeeIds));
-                $emptyDay = function ($date) {
-                    return [
-                        'date' => $date,
-                        'scheduled' => 0,
-                        'present' => 0,
-                        'on_time' => 0,
-                        'late' => 0,
-                        'early' => 0,
-                        'absent' => 0,
-                        'leave' => 0,
-                    ];
-                };
-
-                $daily = [];
-                $cursor = strtotime($fromDate);
-                $end = strtotime($today);
-                while ($cursor <= $end) {
-                    $date = date('Y-m-d', $cursor);
-                    $daily[$date] = $emptyDay($date);
-                    $cursor = strtotime('+1 day', $cursor);
-                }
-
-                if (empty($employeeIds)) {
-                    return [
-                        'total_employees' => 0,
-                        'today' => $daily[$today] ?? $emptyDay($today),
-                        'daily' => array_values($daily),
-                    ];
-                }
-
-                $placeholders = implode(',', array_fill(0, count($employeeIds), '?'));
-                $types = str_repeat('i', count($employeeIds)) . 'ss';
-                $params = array_merge($employeeIds, [$fromDate, $today]);
-                $sql = "SELECT maND, DATE(ngayTao) AS ngayChamCong,
-                               MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) AS gioVao,
-                               MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) AS gioRa
-                        FROM lichsuchamcong
-                        WHERE maND IN ($placeholders)
-                          AND DATE(ngayTao) BETWEEN ? AND ?
-                        GROUP BY maND, DATE(ngayTao)";
-                $stmt = $this->conn->prepare($sql);
-                $attendanceByEmployee = [];
-                if ($stmt) {
-                    $stmt->bind_param($types, ...$params);
-                    $stmt->execute();
-                    foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
-                        $attendanceByEmployee[(int)$row['maND']][$row['ngayChamCong']] = $row;
-                    }
-                    $stmt->close();
-                }
-
-                $leaveTypes = str_repeat('i', count($employeeIds)) . 'ss';
-                $leaveParams = array_merge($employeeIds, [$fromDate, $today]);
-                $leaveSql = "SELECT maND, tuNgay, denNgay
-                             FROM donnghiphep
-                             WHERE maND IN ($placeholders)
-                               AND trangThai = 'approved'
-                               AND denNgay >= ? AND tuNgay <= ?";
-                $leaveByEmployee = [];
-                $leaveStmt = $this->conn->prepare($leaveSql);
-                if ($leaveStmt) {
-                    $leaveStmt->bind_param($leaveTypes, ...$leaveParams);
-                    $leaveStmt->execute();
-                    foreach ($leaveStmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
-                        $start = max($fromDate, $row['tuNgay']);
-                        $finish = min($today, $row['denNgay']);
-                        $leaveCursor = strtotime($start);
-                        $leaveEnd = strtotime($finish);
-                        while ($leaveCursor <= $leaveEnd) {
-                            $leaveDate = date('Y-m-d', $leaveCursor);
-                            $leaveByEmployee[(int)$row['maND']][$leaveDate] = true;
-                            $leaveCursor = strtotime('+1 day', $leaveCursor);
-                        }
-                    }
-                    $leaveStmt->close();
-                }
-
-                foreach ($daily as $date => &$day) {
-                    foreach ($employeeIds as $maND) {
-                        $shift = $this->getShiftForUser($maND, $date);
-                        if (!$shift || $this->isOffShift($shift)) {
-                            continue;
-                        }
-                        $day['scheduled']++;
-                        if (!empty($leaveByEmployee[$maND][$date])) {
-                            $day['leave']++;
-                            continue;
-                        }
-                        $attendance = $attendanceByEmployee[$maND][$date] ?? null;
-                        if (!$attendance || empty($attendance['gioVao'])) {
-                            $day['absent']++;
-                            continue;
-                        }
-                        $day['present']++;
-                        $status = $this->calculateShiftStatus(
-                            $attendance['gioVao'],
-                            $attendance['gioRa'] ?? null,
-                            $shift['gioBatDau'] ?? null,
-                            $shift['gioKetThuc'] ?? null
-                        );
-                        if (in_array('late', $status['statuses'], true)) {
-                            $day['late']++;
-                        } else {
-                            $day['on_time']++;
-                        }
-                        if (in_array('early_leave', $status['statuses'], true)) {
-                            $day['early']++;
-                        }
-                    }
-                }
-                unset($day);
-
-                return [
-                    'total_employees' => count($employeeIds),
-                    'today' => $daily[$today] ?? $emptyDay($today),
-                    'daily' => array_values($daily),
-                ];
-            }
                 FROM nguoidung nd
                 LEFT JOIN taikhoan tk ON nd.maTK = tk.maTK";
         $conditions = [];
