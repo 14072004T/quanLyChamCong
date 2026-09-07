@@ -440,5 +440,150 @@ class TechController
     {
         $this->updateSettings();
     }
+
+    // ========== ACCOUNT & ROLE MANAGEMENT ==========
+
+    /**
+     * Display Account & Role Management page
+     */
+    public function accountManagement()
+    {
+        $departments = $this->model->getAllDepartments() ?? [];
+        $view = 'app/views/chamcong/account_management.php';
+        include __DIR__ . '/../views/chamcong/dashboard.php';
+    }
+
+    /**
+     * API: Get list of all accounts with filters & search
+     */
+    public function accountsApi()
+    {
+        header('Content-Type: application/json');
+
+        $phongBan = trim($_GET['phongBan'] ?? '');
+        $search = trim($_GET['search'] ?? '');
+        $fromDate = trim($_GET['fromDate'] ?? '');
+        $toDate = trim($_GET['toDate'] ?? '');
+
+        $filters = [
+            'phongBan' => $phongBan,
+            'search' => $search,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate
+        ];
+
+        $accounts = $this->model->getAllAccountsWithUsers($filters) ?? [];
+
+        // Format system role for each account
+        foreach ($accounts as &$acc) {
+            $acc['role'] = $this->mapChucVuToRole($acc['chucVu'] ?? '');
+        }
+
+        echo json_encode([
+            'success' => true,
+            'data' => $accounts,
+            'total' => count($accounts)
+        ]);
+        exit;
+    }
+
+    /**
+     * API: Update role (chucVu) for a user
+     * POST: maND, role ('hr' | 'tech' | 'manager' | 'nhanvien')
+     */
+    public function updateRole()
+    {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Phương thức không được hỗ trợ']);
+            exit;
+        }
+
+        $maND = (int)($_POST['maND'] ?? 0);
+        $role = trim($_POST['role'] ?? '');
+
+        if ($maND <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Mã người dùng không hợp lệ']);
+            exit;
+        }
+
+        $allowedRoles = ['hr', 'tech', 'manager', 'nhanvien'];
+        if (!in_array($role, $allowedRoles, true)) {
+            echo json_encode(['success' => false, 'message' => 'Quyền (role) không hợp lệ']);
+            exit;
+        }
+
+        $chucVuMap = [
+            'hr' => 'Bộ phận nhân sự',
+            'tech' => 'Bộ phận kỹ thuật',
+            'manager' => 'Quản lý / Ban lãnh đạo',
+            'nhanvien' => 'Nhân viên'
+        ];
+
+        $chucVu = $chucVuMap[$role];
+
+        $result = $this->model->updateUserRole($maND, $chucVu);
+        if ($result) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Cập nhật phân quyền thành công. User sẽ cần đăng nhập lại để áp dụng quyền mới.'
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Lỗi khi cập nhật phân quyền']);
+        }
+        exit;
+    }
+
+    /**
+     * API: Toggle account active status (taikhoan.trangThai)
+     * POST: maTK
+     */
+    public function toggleAccount()
+    {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Phương thức không được hỗ trợ']);
+            exit;
+        }
+
+        $maTK = (int)($_POST['maTK'] ?? 0);
+
+        if ($maTK <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Mã tài khoản không hợp lệ']);
+            exit;
+        }
+
+        $result = $this->model->toggleAccountStatus($maTK);
+        if ($result) {
+            echo json_encode(['success' => true, 'message' => 'Cập nhật trạng thái tài khoản thành công']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Lỗi khi cập nhật trạng thái tài khoản']);
+        }
+        exit;
+    }
+
+    /**
+     * Map chucVu to system role code
+     */
+    private function mapChucVuToRole($chucVu)
+    {
+        $text = mb_strtolower(trim((string)$chucVu), 'UTF-8');
+        
+        if (strpos($text, 'nhân sự') !== false || strpos($text, 'nhan su') !== false || strpos($text, 'hr') !== false) {
+            return 'hr';
+        }
+        if (strpos($text, 'kỹ thuật') !== false || strpos($text, 'ky thuat') !== false || strpos($text, 'tech') !== false) {
+            return 'tech';
+        }
+        if (strpos($text, 'quản lý') !== false || strpos($text, 'quan ly') !== false || strpos($text, 'lãnh đạo') !== false || strpos($text, 'lanh dao') !== false || strpos($text, 'manager') !== false) {
+            return 'manager';
+        }
+        return 'nhanvien';
+    }
 }
+
 

@@ -94,6 +94,11 @@ class AuthMiddleware
             'tech-settings',
             'tech-update-setting',
             'tech-update-settings',
+            'tech-accounts',
+            'tech-accounts-api',
+            'tech-update-role',
+            'tech-toggle-account',
+
             'lich-su-cham-cong',
             'yeu-cau-chinh-sua-cham-cong',
             'store-edit-request',

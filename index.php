@@ -130,6 +130,11 @@ $allowedPages = [
     'tech-settings',
     'tech-update-setting',
     'tech-update-settings',
+    'tech-accounts',
+    'tech-accounts-api',
+    'tech-update-role',
+    'tech-toggle-account',
+
     // Đơn nghỉ phép
     'create-leave-request',
     'store-leave-request',
@@ -453,6 +458,27 @@ switch ($page) {
         require_once 'app/controllers/TechController.php';
         (new TechController())->updateSetting();
         break;
+
+    case 'tech-accounts':
+        require_once 'app/controllers/TechController.php';
+        (new TechController())->accountManagement();
+        break;
+
+    case 'tech-accounts-api':
+        require_once 'app/controllers/TechController.php';
+        (new TechController())->accountsApi();
+        break;
+
+    case 'tech-update-role':
+        require_once 'app/controllers/TechController.php';
+        (new TechController())->updateRole();
+        break;
+
+    case 'tech-toggle-account':
+        require_once 'app/controllers/TechController.php';
+        (new TechController())->toggleAccount();
+        break;
+
 
     case 'tech-update-settings':
         require_once 'app/controllers/TechController.php';

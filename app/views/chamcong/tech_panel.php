@@ -114,6 +114,15 @@
 <div class="tech-modules">
     <div class="module-card">
         <div class="module-header">
+            <i class="fas fa-users-cog" style="color: #6366f1;"></i>
+            <h3>Quản lý Tài khoản & Phân quyền</h3>
+        </div>
+        <a href="index.php?page=tech-accounts" class="module-btn btn-wifi" style="background: #eef2ff; color: #4f46e5; border-color: #c7d2fe;">
+            <i class="fas fa-external-link-alt"></i> Truy cập Quản lý
+        </a>
+    </div>
+    <div class="module-card">
+        <div class="module-header">
             <i class="fas fa-wifi" style="color: #3b82f6;"></i>
             <h3>Quản lý WiFi</h3>
         </div>
@@ -132,3 +141,4 @@
     </div>
 </div>
 </div>
+
