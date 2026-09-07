@@ -833,12 +833,13 @@ class ChamCongModel
         $today = $today ?: date('Y-m-d');
         $days = max(1, min(31, (int)$days));
         $fromDate = date('Y-m-d', strtotime($today . ' -' . ($days - 1) . ' days'));
-        $employees = array_values(array_filter($this->getEmployees('', true, 0), function ($employee) {
-            return mb_strtolower(trim($employee['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
-        }));
-        $employeeIds = array_values(array_filter(array_map(function ($employee) {
-            return (int)($employee['maND'] ?? 0);
-        }, $employees)));
+        $employeeIds = [];
+        $employeeResult = $this->conn->query("SELECT maND FROM nguoidung WHERE trangThai = 1 AND chucVu = 'Nhân viên'");
+        if ($employeeResult) {
+            while ($employee = $employeeResult->fetch_assoc()) {
+                $employeeIds[] = (int)$employee['maND'];
+            }
+        }
         $emptyDay = function ($date) {
             return ['date' => $date, 'scheduled' => 0, 'present' => 0, 'on_time' => 0, 'late' => 0, 'early' => 0, 'absent' => 0, 'leave' => 0];
         };
@@ -873,17 +874,20 @@ class ChamCongModel
 
         foreach ($daily as $date => &$day) {
             foreach ($employeeIds as $maND) {
+                $row = $attendance[$maND][$date] ?? null;
+                $hasCheckIn = $row && !empty($row['gioVao']);
                 $shift = $this->getShiftForUser($maND, $date);
+                if ($hasCheckIn) {
+                    $day['present']++;
+                }
                 if (!$shift || $this->isOffShift($shift)) {
                     continue;
                 }
                 $day['scheduled']++;
-                $row = $attendance[$maND][$date] ?? null;
-                if (!$row || empty($row['gioVao'])) {
+                if (!$hasCheckIn) {
                     $day['absent']++;
                     continue;
                 }
-                $day['present']++;
                 $status = $this->calculateShiftStatus($row['gioVao'], $row['gioRa'] ?? null, $shift['gioBatDau'] ?? null, $shift['gioKetThuc'] ?? null);
                 if (in_array('late', $status['statuses'], true)) {
                     $day['late']++;
