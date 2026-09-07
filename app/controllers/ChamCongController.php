@@ -302,6 +302,8 @@ class ChamCongController
     {
         $this->requireLogin();
         $stats = $this->model->getThongKeTongQuan();
+        $hrDashboardMetrics = $this->model->getHrDashboardMetrics();
+        $hrRequestMetrics = $this->model->getHrRequestMetrics();
         $corrections = $this->model->getCorrectionRequests('pending');
         require 'app/views/chamcong/hr_panel.php';
     }

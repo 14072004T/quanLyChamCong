@@ -5,9 +5,12 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
 }
 
 $stats = $stats ?? [];
+$hrDashboardMetrics = $hrDashboardMetrics ?? [];
+$hrRequestMetrics = $hrRequestMetrics ?? [];
+$todayMetrics = $hrDashboardMetrics['today'] ?? [];
 $userName = htmlspecialchars($_SESSION['user']['hoTen'] ?? 'HR');
 $today = date('d/m/Y');
-$inToday = (int)($stats['in_today'] ?? 0);
+$inToday = (int)($todayMetrics['present'] ?? 0);
 $pendingCorrections = (int)($stats['pending_corrections'] ?? $stats['pending_requests'] ?? 0);
 $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
 ?>
@@ -56,11 +59,11 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
         </div>
     </div>
     <div class="hrd-stat-card">
-        <div class="hrd-stat-icon purple"><i class="fas fa-clipboard-list"></i></div>
+        <div class="hrd-stat-icon purple"><i class="fas fa-person-walking-arrow-right"></i></div>
         <div class="hrd-stat-body">
-            <div class="hrd-stat-label">Yêu cầu sửa chấm công</div>
-            <div class="hrd-stat-value" id="hrd-pending-corrections"><?= $pendingCorrections ?></div>
-            <a href="index.php?page=xuly-yeucau" class="hrd-stat-link">Xử lý ngay</a>
+            <div class="hrd-stat-label">Về sớm hôm nay</div>
+            <div class="hrd-stat-value" id="hrd-early-today"><?= (int)($todayMetrics['early'] ?? 0) ?></div>
+            <div class="hrd-stat-trend down">Theo dữ liệu ca hôm nay</div>
         </div>
     </div>
 </div>
@@ -97,40 +100,27 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
     </div>
 
     <div class="hrd-panel hrd-tasks-panel">
-        <div class="hrd-panel-head"><span>Công việc HR cần xử lý</span></div>
-        <div class="hrd-task-item hrd-task-blue">
-            <div class="hrd-task-icon"><i class="fas fa-paper-plane"></i></div>
-            <div class="hrd-task-info">
-                <div class="hrd-task-name">Bảng công chờ gửi</div>
-                <div class="hrd-task-sub">Tổng hợp bảng công và gửi manager phê duyệt</div>
+        <div class="hrd-panel-head"><span>Công việc cần theo dõi</span></div>
+        <?php foreach ([
+            'ot' => ['label' => 'Tăng ca', 'icon' => 'fa-business-time', 'class' => 'hrd-task-blue'],
+            'correction' => ['label' => 'Điều chỉnh công', 'icon' => 'fa-pen-to-square', 'class' => 'hrd-task-orange'],
+            'leave' => ['label' => 'Nghỉ phép', 'icon' => 'fa-calendar-minus', 'class' => 'hrd-task-purple'],
+        ] as $type => $task):
+            $request = $hrRequestMetrics[$type] ?? ['requested' => 0, 'approved' => 0, 'rejected' => 0];
+        ?>
+            <div class="hrd-task-item <?= $task['class'] ?>">
+                <div class="hrd-task-icon"><i class="fas <?= $task['icon'] ?>"></i></div>
+                <div class="hrd-task-info">
+                    <div class="hrd-task-name"><?= $task['label'] ?></div>
+                    <div class="hrd-task-sub" style="display:flex;gap:10px;flex-wrap:wrap">
+                        <span>Yêu cầu <strong><?= (int)$request['requested'] ?></strong></span>
+                        <span>Đã duyệt <strong><?= (int)$request['approved'] ?></strong></span>
+                        <span>Từ chối <strong><?= (int)$request['rejected'] ?></strong></span>
+                    </div>
+                </div>
             </div>
-            <div class="hrd-task-count hrd-task-count-blue"><?= $pendingApprovals ?></div>
-        </div>
-        <div class="hrd-task-item hrd-task-orange">
-            <div class="hrd-task-icon"><i class="fas fa-pen-to-square"></i></div>
-            <div class="hrd-task-info">
-                <div class="hrd-task-name">Sửa chấm công</div>
-                <div class="hrd-task-sub">Yêu cầu chỉnh sửa chấm công đang chờ HR</div>
-            </div>
-            <div class="hrd-task-count hrd-task-count-orange" id="task-corrections"><?= $pendingCorrections ?></div>
-        </div>
-        <div class="hrd-task-item hrd-task-purple">
-            <div class="hrd-task-icon"><i class="fas fa-business-time"></i></div>
-            <div class="hrd-task-info">
-                <div class="hrd-task-name">Ca làm việc</div>
-                <div class="hrd-task-sub">Quản lý ca và phân ca nhân viên</div>
-            </div>
-            <div class="hrd-task-count hrd-task-count-purple" id="task-shifts">--</div>
-        </div>
-        <div class="hrd-task-item hrd-task-red">
-            <div class="hrd-task-icon"><i class="fas fa-triangle-exclamation"></i></div>
-            <div class="hrd-task-info">
-                <div class="hrd-task-name">Bất thường</div>
-                <div class="hrd-task-sub">Nhân viên cần kiểm tra dữ liệu công</div>
-            </div>
-            <div class="hrd-task-count hrd-task-count-red" id="task-abnormal">0</div>
-        </div>
-        <a href="index.php?page=xuly-yeucau" class="hrd-see-all">Xem yêu cầu sửa chấm công <i class="fas fa-arrow-right"></i></a>
+        <?php endforeach; ?>
+        <a href="index.php?page=xuly-yeucau" class="hrd-see-all">Xem yêu cầu điều chỉnh công <i class="fas fa-arrow-right"></i></a>
     </div>
 </div>
 
@@ -176,12 +166,19 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 (function() {
-    var month = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0');
-    var inToday = <?= $inToday ?>;
-    var late = Math.max(0, Math.floor(inToday * 0.1));
-    var absent = Math.max(0, Math.floor(inToday * 0.05));
-    var leave = Math.max(0, Math.floor(inToday * 0.08));
-    var totalEmployees = Math.max(1, inToday + absent + leave);
+    var hrMetrics = <?= json_encode($hrDashboardMetrics, JSON_UNESCAPED_UNICODE) ?>;
+    var todayMetrics = hrMetrics.today || {};
+    var dailyMetrics = hrMetrics.daily || [];
+    var inToday = Number(todayMetrics.present || 0);
+    var late = Number(todayMetrics.late || 0);
+    var absent = Number(todayMetrics.absent || 0);
+    var leave = Number(todayMetrics.leave || 0);
+    var totalEmployees = Number(hrMetrics.total_employees || 0);
+
+    document.getElementById('hrd-total-nv').textContent = totalEmployees;
+    document.getElementById('hrd-late-today').textContent = late;
+    document.getElementById('hrd-absent-today').textContent = absent;
+    document.getElementById('hrd-early-today').textContent = Number(todayMetrics.early || 0);
 
     function escHtml(v) {
         return String(v || '').replace(/[&<>"]/g, function(c) {
@@ -189,22 +186,9 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
         });
     }
 
-    fetch('index.php?page=hr-api-payroll&month=' + month, { headers: { Accept: 'application/json' } })
-        .then(function(r) { return r.json(); })
-        .then(function(json) {
-            if (!json.success) return;
-            totalEmployees = (json.data || []).length || totalEmployees;
-            document.getElementById('hrd-total-nv').textContent = totalEmployees;
-            updateCharts();
-        })
-        .catch(updateCharts);
-
-    document.getElementById('hrd-late-today').textContent = late;
-    document.getElementById('hrd-absent-today').textContent = absent;
-
     function updateCharts() {
-        var onTime = Math.max(0, inToday - late);
-        var totalDonut = Math.max(1, onTime + late + absent + leave);
+        var onTime = Number(todayMetrics.on_time || 0);
+        var totalDonut = Math.max(1, Number(todayMetrics.scheduled || 0));
         document.getElementById('hrd-donut-total').textContent = totalEmployees;
         document.getElementById('dl-cnt').textContent = onTime + ' (' + Math.round(onTime / totalDonut * 100) + '%)';
         document.getElementById('dt-cnt').textContent = late + ' (' + Math.round(late / totalDonut * 100) + '%)';
@@ -217,15 +201,10 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
             options: { cutout: '68%', plugins: { legend: { display: false } } }
         });
 
-        var labels = [], onTimeData = [], lateData = [], absentData = [];
-        for (var i = 6; i >= 0; i--) {
-            var d = new Date();
-            d.setDate(d.getDate() - i);
-            labels.push(String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'));
-            onTimeData.push(Math.max(0, onTime - i + 2));
-            lateData.push(Math.max(0, late + (i % 3) - 1));
-            absentData.push(Math.max(0, absent + (i % 2)));
-        }
+        var labels = dailyMetrics.map(function(day) { return day.date.slice(8, 10) + '/' + day.date.slice(5, 7); });
+        var onTimeData = dailyMetrics.map(function(day) { return Number(day.on_time || 0); });
+        var lateData = dailyMetrics.map(function(day) { return Number(day.late || 0); });
+        var absentData = dailyMetrics.map(function(day) { return Number(day.absent || 0); });
         new Chart(document.getElementById('hrdLineChart'), {
             type: 'line',
             data: {
@@ -240,12 +219,13 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
         });
     }
 
+    updateCharts();
+
     fetch('index.php?page=hr-api-shifts', { headers: { Accept: 'application/json' } })
         .then(function(r) { return r.json(); })
         .then(function(json) {
             var tbody = document.getElementById('hrd-shifts-body');
             var rows = (json.data || []).filter(function(s) { return s.hoatDong == 1; });
-            document.getElementById('task-shifts').textContent = rows.length;
             if (!rows.length) {
                 tbody.innerHTML = '<tr><td colspan="4" class="empty-state" style="padding:16px">Chưa có ca làm việc nào</td></tr>';
                 return;
@@ -269,8 +249,6 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
         .then(function(json) {
             var list = document.getElementById('hrd-abnormal-list');
             var rows = (json.data || []).slice(0, 5);
-            document.getElementById('task-corrections').textContent = (json.data || []).length;
-            document.getElementById('task-abnormal').textContent = rows.length;
             if (!rows.length) {
                 list.innerHTML = '<div class="empty-state" style="padding:20px"><i class="fas fa-check-circle"></i> Không có yêu cầu chờ xử lý</div>';
                 return;
