@@ -834,10 +834,10 @@ class ChamCongModel
         $days = max(1, min(31, (int)$days));
         $fromDate = date('Y-m-d', strtotime($today . ' -' . ($days - 1) . ' days'));
         $employeeIds = [];
-        $employeeResult = $this->conn->query("SELECT DISTINCT nd.maND
-                              FROM nguoidung nd
-                              INNER JOIN nhanvien nv ON nv.maND = nd.maND
-                              WHERE nd.trangThai = 1");
+                $employeeResult = $this->conn->query("SELECT DISTINCT nd.maND
+                                                            FROM nguoidung nd
+                                                            WHERE nd.trangThai = 1
+                                                                AND (TRIM(nd.chucVu) LIKE '%Nhân viên%' OR TRIM(nd.chucVu) LIKE '%nhan vien%')");
         if ($employeeResult) {
             while ($employee = $employeeResult->fetch_assoc()) {
                 $employeeIds[] = (int)$employee['maND'];
