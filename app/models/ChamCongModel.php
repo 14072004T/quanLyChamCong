@@ -1192,49 +1192,6 @@ class ChamCongModel
             );
             $find->bind_param("iss", $maND, $effectiveDate, $effectiveDate);
 
-        public function getHrRequestMetrics()
-        {
-            $metrics = [
-                'ot' => ['requested' => 0, 'approved' => 0, 'rejected' => 0],
-                'correction' => ['requested' => 0, 'approved' => 0, 'rejected' => 0],
-                'leave' => ['requested' => 0, 'approved' => 0, 'rejected' => 0],
-            ];
-
-            $result = $this->conn->query("SELECT trangThai, COUNT(*) AS total FROM suachamcong GROUP BY trangThai");
-            if ($result) {
-                while ($row = $result->fetch_assoc()) {
-                    $status = $row['trangThai'] ?? '';
-                    $count = (int)($row['total'] ?? 0);
-                    $metrics['correction']['requested'] += $count;
-                    if (isset($metrics['correction'][$status])) {
-                        $metrics['correction'][$status] = $count;
-                    }
-                }
-            }
-
-            $result = $this->conn->query("SELECT trangThai, COUNT(*) AS total FROM donnghiphep GROUP BY trangThai");
-            if ($result) {
-                while ($row = $result->fetch_assoc()) {
-                    $status = $row['trangThai'] ?? '';
-                    $count = (int)($row['total'] ?? 0);
-                    $metrics['leave']['requested'] += $count;
-                    if (isset($metrics['leave'][$status])) {
-                        $metrics['leave'][$status] = $count;
-                    }
-                }
-            }
-
-            $result = $this->conn->query("SELECT COUNT(*) AS total
-                                         FROM canhanvien a
-                                         JOIN calamviec s ON s.id = a.maCa
-                                         WHERE s.hoatDong = 1 AND s.kyHieu = 'OT'");
-            if ($result) {
-                $metrics['ot']['requested'] = (int)($result->fetch_assoc()['total'] ?? 0);
-                $metrics['ot']['approved'] = $metrics['ot']['requested'];
-            }
-
-            return $metrics;
-        }
             $find->execute();
             $overlapping = $find->get_result()->fetch_all(MYSQLI_ASSOC);
             $find->close();
@@ -1281,6 +1238,41 @@ class ChamCongModel
             $this->conn->rollback();
             return false;
         }
+    }
+
+    public function getHrRequestMetrics()
+    {
+        $metrics = [
+            'ot' => ['requested' => 0, 'approved' => 0, 'rejected' => 0],
+            'correction' => ['requested' => 0, 'approved' => 0, 'rejected' => 0],
+            'leave' => ['requested' => 0, 'approved' => 0, 'rejected' => 0],
+        ];
+
+        foreach (['suachamcong' => 'correction', 'donnghiphep' => 'leave'] as $table => $type) {
+            $result = $this->conn->query("SELECT trangThai, COUNT(*) AS total FROM {$table} GROUP BY trangThai");
+            if (!$result) {
+                continue;
+            }
+            while ($row = $result->fetch_assoc()) {
+                $status = $row['trangThai'] ?? '';
+                $count = (int)($row['total'] ?? 0);
+                $metrics[$type]['requested'] += $count;
+                if (isset($metrics[$type][$status])) {
+                    $metrics[$type][$status] = $count;
+                }
+            }
+        }
+
+        $result = $this->conn->query("SELECT COUNT(*) AS total
+                                     FROM canhanvien a
+                                     JOIN calamviec s ON s.id = a.maCa
+                                     WHERE s.hoatDong = 1 AND s.kyHieu = 'OT'");
+        if ($result) {
+            $metrics['ot']['requested'] = (int)($result->fetch_assoc()['total'] ?? 0);
+            $metrics['ot']['approved'] = $metrics['ot']['requested'];
+        }
+
+        return $metrics;
     }
 
     public function isOffShift($shift)
