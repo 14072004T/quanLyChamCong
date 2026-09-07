@@ -970,7 +970,7 @@ class ChamCongModel
             $username .= rand(10, 99);
 
             $defaultPassword = md5('123456');
-            $insertAccount = $this->conn->prepare("INSERT INTO taikhoan (tenDangNhap, matKhau, trangThai) VALUES (?, ?, 'Hoáº¡t Ä‘á»™ng')");
+            $insertAccount = $this->conn->prepare("INSERT INTO taikhoan (tenDangNhap, matKhau, trangThai) VALUES (?, ?, 'pending')");
             $insertAccount->bind_param("ss", $username, $defaultPassword);
             if (!$insertAccount->execute()) {
                 $this->conn->rollback();
@@ -3900,14 +3900,37 @@ class ChamCongModel
         if (!$res || $res->num_rows === 0) return false;
         
         $row = $res->fetch_assoc();
-        $curr = $row['trangThai'] ?? 1;
-        $newStatus = ($curr == 1 || strtolower(trim((string)$curr)) === 'active') ? 0 : 1;
+        $curr = trim((string)($row['trangThai'] ?? '1'));
+        $currLower = strtolower($curr);
+        
+        // Nếu là pending (chưa kích hoạt) hoặc 0 (đã khóa) -> kích hoạt thành '1'
+        // Nếu đã ở 1 (hoạt động) -> chuyển sang '0' (khóa)
+        if ($currLower === 'pending' || $currLower === 'chua_kich_hoat' || $currLower === '0' || strpos($currLower, 'khoa') !== false || strpos($currLower, 'inactive') !== false) {
+            $newStatus = '1';
+        } else {
+            $newStatus = '0';
+        }
         
         $updateSql = "UPDATE taikhoan SET trangThai = ? WHERE maTK = ?";
         $upStmt = $this->conn->prepare($updateSql);
         if (!$upStmt) return false;
-        $upStmt->bind_param('ii', $newStatus, $maTK);
+        $upStmt->bind_param('si', $newStatus, $maTK);
         return $upStmt->execute();
+    }
+
+    /**
+     * Tech: Kích hoạt tài khoản khi phân quyền (nếu đang ở trạng thái pending)
+     */
+    public function activateAccountByUserId($maND)
+    {
+        $sql = "UPDATE taikhoan tk 
+                JOIN nguoidung nd ON tk.maTK = nd.maTK 
+                SET tk.trangThai = '1' 
+                WHERE nd.maND = ? AND (LOWER(tk.trangThai) = 'pending' OR LOWER(tk.trangThai) = 'chua_kich_hoat')";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return false;
+        $stmt->bind_param('i', $maND);
+        return $stmt->execute();
     }
 
     /**

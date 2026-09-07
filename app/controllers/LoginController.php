@@ -163,7 +163,9 @@ class LoginController {
             
             $isBlocked = (strpos($statusLower, 'khoa') !== false || 
                          strpos($statusLower, 'inactive') !== false ||
-                         strpos($statusLower, 'suspended') !== false);
+                         strpos($statusLower, 'suspended') !== false ||
+                         strpos($statusLower, 'pending') !== false ||
+                         strpos($statusLower, 'chua') !== false);
             
             if ($trangThaiND != 1 || $isBlocked) {
                 header("Location: index.php?page=login&error=inactive");

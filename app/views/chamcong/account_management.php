@@ -293,6 +293,22 @@
             color: #b91c1c;
         }
 
+        .status-pending {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .btn-activate {
+            background: #f0fdf4 !important;
+            color: #15803d !important;
+            border-color: #bbf7d0 !important;
+        }
+
+        .btn-activate:hover {
+            background: #dcfce7 !important;
+        }
+
         /* Action buttons */
         .btn-action-role {
             background: #3b82f6;
@@ -689,7 +705,7 @@
                         <th>Họ & Tên</th>
                         <th>Tên đăng nhập</th>
                         <th>Phòng ban</th>
-                        <th>Role hệ thống</th>
+                        <th>Vai trò</th>
                         <th>Trạng thái</th>
                         <th>Ngày tạo</th>
                         <th style="text-align: right;">Hành động</th>
@@ -870,10 +886,23 @@ function renderAccountsTable(data) {
 
     let html = '';
     data.forEach((item, index) => {
-        const isBlocked = (item.trangThaiTK == 0 || (typeof item.trangThaiTK === 'string' && item.trangThaiTK.toLowerCase().includes('khoa')));
-        const statusBadge = isBlocked 
-            ? '<span class="badge-status status-locked"><i class="fas fa-lock"></i> Đã khóa</span>' 
-            : '<span class="badge-status status-active"><i class="fas fa-check"></i> Hoạt động</span>';
+        const statusRaw = String(item.trangThaiTK || '').toLowerCase();
+        const isPending = (statusRaw === 'pending' || statusRaw === 'chua_kich_hoat' || statusRaw.includes('pending') || statusRaw.includes('chưa'));
+        const isBlocked = !isPending && (item.trangThaiTK == 0 || statusRaw.includes('khoa') || statusRaw.includes('inactive'));
+
+        let statusBadge = '';
+        let actionToggleBtn = '';
+
+        if (isPending) {
+            statusBadge = '<span class="badge-status status-pending"><i class="fas fa-exclamation-circle"></i> Cần kích hoạt</span>';
+            actionToggleBtn = `<button class="btn-action-toggle btn-activate" onclick="toggleAccountStatus(${item.maTK}, '${escapeHtml(item.tenDangNhap)}', 'activate')"><i class="fas fa-check-circle"></i> Kích hoạt</button>`;
+        } else if (isBlocked) {
+            statusBadge = '<span class="badge-status status-locked"><i class="fas fa-lock"></i> Đã khóa</span>';
+            actionToggleBtn = `<button class="btn-action-toggle" onclick="toggleAccountStatus(${item.maTK}, '${escapeHtml(item.tenDangNhap)}', 'unlock')"><i class="fas fa-unlock"></i> Mở khóa</button>`;
+        } else {
+            statusBadge = '<span class="badge-status status-active"><i class="fas fa-check"></i> Hoạt động</span>';
+            actionToggleBtn = `<button class="btn-action-toggle" onclick="toggleAccountStatus(${item.maTK}, '${escapeHtml(item.tenDangNhap)}', 'lock')"><i class="fas fa-lock"></i> Khóa</button>`;
+        }
         
         const roleInfo = roleLabels[item.role] || roleLabels['nhanvien'];
         const roleBadge = `<span class="badge-role ${roleInfo.class}"><i class="fas ${roleInfo.icon}"></i> ${roleInfo.label}</span>`;
@@ -898,9 +927,7 @@ function renderAccountsTable(data) {
                     <button class="btn-action-role" onclick="openRoleModal(${item.maTK})">
                         <i class="fas fa-user-shield"></i> Phân quyền
                     </button>
-                    <button class="btn-action-toggle" onclick="toggleAccountStatus(${item.maTK}, '${escapeHtml(item.tenDangNhap)}', ${isBlocked ? 'unlock' : 'lock'})">
-                        <i class="fas ${isBlocked ? 'fa-unlock' : 'fa-lock'}"></i> ${isBlocked ? 'Mở khóa' : 'Khóa'}
-                    </button>
+                    ${actionToggleBtn}
                 </td>
             </tr>
         `;
@@ -997,9 +1024,14 @@ function submitRoleUpdate() {
 }
 
 function toggleAccountStatus(maTK, tenDangNhap, action) {
-    const confirmMsg = action === 'lock' 
-        ? `Bạn có chắc chắn muốn KHÓA tài khoản "${tenDangNhap}" không?`
-        : `Bạn có chắc chắn muốn MỞ KHÓA tài khoản "${tenDangNhap}" không?`;
+    let confirmMsg = '';
+    if (action === 'activate') {
+        confirmMsg = `Bạn có chắc chắn muốn KÍCH HOẠT tài khoản "${tenDangNhap}" không?`;
+    } else if (action === 'lock') {
+        confirmMsg = `Bạn có chắc chắn muốn KHÓA tài khoản "${tenDangNhap}" không?`;
+    } else {
+        confirmMsg = `Bạn có chắc chắn muốn MỞ KHÓA tài khoản "${tenDangNhap}" không?`;
+    }
 
     if (!confirm(confirmMsg)) return;
 
