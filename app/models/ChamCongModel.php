@@ -1,5 +1,5 @@
 <?php
-require_once 'app/models/ketNoi.php';
+require_once __DIR__ . '/ketNoi.php';
 
 class ChamCongModel
 {

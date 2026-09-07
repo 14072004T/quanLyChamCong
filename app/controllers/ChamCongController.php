@@ -1,6 +1,6 @@
 <?php
-require_once 'app/models/ChamCongModel.php';
-require_once 'app/middleware/AuthMiddleware.php';
+require_once __DIR__ . '/../models/ChamCongModel.php';
+require_once __DIR__ . '/../middleware/AuthMiddleware.php';
 
 class ChamCongController
 {
