@@ -88,25 +88,11 @@
 </div>
 
 <div class="tech-stats">
-    <div class="stat-card" onclick="window.location.href='index.php?page=tech-wifi'">
-        <div class="stat-icon icon-green"><i class="fas fa-wifi"></i></div>
-        <div class="stat-info">
-            <h3>WiFi Hoạt động</h3>
-            <p><?php echo count(array_filter($wifiList ?? [], fn($w) => $w['hoatDong'])); ?></p>
-        </div>
-    </div>
-    <div class="stat-card" onclick="window.location.href='index.php?page=tech-wifi'">
-        <div class="stat-icon icon-blue"><i class="fas fa-network-wired"></i></div>
-        <div class="stat-info">
-            <h3>Tổng mạng</h3>
-            <p><?php echo count($wifiList ?? []); ?></p>
-        </div>
-    </div>
     <div class="stat-card" onclick="window.location.href='index.php?page=tech-settings'">
         <div class="stat-icon icon-purple"><i class="fas fa-cogs"></i></div>
         <div class="stat-info">
             <h3>Cài đặt</h3>
-            <p>4</p>
+            <p>5</p>
         </div>
     </div>
 </div>
@@ -123,17 +109,8 @@
     </div>
     <div class="module-card">
         <div class="module-header">
-            <i class="fas fa-wifi" style="color: #3b82f6;"></i>
-            <h3>Quản lý WiFi</h3>
-        </div>
-        <a href="index.php?page=tech-wifi" class="module-btn btn-wifi">
-            <i class="fas fa-external-link-alt"></i> Truy cập Quản lý
-        </a>
-    </div>
-    <div class="module-card">
-        <div class="module-header">
             <i class="fas fa-sliders-h" style="color: #10b981;"></i>
-            <h3>Cài đặt hệ thống</h3>
+            <h3>Cấu hình hệ thống</h3>
         </div>
         <a href="index.php?page=tech-settings" class="module-btn btn-settings">
             <i class="fas fa-external-link-alt"></i> Truy cập Cài đặt

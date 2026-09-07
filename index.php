@@ -455,6 +455,7 @@ switch ($page) {
         break;
 
     case 'tech-update-setting':
+    case 'tech-update-settings':
         require_once 'app/controllers/TechController.php';
         (new TechController())->updateSetting();
         break;

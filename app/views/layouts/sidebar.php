@@ -23,7 +23,6 @@ $menus = [
     ],
     'tech' => [
         ['page' => 'tech-accounts', 'label' => 'Quản lý Tài khoản', 'icon' => 'fa-users-cog'],
-        ['page' => 'tech-wifi', 'label' => 'Mạng & WiFi', 'icon' => 'fa-wifi'],
         ['page' => 'tech-settings', 'label' => 'Cấu hình Hệ thống', 'icon' => 'fa-server'],
         ['divider' => true, 'label' => 'Cá nhân'],
     ],

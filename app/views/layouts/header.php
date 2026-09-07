@@ -276,22 +276,6 @@
                 }
             }
 
-        } elseif ($role === 'tech') {
-            // WiFi & cấu hình
-            $wifiList = $notificationModel->getAllWifi() ?? [];
-            $activeCount = 0;
-            foreach ($wifiList as $w) {
-                if (!empty($w['trangThai'])) $activeCount++;
-            }
-            if ($activeCount > 0) {
-                $notificationItems[] = [
-                    'title' => 'Hệ thống WiFi chấm công: ' . $activeCount . ' điểm hoạt động',
-                    'meta' => 'Cấu hình mạng LAN / BSSID ổn định',
-                    'time' => date('Y-m-d H:i:s'),
-                    'link' => 'index.php?page=tech-wifi',
-                    'sort_time' => time(),
-                ];
-            }
         }
 
         // Sắp xếp thông báo mới nhất lên đầu

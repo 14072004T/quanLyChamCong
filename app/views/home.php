@@ -348,15 +348,8 @@ $user = $_SESSION['user'] ?? [];
                     </div>
                 </div>
 
-                <div class="grid-2">
-                    <a href="index.php?page=tech-wifi" class="m-card">
-                        <div style="width: 50px; height: 50px; border-radius: 12px; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 20px;">
-                            <i class="fas fa-wifi"></i>
-                        </div>
-                        <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 8px;">Quản lý WiFi & MAC</h3>
-                        <p style="font-size: 14px; color: #64748b; margin: 0;">Thiết lập SSID và danh sách địa chỉ MAC được phép chấm công.</p>
-                    </a>
-                    <a href="index.php?page=tech-settings" class="m-card">
+                <div>
+                    <a href="index.php?page=tech-settings" class="m-card" style="display: block;">
                         <div style="width: 50px; height: 50px; border-radius: 12px; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 20px;">
                             <i class="fas fa-cogs"></i>
                         </div>

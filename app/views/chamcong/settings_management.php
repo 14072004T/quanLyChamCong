@@ -12,40 +12,54 @@ if (!isset($_SESSION['user'])) {
 
 // Define setting metadata
 $settingsMetadata = [
-    'ALLOW_QR_CHECKIN' => [
-        'name' => 'Chấm công QR',
-        'type' => 'boolean',
-        'moTa' => 'Sử dụng mã QR để chấm công qua di động',
-    ],
-    'ALLOW_OFFLINE_CHECKIN' => [
-        'name' => 'Chấm công Offline',
-        'type' => 'boolean',
-        'moTa' => 'Cho phép chấm công khi mất kết nối mạng',
-    ],
     'LATE_THRESHOLD_MINUTES' => [
         'name' => 'Ngưỡng đi trễ',
         'type' => 'number',
-        'moTa' => 'Số phút tối đa cho phép vào muộn',
+        'moTa' => 'Số phút tối đa cho phép vào muộn (quá số phút này tính là trễ)',
         'unit' => 'phút',
+        'default' => '15'
     ],
     'OVERTIME_THRESHOLD_MINUTES' => [
-        'name' => 'Ngưỡng tăng ca',
+        'name' => 'Ngưỡng tăng ca (OT)',
         'type' => 'number',
-        'moTa' => 'Số phút tối thiểu để bắt đầu tính OT',
+        'moTa' => 'Số phút làm thêm giờ tối thiểu để bắt đầu tính tăng ca (OT)',
         'unit' => 'phút',
+        'default' => '30'
+    ],
+    'MAX_CORRECTION_DAYS' => [
+        'name' => 'Thời gian được phép điều chỉnh công',
+        'type' => 'number',
+        'moTa' => 'Số ngày tối đa cho phép gửi yêu cầu chỉnh sửa sau ngày làm việc',
+        'unit' => 'ngày',
+        'default' => '7'
+    ],
+    'SESSION_TIMEOUT_MINUTES' => [
+        'name' => 'Thời gian hết phiên đăng nhập',
+        'type' => 'number',
+        'moTa' => 'Thời gian (phút) tự động ngắt phiên làm việc khi không hoạt động',
+        'unit' => 'phút',
+        'default' => '60'
+    ],
+    'MAX_LOGIN_ATTEMPTS' => [
+        'name' => 'Số lần đăng nhập',
+        'type' => 'number',
+        'moTa' => 'Số lần nhập sai mật khẩu tối đa trước khi khóa tài khoản',
+        'unit' => 'lần',
+        'default' => '5'
     ]
 ];
 
 // Get current values from database
 $settingValues = [];
 foreach ($settingsMetadata as $key => $meta) {
-    $settingValues[$key] = '';
+    $val = null;
     foreach ($settings as $setting) {
         if ($setting['tenCaiDat'] === $key) {
-            $settingValues[$key] = $setting['giaTri'];
+            $val = $setting['giaTri'];
             break;
         }
     }
+    $settingValues[$key] = ($val !== null && $val !== '') ? $val : $meta['default'];
 }
 ?>
 <div class="tech-container">
