@@ -11,6 +11,35 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Kiểm tra phiên đăng nhập hết hạn dựa vào cài đặt SESSION_TIMEOUT_MINUTES
+if (isset($_SESSION['user']) && isset($_SESSION['login_time'])) {
+    // Đọc cài đặt hết phiên từ DB (bỏ qua nếu bảng chưa tồn tại)
+    $sessionTimeout = 120; // Mặc định 120 phút
+    try {
+        require_once 'app/models/ketNoi.php';
+        $_tmpDb = new KetNoi();
+        $_tmpConn = $_tmpDb->connect();
+        $_tmpStmt = $_tmpConn->prepare("SELECT giaTri FROM caidathethong WHERE tenCaiDat = 'SESSION_TIMEOUT_MINUTES' LIMIT 1");
+        if ($_tmpStmt) {
+            $_tmpStmt->execute();
+            $_tmpRow = $_tmpStmt->get_result()->fetch_assoc();
+            $_tmpStmt->close();
+            if ($_tmpRow && is_numeric($_tmpRow['giaTri']) && (int)$_tmpRow['giaTri'] > 0) {
+                $sessionTimeout = (int)$_tmpRow['giaTri'];
+            }
+        }
+    } catch (Exception $_e) { /* bỏ qua nếu bảng chưa tồn tại */ }
+
+    if ((time() - $_SESSION['login_time']) > ($sessionTimeout * 60)) {
+        session_unset();
+        session_destroy();
+        header('Location: index.php?page=login&error=session_expired');
+        exit;
+    }
+    // Cập nhật thời gian hoạt động cuối
+    $_SESSION['login_time'] = time();
+}
+
 // Require middleware
 require_once 'app/middleware/AuthMiddleware.php';
 

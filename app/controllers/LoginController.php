@@ -122,6 +122,19 @@ class LoginController {
         require_once 'app/views/login.php';
     }
 
+    /**
+     * Lấy giá trị cài đặt hệ thống từ bảng caidathethong
+     */
+    private function getSystemSetting($conn, $key, $default) {
+        $stmt = $conn->prepare("SELECT giaTri FROM caidathethong WHERE tenCaiDat = ? LIMIT 1");
+        if (!$stmt) return $default;
+        $stmt->bind_param('s', $key);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row['giaTri'] ?? $default;
+    }
+
     public function handleLogin() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -151,8 +164,34 @@ class LoginController {
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
             
+            // Lấy giới hạn số lần đăng nhập sai từ cài đặt hệ thống
+            $maxAttempts = (int)$this->getSystemSetting($conn, 'MAX_LOGIN_ATTEMPTS', 5);
+
             if (md5($matKhau) !== $user['matKhau']) {
-                header("Location: index.php?page=login&error=1");
+                // Tăng số lần đăng nhập sai
+                $currentAttempts = (int)($user['soLanDangNhapSai'] ?? 0);
+                $newAttempts = $currentAttempts + 1;
+
+                if ($maxAttempts > 0 && $newAttempts >= $maxAttempts) {
+                    // Khóa tài khoản
+                    $lockStmt = $conn->prepare("UPDATE taikhoan SET soLanDangNhapSai = ?, trangThai = '0' WHERE maTK = ?");
+                    if ($lockStmt) {
+                        $lockStmt->bind_param('ii', $newAttempts, $user['maTK']);
+                        $lockStmt->execute();
+                        $lockStmt->close();
+                    }
+                    header("Location: index.php?page=login&error=locked");
+                } else {
+                    // Chỉ tăng đếm
+                    $incStmt = $conn->prepare("UPDATE taikhoan SET soLanDangNhapSai = ? WHERE maTK = ?");
+                    if ($incStmt) {
+                        $incStmt->bind_param('ii', $newAttempts, $user['maTK']);
+                        $incStmt->execute();
+                        $incStmt->close();
+                    }
+                    $remaining = ($maxAttempts > 0) ? ($maxAttempts - $newAttempts) : 0;
+                    header("Location: index.php?page=login&error=1&remaining=" . $remaining);
+                }
                 exit;
             }
 
@@ -176,6 +215,14 @@ class LoginController {
             if ($trangThaiND != 1) {
                 header("Location: index.php?page=login&error=inactive");
                 exit;
+            }
+
+            // Đăng nhập thành công → reset số lần đăng nhập sai
+            $resetStmt = $conn->prepare("UPDATE taikhoan SET soLanDangNhapSai = 0 WHERE maTK = ?");
+            if ($resetStmt) {
+                $resetStmt->bind_param('i', $user['maTK']);
+                $resetStmt->execute();
+                $resetStmt->close();
             }
 
             $roleMapping = [
@@ -212,6 +259,8 @@ class LoginController {
             ];
             
             $_SESSION['role'] = $role;
+            // Ghi lại thời điểm đăng nhập để kiểm tra hết phiên
+            $_SESSION['login_time'] = time();
 
             header("Location: index.php?page=" . $this->getDefaultPageForRole($role));
             exit;

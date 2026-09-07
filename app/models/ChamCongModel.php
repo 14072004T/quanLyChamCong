@@ -108,6 +108,9 @@ class ChamCongModel
             }
         }
 
+        // Migration: add failed login attempt counter to taikhoan
+        $this->addColumnIfMissing('taikhoan', 'soLanDangNhapSai', 'INT NOT NULL DEFAULT 0');
+
         $this->conn->query("
             CREATE TABLE IF NOT EXISTS calamviec (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -3926,10 +3929,10 @@ class ChamCongModel
             $newStatus = '0';
         }
         
-        $updateSql = "UPDATE taikhoan SET trangThai = ? WHERE maTK = ?";
+        $updateSql = "UPDATE taikhoan SET trangThai = ?, soLanDangNhapSai = IF(? = '1', 0, soLanDangNhapSai) WHERE maTK = ?";
         $upStmt = $this->conn->prepare($updateSql);
         if (!$upStmt) return false;
-        $upStmt->bind_param('si', $newStatus, $maTK);
+        $upStmt->bind_param('ssi', $newStatus, $newStatus, $maTK);
         return $upStmt->execute();
     }
 

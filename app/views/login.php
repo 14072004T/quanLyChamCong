@@ -964,11 +964,17 @@
 
                     <?php
                         $loi = $_GET['error'] ?? '';
+                        $remaining = isset($_GET['remaining']) ? (int)$_GET['remaining'] : -1;
                         if ($loi === '1'):
                     ?>
                         <div class="alert-box alert-error">
                             <i class="fas fa-exclamation-circle" style="margin-top: 2px;"></i>
-                            <span>Sai tên đăng nhập hoặc mật khẩu. Vui lòng thử lại.</span>
+                            <div>
+                                <span>Sai tên đăng nhập hoặc mật khẩu. Vui lòng thử lại.</span>
+                                <?php if ($remaining > 0): ?>
+                                    <br><small style="opacity:0.85;">Còn <strong><?= $remaining ?></strong> lần thử trước khi tài khoản bị khóa.</small>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     <?php endif; ?>
 
@@ -988,6 +994,26 @@
                             <div>
                                 <strong>Tài khoản đã bị khóa</strong><br>
                                 <span>Vui lòng liên hệ quản trị viên để được hỗ trợ.</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($loi === 'locked'): ?>
+                        <div class="alert-box alert-error">
+                            <i class="fas fa-user-lock" style="margin-top: 2px;"></i>
+                            <div>
+                                <strong>Tài khoản đã bị khóa tạm thời</strong><br>
+                                <span>Bạn đã nhập sai mật khẩu quá số lần cho phép. Vui lòng liên hệ IT/Admin để mở khóa.</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($loi === 'session_expired'): ?>
+                        <div class="alert-box alert-warning">
+                            <i class="fas fa-clock" style="margin-top: 2px;"></i>
+                            <div>
+                                <strong>Phiên đăng nhập đã hết hạn</strong><br>
+                                <span>Vì lý do bảo mật, bạn đã bị đăng xuất tự động. Vui lòng đăng nhập lại.</span>
                             </div>
                         </div>
                     <?php endif; ?>
