@@ -721,115 +721,111 @@
         <!-- ========================================== -->
         <!-- MOBILE LOGIN VIEW                          -->
         <!-- ========================================== -->
-        <div class="main-content" style="padding: 40px 16px 20px;">
-            
-            <!-- Logo boxes: R, F, T -->
-            <a href="index.php?" class="mb-login-logo-container" style="text-decoration:none;" title="Trang chủ">
-                <div class="mb-login-logo-box r">R</div>
-                <div class="mb-login-logo-box f">F</div>
-                <div class="mb-login-logo-box t">T</div>
-            </a>
+        <div class="main-content mb-login-wrapper">
 
-            <h1 class="mb-login-title">Chào mừng trở lại!</h1>
-            <p class="mb-login-subtitle">Hệ thống quản lý chấm công kỹ thuật số dành cho doanh nghiệp hiện đại.</p>
+            <!-- Hero top bar -->
+            <div class="mb-login-hero">
+                <a href="index.php?" class="mb-login-logo-container" style="text-decoration:none;" title="Trang chủ">
+                    <div class="mb-login-logo-box r">R</div>
+                    <div class="mb-login-logo-box f">F</div>
+                    <div class="mb-login-logo-box t">T</div>
+                </a>
+                <h1 class="mb-login-title">Chào mừng trở lại!</h1>
+                <p class="mb-login-subtitle">Hệ thống quản lý chấm công thông minh dành cho doanh nghiệp.</p>
+            </div>
 
             <!-- Login Card -->
             <div class="mb-login-card">
-                <h2>Đăng nhập</h2>
-                <p>Vui lòng nhập thông tin tài khoản để tiếp tục</p>
+                <div class="mb-login-card-header">
+                    <h2>Đăng nhập</h2>
+                    <p>Nhập thông tin tài khoản của bạn</p>
+                </div>
 
-                <?php
-                    $loi = $_GET['error'] ?? '';
-                    if ($loi === '1'):
-                ?>
-                    <div class="alert alert-error" style="margin-bottom: 16px; border-radius: 8px; font-size: 13px;">
+                <?php $loi = $_GET['error'] ?? ''; ?>
+                <?php if ($loi === '1'): ?>
+                    <div class="mb-alert mb-alert--error">
                         <i class="fas fa-exclamation-circle"></i>
-                        <span>Sai tên đăng nhập hoặc mật khẩu. Vui lòng thử lại.</span>
+                        <span>Sai tên đăng nhập hoặc mật khẩu.</span>
                     </div>
                 <?php endif; ?>
-
                 <?php if ($loi === 'inactive'): ?>
-                    <div class="alert alert-warning" style="margin-bottom: 16px; border-radius: 8px; font-size: 13px;">
+                    <div class="mb-alert mb-alert--warning">
                         <i class="fas fa-lock"></i>
-                        <div>
-                            <strong>Tài khoản đã bị khóa</strong><br>
-                            <span>Vui lòng liên hệ quản trị viên để được hỗ trợ.</span>
-                        </div>
+                        <span>Tài khoản đã bị khóa. Liên hệ quản trị viên.</span>
                     </div>
                 <?php endif; ?>
-
                 <?php if ($loi === 'ib_only'): ?>
-                    <div class="alert alert-warning" style="margin-bottom: 16px; border-radius: 8px; font-size: 13px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #fca5a5;">
+                    <div class="mb-alert mb-alert--error">
                         <i class="fas fa-desktop"></i>
-                        <div>
-                            <strong>Quyền truy cập hạn chế</strong><br>
-                            <span>Tài khoản này chỉ được phép hoạt động trên Internet Banking (IB).</span>
-                        </div>
+                        <span>Tài khoản chỉ hoạt động trên máy tính.</span>
                     </div>
                 <?php endif; ?>
 
                 <form method="POST" action="index.php?page=login-process">
                     <div class="mb-form-group">
-                        <label for="username">TÊN ĐĂNG NHẬP / EMAIL</label>
+                        <label for="username">Tên đăng nhập</label>
                         <div class="mb-input-wrapper">
-                            <i class="fas fa-user input-icon"></i>
-                            <input type="text" id="username" name="username" class="mb-input-field" placeholder="Nhập tên đăng nhập hoặc email" autocomplete="username" autofocus required>
+                            <i class="far fa-user input-icon"></i>
+                            <input type="text" id="username" name="username" class="mb-input-field"
+                                placeholder="Email hoặc tên tài khoản" autocomplete="username" autofocus required>
                         </div>
                     </div>
 
                     <div class="mb-form-group">
-                        <label for="matKhau">MẬT KHẨU</label>
+                        <label for="matKhau">Mật khẩu</label>
                         <div class="mb-input-wrapper">
                             <i class="fas fa-lock input-icon"></i>
-                            <input type="password" id="matKhau" name="matKhau" class="mb-input-field" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
-                            <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('matKhau', this)"></i>
+                            <input type="password" id="matKhau" name="matKhau" class="mb-input-field"
+                                placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+                            <i class="far fa-eye toggle-password" onclick="togglePasswordVisibility('matKhau', this)"></i>
                         </div>
                     </div>
 
-                    <div class="mb-forgot-pw">
-                        <a href="#">QUÊN MẬT KHẨU?</a>
+                    <div class="mb-login-options-row">
+                        <label class="mb-remember-label">
+                            <input type="checkbox" name="remember" id="rememberMe">
+                            <span>Ghi nhớ</span>
+                        </label>
+                        <a href="#" class="mb-forgot-link">Quên mật khẩu?</a>
                     </div>
 
                     <button type="submit" class="mb-login-btn">
-                        <i class="fas fa-arrow-right-to-bracket"></i> Đăng nhập
+                        <i class="fas fa-arrow-right-to-bracket"></i>
+                        <span>Đăng nhập</span>
                     </button>
                 </form>
-            </div>
 
-            <!-- Divider + Alternative Auth -->
-            <div class="mb-alt-divider">
-                <div class="mb-alt-divider-line"></div>
-                <span class="mb-alt-divider-text">HOẶC PHƯƠNG THỨC KHÁC</span>
-                <div class="mb-alt-divider-line"></div>
-            </div>
+                <!-- Divider -->
+                <div class="mb-alt-divider">
+                    <div class="mb-alt-divider-line"></div>
+                    <span class="mb-alt-divider-text">SINH TRẮC HỌC</span>
+                    <div class="mb-alt-divider-line"></div>
+                </div>
 
-            <div class="mb-alt-buttons">
-                <a href="index.php?page=tablet-cham-cong" class="mb-alt-btn mb-alt-btn--wifi">
-                    <div class="mb-alt-btn-icon">
-                        <i class="fas fa-wifi"></i>
+                <!-- FaceID Button -->
+                <a href="index.php?page=tablet-cham-cong" class="mb-faceid-btn">
+                    <div class="mb-faceid-icon-wrap">
+                        <div class="mb-faceid-scan-corners">
+                            <span class="mfc-tl"></span><span class="mfc-tr"></span>
+                            <span class="mfc-bl"></span><span class="mfc-br"></span>
+                        </div>
+                        <i class="far fa-user"></i>
                     </div>
-                    <div class="mb-alt-btn-text">
-                        <span class="mb-alt-btn-title">WiFi Chấm Công</span>
-                        <span class="mb-alt-btn-sub">Chấm công bằng khuôn mặt qua thiết bị</span>
+                    <div class="mb-faceid-text">
+                        <span class="mb-faceid-title">Đăng nhập bằng FaceID</span>
+                        <span class="mb-faceid-sub">AI nhận diện khuôn mặt · Bảo mật cao</span>
                     </div>
-                    <i class="fas fa-chevron-right mb-alt-btn-arrow"></i>
+                    <span class="mb-faceid-live">
+                        <span class="mb-faceid-pulse"></span>LIVE
+                    </span>
                 </a>
-                <a href="index.php?page=tablet-cham-cong" class="mb-alt-btn mb-alt-btn--faceid">
-                    <div class="mb-alt-btn-icon">
-                        <i class="far fa-face-smile"></i>
-                    </div>
-                    <div class="mb-alt-btn-text">
-                        <span class="mb-alt-btn-title">FaceID</span>
-                        <span class="mb-alt-btn-sub">Nhận diện khuôn mặt tự động</span>
-                    </div>
-                    <i class="fas fa-chevron-right mb-alt-btn-arrow"></i>
-                </a>
-            </div>
+
+            </div><!-- /.mb-login-card -->
 
             <!-- Mobile Footer -->
-            <div class="mb-login-footer" style="background: none; border-top: none;">
-                <div>© 2026 RFT HỆ THỐNG QUẢN LÝ CHẤM CÔNG — <?= htmlspecialchars(defined('APP_VERSION') ? APP_VERSION : 'v2.4.34') ?></div>
-                <div style="margin-top: 4px;">CẦN HỖ TRỢ? <a href="#">Trò chuyện ngay</a> <i class="far fa-comment-dots" style="color: #1b5ed8;"></i></div>
+            <div class="mb-login-footer" style="background:none; border-top:none; margin-top:20px;">
+                <div>© 2026 RFT — Hệ thống Quản lý Chấm Công</div>
+                <div style="margin-top:4px;">CẦN HỖ TRỢ? <a href="#">Liên hệ ngay</a></div>
             </div>
 
         </div>

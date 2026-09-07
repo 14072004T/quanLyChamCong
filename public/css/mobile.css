@@ -330,10 +330,388 @@ body.mobile-view.mobile-menu-open .mobile-sidebar-nav,
 
 .sidebar-close { display: none; }
 
-/* --- MOBILE LOGIN PAGE (SCREENSHOT 1) --- */
+/* --- MOBILE LOGIN PAGE --- */
 .mb-login-body {
-    background: #f1f5fa !important;
+    background: #f0f4f8 !important;
 }
+
+.mb-login-wrapper {
+    padding: 36px 18px 24px !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Hero */
+.mb-login-hero {
+    text-align: center !important;
+    margin-bottom: 28px !important;
+}
+
+.mb-login-logo-container {
+    display: inline-flex !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+}
+
+.mb-login-logo-box {
+    width: 40px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 22px !important;
+    font-weight: 800 !important;
+    color: white !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
+}
+
+.mb-login-logo-box.r { background: #1e293b !important; }
+.mb-login-logo-box.f { background: #0284c7 !important; }
+.mb-login-logo-box.t { background: #2563eb !important; }
+
+.mb-login-title {
+    font-size: 26px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 0 0 8px !important;
+    letter-spacing: -0.4px !important;
+}
+
+.mb-login-subtitle {
+    font-size: 13px !important;
+    color: #64748b !important;
+    margin: 0 !important;
+    line-height: 1.5 !important;
+}
+
+/* Card */
+.mb-login-card {
+    background: #ffffff !important;
+    border-radius: 24px !important;
+    padding: 28px 22px !important;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.07) !important;
+    border: 1px solid #e8edf3 !important;
+    margin-bottom: 0 !important;
+}
+
+.mb-login-card-header {
+    margin-bottom: 22px !important;
+}
+
+.mb-login-card-header h2 {
+    font-size: 21px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    margin: 0 0 4px !important;
+}
+
+.mb-login-card-header p {
+    font-size: 13px !important;
+    color: #64748b !important;
+    margin: 0 !important;
+}
+
+/* Alerts */
+.mb-alert {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 11px 14px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    margin-bottom: 18px !important;
+    font-weight: 500 !important;
+}
+
+.mb-alert i {
+    font-size: 14px !important;
+    flex-shrink: 0 !important;
+}
+
+.mb-alert--error {
+    background: rgba(239, 68, 68, 0.09) !important;
+    border: 1px solid rgba(239, 68, 68, 0.22) !important;
+    color: #dc2626 !important;
+}
+
+.mb-alert--warning {
+    background: rgba(245, 158, 11, 0.1) !important;
+    border: 1px solid rgba(245, 158, 11, 0.25) !important;
+    color: #b45309 !important;
+}
+
+/* Form groups */
+.mb-form-group {
+    margin-bottom: 16px !important;
+}
+
+.mb-form-group label {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    letter-spacing: 0.2px !important;
+    margin-bottom: 7px !important;
+    display: block !important;
+}
+
+.mb-input-wrapper {
+    position: relative !important;
+}
+
+.mb-input-wrapper i.input-icon {
+    position: absolute !important;
+    left: 14px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #94a3b8 !important;
+    font-size: 14px !important;
+    pointer-events: none !important;
+}
+
+.mb-input-wrapper i.toggle-password {
+    position: absolute !important;
+    right: 14px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #94a3b8 !important;
+    font-size: 15px !important;
+    cursor: pointer !important;
+}
+
+.mb-input-field {
+    width: 100% !important;
+    background: #f4f7fa !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    height: 48px !important;
+    padding: 0 16px 0 44px !important;
+    font-size: 14px !important;
+    color: #0f172a !important;
+    box-sizing: border-box !important;
+    transition: border-color 0.2s, background 0.2s !important;
+    font-family: inherit !important;
+}
+
+.mb-input-field:focus {
+    outline: none !important;
+    border-color: #3b82f6 !important;
+    background: #eff6ff !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12) !important;
+}
+
+.mb-input-field::placeholder {
+    color: #94a3b8 !important;
+}
+
+/* Options row: remember + forgot */
+.mb-login-options-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin: 10px 0 20px !important;
+}
+
+.mb-remember-label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    font-size: 13px !important;
+    color: #64748b !important;
+    cursor: pointer !important;
+    user-select: none !important;
+}
+
+.mb-remember-label input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    accent-color: #2563eb !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+}
+
+.mb-forgot-link {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #2563eb !important;
+    text-decoration: none !important;
+}
+
+/* Submit button */
+.mb-login-btn {
+    width: 100% !important;
+    height: 50px !important;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 14px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    font-family: inherit !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 9px !important;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35) !important;
+    transition: all 0.2s !important;
+    letter-spacing: 0.2px !important;
+}
+
+.mb-login-btn:active {
+    transform: scale(0.98) !important;
+    opacity: 0.92 !important;
+}
+
+/* Divider */
+.mb-alt-divider {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin: 22px 0 18px !important;
+}
+
+.mb-alt-divider-line {
+    flex: 1 !important;
+    height: 1px !important;
+    background: #e2e8f0 !important;
+}
+
+.mb-alt-divider-text {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: #94a3b8 !important;
+    letter-spacing: 0.8px !important;
+    white-space: nowrap !important;
+}
+
+/* FaceID button */
+.mb-faceid-btn {
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+    background: #0f172a !important;
+    border-radius: 18px !important;
+    padding: 16px 18px !important;
+    text-decoration: none !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    box-shadow: 0 6px 20px rgba(15,23,42,0.18) !important;
+    transition: opacity 0.2s !important;
+    margin-bottom: 4px !important;
+}
+
+.mb-faceid-btn:active {
+    opacity: 0.85 !important;
+    transform: scale(0.99) !important;
+}
+
+.mb-faceid-icon-wrap {
+    width: 52px !important;
+    height: 52px !important;
+    background: rgba(0, 210, 255, 0.08) !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(0,210,255,0.2) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+    color: #00d2ff !important;
+    font-size: 20px !important;
+}
+
+.mb-faceid-scan-corners {
+    position: absolute !important;
+    inset: 5px !important;
+}
+
+.mb-faceid-scan-corners span {
+    position: absolute !important;
+    width: 10px !important;
+    height: 10px !important;
+    border-color: #00d2ff !important;
+    border-style: solid !important;
+    opacity: 0.8 !important;
+}
+
+.mfc-tl { top: 0; left: 0; border-width: 2px 0 0 2px; border-top-left-radius: 3px; }
+.mfc-tr { top: 0; right: 0; border-width: 2px 2px 0 0; border-top-right-radius: 3px; }
+.mfc-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; border-bottom-left-radius: 3px; }
+.mfc-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; border-bottom-right-radius: 3px; }
+
+.mb-faceid-text {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+}
+
+.mb-faceid-title {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #f1f5f9 !important;
+    display: block !important;
+}
+
+.mb-faceid-sub {
+    font-size: 11px !important;
+    color: #64748b !important;
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.mb-faceid-live {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    color: #10b981 !important;
+    background: rgba(16,185,129,0.12) !important;
+    border: 1px solid rgba(16,185,129,0.25) !important;
+    border-radius: 20px !important;
+    padding: 4px 8px !important;
+    flex-shrink: 0 !important;
+    letter-spacing: 0.5px !important;
+}
+
+.mb-faceid-pulse {
+    width: 6px !important;
+    height: 6px !important;
+    background: #10b981 !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+    animation: mbLivePulse 1.6s infinite !important;
+}
+
+@keyframes mbLivePulse {
+    0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.6); }
+    70%  { box-shadow: 0 0 0 5px rgba(16,185,129,0); }
+    100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+
+/* Footer */
+.mb-login-footer {
+    text-align: center !important;
+    font-size: 11.5px !important;
+    color: #94a3b8 !important;
+    line-height: 1.6 !important;
+    padding: 0 !important;
+}
+
+.mb-login-footer a {
+    color: #2563eb !important;
+    text-decoration: none !important;
+    font-weight: 600 !important;
+}
+
+
 
 .mb-login-logo-container {
     display: flex !important;
