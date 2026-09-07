@@ -46,7 +46,9 @@ require_once 'app/middleware/AuthMiddleware.php';
 $defaultPage = 'login';
 if (isset($_SESSION['user'])) {
     $role = $_SESSION['role'] ?? 'nhanvien';
-    if ($role === 'manager') {
+    if (AuthMiddleware::isMobile()) {
+        $defaultPage = 'home';
+    } elseif ($role === 'manager') {
         $defaultPage = 'bao-cao-tong-hop';
     } elseif ($role === 'hr') {
         $defaultPage = 'cham-cong-dashboard';
@@ -197,11 +199,10 @@ if (!isset($_SESSION['user']) && !in_array($page, ['login', 'login-process', 'lo
     exit;
 }
 
-// MB chỉ role nhân viên thực hiện chấm công, các role còn lại chỉ được thực hiện trên IB.
-// Riêng HR được dùng đầy đủ menu chức năng trên mobile (vd: mở tablet chấm công).
+// MB hỗ trợ các role nhân viên, HR, IT (tech) đăng nhập để sử dụng các chức năng cá nhân.
 if (isset($_SESSION['user'])) {
     $role = $_SESSION['role'] ?? 'nhanvien';
-    if (AuthMiddleware::isMobile() && $role !== 'nhanvien' && $role !== 'hr') {
+    if (AuthMiddleware::isMobile() && !in_array($role, ['nhanvien', 'hr', 'tech'], true)) {
         session_unset();
         session_destroy();
         header('Location: index.php?page=login&error=ib_only');

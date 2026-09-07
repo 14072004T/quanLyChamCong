@@ -29,11 +29,17 @@ $menus = [
 
 ];
 
-// HR và Tech được xem thêm menu của Nhân viên
-if ($role === 'hr' || $role === 'tech') {
-    $roleMenus = array_merge($menus[$role] ?? [], $menus['nhanvien']);
+// Trải nghiệm mobile app: tất cả tài khoản (HR, IT, Nhân viên) chỉ hiển thị chức năng cá nhân
+if (AuthMiddleware::isMobile()) {
+    $roleMenus = $menus['nhanvien'];
+    $displayRoleTitle = 'Nhân viên';
 } else {
-    $roleMenus = $menus[$role] ?? $menus['nhanvien'];
+    if ($role === 'hr' || $role === 'tech') {
+        $roleMenus = array_merge($menus[$role] ?? [], $menus['nhanvien']);
+    } else {
+        $roleMenus = $menus[$role] ?? $menus['nhanvien'];
+    }
+    $displayRoleTitle = $roleLabels[$role] ?? 'Menu';
 }
 
 // Check if face is registered to hide the menu
@@ -47,7 +53,7 @@ $isHR = ($role === 'hr');
 $showFaceRegisterMenu = true;
 
 if ($hasFace) {
-    if (!$isHR) {
+    if (!$isHR || AuthMiddleware::isMobile()) {
         $showFaceRegisterMenu = false;
     } else {
         $rawList = $chamCongModel->getEmployees('', true) ?? [];
@@ -89,7 +95,7 @@ $roleLabels = [
         </button>
     </div>
 
-    <h3><?= htmlspecialchars($roleLabels[$role] ?? 'Menu') ?></h3>
+    <h3><?= htmlspecialchars($displayRoleTitle) ?></h3>
     <ul id="sidebarList">
         <?php foreach ($filteredMenus as $menu): ?>
             <?php if (!empty($menu['divider'])): ?>

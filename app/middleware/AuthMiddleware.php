@@ -143,8 +143,12 @@ class AuthMiddleware
     {
         self::checkLogin();
         $role = $_SESSION['role'] ?? 'nhanvien';
-        $permissions = self::$permissions[$role] ?? [];
-        return in_array($page, $permissions);
+        if (self::isMobile()) {
+            $permissions = self::$permissions['nhanvien'] ?? [];
+        } else {
+            $permissions = self::$permissions[$role] ?? [];
+        }
+        return in_array($page, $permissions, true);
     }
 
     /**

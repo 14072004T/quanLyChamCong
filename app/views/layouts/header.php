@@ -52,9 +52,10 @@
         require_once 'app/models/ChamCongModel.php';
         $notificationModel = new ChamCongModel();
         $role = $_SESSION['role'] ?? 'nhanvien';
+        $effectiveRole = AuthMiddleware::isMobile() ? 'nhanvien' : $role;
         $maND = (int)($_SESSION['user']['maND'] ?? 0);
 
-        if ($role === 'nhanvien' && $maND > 0) {
+        if ($effectiveRole === 'nhanvien' && $maND > 0) {
             // 1. Bảng công tháng HR gửi chờ nhân viên xác nhận
             $pendingTimesheets = $notificationModel->getPendingTimesheets($maND, 5);
             foreach ($pendingTimesheets as $ts) {
