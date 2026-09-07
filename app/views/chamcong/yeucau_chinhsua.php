@@ -184,7 +184,11 @@ $todayOut = $todayShiftStatus['gioRaCuoi'] ?? null;
 
                             <div class="mb-request-form-group">
                                 <label for="lyDo">Lý do điều chỉnh <span style="color:#ef4444">*</span></label>
-                                <textarea id="lyDo" name="lyDo" class="mb-request-textarea" placeholder="VD: Quên bấm thẻ, Đi công tác..." required style="min-height: 80px;"></textarea>
+                                <select id="lyDo" name="lyDo" class="mb-request-input-field" required style="padding-left: 12px !important; height: 38px;">
+                                    <option value="">-- Chọn lý do --</option>
+                                    <option value="Quên chấm công">Quên chấm công</option>
+                                    <option value="Xin OT">Xin OT</option>
+                                </select>
                             </div>
 
                             <div class="mb-request-form-group">
@@ -323,7 +327,11 @@ $todayOut = $todayShiftStatus['gioRaCuoi'] ?? null;
                     <div style="display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: end; margin-bottom: 16px;">
                         <div class="yc-form-group">
                             <label class="yc-label" for="lyDo">Lý do điều chỉnh <span style="color:var(--yc-danger)">*</span></label>
-                            <input type="text" id="lyDo" name="lyDo" class="yc-input" required placeholder="VD: Quên bấm thẻ, Đi công tác..." style="height: 36px;">
+                            <select id="lyDo" name="lyDo" class="yc-input" required style="height: 36px;">
+                                <option value="">-- Chọn lý do --</option>
+                                <option value="Quên chấm công">Quên chấm công</option>
+                                <option value="Xin OT">Xin OT</option>
+                            </select>
                         </div>
                         <div class="yc-form-group">
                             <label class="yc-label">Minh chứng (Ảnh/PDF)</label>
