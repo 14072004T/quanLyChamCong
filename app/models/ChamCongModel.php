@@ -668,6 +668,7 @@ class ChamCongModel
             $shiftEndTime = strtotime($checkInDate . ' ' . $shiftEnd);
         }
 
+        $diffIn = ($checkInTime - $shiftStartTime) / 60; // in minutes
         $lateThreshold = (int)$this->getSettingValue('LATE_THRESHOLD_MINUTES', 15);
 
         if ($diffIn > $lateThreshold) {
