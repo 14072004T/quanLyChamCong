@@ -323,6 +323,13 @@ class ChamCongModel
             return false;
         }
 
+        // Validate MAX_CORRECTION_DAYS dynamically
+        $maxCorrectionDays = (int)$this->getSettingValue('MAX_CORRECTION_DAYS', '7');
+        $diffDays = (time() - strtotime($attendanceDate)) / 86400;
+        if ($diffDays > $maxCorrectionDays) {
+            return false;
+        }
+
         // Build gioMoi from gioVaoDeXuat if not provided (backward compat)
         if ($newTime === null && $proposedCheckin !== null) {
             $newTime = $proposedCheckin;
@@ -658,11 +665,10 @@ class ChamCongModel
             $shiftEndTime = strtotime($checkInDate . ' ' . $shiftEnd);
         }
 
-        // === CHECK-IN analysis ===
-        $diffIn = ($checkInTime - $shiftStartTime) / 60; // minutes
+        $lateThreshold = (int)$this->getSettingValue('LATE_THRESHOLD_MINUTES', 15);
 
-        if ($diffIn > 1) {
-            // Late (more than 1 minute grace)
+        if ($diffIn > $lateThreshold) {
+            // Late (more than LATE_THRESHOLD_MINUTES)
             $result['statuses'][] = 'late';
             $result['minutes_late'] = (int)round($diffIn);
             $result['labels'][] = 'Äi trá»… ' . $result['minutes_late'] . ' phÃºt';
@@ -687,14 +693,15 @@ class ChamCongModel
         } else {
             $checkOutTime = strtotime($checkOut);
             $diffOut = ($checkOutTime - $shiftEndTime) / 60; // minutes
+            $otThreshold = (int)$this->getSettingValue('OVERTIME_THRESHOLD_MINUTES', 30);
 
             if ($diffOut < -1) {
                 // Left early
                 $result['statuses'][] = 'early_leave';
                 $result['minutes_early'] = abs((int)round($diffOut));
-                $result['labels'][] = 'Vá» sá»›m ' . $result['minutes_early'] . ' phÃºt';
+                $result['labels'][] = 'Vá»  sá»›m ' . $result['minutes_early'] . ' phÃºt';
                 $result['colors'][] = '#f97316';
-            } elseif ($diffOut > 1) {
+            } elseif ($diffOut >= $otThreshold) {
                 // Overtime
                 $result['statuses'][] = 'overtime';
                 $result['phutTangCa'] = (int)round($diffOut);
