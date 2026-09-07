@@ -4,7 +4,6 @@ $currentPage = $_GET['page'] ?? 'home';
 
 $menus = [
     'nhanvien' => [
-        ['page' => 'cham-cong-dashboard', 'label' => 'Chấm công', 'icon' => 'fa-fingerprint'],
         ['page' => 'lich-su-cham-cong', 'label' => 'Xem lịch sử', 'icon' => 'fa-clock-rotate-left'],
         ['page' => 'bang-cong-thang', 'label' => 'Bảng công tháng', 'icon' => 'fa-file-invoice'],
         ['page' => 'yeu-cau-chinh-sua-cham-cong', 'label' => 'Gửi yêu cầu chỉnh sửa', 'icon' => 'fa-pen-to-square'],
@@ -27,7 +26,12 @@ $menus = [
     ],
 ];
 
-$roleMenus = $menus[$role] ?? $menus['nhanvien'];
+// HR và Tech được xem thêm menu của Nhân viên
+if ($role === 'hr' || $role === 'tech') {
+    $roleMenus = array_merge($menus[$role] ?? [], $menus['nhanvien']);
+} else {
+    $roleMenus = $menus[$role] ?? $menus['nhanvien'];
+}
 
 // Check if face is registered to hide the menu
 require_once 'app/models/FaceModel.php';
