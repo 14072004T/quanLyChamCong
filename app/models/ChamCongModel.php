@@ -3770,7 +3770,7 @@ class ChamCongModel
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
     /**
-     * HR: Láº¥y chi tiáº¿t tráº¡ng thÃ¡i phÃª duyá»‡t cá»§a tá»«ng nhÃ¢n viÃªn theo ká»³ cÃ´ng
+     * HR: Lấy chi tiết trạng thái phê duyệt của từng nhân viên theo kỳ công
      */
     public function getTimesheetApprovalDetails($monthKey)
     {
@@ -3784,6 +3784,142 @@ class ChamCongModel
         $stmt->bind_param('s', $monthKey);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /**
+     * Tech: Lấy danh sách tất cả tài khoản join người dùng với các bộ lọc
+     */
+    public function getAllAccountsWithUsers($filters = [])
+    {
+        $sql = "SELECT 
+                    tk.maTK,
+                    tk.tenDangNhap,
+                    tk.trangThai AS trangThaiTK,
+                    tk.ngayTao AS ngayTaoTK,
+                    nd.maND,
+                    nd.hoTen,
+                    nd.phongBan,
+                    nd.chucVu,
+                    nd.trangThai AS trangThaiND
+                FROM taikhoan tk
+                LEFT JOIN nguoidung nd ON tk.maTK = nd.maTK
+                WHERE 1=1";
+        
+        $params = [];
+        $types = "";
+
+        if (!empty($filters['phongBan'])) {
+            $sql .= " AND nd.phongBan = ?";
+            $params[] = $filters['phongBan'];
+            $types .= "s";
+        }
+
+        if (!empty($filters['search'])) {
+            $search = '%' . trim($filters['search']) . '%';
+            $sql .= " AND (nd.hoTen LIKE ? OR tk.tenDangNhap LIKE ? OR CAST(nd.maND AS CHAR) LIKE ?)";
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+            $types .= "sss";
+        }
+
+        if (!empty($filters['fromDate'])) {
+            $sql .= " AND tk.ngayTao >= ?";
+            $params[] = $filters['fromDate'] . ' 00:00:00';
+            $types .= "s";
+        }
+        if (!empty($filters['toDate'])) {
+            $sql .= " AND tk.ngayTao <= ?";
+            $params[] = $filters['toDate'] . ' 23:59:59';
+            $types .= "s";
+        }
+
+        $sql .= " ORDER BY tk.maTK DESC";
+
+        if (!empty($types)) {
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) return [];
+            $stmt->bind_param($types, ...$params);
+            $stmt->execute();
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        }
+
+        $result = $this->conn->query($sql);
+        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    }
+
+    /**
+     * Tech: Lấy chi tiết tài khoản theo maTK
+     */
+    public function getUserAccountById($maTK)
+    {
+        $sql = "SELECT 
+                    tk.maTK,
+                    tk.tenDangNhap,
+                    tk.trangThai AS trangThaiTK,
+                    tk.ngayTao AS ngayTaoTK,
+                    nd.maND,
+                    nd.hoTen,
+                    nd.phongBan,
+                    nd.chucVu,
+                    nd.trangThai AS trangThaiND
+                FROM taikhoan tk
+                LEFT JOIN nguoidung nd ON tk.maTK = nd.maTK
+                WHERE tk.maTK = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return null;
+        $stmt->bind_param('i', $maTK);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        return $res ? $res->fetch_assoc() : null;
+    }
+
+    /**
+     * Tech: Cập nhật chức vụ (role) cho người dùng trong bảng nguoidung
+     */
+    public function updateUserRole($maND, $chucVu)
+    {
+        $sql = "UPDATE nguoidung SET chucVu = ? WHERE maND = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return false;
+        $stmt->bind_param('si', $chucVu, $maND);
+        return $stmt->execute();
+    }
+
+    /**
+     * Tech: Bật/Tắt trạng thái hoạt động tài khoản (taikhoan.trangThai)
+     */
+    public function toggleAccountStatus($maTK)
+    {
+        $sql = "SELECT trangThai FROM taikhoan WHERE maTK = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return false;
+        $stmt->bind_param('i', $maTK);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if (!$res || $res->num_rows === 0) return false;
+        
+        $row = $res->fetch_assoc();
+        $curr = $row['trangThai'] ?? 1;
+        $newStatus = ($curr == 1 || strtolower(trim((string)$curr)) === 'active') ? 0 : 1;
+        
+        $updateSql = "UPDATE taikhoan SET trangThai = ? WHERE maTK = ?";
+        $upStmt = $this->conn->prepare($updateSql);
+        if (!$upStmt) return false;
+        $upStmt->bind_param('ii', $newStatus, $maTK);
+        return $upStmt->execute();
+    }
+
+    /**
+     * Lấy danh sách tất cả các phòng ban từ bảng nguoidung
+     */
+    public function getAllDepartments()
+    {
+        $sql = "SELECT DISTINCT phongBan FROM nguoidung WHERE phongBan IS NOT NULL AND phongBan != '' ORDER BY phongBan ASC";
+        $result = $this->conn->query($sql);
+        if (!$result) return [];
+        $rows = $result->fetch_all(MYSQLI_ASSOC);
+        return array_column($rows, 'phongBan');
     }
 }
 
