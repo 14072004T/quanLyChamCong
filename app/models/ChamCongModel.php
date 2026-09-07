@@ -834,7 +834,10 @@ class ChamCongModel
         $days = max(1, min(31, (int)$days));
         $fromDate = date('Y-m-d', strtotime($today . ' -' . ($days - 1) . ' days'));
         $employeeIds = [];
-        $employeeResult = $this->conn->query("SELECT maND FROM nguoidung WHERE trangThai = 1 AND TRIM(chucVu) LIKE '%Nhân viên%'");
+        $employeeResult = $this->conn->query("SELECT DISTINCT nd.maND
+                              FROM nguoidung nd
+                              INNER JOIN nhanvien nv ON nv.maND = nd.maND
+                              WHERE nd.trangThai = 1");
         if ($employeeResult) {
             while ($employee = $employeeResult->fetch_assoc()) {
                 $employeeIds[] = (int)$employee['maND'];
@@ -912,7 +915,10 @@ class ChamCongModel
         }
         unset($day);
 
-        return ['total_employees' => count($employeeIds), 'today' => $daily[$today] ?? $emptyDay($today), 'daily' => array_values($daily)];
+        $todayMetrics = $daily[$today] ?? $emptyDay($today);
+        $todayMetrics['absent'] = max(0, count($employeeIds) - (int)$todayMetrics['present']);
+
+        return ['total_employees' => count($employeeIds), 'today' => $todayMetrics, 'daily' => array_values($daily)];
     }
 
     public function getEmployees($keyword = '', $activeOnly = false, $limit = 0)
