@@ -49,6 +49,12 @@ class ChamCongController
         // Biến này dùng để include view cho từng role
         $view = null;
         $role = $_SESSION['role'] ?? 'nhanvien';
+        $hrDashboardMetrics = [];
+        $hrRequestMetrics = [];
+        if ($role === 'hr') {
+            $hrDashboardMetrics = $this->model->getHrDashboardMetrics();
+            $hrRequestMetrics = $this->model->getHrRequestMetrics();
+        }
         
         // Fetch tech panel data if role is tech
         if ($role === 'tech') {
