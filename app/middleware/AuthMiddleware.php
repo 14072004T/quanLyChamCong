@@ -234,10 +234,13 @@ class AuthMiddleware
             $dev = strtolower($_GET['device']);
             if ($dev === 'mobile' || $dev === 'phone') {
                 $_SESSION['device_override'] = 'phone';
+                setcookie('device_hint', 'phone', time() + 2592000, '/');
             } elseif ($dev === 'tablet') {
                 $_SESSION['device_override'] = 'tablet';
+                setcookie('device_hint', 'tablet', time() + 2592000, '/');
             } elseif ($dev === 'desktop') {
                 $_SESSION['device_override'] = 'desktop';
+                setcookie('device_hint', 'desktop', time() + 2592000, '/');
             }
         }
 
@@ -246,19 +249,23 @@ class AuthMiddleware
         }
 
         $hint = $_COOKIE['device_hint'] ?? '';
-        if ($hint === 'phone' || $hint === 'mobile') {
-            return 'phone';
-        }
         if ($hint === 'tablet') {
             return 'tablet';
         }
         if ($hint === 'desktop') {
             return 'desktop';
         }
+        if ($hint === 'phone') {
+            return 'phone';
+        }
 
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
         if (preg_match('/(ipad|tablet|playbook|silk|(android(?!.*mobile)))/i', $userAgent)) {
             return 'tablet';
+        }
+
+        if ($hint === 'mobile') {
+            return 'phone';
         }
 
         $isPhone = preg_match('/(android.+mobile|iphone|ipod|blackberry|auth|bb10|symbian|windows phone|palm)/i', $userAgent) 

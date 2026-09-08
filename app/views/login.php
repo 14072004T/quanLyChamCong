@@ -703,24 +703,36 @@
                     return;
                 }
                 if (force === 'tablet') {
+                    document.body.classList.remove('mobile-view');
+                    document.body.classList.remove('mb-login-body');
                     document.cookie = 'device_hint=tablet; path=/; max-age=2592000; SameSite=Lax';
                     return;
                 }
                 if (force === 'desktop') {
+                    document.body.classList.remove('mobile-view');
+                    document.body.classList.remove('mb-login-body');
                     document.cookie = 'device_hint=desktop; path=/; max-age=2592000; SameSite=Lax';
                     return;
                 }
 
-                const isPhone = window.innerWidth < 768 && /iPhone|iPod|Android.+Mobile|Windows Phone/i.test(navigator.userAgent);
-                const isTablet = (window.innerWidth >= 768 && window.innerWidth <= 1024) || /iPad|Tablet|PlayBook|Silk|(Android(?!.*Mobile))/i.test(navigator.userAgent);
+                const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+                const isMac = /Macintosh/i.test(navigator.userAgent);
+                const isIpadOS = isMac && isTouch;
+
+                const isTablet = isIpadOS || /iPad|Tablet|PlayBook|Silk|(Android(?!.*Mobile))/i.test(navigator.userAgent) || (window.innerWidth >= 768 && window.innerWidth <= 1280 && isTouch);
+                const isPhone = !isTablet && (/iPhone|iPod|Android.+Mobile|Windows Phone/i.test(navigator.userAgent) || (window.innerWidth < 768 && isTouch));
 
                 if (isPhone) {
                     document.body.classList.add('mobile-view');
                     document.body.classList.add('mb-login-body');
                     document.cookie = 'device_hint=phone; path=/; max-age=2592000; SameSite=Lax';
                 } else if (isTablet) {
+                    document.body.classList.remove('mobile-view');
+                    document.body.classList.remove('mb-login-body');
                     document.cookie = 'device_hint=tablet; path=/; max-age=2592000; SameSite=Lax';
                 } else {
+                    document.body.classList.remove('mobile-view');
+                    document.body.classList.remove('mb-login-body');
                     document.cookie = 'device_hint=desktop; path=/; max-age=0; SameSite=Lax';
                 }
             } catch (e) {}
