@@ -18,7 +18,7 @@ class FaceModel
      */
     public function getFaceProfile($maND)
     {
-        $sql = "SELECT id, maND, embedding, ngayTao, ngayCapNhat FROM face_profile WHERE maND = ?";
+        $sql = "SELECT id, maND, embedding, embedding_front, embedding_left, embedding_right, ngayTao, ngayCapNhat FROM face_profile WHERE maND = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return null;
@@ -36,23 +36,23 @@ class FaceModel
      * @param string $embeddingJson
      * @return bool
      */
-    public function saveFaceProfile($maND, $embeddingJson)
+    public function saveFaceProfile($maND, $embeddingJson, $frontJson = null, $leftJson = null, $rightJson = null)
     {
         $existing = $this->getFaceProfile($maND);
         if ($existing) {
-            $sql = "UPDATE face_profile SET embedding = ? WHERE maND = ?";
+            $sql = "UPDATE face_profile SET embedding = ?, embedding_front = ?, embedding_left = ?, embedding_right = ? WHERE maND = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
             }
-            $stmt->bind_param("si", $embeddingJson, $maND);
+            $stmt->bind_param("ssssi", $embeddingJson, $frontJson, $leftJson, $rightJson, $maND);
         } else {
-            $sql = "INSERT INTO face_profile (maND, embedding) VALUES (?, ?)";
+            $sql = "INSERT INTO face_profile (maND, embedding, embedding_front, embedding_left, embedding_right) VALUES (?, ?, ?, ?, ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
             }
-            $stmt->bind_param("is", $maND, $embeddingJson);
+            $stmt->bind_param("issss", $maND, $embeddingJson, $frontJson, $leftJson, $rightJson);
         }
         $res = $stmt->execute();
         $stmt->close();
@@ -86,7 +86,7 @@ class FaceModel
     {
         $profiles = [];
         if ($excludeMaND !== null) {
-            $sql = "SELECT id, maND, embedding FROM face_profile WHERE maND != ?";
+            $sql = "SELECT id, maND, embedding, embedding_front, embedding_left, embedding_right FROM face_profile WHERE maND != ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return [];
@@ -99,7 +99,7 @@ class FaceModel
             }
             $stmt->close();
         } else {
-            $sql = "SELECT id, maND, embedding FROM face_profile";
+            $sql = "SELECT id, maND, embedding, embedding_front, embedding_left, embedding_right FROM face_profile";
             $result = $this->conn->query($sql);
             if ($result) {
                 while ($row = $result->fetch_assoc()) {

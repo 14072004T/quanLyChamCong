@@ -256,11 +256,17 @@ class ChamCongModel
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL UNIQUE,
                 embedding TEXT NOT NULL,
+                embedding_front TEXT DEFAULT NULL,
+                embedding_left TEXT DEFAULT NULL,
+                embedding_right TEXT DEFAULT NULL,
                 ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (maND) REFERENCES nguoidung(maND) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+        $this->addColumnIfMissing('face_profile', 'embedding_front', 'TEXT DEFAULT NULL AFTER embedding');
+        $this->addColumnIfMissing('face_profile', 'embedding_left', 'TEXT DEFAULT NULL AFTER embedding_front');
+        $this->addColumnIfMissing('face_profile', 'embedding_right', 'TEXT DEFAULT NULL AFTER embedding_left');
         $this->addColumnIfMissing('lichsuchamcong', 'anhMinhChung', 'VARCHAR(255) DEFAULT NULL');
     }
 

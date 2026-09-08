@@ -42,29 +42,74 @@ function cosineSimilarity($v1, $v2)
 
 $faceModel = new FaceModel();
 $profiles = $faceModel->getAllFaceProfiles();
+$templateLabels = [
+    'embedding' => 'Trung bình',
+    'embedding_front' => 'Chính diện',
+    'embedding_left' => 'Góc trái',
+    'embedding_right' => 'Góc phải',
+];
 
 $parsed = [];
 foreach ($profiles as $p) {
-    $emb = json_decode($p['embedding'], true);
-    if (!is_array($emb)) continue;
-    $parsed[] = ['maND' => $p['maND'], 'name' => $faceModel->getUserName($p['maND']), 'vec' => normalizeEmbedding($emb)];
+    $templates = [];
+    foreach ($templateLabels as $field => $label) {
+        $emb = json_decode($p[$field] ?? '', true);
+        if (!is_array($emb) || count($emb) !== 128) {
+            continue;
+        }
+        $vec = normalizeEmbedding($emb);
+        if (!empty($vec)) {
+            $templates[$field] = $vec;
+        }
+    }
+    if (empty($templates)) continue;
+    $parsed[] = [
+        'maND' => $p['maND'],
+        'name' => $faceModel->getUserName($p['maND']),
+        'templates' => $templates,
+    ];
 }
 
-echo "<pre>Tổng số hồ sơ khuôn mặt: " . count($parsed) . "\n\n";
-echo "Các cặp có nguy cơ nhận nhầm (distance <= 0.60 hoặc cosine >= 0.80):\n";
-echo str_pad('NV A', 25) . str_pad('NV B', 25) . str_pad('Distance', 12) . "Cosine\n";
-echo str_repeat('-', 74) . "\n";
+echo "<pre>Tổng số hồ sơ khuôn mặt: " . count($parsed) . "\n";
+echo "Mỗi hồ sơ được so sánh theo 4 template: Trung bình, Chính diện, Góc trái, Góc phải.\n";
+echo "Cảnh báo nghiêm trọng: distance <= 0.45 và cosine >= 0.90.\n";
+echo "Cảnh báo rộng: distance <= 0.60 hoặc cosine >= 0.80.\n\n";
+echo str_pad('NV A', 25) . str_pad('NV B', 25) . str_pad('Mẫu A', 14) . str_pad('Mẫu B', 14) . str_pad('Distance', 12) . "Cosine\n";
+echo str_repeat('-', 99) . "\n";
 
 $found = false;
 for ($i = 0; $i < count($parsed); $i++) {
     for ($j = $i + 1; $j < count($parsed); $j++) {
-        $d = euclideanDistance($parsed[$i]['vec'], $parsed[$j]['vec']);
-        $c = cosineSimilarity($parsed[$i]['vec'], $parsed[$j]['vec']);
-        if ($d <= 0.60 || $c >= 0.80) {
+        $best = null;
+        foreach ($parsed[$i]['templates'] as $fieldA => $vecA) {
+            foreach ($parsed[$j]['templates'] as $fieldB => $vecB) {
+                if (count($vecA) !== count($vecB)) continue;
+                $distance = euclideanDistance($vecA, $vecB);
+                $cosine = cosineSimilarity($vecA, $vecB);
+                if ($best === null || $distance < $best['distance']) {
+                    $best = [
+                        'fieldA' => $fieldA,
+                        'fieldB' => $fieldB,
+                        'distance' => $distance,
+                        'cosine' => $cosine,
+                    ];
+                }
+            }
+        }
+        if ($best === null) continue;
+        $d = $best['distance'];
+        $c = $best['cosine'];
+        if (($d <= 0.45 && $c >= 0.90) || $d <= 0.60 || $c >= 0.80) {
             $found = true;
             $labelA = $parsed[$i]['maND'] . '-' . $parsed[$i]['name'];
             $labelB = $parsed[$j]['maND'] . '-' . $parsed[$j]['name'];
-            echo str_pad($labelA, 25) . str_pad($labelB, 25) . str_pad(number_format($d, 4), 12) . number_format($c, 4) . "\n";
+            $severity = ($d <= 0.45 && $c >= 0.90) ? ' [NGHIÊM TRỌNG]' : ' [cảnh báo]';
+            echo str_pad($labelA, 25)
+                . str_pad($labelB, 25)
+                . str_pad($templateLabels[$best['fieldA']], 14)
+                . str_pad($templateLabels[$best['fieldB']], 14)
+                . str_pad(number_format($d, 4), 12)
+                . number_format($c, 4) . $severity . "\n";
         }
     }
 }

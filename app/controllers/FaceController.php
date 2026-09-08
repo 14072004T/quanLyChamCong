@@ -173,6 +173,15 @@ class FaceController extends Controller
         }
         $incomingEmbedding = $this->normalizeEmbedding($incomingEmbedding);
         $embedding = json_encode($incomingEmbedding);
+        $templateEmbeddings = [];
+        foreach (['front' => 'embedding_front', 'left' => 'embedding_left', 'right' => 'embedding_right'] as $template => $field) {
+            $candidate = json_decode($_POST[$field] ?? '', true);
+            if (is_array($candidate) && count($candidate) === 128) {
+                $templateEmbeddings[$template] = $this->normalizeEmbedding($candidate);
+            } else {
+                $templateEmbeddings[$template] = $incomingEmbedding;
+            }
+        }
 
         // 2. Kiểm tra tính độc nhất, bỏ qua profile cũ của chính nhân viên này.
         $allProfiles = $this->faceModel->getAllFaceProfiles($maND);
@@ -186,11 +195,26 @@ class FaceController extends Controller
         $duplicateMatchFound = false;
 
         foreach ($allProfiles as $prof) {
-            $otherEmbedding = json_decode($prof['embedding'], true);
-            if (is_array($otherEmbedding) && count($otherEmbedding) === 128) {
+            $profileEmbeddings = [$prof['embedding'] ?? ''];
+            foreach (['embedding_front', 'embedding_left', 'embedding_right'] as $field) {
+                if (!empty($prof[$field])) $profileEmbeddings[] = $prof[$field];
+            }
+            foreach ($profileEmbeddings as $storedJson) {
+                $otherEmbedding = json_decode($storedJson, true);
+                if (!is_array($otherEmbedding) || count($otherEmbedding) !== 128) continue;
                 $otherEmbedding = $this->normalizeEmbedding($otherEmbedding);
-                $dist = $this->euclideanDistance($incomingEmbedding, $otherEmbedding);
-                $cosine = $this->cosineSimilarity($incomingEmbedding, $otherEmbedding);
+                $bestTemplateDist = $this->euclideanDistance($incomingEmbedding, $otherEmbedding);
+                $bestTemplateCosine = $this->cosineSimilarity($incomingEmbedding, $otherEmbedding);
+                foreach ($templateEmbeddings as $templateEmbedding) {
+                    $candidateDist = $this->euclideanDistance($templateEmbedding, $otherEmbedding);
+                    $candidateCosine = $this->cosineSimilarity($templateEmbedding, $otherEmbedding);
+                    if ($candidateDist < $bestTemplateDist) {
+                        $bestTemplateDist = $candidateDist;
+                        $bestTemplateCosine = $candidateCosine;
+                    }
+                }
+                $dist = $bestTemplateDist;
+                $cosine = $bestTemplateCosine;
 
                 $isDuplicate = $dist <= $threshold && $cosine >= $cosineThreshold;
                 $logMsg = sprintf(
@@ -266,7 +290,13 @@ class FaceController extends Controller
         ), FILE_APPEND | LOCK_EX);
 
         // 4. Lưu khuôn mặt mới (INSERT)
-        $ok = $this->faceModel->saveFaceProfile($maND, $embedding);
+        $ok = $this->faceModel->saveFaceProfile(
+            $maND,
+            $embedding,
+            json_encode($templateEmbeddings['front']),
+            json_encode($templateEmbeddings['left']),
+            json_encode($templateEmbeddings['right'])
+        );
         if ($ok) {
             echo json_encode(['success' => true, 'message' => '✅ Đăng ký khuôn mặt thành công!']);
         } else {
@@ -394,11 +424,24 @@ class FaceController extends Controller
         $candidates = [];
         $incoming = $this->normalizeEmbedding($embedding);
         foreach ($this->faceModel->getAllFaceProfiles() as $profile) {
-            $stored = json_decode($profile['embedding'], true);
-            if (!is_array($stored)) continue;
-            $stored = $this->normalizeEmbedding($stored);
-            $distance = $this->euclideanDistance($stored, $incoming);
-            $cosine = $this->cosineSimilarity($stored, $incoming);
+            $storedJsons = [$profile['embedding'] ?? ''];
+            foreach (['embedding_front', 'embedding_left', 'embedding_right'] as $field) {
+                if (!empty($profile[$field])) $storedJsons[] = $profile[$field];
+            }
+            $distance = 999.0;
+            $cosine = -1.0;
+            foreach ($storedJsons as $storedJson) {
+                $stored = json_decode($storedJson, true);
+                if (!is_array($stored) || count($stored) !== 128) continue;
+                $stored = $this->normalizeEmbedding($stored);
+                $candidateDistance = $this->euclideanDistance($stored, $incoming);
+                $candidateCosine = $this->cosineSimilarity($stored, $incoming);
+                if ($candidateDistance < $distance) {
+                    $distance = $candidateDistance;
+                    $cosine = $candidateCosine;
+                }
+            }
+            if ($distance === 999.0) continue;
             $candidates[] = ['maND' => (int)$profile['maND'], 'distance' => $distance, 'cosine' => $cosine];
 
             @file_put_contents($logDir . 'tablet_recognition.log', sprintf(
@@ -562,16 +605,35 @@ class FaceController extends Controller
         }
 
         // 2. Tính khoảng cách Euclidean giữa 2 vector embedding
-        $storedEmbedding = json_decode($profile['embedding'], true);
         $incomingEmbedding = json_decode($embedding, true);
 
-        if (!is_array($storedEmbedding) || !is_array($incomingEmbedding)) {
+        if (!is_array($incomingEmbedding)) {
             echo json_encode(['success' => false, 'message' => 'Dữ liệu khuôn mặt bị lỗi định dạng.']);
             exit;
         }
 
-        $distance = $this->euclideanDistance($storedEmbedding, $incomingEmbedding);
-        $cosine = $this->cosineSimilarity($storedEmbedding, $incomingEmbedding);
+        $incomingEmbedding = $this->normalizeEmbedding($incomingEmbedding);
+        $storedEmbeddings = [$profile['embedding'] ?? ''];
+        foreach (['embedding_front', 'embedding_left', 'embedding_right'] as $field) {
+            if (!empty($profile[$field])) $storedEmbeddings[] = $profile[$field];
+        }
+        $distance = 999.0;
+        $cosine = -1.0;
+        foreach ($storedEmbeddings as $storedJson) {
+            $storedEmbedding = json_decode($storedJson, true);
+            if (!is_array($storedEmbedding)) continue;
+            $storedEmbedding = $this->normalizeEmbedding($storedEmbedding);
+            $candidateDistance = $this->euclideanDistance($storedEmbedding, $incomingEmbedding);
+            $candidateCosine = $this->cosineSimilarity($storedEmbedding, $incomingEmbedding);
+            if ($candidateDistance < $distance) {
+                $distance = $candidateDistance;
+                $cosine = $candidateCosine;
+            }
+        }
+        if ($distance === 999.0) {
+            echo json_encode(['success' => false, 'message' => 'Dữ liệu khuôn mặt bị lỗi định dạng.']);
+            exit;
+        }
         $threshold = 0.8; // Cho phép khớp ổn hơn giữa descriptor đã đăng ký và frame chấm công
         $cosineThreshold = 0.75;
 

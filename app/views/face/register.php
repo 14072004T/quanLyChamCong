@@ -1580,6 +1580,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     let lastDescriptor = null;
     let lastDescriptorConfidence = 0;
     let collectedDescriptors = [];
+    let frontDescriptors = [];
+    let leftDescriptors = [];
+    let rightDescriptors = [];
     let isModelLoaded = false;
     let cameraStream = null;
     let isDetecting = false;
@@ -1610,6 +1613,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         lastDescriptor = null;
         lastDescriptorConfidence = 0;
         collectedDescriptors = [];
+        frontDescriptors = [];
+        leftDescriptors = [];
+        rightDescriptors = [];
         if (btnRegister) btnRegister.disabled = true;
         window.regWarmupFrames = 0;
         updateStepperUI();
@@ -1887,6 +1893,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         statusDisplay.innerHTML = '<i class="fas fa-adjust"></i> Vui lòng đưa khuôn mặt rõ nét vào khung hình và giữ cố định.';
                     } else if (currentStep === 'front') {
                         if (ratio >= 0.70 && ratio <= 1.40) {
+                            if (isFaceConfident) frontDescriptors.push(Array.from(detection.descriptor));
                             successFrames++;
                             statusDisplay.className = 'status-banner status-ready';
                             statusDisplay.innerHTML = `<i class="fas fa-smile"></i> Bước 1/3: Đang quét chính diện... (${Math.round((successFrames/requiredSuccessFrames)*100)}%)`;
@@ -1908,6 +1915,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                         if (ratio < 0.68 || ratio > 1.47) {
                             successFrames++;
                             firstTurnSide = ratio < 0.68 ? 'left' : 'right';
+                            if (firstTurnSide === 'left') leftDescriptors.push(Array.from(detection.descriptor));
+                            else rightDescriptors.push(Array.from(detection.descriptor));
                             const sideText = firstTurnSide === 'left' ? 'trái' : 'phải';
                             statusDisplay.className = 'status-banner status-ready';
                             statusDisplay.innerHTML = `<i class="fas fa-sync"></i> Bước 2/3: Đang quét góc thứ nhất (${sideText})... (${Math.round((successFrames/requiredSuccessFrames)*100)}%)`;
@@ -1928,6 +1937,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                         
                         if (isOppositeOk) {
                             successFrames++;
+                            if (firstTurnSide === 'left') rightDescriptors.push(Array.from(detection.descriptor));
+                            else leftDescriptors.push(Array.from(detection.descriptor));
                             statusDisplay.className = 'status-banner status-ready';
                             statusDisplay.innerHTML = `<i class="fas fa-sync"></i> Bước 3/3: Đang quét góc thứ hai (${oppositeText.toLowerCase()})... (${Math.round((successFrames/requiredSuccessFrames)*100)}%)`;
                             
@@ -1991,6 +2002,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             savedFrontDescriptor = null;
             firstTurnSide = null;
             lastDescriptor = null;
+            frontDescriptors = [];
+            leftDescriptors = [];
+            rightDescriptors = [];
             btnRegister.disabled = true;
             window.regWarmupFrames = 0;
             updateStepperUI();
@@ -2017,10 +2031,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         const descriptorToSave = buildAverageDescriptor(collectedDescriptors) || lastDescriptor;
+        const frontDescriptor = buildAverageDescriptor(frontDescriptors) || descriptorToSave;
+        const leftDescriptor = buildAverageDescriptor(leftDescriptors) || descriptorToSave;
+        const rightDescriptor = buildAverageDescriptor(rightDescriptors) || descriptorToSave;
         const embeddingString = JSON.stringify(Array.from(descriptorToSave));
 
         const formData = new FormData();
         formData.append('embedding', embeddingString);
+        formData.append('embedding_front', JSON.stringify(Array.from(frontDescriptor)));
+        formData.append('embedding_left', JSON.stringify(Array.from(leftDescriptor)));
+        formData.append('embedding_right', JSON.stringify(Array.from(rightDescriptor)));
         formData.append('targetMaND', targetMaND);
         formData.append('confidence', String(lastDescriptorConfidence));
 
