@@ -788,6 +788,12 @@
                         <span>Tài khoản chỉ hoạt động trên máy tính.</span>
                     </div>
                 <?php endif; ?>
+                <?php if ($loi === 'tablet_tech_not_allowed'): ?>
+                    <div class="mb-alert mb-alert--error">
+                        <i class="fas fa-tablet-screen-button"></i>
+                        <span>Tài khoản Kỹ thuật (Tech) không được phép sử dụng trên Tablet.</span>
+                    </div>
+                <?php endif; ?>
 
                 <form method="POST" action="index.php?page=login-process">
                     <div class="mb-form-group">
@@ -1026,6 +1032,16 @@
                             <div>
                                 <strong>Tài khoản đã bị khóa tạm thời</strong><br>
                                 <span>Bạn đã nhập sai mật khẩu quá số lần cho phép. Vui lòng liên hệ IT/Admin để mở khóa.</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($loi === 'tablet_tech_not_allowed'): ?>
+                        <div class="alert-box alert-error">
+                            <i class="fas fa-tablet-screen-button" style="margin-top: 2px;"></i>
+                            <div>
+                                <strong>Không hỗ trợ trên Tablet</strong><br>
+                                <span>Tài khoản Kỹ thuật (Tech) không được phép sử dụng trên Tablet.</span>
                             </div>
                         </div>
                     <?php endif; ?>

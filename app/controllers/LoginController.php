@@ -255,6 +255,11 @@ class LoginController {
                 exit;
             }
 
+            if (AuthMiddleware::isTablet() && $role === 'tech') {
+                header("Location: index.php?page=login&error=tablet_tech_not_allowed");
+                exit;
+            }
+
             $_SESSION['user'] = [
                 'maTK' => $user['maTK'],
                 'maND' => $user['maND'] ?? null,

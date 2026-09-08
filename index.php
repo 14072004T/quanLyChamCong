@@ -210,6 +210,12 @@ if (isset($_SESSION['user'])) {
         header('Location: index.php?page=login&error=ib_only');
         exit;
     }
+    if (AuthMiddleware::isTablet() && $role === 'tech') {
+        session_unset();
+        session_destroy();
+        header('Location: index.php?page=login&error=tablet_tech_not_allowed');
+        exit;
+    }
 }
 
 // Debug log
