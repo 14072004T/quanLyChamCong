@@ -696,22 +696,32 @@
             try {
                 const params = new URLSearchParams(window.location.search);
                 const force = params.get('device');
-                if (force === 'mobile') {
+                if (force === 'mobile' || force === 'phone') {
                     document.body.classList.add('mobile-view');
                     document.body.classList.add('mb-login-body');
+                    document.cookie = 'device_hint=phone; path=/; max-age=2592000; SameSite=Lax';
+                    return;
+                }
+                if (force === 'tablet') {
+                    document.cookie = 'device_hint=tablet; path=/; max-age=2592000; SameSite=Lax';
                     return;
                 }
                 if (force === 'desktop') {
+                    document.cookie = 'device_hint=desktop; path=/; max-age=2592000; SameSite=Lax';
                     return;
                 }
-                const isTabletOrMobile = window.innerWidth <= 1024 &&
-                    /iPad|iPhone|iPod|Android|Mobile|Tablet/i.test(navigator.userAgent);
-                if (isTabletOrMobile) {
+
+                const isPhone = window.innerWidth < 768 && /iPhone|iPod|Android.+Mobile|Windows Phone/i.test(navigator.userAgent);
+                const isTablet = (window.innerWidth >= 768 && window.innerWidth <= 1024) || /iPad|Tablet|PlayBook|Silk|(Android(?!.*Mobile))/i.test(navigator.userAgent);
+
+                if (isPhone) {
                     document.body.classList.add('mobile-view');
                     document.body.classList.add('mb-login-body');
-                    document.cookie = 'device_hint=mobile; path=/; max-age=2592000; SameSite=Lax';
+                    document.cookie = 'device_hint=phone; path=/; max-age=2592000; SameSite=Lax';
+                } else if (isTablet) {
+                    document.cookie = 'device_hint=tablet; path=/; max-age=2592000; SameSite=Lax';
                 } else {
-                    document.cookie = 'device_hint=; path=/; max-age=0; SameSite=Lax';
+                    document.cookie = 'device_hint=desktop; path=/; max-age=0; SameSite=Lax';
                 }
             } catch (e) {}
         })();

@@ -101,10 +101,16 @@ class LoginController {
     }
     
     private function getDefaultPageForRole($role) {
+        require_once 'app/middleware/AuthMiddleware.php';
+        if (AuthMiddleware::isPhone()) {
+            return 'home';
+        }
         if ($role === 'manager') {
             return 'bao-cao-tong-hop';
         } elseif ($role === 'hr') {
             return 'cham-cong-dashboard';
+        } elseif ($role === 'tech') {
+            return 'tech-accounts';
         } else {
             return 'home';
         }

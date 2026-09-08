@@ -46,12 +46,14 @@ require_once 'app/middleware/AuthMiddleware.php';
 $defaultPage = 'login';
 if (isset($_SESSION['user'])) {
     $role = $_SESSION['role'] ?? 'nhanvien';
-    if (AuthMiddleware::isMobile()) {
+    if (AuthMiddleware::isPhone()) {
         $defaultPage = 'home';
     } elseif ($role === 'manager') {
         $defaultPage = 'bao-cao-tong-hop';
     } elseif ($role === 'hr') {
         $defaultPage = 'cham-cong-dashboard';
+    } elseif ($role === 'tech') {
+        $defaultPage = 'tech-accounts';
     } else {
         $defaultPage = 'home';
     }

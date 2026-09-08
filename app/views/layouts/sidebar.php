@@ -29,11 +29,24 @@ $menus = [
 
 ];
 
-// Trải nghiệm mobile app: tất cả tài khoản (HR, IT, Nhân viên) chỉ hiển thị chức năng cá nhân
-if (AuthMiddleware::isMobile()) {
+$roleLabels = [
+    'nhanvien' => 'Nhân viên',
+    'hr' => 'HR',
+    'manager' => 'Quản lý',
+    'tech' => 'Kỹ thuật',
+];
+
+if (AuthMiddleware::isPhone()) {
+    // Điện thoại: Tất cả chỉ hiển thị chức năng nhân viên cá nhân
     $roleMenus = $menus['nhanvien'];
     $displayRoleTitle = 'Nhân viên';
+} elseif (AuthMiddleware::isTablet()) {
+    // Tablet: Chỉ hiển thị các chức năng của role HR/Tech (bỏ divider Cá nhân & không gộp menu nhân viên)
+    $rawMenus = $menus[$role] ?? $menus['nhanvien'];
+    $roleMenus = array_values(array_filter($rawMenus, fn($m) => empty($m['divider'])));
+    $displayRoleTitle = $roleLabels[$role] ?? 'Menu';
 } else {
+    // Desktop: Giữ nguyên (gộp menu role + menu nhân viên cho HR & Tech)
     if ($role === 'hr' || $role === 'tech') {
         $roleMenus = array_merge($menus[$role] ?? [], $menus['nhanvien']);
     } else {
@@ -41,6 +54,7 @@ if (AuthMiddleware::isMobile()) {
     }
     $displayRoleTitle = $roleLabels[$role] ?? 'Menu';
 }
+
 
 // Check if face is registered to hide the menu
 require_once 'app/models/FaceModel.php';
@@ -78,12 +92,6 @@ foreach ($roleMenus as $menu) {
     $filteredMenus[] = $menu;
 }
 
-$roleLabels = [
-    'nhanvien' => 'Nhân viên',
-    'hr' => 'HR',
-    'manager' => 'Quản lý',
-    'tech' => 'Kỹ thuật',
-];
 ?>
 
 <nav class="sidebar-nav <?= AuthMiddleware::isMobile() ? 'mobile-sidebar-nav' : '' ?>">

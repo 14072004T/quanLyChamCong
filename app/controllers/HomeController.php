@@ -71,21 +71,22 @@ class HomeController
      */
     private function getMenuItemsByRole($showFaceRegisterOption = true)
     {
-        // Định nghĩa tất cả chức năng theo danh mục
         $allCategories = [
-            'Chấm công nhân viên' => [
-                ['link' => 'cham-cong-dashboard', 'icon' => 'fa-fingerprint', 'text' => 'Dashboard chấm công'],
-                ['link' => 'lich-su-cham-cong', 'icon' => 'fa-clock-rotate-left', 'text' => 'Lịch sử chấm công'],
-                ['link' => 'yeu-cau-chinh-sua-cham-cong', 'icon' => 'fa-pen-to-square', 'text' => 'Yêu cầu chỉnh sửa'],
+            'Chức năng Quản trị' => [
+                ['link' => 'quan-ly-nhanvien', 'icon' => 'fa-users', 'text' => 'Quản lý Nhân viên'],
+                ['link' => 'quan-ly-ca-lam', 'icon' => 'fa-business-time', 'text' => 'Quản lý Ca làm việc'],
+                ['link' => 'tinh-cong', 'icon' => 'fa-calculator', 'text' => 'Tính công & Báo cáo'],
                 ['link' => 'face-register', 'icon' => 'fa-portrait', 'text' => 'Đăng ký khuôn mặt'],
+                ['link' => 'bao-cao-tong-hop', 'icon' => 'fa-file-lines', 'text' => 'Báo cáo tổng hợp'],
+                ['link' => 'xuly-yeucau', 'icon' => 'fa-clipboard-check', 'text' => 'Điều chỉnh công'],
+                ['link' => 'tech-accounts', 'icon' => 'fa-users-cog', 'text' => 'Quản lý Tài khoản'],
+                ['link' => 'tech-settings', 'icon' => 'fa-server', 'text' => 'Cấu hình Hệ thống'],
             ],
-            'Điều hành chấm công' => [
-                ['link' => 'hr-cham-cong', 'icon' => 'fa-users', 'text' => 'Điều hành HR'],
-                ['link' => 'quan-ly-cham-cong', 'icon' => 'fa-circle-check', 'text' => 'Báo cáo quản lý'],
-                ['link' => 'ky-thuat-cham-cong', 'icon' => 'fa-wifi', 'text' => 'Cấu hình kỹ thuật'],
-            ],
-            'Tài khoản' => [
-                ['link' => 'cham-cong-dashboard', 'icon' => 'fa-house', 'text' => 'Trang chấm công'],
+            'Chấm công cá nhân' => [
+                ['link' => 'lich-su-cham-cong', 'icon' => 'fa-clock-rotate-left', 'text' => 'Lịch sử chấm công'],
+                ['link' => 'bang-cong-thang', 'icon' => 'fa-file-invoice', 'text' => 'Bảng công tháng'],
+                ['link' => 'yeu-cau-chinh-sua-cham-cong', 'icon' => 'fa-pen-to-square', 'text' => 'Yêu cầu chỉnh sửa'],
+                ['link' => 'create-leave-request', 'icon' => 'fa-calendar-check', 'text' => 'Đơn nghỉ phép'],
             ],
         ];
 
