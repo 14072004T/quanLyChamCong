@@ -838,16 +838,6 @@ class ChamCongModel
     {
         $today = $today ?: date('Y-m-d');
         $fromDate = date('Y-m-01', strtotime($today));
-        $employeeIds = [];
-                $employeeResult = $this->conn->query("SELECT DISTINCT nd.maND
-                                                            FROM nguoidung nd
-                                                            WHERE nd.trangThai = 1
-                                                                AND (TRIM(nd.chucVu) LIKE '%Nhân viên%' OR TRIM(nd.chucVu) LIKE '%nhan vien%')");
-        if ($employeeResult) {
-            while ($employee = $employeeResult->fetch_assoc()) {
-                $employeeIds[] = (int)$employee['maND'];
-            }
-        }
         $emptyDay = function ($date) {
             return ['date' => $date, 'scheduled' => 0, 'present' => 0, 'on_time' => 0, 'late' => 0, 'early' => 0, 'absent' => 0, 'leave' => 0];
         };
@@ -855,71 +845,52 @@ class ChamCongModel
         for ($cursor = strtotime($fromDate); $cursor <= strtotime($today); $cursor = strtotime('+1 day', $cursor)) {
             $date = date('Y-m-d', $cursor);
             $daily[$date] = $emptyDay($date);
-        }
-        if (empty($employeeIds)) {
-            $fallback = $this->conn->query("SELECT DISTINCT l.maND
-                                           FROM lichsuchamcong l
-                                           JOIN nguoidung n ON n.maND = l.maND
-                                           WHERE n.trangThai = 1 AND DATE(l.ngayTao) BETWEEN '" . $this->conn->real_escape_string($fromDate) . "' AND '" . $this->conn->real_escape_string($today) . "'");
-            if ($fallback) {
-                while ($employee = $fallback->fetch_assoc()) {
-                    $employeeIds[] = (int)$employee['maND'];
-                }
+            $sql = "SELECT nd.maND, s.gioBatDau, s.gioKetThuc,
+                           t.gioVaoDau, t.gioRaCuoi, t.phutDiTre, t.trangThai
+                    FROM nguoidung nd
+                    INNER JOIN canhanvien cv ON cv.maND = nd.maND
+                        AND cv.hieuLucTu <= ?
+                        AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
+                    INNER JOIN calamviec s ON s.id = cv.maCa
+                        AND s.hoatDong = 1
+                        AND UPPER(TRIM(s.kyHieu)) NOT IN ('OFF', 'LE')
+                    LEFT JOIN tonghopngaycong t ON t.maND = nd.maND
+                        AND t.ngayLamViec = ?
+                    WHERE nd.trangThai = 1";
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                continue;
             }
-        }
-        if (empty($employeeIds)) {
-            $period = $emptyDay($fromDate);
-            return ['total_employees' => 0, 'today' => $daily[$today] ?? $emptyDay($today), 'period' => $period, 'daily' => array_values($daily)];
-        }
-
-        $placeholders = implode(',', array_fill(0, count($employeeIds), '?'));
-        $types = str_repeat('i', count($employeeIds)) . 'ss';
-        $params = array_merge($employeeIds, [$fromDate, $today]);
-        $sql = "SELECT maND, DATE(ngayTao) AS ngayChamCong,
-                       MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) AS gioVao,
-                       MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) AS gioRa
-                FROM lichsuchamcong
-                WHERE maND IN ($placeholders) AND DATE(ngayTao) BETWEEN ? AND ?
-                GROUP BY maND, DATE(ngayTao)";
-        $stmt = $this->conn->prepare($sql);
-        $attendance = [];
-        if ($stmt) {
-            $stmt->bind_param($types, ...$params);
+            $stmt->bind_param('sss', $date, $date, $date);
             $stmt->execute();
-            foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
-                $attendance[(int)$row['maND']][$row['ngayChamCong']] = $row;
-            }
+            $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
-        }
 
-        foreach ($daily as $date => &$day) {
-            foreach ($employeeIds as $maND) {
-                $row = $attendance[$maND][$date] ?? null;
-                $hasCheckIn = $row && !empty($row['gioVao']);
-                $shift = $this->getShiftForUser($maND, $date);
-                if ($hasCheckIn) {
-                    $day['present']++;
-                }
-                if (!$shift || $this->isOffShift($shift)) {
+            foreach ($rows as $row) {
+                $daily[$date]['scheduled']++;
+                $hasAttendance = !empty($row['gioVaoDau']);
+                if (!$hasAttendance) {
+                    $daily[$date]['absent']++;
                     continue;
                 }
-                $day['scheduled']++;
-                if (!$hasCheckIn) {
-                    $day['absent']++;
-                    continue;
-                }
-                $status = $this->calculateShiftStatus($row['gioVao'], $row['gioRa'] ?? null, $shift['gioBatDau'] ?? null, $shift['gioKetThuc'] ?? null);
-                if (in_array('late', $status['statuses'], true)) {
-                    $day['late']++;
+                $daily[$date]['present']++;
+                $lateMinutes = (int)($row['phutDiTre'] ?? 0);
+                if ($lateMinutes > 0 || ($row['trangThai'] ?? '') === 'late') {
+                    $daily[$date]['late']++;
                 } else {
-                    $day['on_time']++;
+                    $daily[$date]['on_time']++;
                 }
+                $status = $this->calculateShiftStatus(
+                    $row['gioVaoDau'],
+                    $row['gioRaCuoi'] ?? null,
+                    $row['gioBatDau'],
+                    $row['gioKetThuc']
+                );
                 if (in_array('early_leave', $status['statuses'], true)) {
-                    $day['early']++;
+                    $daily[$date]['early']++;
                 }
             }
         }
-        unset($day);
 
         $periodMetrics = $emptyDay($fromDate);
         foreach ($daily as $day) {
@@ -928,9 +899,9 @@ class ChamCongModel
             }
         }
         $todayMetrics = $daily[$today] ?? $emptyDay($today);
-        $todayMetrics['absent'] = max(0, count($employeeIds) - (int)$todayMetrics['present']);
+        $todayMetrics['absent'] = max(0, (int)$todayMetrics['scheduled'] - (int)$todayMetrics['present']);
 
-        return ['total_employees' => count($employeeIds), 'today' => $todayMetrics, 'period' => $periodMetrics, 'daily' => array_values($daily)];
+        return ['total_employees' => (int)$todayMetrics['scheduled'], 'today' => $todayMetrics, 'period' => $periodMetrics, 'daily' => array_values($daily)];
     }
 
     public function getEmployees($keyword = '', $activeOnly = false, $limit = 0)
