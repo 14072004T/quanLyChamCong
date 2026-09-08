@@ -846,7 +846,9 @@ class ChamCongModel
             $date = date('Y-m-d', $cursor);
             $daily[$date] = $emptyDay($date);
             $sql = "SELECT nd.maND, s.gioBatDau, s.gioKetThuc,
-                           t.gioVaoDau, t.gioRaCuoi, t.phutDiTre, t.trangThai
+                           COALESCE(t.gioVaoDau, MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END)) AS gioVaoDau,
+                           COALESCE(t.gioRaCuoi, MAX(CASE WHEN l.hanhDong = 'OUT' THEN l.ngayTao END)) AS gioRaCuoi,
+                           t.phutDiTre, t.trangThai
                     FROM nguoidung nd
                     INNER JOIN canhanvien cv ON cv.maND = nd.maND
                         AND cv.hieuLucTu <= ?
@@ -856,12 +858,16 @@ class ChamCongModel
                         AND UPPER(TRIM(s.kyHieu)) NOT IN ('OFF', 'LE')
                     LEFT JOIN tonghopngaycong t ON t.maND = nd.maND
                         AND t.ngayLamViec = ?
-                    WHERE nd.trangThai = 1";
+                    LEFT JOIN lichsuchamcong l ON l.maND = nd.maND
+                        AND l.ngayTao >= CONCAT(?, ' 00:00:00')
+                        AND l.ngayTao <= CONCAT(?, ' 23:59:59')
+                    WHERE nd.trangThai = 1
+                    GROUP BY nd.maND, s.gioBatDau, s.gioKetThuc, t.gioVaoDau, t.gioRaCuoi, t.phutDiTre, t.trangThai";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 continue;
             }
-            $stmt->bind_param('sss', $date, $date, $date);
+            $stmt->bind_param('sssss', $date, $date, $date, $date, $date);
             $stmt->execute();
             $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
