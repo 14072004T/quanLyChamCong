@@ -853,9 +853,18 @@ class ChamCongModel
                     INNER JOIN canhanvien cv ON cv.maND = nd.maND
                         AND cv.hieuLucTu <= ?
                         AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
+                                                AND cv.id = (
+                                                        SELECT cv2.id
+                                                        FROM canhanvien cv2
+                                                        WHERE cv2.maND = nd.maND
+                                                            AND cv2.hieuLucTu <= ?
+                                                            AND (cv2.hieuLucDen IS NULL OR cv2.hieuLucDen >= ?)
+                                                        ORDER BY cv2.hieuLucTu DESC, cv2.id DESC
+                                                        LIMIT 1
+                                                )
                     INNER JOIN calamviec s ON s.id = cv.maCa
                         AND s.hoatDong = 1
-                        AND UPPER(TRIM(s.kyHieu)) NOT IN ('OFF', 'LE')
+                        AND COALESCE(UPPER(TRIM(s.kyHieu)), '') NOT IN ('OFF', 'LE')
                     LEFT JOIN tonghopngaycong t ON t.maND = nd.maND
                         AND t.ngayLamViec = ?
                     LEFT JOIN lichsuchamcong l ON l.maND = nd.maND
@@ -867,7 +876,7 @@ class ChamCongModel
             if (!$stmt) {
                 continue;
             }
-            $stmt->bind_param('sssss', $date, $date, $date, $date, $date);
+            $stmt->bind_param('sssssss', $date, $date, $date, $date, $date, $date, $date);
             $stmt->execute();
             $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
