@@ -904,6 +904,32 @@ class ChamCongModel
                     $daily[$date]['early']++;
                 }
             }
+
+            if ($daily[$date]['scheduled'] === 0) {
+                foreach ($this->getShifts() as $shift) {
+                    $shiftCode = strtoupper(trim((string)($shift['kyHieu'] ?? '')));
+                    if ((int)($shift['hoatDong'] ?? 0) === 1 && !in_array($shiftCode, ['OFF', 'LE'], true)) {
+                        $daily[$date]['scheduled'] += (int)($shift['assigned_count'] ?? 0);
+                    }
+                }
+                $fallbackSql = "SELECT COUNT(DISTINCT l.maND) AS present_count
+                                FROM lichsuchamcong l
+                                JOIN nguoidung nd ON nd.maND = l.maND
+                                WHERE nd.trangThai = 1
+                                  AND l.hanhDong = 'IN'
+                                  AND l.ngayTao >= CONCAT(?, ' 00:00:00')
+                                  AND l.ngayTao <= CONCAT(?, ' 23:59:59')";
+                $fallbackStmt = $this->conn->prepare($fallbackSql);
+                if ($fallbackStmt) {
+                    $fallbackStmt->bind_param('ss', $date, $date);
+                    $fallbackStmt->execute();
+                    $fallbackRow = $fallbackStmt->get_result()->fetch_assoc();
+                    $fallbackStmt->close();
+                    $daily[$date]['present'] = (int)($fallbackRow['present_count'] ?? 0);
+                    $daily[$date]['absent'] = max(0, $daily[$date]['scheduled'] - $daily[$date]['present']);
+                    $daily[$date]['on_time'] = max(0, $daily[$date]['present']);
+                }
+            }
         }
 
         $periodMetrics = $emptyDay($fromDate);
