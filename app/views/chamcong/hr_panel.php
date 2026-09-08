@@ -54,7 +54,7 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
     <div class="hrd-stat-card">
         <div class="hrd-stat-icon red"><i class="fas fa-user-times"></i></div>
         <div class="hrd-stat-body">
-            <div class="hrd-stat-label">Vắng mặt</div>
+            <div class="hrd-stat-label">Vắng mặt hôm nay</div>
             <div class="hrd-stat-value" id="hrd-absent-today">--</div>
             <div class="hrd-stat-trend down">Trong ngày</div>
         </div>
@@ -77,9 +77,10 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
         </div>
         <canvas id="hrdLineChart" height="120"></canvas>
         <div class="hrd-chart-legend">
-            <span class="legend-dot green"></span> Đi làm đúng giờ
+            <span class="legend-dot green"></span> Đã chấm công
             <span class="legend-dot orange" style="margin-left:12px"></span> Đi trễ
             <span class="legend-dot red" style="margin-left:12px"></span> Vắng mặt
+            <span class="legend-dot blue" style="margin-left:12px"></span> Về sớm
         </div>
     </div>
 
@@ -93,10 +94,10 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
             </div>
         </div>
         <div class="hrd-donut-legend">
-            <div><span class="legend-dot green"></span> Đi làm đúng giờ <span class="legend-pct" id="dl-cnt">--</span></div>
-            <div><span class="legend-dot orange"></span> Đi trễ <span class="legend-pct" id="dt-cnt">--</span></div>
+            <div><span class="legend-dot green"></span> Đã chấm công <span class="legend-pct" id="dl-cnt">--</span></div>
             <div><span class="legend-dot red"></span> Vắng mặt <span class="legend-pct" id="vm-cnt">--</span></div>
-            <div><span class="legend-dot blue"></span> Nghỉ phép <span class="legend-pct" id="np-cnt">--</span></div>
+            <div><span class="legend-dot orange"></span> Đi trễ <span class="legend-pct" id="dt-cnt">--</span></div>
+            <div><span class="legend-dot blue"></span> Về sớm <span class="legend-pct" id="vs-cnt">--</span></div>
         </div>
     </div>
 
@@ -173,35 +174,37 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
     }
 
     function updateCharts() {
-        var onTime = Number(periodMetrics.on_time || 0);
+        var periodPresent = Number(periodMetrics.present || 0);
         var periodLate = Number(periodMetrics.late || 0);
         var periodAbsent = Number(periodMetrics.absent || 0);
-        var periodLeave = Number(periodMetrics.leave || 0);
+        var periodEarly = Number(periodMetrics.early || 0);
         var totalDonut = Math.max(1, Number(periodMetrics.scheduled || 0));
         document.getElementById('hrd-donut-total').textContent = totalEmployees;
-        document.getElementById('dl-cnt').textContent = onTime + ' (' + Math.round(onTime / totalDonut * 100) + '%)';
-        document.getElementById('dt-cnt').textContent = periodLate + ' (' + Math.round(periodLate / totalDonut * 100) + '%)';
+        document.getElementById('dl-cnt').textContent = periodPresent + ' (' + Math.round(periodPresent / totalDonut * 100) + '%)';
         document.getElementById('vm-cnt').textContent = periodAbsent + ' (' + Math.round(periodAbsent / totalDonut * 100) + '%)';
-        document.getElementById('np-cnt').textContent = periodLeave + ' (' + Math.round(periodLeave / totalDonut * 100) + '%)';
+        document.getElementById('dt-cnt').textContent = periodLate + ' (' + Math.round(periodLate / totalDonut * 100) + '%)';
+        document.getElementById('vs-cnt').textContent = periodEarly + ' (' + Math.round(periodEarly / totalDonut * 100) + '%)';
 
         new Chart(document.getElementById('hrdDonutChart'), {
             type: 'doughnut',
-            data: { datasets: [{ data: [onTime, periodLate, periodAbsent, periodLeave], backgroundColor: ['#22c55e','#f59e0b','#ef4444','#3b82f6'], borderWidth: 2, borderColor: '#fff' }] },
+            data: { datasets: [{ data: [periodPresent, periodAbsent, periodLate, periodEarly], backgroundColor: ['#22c55e','#ef4444','#f59e0b','#3b82f6'], borderWidth: 2, borderColor: '#fff' }] },
             options: { cutout: '68%', plugins: { legend: { display: false } } }
         });
 
         var labels = dailyMetrics.map(function(day) { return day.date.slice(8, 10) + '/' + day.date.slice(5, 7); });
-        var onTimeData = dailyMetrics.map(function(day) { return Number(day.on_time || 0); });
+        var presentData = dailyMetrics.map(function(day) { return Number(day.present || 0); });
         var lateData = dailyMetrics.map(function(day) { return Number(day.late || 0); });
         var absentData = dailyMetrics.map(function(day) { return Number(day.absent || 0); });
+        var earlyData = dailyMetrics.map(function(day) { return Number(day.early || 0); });
         new Chart(document.getElementById('hrdLineChart'), {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'Đi làm đúng giờ', data: onTimeData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.08)', tension: .4, pointRadius: 3 },
+                    { label: 'Đã chấm công', data: presentData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.08)', tension: .4, pointRadius: 3 },
+                    { label: 'Vắng mặt', data: absentData, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,.08)', tension: .4, pointRadius: 3 },
                     { label: 'Đi trễ', data: lateData, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.08)', tension: .4, pointRadius: 3 },
-                    { label: 'Vắng mặt', data: absentData, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,.08)', tension: .4, pointRadius: 3 }
+                    { label: 'Về sớm', data: earlyData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.08)', tension: .4, pointRadius: 3 }
                 ]
             },
             options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
