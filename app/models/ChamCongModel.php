@@ -845,23 +845,17 @@ class ChamCongModel
         for ($cursor = strtotime($fromDate); $cursor <= strtotime($today); $cursor = strtotime('+1 day', $cursor)) {
             $date = date('Y-m-d', $cursor);
             $daily[$date] = $emptyDay($date);
-            $sql = "SELECT nd.maND, s.gioBatDau, s.gioKetThuc,
-                           COALESCE(t.gioVaoDau, MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END)) AS gioVaoDau,
-                           COALESCE(t.gioRaCuoi, MAX(CASE WHEN l.hanhDong = 'OUT' THEN l.ngayTao END)) AS gioRaCuoi,
-                           t.phutDiTre, t.trangThai
+            $sql = "SELECT nd.maND,
+                           MAX(s.gioBatDau) AS gioBatDau,
+                           MAX(s.gioKetThuc) AS gioKetThuc,
+                           COALESCE(MAX(t.gioVaoDau), MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END)) AS gioVaoDau,
+                           COALESCE(MAX(t.gioRaCuoi), MAX(CASE WHEN l.hanhDong = 'OUT' THEN l.ngayTao END)) AS gioRaCuoi,
+                           MAX(t.phutDiTre) AS phutDiTre,
+                           MAX(t.trangThai) AS trangThai
                     FROM nguoidung nd
                     INNER JOIN canhanvien cv ON cv.maND = nd.maND
                         AND cv.hieuLucTu <= ?
                         AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
-                                                AND cv.id = (
-                                                        SELECT cv2.id
-                                                        FROM canhanvien cv2
-                                                        WHERE cv2.maND = nd.maND
-                                                            AND cv2.hieuLucTu <= ?
-                                                            AND (cv2.hieuLucDen IS NULL OR cv2.hieuLucDen >= ?)
-                                                        ORDER BY cv2.hieuLucTu DESC, cv2.id DESC
-                                                        LIMIT 1
-                                                )
                     INNER JOIN calamviec s ON s.id = cv.maCa
                         AND s.hoatDong = 1
                         AND COALESCE(UPPER(TRIM(s.kyHieu)), '') NOT IN ('OFF', 'LE')
@@ -871,13 +865,18 @@ class ChamCongModel
                         AND l.ngayTao >= CONCAT(?, ' 00:00:00')
                         AND l.ngayTao <= CONCAT(?, ' 23:59:59')
                     WHERE nd.trangThai = 1
-                    GROUP BY nd.maND, s.gioBatDau, s.gioKetThuc, t.gioVaoDau, t.gioRaCuoi, t.phutDiTre, t.trangThai";
+                    GROUP BY nd.maND";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
+                error_log('HR dashboard metrics prepare failed: ' . $this->conn->error);
                 continue;
             }
-            $stmt->bind_param('sssssss', $date, $date, $date, $date, $date, $date, $date);
-            $stmt->execute();
+            $stmt->bind_param('sssss', $date, $date, $date, $date, $date);
+            if (!$stmt->execute()) {
+                error_log('HR dashboard metrics execute failed: ' . $stmt->error);
+                $stmt->close();
+                continue;
+            }
             $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
 
