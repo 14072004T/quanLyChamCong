@@ -249,8 +249,8 @@ class LoginController {
             file_put_contents($debugFile, $debugMsg, FILE_APPEND);
 
             require_once 'app/middleware/AuthMiddleware.php';
-            // HR được phép đăng nhập trên mobile để mở tablet chấm công.
-            if (AuthMiddleware::isMobile() && $role !== 'nhanvien' && $role !== 'hr') {
+            // Cho phép nhanvien, hr, tech đăng nhập trên mobile phone (chỉ dùng chức năng nhân viên)
+            if (AuthMiddleware::isMobile() && !in_array($role, ['nhanvien', 'hr', 'tech'], true)) {
                 header("Location: index.php?page=login&error=ib_only");
                 exit;
             }
