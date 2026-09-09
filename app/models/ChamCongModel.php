@@ -848,8 +848,8 @@ class ChamCongModel
             $sql = "SELECT nd.maND,
                            MAX(s.gioBatDau) AS gioBatDau,
                            MAX(s.gioKetThuc) AS gioKetThuc,
-                           COALESCE(MAX(t.gioVaoDau), MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END)) AS gioVaoDau,
-                           COALESCE(MAX(t.gioRaCuoi), MAX(CASE WHEN l.hanhDong = 'OUT' THEN l.ngayTao END)) AS gioRaCuoi,
+                           COALESCE(MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END), MAX(t.gioVaoDau)) AS gioVaoDau,
+                           COALESCE(MAX(CASE WHEN l.hanhDong = 'OUT' THEN l.ngayTao END), MAX(t.gioRaCuoi)) AS gioRaCuoi,
                            MAX(t.phutDiTre) AS phutDiTre,
                            MAX(t.trangThai) AS trangThai
                     FROM nguoidung nd
