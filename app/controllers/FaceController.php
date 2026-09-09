@@ -185,11 +185,13 @@ class FaceController extends Controller
 
         // 2. Kiểm tra tính độc nhất, bỏ qua profile cũ của chính nhân viên này.
         $allProfiles = $this->faceModel->getAllFaceProfiles($maND);
-        // Face-API descriptors are L2-normalized before comparison. Use a
-        // stricter boundary here so different employees are not treated as
-        // the same face because of a loose cosine-only match.
-        $threshold = 0.40;
-        $cosineThreshold = 0.92;
+        // Face-API descriptors in this employee set can be close for two real
+        // different people. Only block very strong matches; keep softer matches
+        // in the log for HR review instead of preventing registration.
+        $threshold = 0.30;
+        $cosineThreshold = 0.955;
+        $warningThreshold = 0.40;
+        $warningCosineThreshold = 0.92;
 
         $duplicateProbeSessionKey = 'face_duplicate_probe_' . $maND;
         $duplicateMatchFound = false;
@@ -217,8 +219,9 @@ class FaceController extends Controller
                 $cosine = $bestTemplateCosine;
 
                 $isDuplicate = $dist <= $threshold && $cosine >= $cosineThreshold;
+                $isNearDuplicate = !$isDuplicate && $dist <= $warningThreshold && $cosine >= $warningCosineThreshold;
                 $logMsg = sprintf(
-                    "[%s] Register compare target=%s existing=%s dist=%.4f cosine=%.4f confidence=%.4f thresholdDist=%.2f thresholdCosine=%.2f duplicate=%s\n",
+                    "[%s] Register compare target=%s existing=%s dist=%.4f cosine=%.4f confidence=%.4f thresholdDist=%.2f thresholdCosine=%.3f warningDist=%.2f warningCosine=%.2f duplicate=%s nearDuplicate=%s\n",
                     date('Y-m-d H:i:s'),
                     $maND,
                     $prof['maND'],
@@ -227,7 +230,10 @@ class FaceController extends Controller
                     $confidence,
                     $threshold,
                     $cosineThreshold,
-                    $isDuplicate ? 'YES' : 'NO'
+                    $warningThreshold,
+                    $warningCosineThreshold,
+                    $isDuplicate ? 'YES' : 'NO',
+                    $isNearDuplicate ? 'YES' : 'NO'
                 );
                 @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND | LOCK_EX);
 
