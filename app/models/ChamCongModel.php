@@ -888,18 +888,17 @@ class ChamCongModel
                     continue;
                 }
                 $daily[$date]['present']++;
-                $lateMinutes = (int)($row['phutDiTre'] ?? 0);
-                if ($lateMinutes > 0 || ($row['trangThai'] ?? '') === 'late') {
-                    $daily[$date]['late']++;
-                } else {
-                    $daily[$date]['on_time']++;
-                }
                 $status = $this->calculateShiftStatus(
                     $row['gioVaoDau'],
                     $row['gioRaCuoi'] ?? null,
                     $row['gioBatDau'],
                     $row['gioKetThuc']
                 );
+                if (in_array('late', $status['statuses'], true)) {
+                    $daily[$date]['late']++;
+                } else {
+                    $daily[$date]['on_time']++;
+                }
                 if (in_array('early_leave', $status['statuses'], true)) {
                     $daily[$date]['early']++;
                 }
