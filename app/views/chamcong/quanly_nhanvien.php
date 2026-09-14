@@ -79,7 +79,7 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="form-group" style="min-width:180px;">
+                <div class="form-group" style="display:none;">
                     <label>Chức vụ *</label>
                     <select name="chucVu" required>
                         <?php
@@ -122,7 +122,7 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                         <th>TÀI KHOẢN</th>
                         <th>EMAIL</th>
                         <th>PHÒNG BAN</th>
-                        <th>CHỨC VỤ</th>
+                        <!-- Ẩn cột chức vụ -->
                         <th>TRẠNG THÁI</th>
                         <th>HÀNH ĐỘNG</th>
                     </tr>
@@ -147,7 +147,7 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                 </a>
             </td>
             <td><?= htmlspecialchars($emp['phongBan'] ?? '') ?></td>
-            <td><?= htmlspecialchars($emp['chucVu'] ?? '') ?></td>
+            <!-- Ẩn cột chức vụ -->
             <td>
                 <span class="trangThai-badge <?= (int)$emp['trangThai'] === 1 ? 'trangThai-approved' : 'trangThai-rejected' ?>">
                     <?= (int)$emp['trangThai'] === 1 ? '• Hoạt động' : '• Ngừng' ?>
