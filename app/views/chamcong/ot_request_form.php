@@ -18,6 +18,20 @@ $statusIcons = [
     'approved' => 'fa-check-circle',
     'rejected' => 'fa-times-circle',
 ];
+
+// Tên thứ tiếng Việt
+$thuViet = ['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+
+// Build 4 ngày: hôm nay, hôm qua, hôm kia, 3 ngày trước
+$dateOptions = [];
+for ($i = 0; $i <= 3; $i++) {
+    $ts    = strtotime("-{$i} day");
+    $val   = date('Y-m-d', $ts);
+    $dow   = (int)date('w', $ts);
+    $label = $thuViet[$dow] . ' ' . date('d/m/Y', $ts);
+    if ($i === 0) $label = 'Hôm nay (' . $label . ')';
+    $dateOptions[] = ['value' => $val, 'label' => $label];
+}
 ?>
 <?php include 'app/views/layouts/header.php'; ?>
 <?php include 'app/views/layouts/nav.php'; ?>
@@ -341,16 +355,20 @@ $statusIcons = [
                     <div class="ot-field col-4">
                         <label for="ngayOT">Ngày OT <span class="req">*</span></label>
                         <select id="ngayOT" name="ngayOT" required>
-                            <option value="<?= date('Y-m-d') ?>">Hôm nay (<?= date('d/m/Y') ?>)</option>
-                            <option value="<?= date('Y-m-d', strtotime('-1 day')) ?>">Hôm qua (<?= date('d/m/Y', strtotime('-1 day')) ?>)</option>
-                            <option value="<?= date('Y-m-d', strtotime('-2 days')) ?>">Hôm kia (<?= date('d/m/Y', strtotime('-2 days')) ?>)</option>
-                            <option value="<?= date('Y-m-d', strtotime('-3 days')) ?>">3 ngày trước (<?= date('d/m/Y', strtotime('-3 days')) ?>)</option>
+                            <?php foreach ($dateOptions as $opt): ?>
+                                <option value="<?= htmlspecialchars($opt['value']) ?>"><?= htmlspecialchars($opt['label']) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     
                     <div class="ot-field col-4">
                         <label for="soGioOT">Số giờ OT <span class="req">*</span></label>
-                        <input type="number" id="soGioOT" name="soGioOT" min="0.5" step="0.5" max="24" required placeholder="VD: 2.5">
+                        <select id="soGioOT" name="soGioOT" required>
+                            <option value="" disabled selected>— Chọn số giờ —</option>
+                            <?php for ($h = 0.5; $h <= 5.0; $h += 0.5): ?>
+                                <option value="<?= number_format($h, 1, '.', '') ?>"><?= number_format($h, 1, '.', '') ?> giờ</option>
+                            <?php endfor; ?>
+                        </select>
                     </div>
                     
                     <div class="ot-field col-4">

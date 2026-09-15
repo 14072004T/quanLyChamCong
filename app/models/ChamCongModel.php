@@ -4203,6 +4203,51 @@ class ChamCongModel
     }
 
     /**
+     * Lấy TẤT CẢ đơn OT gửi đến quản lý (bao gồm đã duyệt/từ chối), hỗ trợ lọc
+     */
+    public function getAllOTByManager($managerId, $filterStatus = '', $filterEmployee = '', $filterMonth = '')
+    {
+        $managerId = (int)$managerId;
+        $conditions = ["o.nguoiDuyet = ?"];
+        $types = "i";
+        $params = [$managerId];
+
+        if (!empty($filterStatus) && in_array($filterStatus, ['pending', 'approved', 'rejected'])) {
+            $conditions[] = "o.trangThai = ?";
+            $types .= "s";
+            $params[] = $filterStatus;
+        }
+
+        if (!empty($filterEmployee)) {
+            $conditions[] = "nd.hoTen LIKE ?";
+            $types .= "s";
+            $params[] = '%' . $filterEmployee . '%';
+        }
+
+        if (!empty($filterMonth)) {
+            $conditions[] = "DATE_FORMAT(o.ngayOT, '%Y-%m') = ?";
+            $types .= "s";
+            $params[] = $filterMonth;
+        }
+
+        $where = implode(' AND ', $conditions);
+        $sql = "SELECT o.*, nd.hoTen as employee_name, nd.phongBan
+                FROM don_ot o
+                LEFT JOIN nguoidung nd ON o.maND = nd.maND
+                WHERE $where
+                ORDER BY o.ngayTao DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return [];
+
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    /**
      * Cập nhật trạng thái duyệt đơn OT
      */
     public function updateOTStatus($id, $trangThai, $managerId)

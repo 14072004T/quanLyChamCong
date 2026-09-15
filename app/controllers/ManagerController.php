@@ -589,7 +589,13 @@ class ManagerController
     public function listOTRequests()
     {
         $managerId = (int)($_SESSION['user']['maND'] ?? 0);
-        $otRequests = $this->model->getPendingOTByManager($managerId);
+
+        // Bộ lọc từ GET params
+        $filterStatus   = trim($_GET['status'] ?? '');
+        $filterEmployee = trim($_GET['employee'] ?? '');
+        $filterMonth    = trim($_GET['month'] ?? '');
+
+        $otRequests = $this->model->getAllOTByManager($managerId, $filterStatus, $filterEmployee, $filterMonth);
         
         $successMsg = $_SESSION['ot_success'] ?? '';
         $errorMsg   = $_SESSION['ot_error'] ?? '';
