@@ -1080,10 +1080,16 @@ class ChamCongController
             exit;
         }
 
-        $today = date('Y-m-d');
-        $tomorrow = date('Y-m-d', strtotime('+1 day'));
-        if ($ngayOT !== $today && $ngayOT !== $tomorrow) {
-            $_SESSION['ot_error'] = 'Chỉ được phép đăng ký OT cho ngày hôm nay hoặc ngày mai.';
+        $todayStr = date('Y-m-d');
+        $validDates = [
+            $todayStr,
+            date('Y-m-d', strtotime('-1 day')),
+            date('Y-m-d', strtotime('-2 days')),
+            date('Y-m-d', strtotime('-3 days')),
+        ];
+
+        if (!in_array($ngayOT, $validDates, true)) {
+            $_SESSION['ot_error'] = 'Chỉ được phép đăng ký OT cho ngày hôm nay và tối đa 3 ngày trước đó.';
             header('Location: index.php?page=create-ot-request');
             exit;
         }

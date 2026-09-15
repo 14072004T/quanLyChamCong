@@ -618,6 +618,13 @@ class ManagerController
             exit;
         }
 
+        // Kiểm tra điều kiện: Quản lý chỉ được duyệt trước ngày 30 hàng tháng
+        if ((int)date('d') >= 30) {
+            $_SESSION['ot_error'] = 'Hệ thống đã khóa sổ. Chỉ được phép duyệt đơn OT trước ngày 30 hàng tháng.';
+            header('Location: index.php?page=manager-ot-requests');
+            exit;
+        }
+
         $ok = $this->model->updateOTStatus($id, $trangThai, $managerId);
         $label = $trangThai === 'approve' ? 'phê duyệt' : 'từ chối';
         
