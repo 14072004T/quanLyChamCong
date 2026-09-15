@@ -80,7 +80,6 @@ class HomeController
                 ['link' => 'bao-cao-tong-hop', 'icon' => 'fa-file-lines', 'text' => 'Báo cáo tổng hợp'],
                 ['link' => 'xuly-yeucau', 'icon' => 'fa-clipboard-check', 'text' => 'Điều chỉnh công'],
                 ['link' => 'tech-accounts', 'icon' => 'fa-users-cog', 'text' => 'Quản lý Tài khoản'],
-                ['link' => 'tech-settings', 'icon' => 'fa-server', 'text' => 'Cấu hình Hệ thống'],
             ],
             'Chấm công cá nhân' => [
                 ['link' => 'lich-su-cham-cong', 'icon' => 'fa-clock-rotate-left', 'text' => 'Lịch sử chấm công'],

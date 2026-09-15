@@ -170,8 +170,8 @@ class LoginController {
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
             
-            // Lấy giới hạn số lần đăng nhập sai từ cài đặt hệ thống
-            $maxAttempts = (int)$this->getSystemSetting($conn, 'MAX_LOGIN_ATTEMPTS', 5);
+            // Setup cứng 3 lần đăng nhập sai sẽ khóa tài khoản
+            $maxAttempts = 3;
 
             if (md5($matKhau) !== $user['matKhau']) {
                 // Tăng số lần đăng nhập sai

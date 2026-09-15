@@ -13,22 +13,8 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Kiểm tra phiên đăng nhập hết hạn dựa vào cài đặt SESSION_TIMEOUT_MINUTES
 if (isset($_SESSION['user']) && isset($_SESSION['login_time'])) {
-    // Đọc cài đặt hết phiên từ DB (bỏ qua nếu bảng chưa tồn tại)
-    $sessionTimeout = 120; // Mặc định 120 phút
-    try {
-        require_once 'app/models/ketNoi.php';
-        $_tmpDb = new KetNoi();
-        $_tmpConn = $_tmpDb->connect();
-        $_tmpStmt = $_tmpConn->prepare("SELECT giaTri FROM caidathethong WHERE tenCaiDat = 'SESSION_TIMEOUT_MINUTES' LIMIT 1");
-        if ($_tmpStmt) {
-            $_tmpStmt->execute();
-            $_tmpRow = $_tmpStmt->get_result()->fetch_assoc();
-            $_tmpStmt->close();
-            if ($_tmpRow && is_numeric($_tmpRow['giaTri']) && (int)$_tmpRow['giaTri'] > 0) {
-                $sessionTimeout = (int)$_tmpRow['giaTri'];
-            }
-        }
-    } catch (Exception $_e) { /* bỏ qua nếu bảng chưa tồn tại */ }
+    // Phiên đăng nhập là 60 phút
+    $sessionTimeout = 60;
 
     if ((time() - $_SESSION['login_time']) > ($sessionTimeout * 60)) {
         session_unset();
@@ -160,9 +146,6 @@ $allowedPages = [
     'tech-update-wifi',
     'tech-toggle-wifi',
     'tech-delete-wifi',
-    'tech-settings',
-    'tech-update-setting',
-    'tech-update-settings',
     'tech-accounts',
     'tech-accounts-api',
     'tech-update-role',
@@ -487,17 +470,6 @@ switch ($page) {
         (new TechController())->deleteWifi();
         break;
 
-    case 'tech-settings':
-        require_once 'app/controllers/TechController.php';
-        (new TechController())->settings();
-        break;
-
-    case 'tech-update-setting':
-    case 'tech-update-settings':
-        require_once 'app/controllers/TechController.php';
-        (new TechController())->updateSetting();
-        break;
-
     case 'tech-accounts':
         require_once 'app/controllers/TechController.php';
         (new TechController())->accountManagement();
@@ -516,12 +488,6 @@ switch ($page) {
     case 'tech-toggle-account':
         require_once 'app/controllers/TechController.php';
         (new TechController())->toggleAccount();
-        break;
-
-
-    case 'tech-update-settings':
-        require_once 'app/controllers/TechController.php';
-        (new TechController())->updateSettings();
         break;
 
     // === ĐƠN NGHỈ PHÉP ===

@@ -87,15 +87,6 @@
     <i class="fas fa-shield-alt" style="font-size: 40px; opacity: 0.2;"></i>
 </div>
 
-<div class="tech-stats">
-    <div class="stat-card" onclick="window.location.href='index.php?page=tech-settings'">
-        <div class="stat-icon icon-purple"><i class="fas fa-cogs"></i></div>
-        <div class="stat-info">
-            <h3>Cài đặt</h3>
-            <p>5</p>
-        </div>
-    </div>
-</div>
 
 <div class="tech-modules">
     <div class="module-card">
@@ -105,15 +96,6 @@
         </div>
         <a href="index.php?page=tech-accounts" class="module-btn btn-wifi" style="background: #eef2ff; color: #4f46e5; border-color: #c7d2fe;">
             <i class="fas fa-external-link-alt"></i> Truy cập Quản lý
-        </a>
-    </div>
-    <div class="module-card">
-        <div class="module-header">
-            <i class="fas fa-sliders-h" style="color: #10b981;"></i>
-            <h3>Cấu hình hệ thống</h3>
-        </div>
-        <a href="index.php?page=tech-settings" class="module-btn btn-settings">
-            <i class="fas fa-external-link-alt"></i> Truy cập Cài đặt
         </a>
     </div>
 </div>
