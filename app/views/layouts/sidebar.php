@@ -8,6 +8,7 @@ $menus = [
         ['page' => 'bang-cong-thang', 'label' => 'Bảng công tháng', 'icon' => 'fa-file-invoice'],
         ['page' => 'yeu-cau-chinh-sua-cham-cong', 'label' => 'Gửi yêu cầu chỉnh sửa', 'icon' => 'fa-pen-to-square'],
         ['page' => 'create-leave-request', 'label' => 'Đơn nghỉ phép', 'icon' => 'fa-calendar-check'],
+        ['page' => 'create-ot-request', 'label' => 'Đăng ký OT', 'icon' => 'fa-business-time'],
     ],
     'hr' => [
         ['page' => 'quan-ly-nhanvien', 'label' => 'Quản lý Nhân viên', 'icon' => 'fa-users'],
@@ -20,6 +21,7 @@ $menus = [
         ['page' => 'bao-cao-tong-hop', 'label' => 'Báo cáo tổng hợp', 'icon' => 'fa-file-lines'],
         ['page' => 'xuly-yeucau', 'label' => 'Quản lý điều chỉnh công', 'icon' => 'fa-clipboard-check'],
         ['page' => 'list-leave-requests', 'label' => 'Quản lý Đơn phép', 'icon' => 'fa-calendar-check'],
+        ['page' => 'manager-ot-requests', 'label' => 'Duyệt đơn OT', 'icon' => 'fa-business-time'],
     ],
     'tech' => [
         ['page' => 'tech-accounts', 'label' => 'Quản lý Tài khoản', 'icon' => 'fa-users-cog'],

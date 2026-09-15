@@ -4114,6 +4114,120 @@ class ChamCongModel
         $rows = $result->fetch_all(MYSQLI_ASSOC);
         return array_column($rows, 'phongBan');
     }
+
+    // ============================
+    // ĐĂNG KÝ VÀ DUYỆT OT
+    // ============================
+
+    /**
+     * Lấy danh sách quản lý để nhân viên chọn người duyệt
+     */
+    public function getManagersList()
+    {
+        // Chức vụ có chữ quản lý hoặc ban lãnh đạo hoặc hr
+        $sql = "SELECT maND, hoTen, chucVu, phongBan FROM nguoidung 
+                WHERE (chucVu LIKE '%quản lý%' OR chucVu LIKE '%lanh dao%' OR chucVu LIKE '%giám đốc%') 
+                AND trangThai = 1 
+                ORDER BY hoTen ASC";
+        $result = $this->conn->query($sql);
+        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    }
+
+    /**
+     * Thêm đơn xin OT
+     */
+    public function insertOTRequest($maND, $ngayOT, $soGioOT, $ghiChu, $nguoiDuyet)
+    {
+        $maND = (int)$maND;
+        $nguoiDuyet = (int)$nguoiDuyet;
+        $soGioOT = (float)$soGioOT;
+        $ngayOT = trim($ngayOT);
+        $ghiChu = trim($ghiChu);
+
+        if ($maND <= 0 || $nguoiDuyet <= 0 || $soGioOT <= 0 || $ngayOT === '' || $ghiChu === '') {
+            return false;
+        }
+
+        $sql = "INSERT INTO don_ot (maND, ngayOT, soGioOT, ghiChu, nguoiDuyet, trangThai) 
+                VALUES (?, ?, ?, ?, ?, 'pending')";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return false;
+        
+        $stmt->bind_param("isdsi", $maND, $ngayOT, $soGioOT, $ghiChu, $nguoiDuyet);
+        $result = $stmt->execute();
+        $stmt->close();
+        return $result;
+    }
+
+    /**
+     * Lấy lịch sử đăng ký OT của 1 nhân viên
+     */
+    public function getOTRequestsByUser($maND)
+    {
+        $maND = (int)$maND;
+        $sql = "SELECT o.*, nd.hoTen, manager.hoTen as manager_name 
+                FROM don_ot o
+                LEFT JOIN nguoidung nd ON o.maND = nd.maND
+                LEFT JOIN nguoidung manager ON o.nguoiDuyet = manager.maND
+                WHERE o.maND = ?
+                ORDER BY o.ngayTao DESC";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return [];
+        
+        $stmt->bind_param("i", $maND);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    /**
+     * Lấy danh sách đơn OT chờ duyệt cho 1 quản lý cụ thể
+     */
+    public function getPendingOTByManager($managerId)
+    {
+        $managerId = (int)$managerId;
+        $sql = "SELECT o.*, nd.hoTen as employee_name, nd.phongBan
+                FROM don_ot o
+                LEFT JOIN nguoidung nd ON o.maND = nd.maND
+                WHERE o.nguoiDuyet = ? AND o.trangThai = 'pending'
+                ORDER BY o.ngayTao ASC";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return [];
+        
+        $stmt->bind_param("i", $managerId);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    /**
+     * Cập nhật trạng thái duyệt đơn OT
+     */
+    public function updateOTStatus($id, $trangThai, $managerId)
+    {
+        $id = (int)$id;
+        $managerId = (int)$managerId;
+        $trangThai = trim((string)$trangThai);
+        if ($trangThai === 'approve') $trangThai = 'approved';
+        if ($trangThai === 'reject') $trangThai = 'rejected';
+
+        if ($id <= 0 || !in_array($trangThai, ['approved', 'rejected'], true)) {
+            return false;
+        }
+
+        $sql = "UPDATE don_ot SET trangThai = ?, ngayDuyet = NOW() 
+                WHERE id = ? AND nguoiDuyet = ? AND trangThai = 'pending'";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return false;
+        
+        $stmt->bind_param("sii", $trangThai, $id, $managerId);
+        $result = $stmt->execute();
+        $affected = $stmt->affected_rows > 0;
+        $stmt->close();
+        return $result && $affected;
+    }
 }
 
 

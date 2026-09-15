@@ -1033,5 +1033,68 @@ class ChamCongController
         header('Location: index.php?page=create-leave-request');
         exit;
     }
+
+    // ============================
+    // ĐĂNG KÝ OT (Làm thêm giờ)
+    // ============================
+
+    /**
+     * Trang đăng ký OT
+     */
+    public function createOTRequest()
+    {
+        $this->requireLogin();
+
+        $message = $_SESSION['ot_success'] ?? '';
+        $error   = $_SESSION['ot_error'] ?? '';
+        unset($_SESSION['ot_success'], $_SESSION['ot_error']);
+
+        $maND       = (int)($_SESSION['user']['maND'] ?? 0);
+        $myRequests = $this->model->getOTRequestsByUser($maND);
+        $managers   = $this->model->getManagersList();
+        
+        require 'app/views/chamcong/ot_request_form.php';
+    }
+
+    /**
+     * Lưu đơn OT
+     */
+    public function storeOTRequest()
+    {
+        $this->requireLogin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=create-ot-request');
+            exit;
+        }
+
+        $maND       = (int)($_SESSION['user']['maND'] ?? 0);
+        $ngayOT     = trim($_POST['ngayOT'] ?? '');
+        $soGioOT    = (float)($_POST['soGioOT'] ?? 0);
+        $ghiChu     = trim($_POST['ghiChu'] ?? '');
+        $nguoiDuyet = (int)($_POST['nguoiDuyet'] ?? 0);
+
+        if ($ngayOT === '' || $soGioOT <= 0 || $ghiChu === '' || $nguoiDuyet <= 0) {
+            $_SESSION['ot_error'] = 'Vui lòng điền đầy đủ các thông tin bắt buộc và số giờ OT phải > 0.';
+            header('Location: index.php?page=create-ot-request');
+            exit;
+        }
+
+        $today = date('Y-m-d');
+        $tomorrow = date('Y-m-d', strtotime('+1 day'));
+        if ($ngayOT !== $today && $ngayOT !== $tomorrow) {
+            $_SESSION['ot_error'] = 'Chỉ được phép đăng ký OT cho ngày hôm nay hoặc ngày mai.';
+            header('Location: index.php?page=create-ot-request');
+            exit;
+        }
+
+        $ok = $this->model->insertOTRequest($maND, $ngayOT, $soGioOT, $ghiChu, $nguoiDuyet);
+        $_SESSION[$ok ? 'ot_success' : 'ot_error'] = $ok
+            ? 'Gửi đăng ký OT thành công!'
+            : 'Không thể gửi đăng ký OT. Vui lòng thử lại.';
+
+        header('Location: index.php?page=create-ot-request');
+        exit;
+    }
 }
 ?>

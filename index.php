@@ -158,7 +158,12 @@ $allowedPages = [
     'approve-leave-request',
     'leave-request-detail',
     'get-leave-detail',
-    'get-correction-detail',
+    // OT
+    'create-ot-request',
+    'store-ot-request',
+    'manager-ot-requests',
+    'approve-ot-request',
+
     // Face Recognition
     'face-register',
     'face-api-register',
@@ -509,6 +514,27 @@ switch ($page) {
     case 'approve-leave-request':
         require_once 'app/controllers/ManagerController.php';
         (new ManagerController())->approveLeaveRequest();
+        break;
+
+    // === OT ===
+    case 'create-ot-request':
+        require_once 'app/controllers/ChamCongController.php';
+        (new ChamCongController())->createOTRequest();
+        break;
+
+    case 'store-ot-request':
+        require_once 'app/controllers/ChamCongController.php';
+        (new ChamCongController())->storeOTRequest();
+        break;
+
+    case 'manager-ot-requests':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->listOTRequests();
+        break;
+
+    case 'approve-ot-request':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->approveOTRequest();
         break;
 
     // === NHẬN DIỆN KHUÔN MẶT ===

@@ -79,6 +79,8 @@ class HomeController
                 ['link' => 'face-register', 'icon' => 'fa-portrait', 'text' => 'Đăng ký khuôn mặt'],
                 ['link' => 'bao-cao-tong-hop', 'icon' => 'fa-file-lines', 'text' => 'Báo cáo tổng hợp'],
                 ['link' => 'xuly-yeucau', 'icon' => 'fa-clipboard-check', 'text' => 'Điều chỉnh công'],
+                ['link' => 'list-leave-requests', 'icon' => 'fa-calendar-check', 'text' => 'Quản lý Đơn phép'],
+                ['link' => 'manager-ot-requests', 'icon' => 'fa-business-time', 'text' => 'Duyệt đơn OT'],
                 ['link' => 'tech-accounts', 'icon' => 'fa-users-cog', 'text' => 'Quản lý Tài khoản'],
             ],
             'Chấm công cá nhân' => [
@@ -86,6 +88,7 @@ class HomeController
                 ['link' => 'bang-cong-thang', 'icon' => 'fa-file-invoice', 'text' => 'Bảng công tháng'],
                 ['link' => 'yeu-cau-chinh-sua-cham-cong', 'icon' => 'fa-pen-to-square', 'text' => 'Yêu cầu chỉnh sửa'],
                 ['link' => 'create-leave-request', 'icon' => 'fa-calendar-check', 'text' => 'Đơn nghỉ phép'],
+                ['link' => 'create-ot-request', 'icon' => 'fa-business-time', 'text' => 'Đăng ký OT'],
             ],
         ];
 

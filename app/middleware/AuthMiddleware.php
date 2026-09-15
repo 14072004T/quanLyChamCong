@@ -20,6 +20,8 @@ class AuthMiddleware
             'store-leave-request',
             'get-leave-detail',
             'get-correction-detail',
+            'create-ot-request',
+            'store-ot-request',
             'face-api-verify',
             'face-liveness-session',
             'logout'
@@ -51,6 +53,8 @@ class AuthMiddleware
             'store-leave-request',
             'get-leave-detail',
             'get-correction-detail',
+            'create-ot-request',
+            'store-ot-request',
             'face-register',
             'face-api-register',
             'face-api-delete',
@@ -78,6 +82,10 @@ class AuthMiddleware
             'approve-leave-request',
             'get-leave-detail',
             'get-correction-detail',
+            'create-ot-request',
+            'store-ot-request',
+            'manager-ot-requests',
+            'approve-ot-request',
             'face-api-verify',
             'face-liveness-session',
             'logout'
@@ -106,6 +114,8 @@ class AuthMiddleware
             'store-leave-request',
             'get-leave-detail',
             'get-correction-detail',
+            'create-ot-request',
+            'store-ot-request',
             'face-api-verify',
             'face-liveness-session',
             'logout'

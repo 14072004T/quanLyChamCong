@@ -579,6 +579,56 @@ class ManagerController
 
     /* ---- helpers ---- */
 
+    // ============================
+    // DUYỆT OT (Quản lý)
+    // ============================
+
+    /**
+     * Danh sách đơn OT chờ duyệt
+     */
+    public function listOTRequests()
+    {
+        $managerId = (int)($_SESSION['user']['maND'] ?? 0);
+        $otRequests = $this->model->getPendingOTByManager($managerId);
+        
+        $successMsg = $_SESSION['ot_success'] ?? '';
+        $errorMsg   = $_SESSION['ot_error'] ?? '';
+        unset($_SESSION['ot_success'], $_SESSION['ot_error']);
+
+        require __DIR__ . '/../views/chamcong/manager_ot_list.php';
+    }
+
+    /**
+     * Phê duyệt / Từ chối đơn OT
+     */
+    public function approveOTRequest()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=manager-ot-requests');
+            exit;
+        }
+
+        $id          = (int)($_POST['id'] ?? 0);
+        $trangThai   = trim($_POST['trangThai'] ?? '');
+        $managerId   = (int)($_SESSION['user']['maND'] ?? 0);
+
+        if ($id <= 0 || !in_array($trangThai, ['approve', 'reject'], true)) {
+            $_SESSION['ot_error'] = 'Dữ liệu không hợp lệ';
+            header('Location: index.php?page=manager-ot-requests');
+            exit;
+        }
+
+        $ok = $this->model->updateOTStatus($id, $trangThai, $managerId);
+        $label = $trangThai === 'approve' ? 'phê duyệt' : 'từ chối';
+        
+        $_SESSION[$ok ? 'ot_success' : 'ot_error'] = $ok
+            ? "Đã $label đơn đăng ký OT thành công"
+            : "Không thể $label đơn đăng ký OT (có thể đã được xử lý)";
+
+        header('Location: index.php?page=manager-ot-requests');
+        exit;
+    }
+
     private function expectsJson()
     {
         $accept = strtolower($_SERVER['HTTP_ACCEPT'] ?? '');
