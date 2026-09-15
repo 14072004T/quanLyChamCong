@@ -4248,6 +4248,23 @@ class ChamCongModel
     }
 
     /**
+     * Lấy 1 đơn OT theo id và managerId (dùng để kiểm tra trước khi duyệt)
+     */
+    public function getOTById($id, $managerId)
+    {
+        $id        = (int)$id;
+        $managerId = (int)$managerId;
+        $sql = "SELECT * FROM don_ot WHERE id = ? AND nguoiDuyet = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return null;
+        $stmt->bind_param("ii", $id, $managerId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
+    }
+
+    /**
      * Cập nhật trạng thái duyệt đơn OT
      */
     public function updateOTStatus($id, $trangThai, $managerId)

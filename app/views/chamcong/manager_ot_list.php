@@ -230,6 +230,8 @@ $thuViet = ['CN','T2','T3','T4','T5','T6','T7'];
 .mot-table tr.row-pending  td:first-child { border-left: 3px solid #f59e0b; }
 .mot-table tr.row-approved td:first-child { border-left: 3px solid #10b981; }
 .mot-table tr.row-rejected td:first-child { border-left: 3px solid #ef4444; }
+.mot-table tr.row-expired  td:first-child { border-left: 3px solid #94a3b8; }
+.mot-table tr.row-expired td { opacity: 0.7; }
 
 /* Employee avatar */
 .emp-cell { display: flex; align-items: center; gap: 12px; }
@@ -254,6 +256,7 @@ $thuViet = ['CN','T2','T3','T4','T5','T6','T7'];
 .badge-pending  { background: #fef3c7; color: #d97706; }
 .badge-approved { background: #dcfce7; color: #16a34a; }
 .badge-rejected { background: #fee2e2; color: #dc2626; }
+.badge-expired  { background: #f1f5f9; color: #64748b; border: 1px dashed #cbd5e1; }
 
 /* Hour pill */
 .hour-pill {
@@ -345,6 +348,8 @@ $thuViet = ['CN','T2','T3','T4','T5','T6','T7'];
     .mot-mobile-card.st-pending::before  { background: #f59e0b; }
     .mot-mobile-card.st-approved::before { background: #10b981; }
     .mot-mobile-card.st-rejected::before { background: #ef4444; }
+    .mot-mobile-card.st-expired::before  { background: #94a3b8; }
+    .mot-mobile-card.st-expired { opacity: 0.75; }
     .mot-filter-form { flex-direction: column; }
 }
 .mot-cards-mobile { display: none; }
@@ -394,14 +399,6 @@ $thuViet = ['CN','T2','T3','T4','T5','T6','T7'];
             <?php endif; ?>
             <?php if (!empty($errorMsg)): ?>
                 <div class="mot-alert mot-alert-error"><i class="fas fa-exclamation-triangle fa-lg"></i> <?= htmlspecialchars($errorMsg) ?></div>
-            <?php endif; ?>
-
-            <!-- Lock notice if on day >= 30 -->
-            <?php if ((int)date('d') >= 30): ?>
-                <div class="mot-lock-notice">
-                    <i class="fas fa-lock"></i>
-                    Hệ thống đã khóa sổ (ngày <?= date('d') ?>). Không thể duyệt thêm đơn OT trong tháng này.
-                </div>
             <?php endif; ?>
 
             <!-- Filter -->
@@ -463,8 +460,14 @@ $thuViet = ['CN','T2','T3','T4','T5','T6','T7'];
                                     $dow = (int)date('w', strtotime($req['ngayOT']));
                                     $thuViet2 = ['CN','T2','T3','T4','T5','T6','T7'];
                                     $dayLabel = $thuViet2[$dow] . ' ' . date('d/m/Y', strtotime($req['ngayOT']));
+                                    // Kiểm tra hết hạn: đơn pending thuộc tháng khác tháng hiện tại
+                                    $otMonth   = date('Y-m', strtotime($req['ngayOT']));
+                                    $isExpired = ($st === 'pending' && $otMonth !== date('Y-m'));
+                                    $badgeSt   = $isExpired ? 'expired' : $st;
+                                    $badgeLabel = $isExpired ? 'Hết hạn' : ($statusLabels[$st] ?? $st);
+                                    $badgeIcon  = $isExpired ? 'fa-calendar-times' : ($st === 'pending' ? 'fa-clock' : ($st === 'approved' ? 'fa-check' : 'fa-times'));
                                 ?>
-                                <tr class="row-<?= $st ?>">
+                                <tr class="row-<?= $badgeSt ?>">
                                     <td>
                                         <div class="emp-cell">
                                             <div class="emp-avatar"><?= mb_substr($req['employee_name'] ?? '?', 0, 1) ?></div>
@@ -487,24 +490,15 @@ $thuViet = ['CN','T2','T3','T4','T5','T6','T7'];
                                         <?= date('d/m/Y H:i', strtotime($req['ngayTao'])) ?>
                                     </td>
                                     <td>
-                                        <span class="badge badge-<?= $st ?>">
-                                            <i class="fas <?= $st === 'pending' ? 'fa-clock' : ($st === 'approved' ? 'fa-check' : 'fa-times') ?>"></i>
-                                            <?= $statusLabels[$st] ?? $st ?>
+                                        <span class="badge badge-<?= $badgeSt ?>">
+                                            <i class="fas <?= $badgeIcon ?>"></i>
+                                            <?= $badgeLabel ?>
                                         </span>
                                     </td>
                                     <td style="text-align:right; white-space:nowrap;">
-                                        <?php if ($st === 'pending' && (int)date('d') < 30): ?>
+                                        <?php if ($st === 'pending' && !$isExpired): ?>
                                             <form method="POST" action="index.php?page=approve-ot-request" style="display:inline-flex; gap:6px;">
                                                 <input type="hidden" name="id" value="<?= $req['id'] ?>">
-                                                <?php
-                                                    // Preserve filter params in redirect
-                                                    $qs = http_build_query([
-                                                        'status'   => $_GET['status']   ?? '',
-                                                        'employee' => $_GET['employee'] ?? '',
-                                                        'month'    => $_GET['month']    ?? '',
-                                                    ]);
-                                                ?>
-                                                <input type="hidden" name="redirect_qs" value="<?= htmlspecialchars($qs) ?>">
                                                 <button type="submit" name="trangThai" value="approve" class="btn-act btn-approve"
                                                         onclick="return confirm('Bạn chắc chắn muốn DUYỆT đơn OT này?');">
                                                     <i class="fas fa-check"></i> Duyệt
@@ -514,10 +508,12 @@ $thuViet = ['CN','T2','T3','T4','T5','T6','T7'];
                                                     <i class="fas fa-times"></i> Từ chối
                                                 </button>
                                             </form>
-                                        <?php elseif ($st !== 'pending'): ?>
-                                            <span style="font-size:12px; color:#94a3b8; font-style:italic;">Đã xử lý</span>
+                                        <?php elseif ($isExpired): ?>
+                                            <span style="font-size:12px; color:#94a3b8; font-style:italic;">
+                                                <i class="fas fa-calendar-times"></i> Hết hạn tháng <?= date('m/Y', strtotime($req['ngayOT'])) ?>
+                                            </span>
                                         <?php else: ?>
-                                            <span style="font-size:12px; color:#f59e0b; font-weight:600;"><i class="fas fa-lock"></i> Khóa sổ</span>
+                                            <span style="font-size:12px; color:#94a3b8; font-style:italic;">Đã xử lý</span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -533,15 +529,21 @@ $thuViet = ['CN','T2','T3','T4','T5','T6','T7'];
                                 $dow = (int)date('w', strtotime($req['ngayOT']));
                                 $thuViet2 = ['CN','T2','T3','T4','T5','T6','T7'];
                                 $dayLabel = $thuViet2[$dow] . ' ' . date('d/m/Y', strtotime($req['ngayOT']));
+                                // Kiểm tra hết hạn: đơn pending nhưng khác tháng hiện tại
+                                $otMonth  = date('Y-m', strtotime($req['ngayOT']));
+                                $isExpired = ($st === 'pending' && $otMonth !== date('Y-m'));
+                                $badgeSt  = $isExpired ? 'expired' : $st;
+                                $badgeLabel = $isExpired ? 'Hết hạn' : ($statusLabels[$st] ?? $st);
+                                $badgeIcon  = $isExpired ? 'fa-calendar-times' : ($st === 'pending' ? 'fa-clock' : ($st === 'approved' ? 'fa-check' : 'fa-times'));
                             ?>
-                            <div class="mot-mobile-card st-<?= $st ?>">
+                            <div class="mot-mobile-card st-<?= $badgeSt ?>">
                                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
                                     <div>
                                         <div class="emp-name"><?= htmlspecialchars($req['employee_name'] ?? '') ?></div>
                                         <div class="emp-dept"><?= htmlspecialchars($req['phongBan'] ?? '') ?></div>
                                     </div>
-                                    <span class="badge badge-<?= $st ?>">
-                                        <?= $statusLabels[$st] ?? $st ?>
+                                    <span class="badge badge-<?= $badgeSt ?>">
+                                        <?= $badgeLabel ?>
                                     </span>
                                 </div>
 
@@ -564,7 +566,7 @@ $thuViet = ['CN','T2','T3','T4','T5','T6','T7'];
                                     Gửi lúc: <?= date('d/m/Y H:i', strtotime($req['ngayTao'])) ?>
                                 </div>
 
-                                <?php if ($st === 'pending' && (int)date('d') < 30): ?>
+                                <?php if ($st === 'pending' && !$isExpired): ?>
                                     <form method="POST" action="index.php?page=approve-ot-request" style="display:flex; gap:8px;">
                                         <input type="hidden" name="id" value="<?= $req['id'] ?>">
                                         <button type="submit" name="trangThai" value="approve" class="btn-act btn-approve" style="flex:1; justify-content:center;"
@@ -576,6 +578,10 @@ $thuViet = ['CN','T2','T3','T4','T5','T6','T7'];
                                             <i class="fas fa-times"></i> Từ chối
                                         </button>
                                     </form>
+                                <?php elseif ($isExpired): ?>
+                                    <div style="text-align:center; font-size:12px; color:#94a3b8; padding:8px; background:#f8fafc; border-radius:8px;">
+                                        <i class="fas fa-calendar-times"></i> Hết hạn tháng <?= date('m/Y', strtotime($req['ngayOT'])) ?>
+                                    </div>
                                 <?php endif; ?>
                             </div>
                         <?php endforeach; ?>

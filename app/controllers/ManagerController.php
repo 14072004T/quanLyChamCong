@@ -614,9 +614,9 @@ class ManagerController
             exit;
         }
 
-        $id          = (int)($_POST['id'] ?? 0);
-        $trangThai   = trim($_POST['trangThai'] ?? '');
-        $managerId   = (int)($_SESSION['user']['maND'] ?? 0);
+        $id        = (int)($_POST['id'] ?? 0);
+        $trangThai = trim($_POST['trangThai'] ?? '');
+        $managerId = (int)($_SESSION['user']['maND'] ?? 0);
 
         if ($id <= 0 || !in_array($trangThai, ['approve', 'reject'], true)) {
             $_SESSION['ot_error'] = 'Dữ liệu không hợp lệ';
@@ -624,16 +624,27 @@ class ManagerController
             exit;
         }
 
-        // Kiểm tra điều kiện: Quản lý chỉ được duyệt trước ngày 30 hàng tháng
-        if ((int)date('d') >= 30) {
-            $_SESSION['ot_error'] = 'Hệ thống đã khóa sổ. Chỉ được phép duyệt đơn OT trước ngày 30 hàng tháng.';
+        // Lấy thông tin đơn OT để kiểm tra tháng
+        $otRow = $this->model->getOTById($id, $managerId);
+        if (!$otRow) {
+            $_SESSION['ot_error'] = 'Không tìm thấy đơn OT hoặc bạn không có quyền xử lý đơn này.';
             header('Location: index.php?page=manager-ot-requests');
             exit;
         }
 
-        $ok = $this->model->updateOTStatus($id, $trangThai, $managerId);
+        // Kiểm tra: chỉ được duyệt trong cùng tháng của ngayOT
+        $otMonth      = date('Y-m', strtotime($otRow['ngayOT']));
+        $currentMonth = date('Y-m');
+        if ($otMonth !== $currentMonth) {
+            $monthLabel = date('m/Y', strtotime($otRow['ngayOT']));
+            $_SESSION['ot_error'] = "Đơn OT thuộc tháng {$monthLabel} đã hết hạn xử lý. Chỉ được duyệt đơn trong cùng tháng.";
+            header('Location: index.php?page=manager-ot-requests');
+            exit;
+        }
+
+        $ok    = $this->model->updateOTStatus($id, $trangThai, $managerId);
         $label = $trangThai === 'approve' ? 'phê duyệt' : 'từ chối';
-        
+
         $_SESSION[$ok ? 'ot_success' : 'ot_error'] = $ok
             ? "Đã $label đơn đăng ký OT thành công"
             : "Không thể $label đơn đăng ký OT (có thể đã được xử lý)";
