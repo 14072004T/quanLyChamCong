@@ -391,23 +391,23 @@ CREATE TABLE `duyetcongthang` (
 INSERT INTO `duyetcongthang` (`id`, `thangNam`, `maNguoiGuiNS`, `maNguoiDuyetQL`, `trangThai`, `ngayGui`, `ngayDuyet`, `ghiChu`, `ngayTao`, `ngayCapNhat`, `phongBan`) VALUES
 (1, '2026-01', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Sản xuất'),
 (2, '2026-01', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Nhân sự'),
-(3, '2026-01', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'CNTT'),
+(3, '2026-01', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Ph?ng C?ng ngh? th?ng tin (IT)'),
 (4, '2026-01', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Điều hành'),
 (5, '2026-02', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Sản xuất'),
 (6, '2026-02', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Nhân sự'),
-(7, '2026-02', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'CNTT'),
+(7, '2026-02', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Ph?ng C?ng ngh? th?ng tin (IT)'),
 (8, '2026-02', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Điều hành'),
 (9, '2026-03', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Sản xuất'),
 (10, '2026-03', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Nhân sự'),
-(11, '2026-03', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'CNTT'),
+(11, '2026-03', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Ph?ng C?ng ngh? th?ng tin (IT)'),
 (12, '2026-03', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Điều hành'),
 (13, '2026-04', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Sản xuất'),
 (14, '2026-04', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Nhân sự'),
-(15, '2026-04', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'CNTT'),
+(15, '2026-04', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Ph?ng C?ng ngh? th?ng tin (IT)'),
 (16, '2026-04', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Điều hành'),
 (17, '2026-05', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Sản xuất'),
 (18, '2026-05', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Nhân sự'),
-(19, '2026-05', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'CNTT'),
+(19, '2026-05', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Ph?ng C?ng ngh? th?ng tin (IT)'),
 (20, '2026-05', 16, 26, 'approved', '2026-06-19 19:54:42', '2026-06-19 19:54:42', 'Tự động duyệt', '2026-06-19 19:54:42', NULL, 'Điều hành');
 
 -- --------------------------------------------------------
@@ -7829,57 +7829,38 @@ CREATE TABLE `nguoidung` (
 --
 
 INSERT INTO `nguoidung` (`maND`, `maTK`, `hoTen`, `email`, `soDienThoai`, `chucVu`, `phongBan`, `trangThai`, `ngayTao`, `ngayCapNhat`) VALUES
-(1, 1, 'Nguyễn Văn An', 'nhanvien01@company.local', '090100001', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(2, 2, 'Trần Thị Bình', 'nhanvien02@company.local', '090100002', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(3, 3, 'Lê Hoàng Châu', 'nhanvien03@company.local', '090100003', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(4, 4, 'Phạm Văn Duy', 'nhanvien04@company.local', '090100004', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(5, 5, 'Hoàng Thị Dung', 'nhanvien05@company.local', '090100005', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(6, 6, 'Vũ Minh Đức', 'nhanvien06@company.local', '090100006', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(7, 7, 'Đặng Thị Phương', 'nhanvien07@company.local', '090100007', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(8, 8, 'Bùi Quang Hải', 'nhanvien08@company.local', '090100008', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(9, 9, 'Đỗ Văn Hưng', 'nhanvien09@company.local', '090100009', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(10, 10, 'Hồ Thị Hương', 'nhanvien10@company.local', '0901000010', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(11, 11, 'Ngô Tuấn Kiệt', 'nhanvien11@company.local', '0901000011', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(12, 12, 'Dương Thị Lan', 'nhanvien12@company.local', '0901000012', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(13, 13, 'Lý Công Minh', 'nhanvien13@company.local', '0901000013', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(14, 14, 'Đào Thị Nga', 'nhanvien14@company.local', '0901000014', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(15, 15, 'Đoàn Văn Nam', 'nhanvien15@company.local', '0901000015', 'Nhân viên', 'Sản xuất', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(16, 16, 'Nguyễn Thị Ngọc', 'hr01@company.local', '0901000016', 'Bộ phận Nhân sự', 'Nhân sự', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(17, 17, 'Trần Hữu Phúc', 'hr02@company.local', '0901000017', 'Bộ phận Nhân sự', 'Nhân sự', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(18, 18, 'Lê Thị Quyên', 'hr03@company.local', '0901000018', 'Bộ phận Nhân sự', 'Nhân sự', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(19, 19, 'Phạm Quốc Sang', 'hr04@company.local', '0901000019', 'Bộ phận Nhân sự', 'Nhân sự', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(20, 20, 'Hoàng Thị Tâm', 'hr05@company.local', '0901000020', 'Bộ phận Nhân sự', 'Nhân sự', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(21, 21, 'Vũ Văn Thái', 'tech01@company.local', '0901000021', 'Bộ phận Kỹ thuật', 'CNTT', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(22, 22, 'Đặng Thị Uyên', 'tech02@company.local', '0901000022', 'Bộ phận Kỹ thuật', 'CNTT', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(23, 23, 'Bùi Xuân Vinh', 'tech03@company.local', '0901000023', 'Bộ phận Kỹ thuật', 'CNTT', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(24, 24, 'Đỗ Thị Vy', 'tech04@company.local', '0901000024', 'Bộ phận Kỹ thuật', 'CNTT', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(25, 25, 'Hồ Văn Xuân', 'tech05@company.local', '0901000025', 'Bộ phận Kỹ thuật', 'CNTT', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(26, 26, 'Ngô Thị Yến', 'manager01@company.local', '0901000026', 'Quản lý / Ban lãnh đạo', 'Điều hành', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(27, 27, 'Dương Trọng Đạt', 'manager02@company.local', '0901000027', 'Quản lý / Ban lãnh đạo', 'Điều hành', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(28, 28, 'Lý Thị Diệp', 'manager03@company.local', '0901000028', 'Quản lý / Ban lãnh đạo', 'Điều hành', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(29, 29, 'Đào Văn Tùng', 'manager04@company.local', '0901000029', 'Quản lý / Ban lãnh đạo', 'Điều hành', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
-(30, 30, 'Đoàn Thị Bích', 'manager05@company.local', '0901000030', 'Quản lý / Ban lãnh đạo', 'Điều hành', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01');
+(1, 1, 'Nguy?n V?n An', 'nhanvien01@company.local', '090100001', 'Nh?n vi?n', 'Ph?ng C?ng ngh? th?ng tin (IT)', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(2, 2, 'Tr?n Th? B?nh', 'nhanvien02@company.local', '090100002', 'Nh?n vi?n', 'Ph?ng K? to?n', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(3, 3, 'L? Ho?ng Ch?u', 'nhanvien03@company.local', '090100003', 'Nh?n vi?n', 'Ph?ng Ki?m so?t ch?t l??ng (QC)', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(4, 4, 'Ph?m V?n Duy', 'nhanvien04@company.local', '090100004', 'Nh?n vi?n', 'Ph?ng Nh?n s?', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(5, 5, 'Ho?ng Th? Dung', 'nhanvien05@company.local', '090100005', 'Nh?n vi?n', 'Ph?ng C?ng ngh? th?ng tin (IT)', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(6, 6, 'V? Minh ??c', 'nhanvien06@company.local', '090100006', 'Nh?n vi?n', 'Ban ?i?u h?nh', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(7, 7, '??ng Th? Ph??ng', 'nhanvien07@company.local', '090100007', 'Nh?n vi?n', 'Ph?ng C?ng ngh? th?ng tin (IT)', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(8, 8, 'B?i Quang H?i', 'nhanvien08@company.local', '090100008', 'Nh?n vi?n', 'Ph?ng S?n xu?t', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(9, 9, '?? V?n H?ng', 'nhanvien09@company.local', '090100009', 'Nh?n vi?n', 'Ph?ng Kinh doanh & Marketing', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(10, 10, 'H? Th? H??ng', 'nhanvien10@company.local', '0901000010', 'Nh?n vi?n', 'Ph?ng H?nh ch?nh', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(11, 11, 'Ng? Tu?n Ki?t', 'nhanvien11@company.local', '0901000011', 'Nh?n vi?n', 'Ban ?i?u h?nh', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(12, 12, 'D??ng Th? Lan', 'nhanvien12@company.local', '0901000012', 'Nh?n vi?n', 'Ph?ng Kinh doanh & Marketing', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(13, 13, 'L? C?ng Minh', 'nhanvien13@company.local', '0901000013', 'Nh?n vi?n', 'Ph?ng K? to?n', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(14, 14, '??o Th? Nga', 'nhanvien14@company.local', '0901000014', 'Nh?n vi?n', 'Ban ?i?u h?nh', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(15, 15, '?o?n V?n Nam', 'nhanvien15@company.local', '0901000015', 'Nh?n vi?n', 'Ph?ng Nh?n s?', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(16, 16, 'Nguy?n Th? Ng?c', 'hr01@company.local', '0901000016', 'B? ph?n Nh?n s?', 'Ph?ng H?nh ch?nh', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(17, 17, 'Tr?n H?u Ph?c', 'hr02@company.local', '0901000017', 'B? ph?n Nh?n s?', 'Ph?ng H?nh ch?nh', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(18, 18, 'L? Th? Quy?n', 'hr03@company.local', '0901000018', 'B? ph?n Nh?n s?', 'Ph?ng Kinh doanh & Marketing', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(19, 19, 'Ph?m Qu?c Sang', 'hr04@company.local', '0901000019', 'B? ph?n Nh?n s?', 'Ph?ng H?nh ch?nh', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(20, 20, 'Ho?ng Th? T?m', 'hr05@company.local', '0901000020', 'B? ph?n Nh?n s?', 'Ph?ng Kinh doanh & Marketing', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(21, 21, 'V? V?n Th?i', 'tech01@company.local', '0901000021', 'B? ph?n K? thu?t', 'Ph?ng C?ng ngh? th?ng tin (IT)', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(22, 22, '??ng Th? Uy?n', 'tech02@company.local', '0901000022', 'B? ph?n K? thu?t', 'Ph?ng Nh?n s?', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(23, 23, 'B?i Xu?n Vinh', 'tech03@company.local', '0901000023', 'B? ph?n K? thu?t', 'Ph?ng S?n xu?t', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(24, 24, '?? Th? Vy', 'tech04@company.local', '0901000024', 'B? ph?n K? thu?t', 'Ph?ng S?n xu?t', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(25, 25, 'H? V?n Xu?n', 'tech05@company.local', '0901000025', 'B? ph?n K? thu?t', 'Ban ?i?u h?nh', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(26, 26, 'Ng? Th? Y?n', 'manager01@company.local', '0901000026', 'Qu?n l? / Ban l?nh ??o', 'Ph?ng S?n xu?t', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(27, 27, 'D??ng Tr?ng ??t', 'manager02@company.local', '0901000027', 'Qu?n l? / Ban l?nh ??o', 'Ph?ng Ki?m so?t ch?t l??ng (QC)', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(28, 28, 'L? Th? Di?p', 'manager03@company.local', '0901000028', 'Qu?n l? / Ban l?nh ??o', 'Ph?ng K? to?n', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(29, 29, '??o V?n T?ng', 'manager04@company.local', '0901000029', 'Qu?n l? / Ban l?nh ??o', 'Ph?ng Ki?m so?t ch?t l??ng (QC)', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),
+(30, 30, '?o?n Th? B?ch', 'manager05@company.local', '0901000030', 'Qu?n l? / Ban l?nh ??o', 'Ph?ng Ki?m so?t ch?t l??ng (QC)', 1, '2026-01-01 00:00:00', '2026-06-19 19:57:01'),;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `nhansu`
---
-
-CREATE TABLE `nhansu` (
-  `maND` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `nhansu`
---
-
-INSERT INTO `nhansu` (`maND`) VALUES
-(16),
-(17),
-(18),
-(19),
-(20);
 
 -- --------------------------------------------------------
 

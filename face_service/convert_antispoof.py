@@ -24,13 +24,13 @@ os.makedirs(WEIGHTS_DIR, exist_ok=True)
 MODELS_TO_CONVERT = [
     {
         "pth_path": os.path.join(SILENT_FACE_DIR, "resources", "anti_spoof_models", "2.7_80x80_MiniFASNetV2.pth"),
-        "onnx_path": os.path.join(WEIGHTS_DIR, "MiniFASNetV1SE_80x80.onnx"),
+        "onnx_path": os.path.join(WEIGHTS_DIR, "MiniFASNetV2_80x80.onnx"),
         "model_type": "MiniFASNetV2",
         "input_size": 80,
     },
     {
         "pth_path": os.path.join(SILENT_FACE_DIR, "resources", "anti_spoof_models", "4_0_0_80x80_MiniFASNetV1SE.pth"),
-        "onnx_path": os.path.join(WEIGHTS_DIR, "MiniFASNetV2_80x80.onnx"),
+        "onnx_path": os.path.join(WEIGHTS_DIR, "MiniFASNetV1SE_80x80.onnx"),
         "model_type": "MiniFASNetV1SE",
         "input_size": 80,
     },
@@ -64,7 +64,11 @@ def convert_model(config: dict):
             model = MiniFASNetV2()
 
         # Load weights
-        state = torch.load(pth_path, map_location="cpu")
+        try:
+            state = torch.load(pth_path, map_location="cpu", weights_only=False)
+        except TypeError:
+            state = torch.load(pth_path, map_location="cpu")
+
         if "state_dict" in state:
             state = state["state_dict"]
         # Remove 'module.' prefix nếu có

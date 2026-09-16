@@ -64,32 +64,26 @@ class ApiHRController
         switch ($phuongThuc) {
             case 'GET':
                 if ($id) {
-                    // Chi tiết 1 nhân viên
+                    // Chi tiết 1 nhân viên/người dùng
                     $employees = $this->model->getEmployees('', false, 0);
                     $found = null;
                     foreach ($employees as $emp) {
-                        if ((int)$emp['maND'] === (int)$id
-                            && mb_strtolower(trim($emp['chucVu'] ?? ''), 'UTF-8') === 'nhân viên') {
+                        if ((int)$emp['maND'] === (int)$id) {
                             $found = $emp;
                             break;
                         }
                     }
                     if (!$found) {
-                        respondError('Không tìm thấy nhân viên', 404);
+                        respondError('Không tìm thấy người dùng', 404);
                     }
                     respond(['success' => true, 'data' => $found]);
                 } else {
-                    // Danh sách nhân viên — chỉ role "Nhân viên", tất cả phòng ban
+                    // Danh sách tất cả người dùng
                     $keyword = trim($_GET['q'] ?? '');
                     $activeOnly = ($_GET['active'] ?? '1') !== '0';
                     $limit = max(0, (int)($_GET['limit'] ?? 0));
 
-                    $allEmployees = $this->model->getEmployees($keyword, $activeOnly, 0);
-
-                    // HR chỉ xem được nhân viên có chức vụ "Nhân viên" (tất cả phòng ban)
-                    $employees = array_values(array_filter($allEmployees, function($e) {
-                        return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
-                    }));
+                    $employees = $this->model->getEmployees($keyword, $activeOnly, 0);
 
                     if ($limit > 0) {
                         $employees = array_slice($employees, 0, $limit);
@@ -109,27 +103,31 @@ class ApiHRController
                 break;
 
             case 'POST':
-                // Thêm nhân viên mới
+                // Thêm người dùng mới
                 $payload = $_POST;
                 if (empty($payload)) $payload = $body;
-                $payload['chucVu'] = 'Nhân viên'; // HR chỉ thêm được nhân viên
+                if (empty($payload['chucVu'])) {
+                    $payload['chucVu'] = 'Nhân viên';
+                }
 
                 $ok = $this->model->saveEmployee($payload);
                 respond(
-                    ['success' => $ok, 'message' => $ok ? 'Thêm nhân viên thành công' : 'Không thể thêm nhân viên'],
+                    ['success' => $ok, 'message' => $ok ? 'Thêm người dùng thành công' : 'Không thể thêm người dùng'],
                     $ok ? 201 : 422
                 );
                 break;
 
             case 'PUT':
-                if (!$id) respondError('Thiếu mã nhân viên', 422);
+                if (!$id) respondError('Thiếu mã người dùng', 422);
                 $payload = $body;
                 $payload['maND'] = (int)$id;
-                $payload['chucVu'] = 'Nhân viên'; // HR chỉ sửa được nhân viên
+                if (empty($payload['chucVu'])) {
+                    $payload['chucVu'] = 'Nhân viên';
+                }
 
                 $ok = $this->model->saveEmployee($payload);
                 respond(
-                    ['success' => $ok, 'message' => $ok ? 'Cập nhật nhân viên thành công' : 'Không thể cập nhật'],
+                    ['success' => $ok, 'message' => $ok ? 'Cập nhật người dùng thành công' : 'Không thể cập nhật'],
                     $ok ? 200 : 422
                 );
                 break;
