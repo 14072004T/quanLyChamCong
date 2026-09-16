@@ -184,11 +184,12 @@ $todayOut = $todayShiftStatus['gioRaCuoi'] ?? null;
 
                             <div class="mb-request-form-group">
                                 <label for="lyDo">Lý do điều chỉnh <span style="color:#ef4444">*</span></label>
-                                <select id="lyDo" name="lyDo" class="mb-request-input-field" required style="padding-left: 12px !important; height: 38px;">
+                                <select id="lyDo-mb" name="lyDo" class="mb-request-input-field" required style="padding-left: 12px !important; height: 38px;" onchange="toggleLyDoKhac('mb')">
                                     <option value="">-- Chọn lý do --</option>
                                     <option value="Quên chấm công">Quên chấm công</option>
-                                    <option value="Xin OT">Xin OT</option>
+                                    <option value="__khac__">Khác</option>
                                 </select>
+                                <textarea id="lyDo-khac-mb" placeholder="Nhập lý do cụ thể..." style="display:none; margin-top:6px; width:100%; min-height:72px; border-radius:10px; border:1px solid #cbd5e1; padding:8px 12px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
                             </div>
 
                             <div class="mb-request-form-group">
@@ -324,22 +325,28 @@ $todayOut = $todayShiftStatus['gioRaCuoi'] ?? null;
                     </div>
 
                     <!-- Bottom row: Reason + Evidence -->
-                    <div style="display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: end; margin-bottom: 16px;">
-                        <div class="yc-form-group">
-                            <label class="yc-label" for="lyDo">Lý do điều chỉnh <span style="color:var(--yc-danger)">*</span></label>
-                            <select id="lyDo" name="lyDo" class="yc-input" required style="height: 36px;">
-                                <option value="">-- Chọn lý do --</option>
-                                <option value="Quên chấm công">Quên chấm công</option>
-                                <option value="Xin OT">Xin OT</option>
-                            </select>
-                        </div>
-                        <div class="yc-form-group">
-                            <label class="yc-label">Minh chứng (Ảnh/PDF)</label>
-                            <div class="yc-file-zone" id="fileZone" onclick="document.getElementById('evidenceFile').click()" style="height: 36px;">
-                                <i class="fas fa-paperclip"></i>
-                                <p id="fileText">Chọn file minh chứng...</p>
-                                <input type="file" id="evidenceFile" name="tepMinhChung" accept=".jpg,.jpeg,.png,.pdf" style="display:none">
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: end;">
+                            <div class="yc-form-group">
+                                <label class="yc-label" for="lyDo-dt">Lý do điều chỉnh <span style="color:var(--yc-danger)">*</span></label>
+                                <select id="lyDo-dt" name="lyDo" class="yc-input" required style="height: 36px;" onchange="toggleLyDoKhac('dt')">
+                                    <option value="">-- Chọn lý do --</option>
+                                    <option value="Quên chấm công">Quên chấm công</option>
+                                    <option value="__khac__">Khác</option>
+                                </select>
                             </div>
+                            <div class="yc-form-group">
+                                <label class="yc-label">Minh chứng (Ảnh/PDF)</label>
+                                <div class="yc-file-zone" id="fileZone" onclick="document.getElementById('evidenceFile').click()" style="height: 36px;">
+                                    <i class="fas fa-paperclip"></i>
+                                    <p id="fileText">Chọn file minh chứng...</p>
+                                    <input type="file" id="evidenceFile" name="tepMinhChung" accept=".jpg,.jpeg,.png,.pdf" style="display:none">
+                                </div>
+                            </div>
+                        </div>
+                        <div id="lyDo-khac-dt-wrap" style="display:none; margin-top:10px;">
+                            <label class="yc-label">Nhập lý do cụ thể <span style="color:var(--yc-danger)">*</span></label>
+                            <textarea id="lyDo-khac-dt" placeholder="Nhập lý do chi tiết..." style="width:100%; min-height:68px; border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box; margin-top:4px;"></textarea>
                         </div>
                     </div>
 
@@ -513,8 +520,55 @@ if (activeId) {
     if (el) { el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.background='#fffbeb'; }
 }
 
+// Hiện/ẩn ô nhập lý do Khác
+function toggleLyDoKhac(mode) {
+    if (mode === 'mb') {
+        var sel = document.getElementById('lyDo-mb');
+        var ta  = document.getElementById('lyDo-khac-mb');
+        if (sel && ta) {
+            var show = sel.value === '__khac__';
+            ta.style.display = show ? 'block' : 'none';
+            ta.required = show;
+        }
+    } else {
+        var sel = document.getElementById('lyDo-dt');
+        var wrap = document.getElementById('lyDo-khac-dt-wrap');
+        var ta   = document.getElementById('lyDo-khac-dt');
+        if (sel && wrap && ta) {
+            var show = sel.value === '__khac__';
+            wrap.style.display = show ? 'block' : 'none';
+            ta.required = show;
+        }
+    }
+}
+
 // Form validation and prevent multiple submissions
 document.getElementById('editRequestForm').addEventListener('submit', function(e) {
+    // Xử lý lý do "Khác": override giá trị select bằng nội dung textarea
+    var selMb  = document.getElementById('lyDo-mb');
+    var taMb   = document.getElementById('lyDo-khac-mb');
+    var selDt  = document.getElementById('lyDo-dt');
+    var taDt   = document.getElementById('lyDo-khac-dt');
+
+    if (selMb && selMb.value === '__khac__') {
+        if (!taMb || !taMb.value.trim()) {
+            e.preventDefault();
+            alert('Vui lòng nhập lý do cụ thể!');
+            taMb && taMb.focus();
+            return;
+        }
+        selMb.value = taMb.value.trim();
+    }
+    if (selDt && selDt.value === '__khac__') {
+        if (!taDt || !taDt.value.trim()) {
+            e.preventDefault();
+            alert('Vui lòng nhập lý do cụ thể!');
+            taDt && taDt.focus();
+            return;
+        }
+        selDt.value = taDt.value.trim();
+    }
+
     var fileInput = document.getElementById('evidenceFile');
     if (fileInput.files.length === 0) {
         e.preventDefault();
