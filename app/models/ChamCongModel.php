@@ -4094,6 +4094,22 @@ class ChamCongModel
     }
 
     /**
+     * Đặt trangThai cụ thể cho tài khoản ('1' = hoạt động, '0' = khóa)
+     */
+    public function setAccountStatus($maTK, $newStatus)
+    {
+        $maTK = (int)$maTK;
+        $newStatus = ($newStatus === '1' || $newStatus === 1) ? '1' : '0';
+        if ($maTK <= 0) return false;
+
+        $sql = "UPDATE taikhoan SET trangThai = ?, soLanDangNhapSai = IF(? = '1', 0, soLanDangNhapSai) WHERE maTK = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) return false;
+        $stmt->bind_param('ssi', $newStatus, $newStatus, $maTK);
+        return $stmt->execute();
+    }
+
+    /**
      * Tech: Kích hoạt tài khoản khi phân quyền (nếu đang ở trạng thái pending)
      */
     public function activateAccountByUserId($maND)

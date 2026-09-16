@@ -953,6 +953,7 @@ function toggleAccountStatus(maTK, tenDangNhap, action) {
 
     const formData = new FormData();
     formData.append('maTK', maTK);
+    formData.append('action', action);
 
     fetch('index.php?page=tech-toggle-account', {
         method: 'POST',

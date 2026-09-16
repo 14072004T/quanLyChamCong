@@ -552,15 +552,27 @@ class TechController
         }
 
         $maTK = (int)($_POST['maTK'] ?? 0);
+        $action = trim($_POST['action'] ?? '');
 
         if ($maTK <= 0) {
             echo json_encode(['success' => false, 'message' => 'Mã tài khoản không hợp lệ']);
             exit;
         }
 
-        $result = $this->model->toggleAccountStatus($maTK);
+        // Nếu có action cụ thể thì xử lý theo action, không thì toggle
+        if ($action === 'activate' || $action === 'unlock') {
+            $result = $this->model->setAccountStatus($maTK, '1');
+            $msg = $action === 'activate' ? 'Kích hoạt tài khoản thành công' : 'Mở khóa tài khoản thành công';
+        } elseif ($action === 'lock') {
+            $result = $this->model->setAccountStatus($maTK, '0');
+            $msg = 'Khóa tài khoản thành công';
+        } else {
+            $result = $this->model->toggleAccountStatus($maTK);
+            $msg = 'Cập nhật trạng thái tài khoản thành công';
+        }
+
         if ($result) {
-            echo json_encode(['success' => true, 'message' => 'Cập nhật trạng thái tài khoản thành công']);
+            echo json_encode(['success' => true, 'message' => $msg]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Lỗi khi cập nhật trạng thái tài khoản']);
         }
