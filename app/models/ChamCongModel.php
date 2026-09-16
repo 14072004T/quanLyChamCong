@@ -2344,7 +2344,12 @@ class ChamCongModel
         }
 
         $type = trim($filters['type'] ?? '');
-        if ($type !== '') {
+        if ($type === 'khac') {
+            // "Khác": lấy các lý do không phải là "quên chấm công"
+            $conditions[] = "c.lyDo NOT LIKE CONCAT('%', ?, '%')";
+            $types .= 's';
+            $params[] = 'quên chấm công';
+        } elseif ($type !== '') {
             $conditions[] = "c.lyDo LIKE CONCAT('%', ?, '%')";
             $types .= 's';
             $params[] = $type;

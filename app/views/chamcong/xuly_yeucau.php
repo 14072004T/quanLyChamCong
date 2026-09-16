@@ -91,7 +91,7 @@ $activeRequestId = (int)($_GET['request_id'] ?? 0);
                     <select name="type">
                         <option value="">Tất cả</option>
                         <option value="quên chấm công" <?= (($filters['type'] ?? '') === 'quên chấm công') ? 'selected' : '' ?>>Quên chấm công</option>
-                        <option value="ot" <?= (($filters['type'] ?? '') === 'ot') ? 'selected' : '' ?>>Xin OT</option>
+                        <option value="khac" <?= (($filters['type'] ?? '') === 'khac') ? 'selected' : '' ?>>Khác</option>
                     </select>
                 </div>
                 <div class="form-group">
