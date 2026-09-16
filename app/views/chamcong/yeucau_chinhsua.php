@@ -184,12 +184,13 @@ $todayOut = $todayShiftStatus['gioRaCuoi'] ?? null;
 
                             <div class="mb-request-form-group">
                                 <label for="lyDo">Lý do điều chỉnh <span style="color:#ef4444">*</span></label>
-                                <select id="lyDo-mb" name="lyDo" class="mb-request-input-field" required style="padding-left: 12px !important; height: 38px;" onchange="toggleLyDoKhac('mb')">
+                                <select id="lyDo-mb" class="mb-request-input-field" required style="padding-left: 12px !important; height: 38px;" onchange="toggleLyDoKhac('mb')">
                                     <option value="">-- Chọn lý do --</option>
                                     <option value="Quên chấm công">Quên chấm công</option>
                                     <option value="__khac__">Khác</option>
                                 </select>
                                 <textarea id="lyDo-khac-mb" placeholder="Nhập lý do cụ thể..." style="display:none; margin-top:6px; width:100%; min-height:72px; border-radius:10px; border:1px solid #cbd5e1; padding:8px 12px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
+                                <input type="hidden" id="lyDo-hidden-mb" name="lyDo">
                             </div>
 
                             <div class="mb-request-form-group">
@@ -329,11 +330,12 @@ $todayOut = $todayShiftStatus['gioRaCuoi'] ?? null;
                         <div style="display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: end;">
                             <div class="yc-form-group">
                                 <label class="yc-label" for="lyDo-dt">Lý do điều chỉnh <span style="color:var(--yc-danger)">*</span></label>
-                                <select id="lyDo-dt" name="lyDo" class="yc-input" required style="height: 36px;" onchange="toggleLyDoKhac('dt')">
+                                <select id="lyDo-dt" class="yc-input" required style="height: 36px;" onchange="toggleLyDoKhac('dt')">
                                     <option value="">-- Chọn lý do --</option>
                                     <option value="Quên chấm công">Quên chấm công</option>
                                     <option value="__khac__">Khác</option>
                                 </select>
+                                <input type="hidden" id="lyDo-hidden-dt" name="lyDo">
                             </div>
                             <div class="yc-form-group">
                                 <label class="yc-label">Minh chứng (Ảnh/PDF)</label>
@@ -523,50 +525,70 @@ if (activeId) {
 // Hiện/ẩn ô nhập lý do Khác
 function toggleLyDoKhac(mode) {
     if (mode === 'mb') {
-        var sel = document.getElementById('lyDo-mb');
-        var ta  = document.getElementById('lyDo-khac-mb');
-        if (sel && ta) {
-            var show = sel.value === '__khac__';
-            ta.style.display = show ? 'block' : 'none';
-            ta.required = show;
-        }
+        var sel    = document.getElementById('lyDo-mb');
+        var ta     = document.getElementById('lyDo-khac-mb');
+        var hidden = document.getElementById('lyDo-hidden-mb');
+        if (!sel) return;
+        var isKhac = sel.value === '__khac__';
+        if (ta)     { ta.style.display = isKhac ? 'block' : 'none'; ta.required = isKhac; }
+        if (hidden) { hidden.value = isKhac ? '' : sel.value; }
     } else {
-        var sel = document.getElementById('lyDo-dt');
-        var wrap = document.getElementById('lyDo-khac-dt-wrap');
-        var ta   = document.getElementById('lyDo-khac-dt');
-        if (sel && wrap && ta) {
-            var show = sel.value === '__khac__';
-            wrap.style.display = show ? 'block' : 'none';
-            ta.required = show;
-        }
+        var sel    = document.getElementById('lyDo-dt');
+        var wrap   = document.getElementById('lyDo-khac-dt-wrap');
+        var ta     = document.getElementById('lyDo-khac-dt');
+        var hidden = document.getElementById('lyDo-hidden-dt');
+        if (!sel) return;
+        var isKhac = sel.value === '__khac__';
+        if (wrap)   { wrap.style.display = isKhac ? 'block' : 'none'; }
+        if (ta)     { ta.required = isKhac; }
+        if (hidden) { hidden.value = isKhac ? '' : sel.value; }
     }
 }
 
 // Form validation and prevent multiple submissions
 document.getElementById('editRequestForm').addEventListener('submit', function(e) {
-    // Xử lý lý do "Khác": override giá trị select bằng nội dung textarea
-    var selMb  = document.getElementById('lyDo-mb');
-    var taMb   = document.getElementById('lyDo-khac-mb');
-    var selDt  = document.getElementById('lyDo-dt');
-    var taDt   = document.getElementById('lyDo-khac-dt');
+    // Xử lý lý do: ghi giá trị vào hidden input trước khi submit
+    var selMb    = document.getElementById('lyDo-mb');
+    var taMb     = document.getElementById('lyDo-khac-mb');
+    var hiddenMb = document.getElementById('lyDo-hidden-mb');
+    var selDt    = document.getElementById('lyDo-dt');
+    var taDt     = document.getElementById('lyDo-khac-dt');
+    var hiddenDt = document.getElementById('lyDo-hidden-dt');
 
-    if (selMb && selMb.value === '__khac__') {
-        if (!taMb || !taMb.value.trim()) {
-            e.preventDefault();
-            alert('Vui lòng nhập lý do cụ thể!');
-            taMb && taMb.focus();
-            return;
-        }
-        selMb.value = taMb.value.trim();
+    // Xác định active select (mobile hoặc desktop)
+    var activeHidden = hiddenMb || hiddenDt;
+    var activeSel    = selMb    || selDt;
+    var activeTa     = taMb    || taDt;
+    if (selMb && selMb.offsetParent !== null) {
+        // Mobile form đang hiển
+        activeHidden = hiddenMb;
+        activeSel    = selMb;
+        activeTa     = taMb;
+    } else if (selDt && selDt.offsetParent !== null) {
+        // Desktop form đang hiển
+        activeHidden = hiddenDt;
+        activeSel    = selDt;
+        activeTa     = taDt;
     }
-    if (selDt && selDt.value === '__khac__') {
-        if (!taDt || !taDt.value.trim()) {
-            e.preventDefault();
-            alert('Vui lòng nhập lý do cụ thể!');
-            taDt && taDt.focus();
-            return;
+
+    if (activeSel && activeHidden) {
+        if (activeSel.value === '__khac__') {
+            if (!activeTa || !activeTa.value.trim()) {
+                e.preventDefault();
+                alert('Vui lòng nhập lý do cụ thể!');
+                activeTa && activeTa.focus();
+                return;
+            }
+            activeHidden.value = activeTa.value.trim();
+        } else {
+            if (!activeSel.value) {
+                e.preventDefault();
+                alert('Vui lòng chọn lý do!');
+                activeSel.focus();
+                return;
+            }
+            activeHidden.value = activeSel.value;
         }
-        selDt.value = taDt.value.trim();
     }
 
     var fileInput = document.getElementById('evidenceFile');
