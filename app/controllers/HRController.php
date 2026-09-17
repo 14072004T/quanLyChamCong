@@ -48,12 +48,7 @@ class HRController
         $keyword = trim($_GET['q'] ?? '');
         $activeOnly = ($_GET['active'] ?? '1') !== '0';
         $limit = max(0, (int)($_GET['limit'] ?? 20));
-        $allEmployees = $this->model->getEmployees($keyword, $activeOnly, 0);
-        
-        // HR chỉ xem được nhân viên có chức vụ "Nhân viên" (tất cả phòng ban)
-        $employees = array_values(array_filter($allEmployees, function($e) {
-            return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
-        }));
+        $employees = $this->model->getEmployees($keyword, $activeOnly, 0);
         
         if ($limit > 0) {
             $employees = array_slice($employees, 0, $limit);
@@ -162,10 +157,7 @@ class HRController
             $employeeKeyword
         );
         $allActive = $this->model->getEmployees('', true, 0);
-        // HR chỉ xem được nhân viên có chức vụ "Nhân viên" (tất cả phòng ban)
-        $filterEmployees = array_values(array_filter($allActive, function($e) {
-            return mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') === 'nhân viên';
-        }));
+        $filterEmployees = $allActive;
         
         $monthlyApproval = $this->model->getMonthlyApprovalByMonth($selectedMonth);
         $approvalHistory = $this->model->getTimesheetApprovalSummary();

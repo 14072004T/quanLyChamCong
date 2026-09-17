@@ -9,8 +9,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 $editing = null;
 if (!empty($_GET['edit']) && !empty($employees)) {
     foreach ($employees as $emp) {
-        if ((int)$emp['maND'] === (int)$_GET['edit']
-    && ($emp['chucVu'] ?? '') === 'Nhân viên'){
+        if ((int)$emp['maND'] === (int)$_GET['edit']) {
             $editing = $emp;
             break;
         }
@@ -83,10 +82,13 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                     <label>Chức vụ *</label>
                     <select name="chucVu" required>
                         <?php
-                        $roles = ['Nhân viên'];
+                        $roles = ['Nhân viên', 'Bộ phận Nhân sự', 'Bộ phận Kỹ thuật', 'Quản lý'];
                         $selectedRole = $editing['chucVu'] ?? 'Nhân viên';
-                        foreach ($roles as $roleLabel):
+                        if (!empty($selectedRole) && !in_array($selectedRole, $roles, true)):
                         ?>
+                            <option value="<?= htmlspecialchars($selectedRole) ?>" selected><?= htmlspecialchars($selectedRole) ?> (Hiện tại)</option>
+                        <?php endif; ?>
+                        <?php foreach ($roles as $roleLabel): ?>
                             <option value="<?= htmlspecialchars($roleLabel) ?>" <?= $selectedRole === $roleLabel ? 'selected' : '' ?>><?= htmlspecialchars($roleLabel) ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -122,7 +124,6 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                         <th>TÀI KHOẢN</th>
                         <th>EMAIL</th>
                         <th>PHÒNG BAN</th>
-                        <!-- Ẩn cột chức vụ -->
                         <th>TRẠNG THÁI</th>
                         <th>HÀNH ĐỘNG</th>
                     </tr>
@@ -130,8 +131,6 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                <tbody>
 <?php if (!empty($employees)): ?>
     <?php foreach ($employees as $emp): ?>
-
-        <?php if (($emp['chucVu'] ?? '') !== 'Nhân viên') continue; ?>
 
         <tr>
             <td><?= (int)$emp['maND'] ?></td>
@@ -147,7 +146,6 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                 </a>
             </td>
             <td><?= htmlspecialchars($emp['phongBan'] ?? '') ?></td>
-            <!-- Ẩn cột chức vụ -->
             <td>
                 <span class="trangThai-badge <?= (int)$emp['trangThai'] === 1 ? 'trangThai-approved' : 'trangThai-rejected' ?>">
                     <?= (int)$emp['trangThai'] === 1 ? '• Hoạt động' : '• Ngừng' ?>
@@ -173,7 +171,7 @@ if (!empty($_GET['edit']) && !empty($employees)) {
     <?php endforeach; ?>
 <?php else: ?>
     <tr>
-        <td colspan="8" class="empty-state">
+        <td colspan="7" class="empty-state">
             Không có nhân viên phù hợp.
         </td>
     </tr>
