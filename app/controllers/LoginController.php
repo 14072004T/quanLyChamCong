@@ -132,13 +132,7 @@ class LoginController {
      * Lấy giá trị cài đặt hệ thống từ bảng caidathethong
      */
     private function getSystemSetting($conn, $key, $default) {
-        $stmt = $conn->prepare("SELECT giaTri FROM caidathethong WHERE tenCaiDat = ? LIMIT 1");
-        if (!$stmt) return $default;
-        $stmt->bind_param('s', $key);
-        $stmt->execute();
-        $row = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        return $row['giaTri'] ?? $default;
+        return $default;
     }
 
     public function handleLogin() {

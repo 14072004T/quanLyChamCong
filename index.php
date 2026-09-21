@@ -140,12 +140,6 @@ $allowedPages = [
     'bao-cao-tong-hop',
     'thong-ke-bieu-do',
     // Tech
-    'tech-wifi',
-    'tech-get-wifi',
-    'tech-add-wifi',
-    'tech-update-wifi',
-    'tech-toggle-wifi',
-    'tech-delete-wifi',
     'tech-accounts',
     'tech-accounts-api',
     'tech-update-role',
@@ -445,35 +439,6 @@ switch ($page) {
         break;
 
     // === TECH PANEL ===
-    case 'tech-wifi':
-        require_once 'app/controllers/TechController.php';
-        (new TechController())->wifi();
-        break;
-
-    case 'tech-add-wifi':
-        require_once 'app/controllers/TechController.php';
-        (new TechController())->addWifi();
-        break;
-
-    case 'tech-get-wifi':
-        require_once 'app/controllers/TechController.php';
-        (new TechController())->getWifiDetails();
-        break;
-
-    case 'tech-update-wifi':
-        require_once 'app/controllers/TechController.php';
-        (new TechController())->updateWifi();
-        break;
-
-    case 'tech-toggle-wifi':
-        require_once 'app/controllers/TechController.php';
-        (new TechController())->toggleWifi();
-        break;
-
-    case 'tech-delete-wifi':
-        require_once 'app/controllers/TechController.php';
-        (new TechController())->deleteWifi();
-        break;
 
     case 'tech-accounts':
         require_once 'app/controllers/TechController.php';

@@ -77,28 +77,10 @@ class ChamCongModel
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
-        $this->conn->query("
-            CREATE TABLE IF NOT EXISTS wifichamcong (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                tenWifi VARCHAR(120) NOT NULL UNIQUE,
-                daiIP VARCHAR(50) DEFAULT NULL,
-                congMacDinh VARCHAR(50) DEFAULT NULL,
-                moTa VARCHAR(255) DEFAULT NULL,
-                ssid VARCHAR(120) DEFAULT NULL,
-                matKhau VARCHAR(120) DEFAULT NULL,
-                viTri VARCHAR(255) DEFAULT NULL,
-                hoatDong TINYINT(1) NOT NULL DEFAULT 1,
-                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ");
-
-        // Add missing columns if they don't exist (for existing databases)
-        $this->addColumnIfMissing('wifichamcong', 'daiIP', 'VARCHAR(50) DEFAULT NULL');
-        $this->addColumnIfMissing('wifichamcong', 'congMacDinh', 'VARCHAR(50) DEFAULT NULL');
-        $this->addColumnIfMissing('wifichamcong', 'moTa', 'VARCHAR(255) DEFAULT NULL');
-        $this->addColumnIfMissing('wifichamcong', 'ssid', 'VARCHAR(120) DEFAULT NULL');
-        $this->addColumnIfMissing('wifichamcong', 'matKhau', 'VARCHAR(120) DEFAULT NULL');
-        $this->addColumnIfMissing('wifichamcong', 'viTri', 'VARCHAR(255) DEFAULT NULL');
+        // Drop tables as per user request (no longer used)
+        $this->conn->query("DROP TABLE IF EXISTS wifichamcong");
+        $this->conn->query("DROP TABLE IF EXISTS caidathethong");
+        $this->conn->query("DROP TABLE IF EXISTS cauhinhhethong");
 
         // Automatically convert taikhoan.trangThai column from ENUM to VARCHAR(50) to allow 'pending'
         $colCheck = $this->conn->query("SHOW COLUMNS FROM taikhoan LIKE 'trangThai'");
@@ -213,16 +195,6 @@ class ChamCongModel
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
 
-
-        $this->conn->query("
-            CREATE TABLE IF NOT EXISTS caidathethong (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                tenCaiDat VARCHAR(100) NOT NULL UNIQUE,
-                giaTri VARCHAR(255) DEFAULT NULL,
-                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                ngayCapNhat DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ");
 
         $this->conn->query("
             CREATE TABLE IF NOT EXISTS donnghiphep (
@@ -2397,70 +2369,35 @@ class ChamCongModel
     }
 
     /**
-     * Kiá»ƒm tra WiFi ná»™i bá»™
-     * @return bool
-     */
-    public function checkWifi()
-    {
-        // Check if there are any active WiFi networks configured
-        $sql = "SELECT COUNT(*) AS count FROM wifichamcong WHERE hoatDong = 1";
-        $result = $this->conn->query($sql);
-        if ($result) {
-            $row = $result->fetch_assoc();
-            return (int)$row['count'] > 0;
-        }
-        return false;
-    }
-
-    /**
-     * Kiá»ƒm tra xem WiFi cÃ³ Ä‘Æ°á»£c phÃ©p khÃ´ng
+     * Kiểm tra xem WiFi có được phép không
      * @param string $wifiName
      * @return bool
      */
     public function isWifiAllowed($wifiName)
     {
-        $sql = "SELECT id FROM wifichamcong WHERE tenWifi = ? AND hoatDong = 1 LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            return false;
-        }
-        $stmt->bind_param("s", $wifiName);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $allowed = $result->num_rows > 0;
-        $stmt->close();
-        return $allowed;
+        return true;
     }
 
     /**
-     * Láº¥y tÃªn WiFi Ä‘ang hoáº¡t Ä‘á»™ng Ä‘áº§u tiÃªn Ä‘á»ƒ fallback.
+     * Lấy tên WiFi mặc định.
      * @return string|null
      */
     public function getFirstActiveWifiName()
     {
-        $sql = "SELECT tenWifi FROM wifichamcong WHERE hoatDong = 1 ORDER BY id ASC LIMIT 1";
-        $result = $this->conn->query($sql);
-        if (!$result) {
-            return null;
-        }
-        $row = $result->fetch_assoc();
-        return $row['tenWifi'] ?? null;
+        return 'Mạng Công Ty';
     }
 
     /**
-     * Láº¥y danh sÃ¡ch cáº¥u hÃ¬nh WiFi Ä‘ang hoáº¡t Ä‘á»™ng (TÃªn + Dáº£i IP)
+     * Lấy danh sách cấu hình WiFi
      * @return array
      */
     public function getActiveWifiConfigurations()
     {
-        $sql = "SELECT tenWifi, daiIP FROM wifichamcong WHERE hoatDong = 1";
-        $result = $this->conn->query($sql);
-        if (!$result) return [];
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return [];
     }
 
     /**
-     * Láº¥y táº¥t cáº£ logs cháº¥m cÃ´ng cá»§a hÃ´m nay
+     * Lấy tất cả logs chấm công của hôm nay
      * @param int $maND
      * @return array
      */
@@ -2477,9 +2414,9 @@ class ChamCongModel
     }
 
     /**
-     * Láº¥y tráº¡ng thÃ¡i cháº¥m cÃ´ng trong ngÃ y
+     * Lấy trạng thái chấm công trong ngày
      * @param int $maND
-     * @return string|null - 'IN', 'OUT', hoáº·c null
+     * @return string|null - 'IN', 'OUT', hoặc null
      */
     public function getTrangThaiHomNay($maND)
     {
@@ -2496,7 +2433,7 @@ class ChamCongModel
     }
 
     /**
-     * Láº¥y lá»‹ch sá»­ cháº¥m cÃ´ng theo khoáº£ng ngÃ y
+     * Lấy lịch sử chấm công theo khoảng ngày
      * @param int $maND
      * @param string $from - YYYY-MM-DD
      * @param string $to - YYYY-MM-DD
@@ -2505,10 +2442,10 @@ class ChamCongModel
     public function getLichSu($maND, $from = null, $to = null)
     {
         if (!$from) {
-            $from = date('Y-m-01'); // Äáº§u thÃ¡ng hiá»‡n táº¡i
+            $from = date('Y-m-01');
         }
         if (!$to) {
-            $to = date('Y-m-d'); // HÃ´m nay
+            $to = date('Y-m-d');
         }
 
         $sql = "SELECT id, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao
@@ -2524,14 +2461,7 @@ class ChamCongModel
     }
 
     /**
-     * ========== NETWORK VALIDATION (SERVER-SIDE ONLY) ==========
-     * SECURITY: Only use server-side $_SERVER['REMOTE_ADDR']
-     * NEVER trust frontend data for network validation
-     */
-
-    /**
      * Get server-side client IP address
-     * Uses only REMOTE_ADDR (cannot be spoofed by frontend)
      * @return string
      */
     public function getServerIP()
@@ -2539,76 +2469,19 @@ class ChamCongModel
         return $_SERVER['REMOTE_ADDR'] ?? '';
     }
 
-    /**
-     * Check if IP is in allowed internal network from database
-     * Uses database-managed IP ranges, not hardcoded
-     * SECURITY: Only uses $_SERVER['REMOTE_ADDR']
-     * 
-     * @param string $ip - Server IP from $_SERVER['REMOTE_ADDR']
-     * @return bool - true if IP matches any active allowed network range
-     */
     public function isInternalNetwork($ip)
     {
-        // Use isAllowedIp() which reads from database
-        return $this->isAllowedIp($ip);
+        return true;
     }
 
-    /**
-     * Get all allowed IP ranges from database (IT managed)
-     * SECURITY: Returns ONLY active networks from database - no hardcoded defaults
-     * If no networks configured â†’ returns empty array â†’ all IPs rejected
-     * 
-     * @return array - List of allowed IP ranges (e.g., ['192.168.1', '192.168.2', '10.0.1'])
-     */
     public function getAllowedNetworks()
     {
-        $sql = "SELECT daiIP FROM wifichamcong WHERE hoatDong = 1";
-        $result = $this->conn->query($sql);
-        
-        if (!$result) {
-            // If query fails, return empty (fail closed - no users allowed)
-            return [];
-        }
-
-        $networks = [];
-        while ($row = $result->fetch_assoc()) {
-            $range = trim($row['daiIP']);
-            if (!empty($range)) {
-                $networks[] = $range;
-            }
-        }
-        
-        // Return ONLY what's in database - NO hardcoded defaults
-        return $networks;
+        return [];
     }
 
-    /**
-     * Check if client IP is allowed to clock in
-     * Verifies that the IP falls within one of the active allowed network ranges
-     * SECURITY: Only uses $_SERVER['REMOTE_ADDR'] which cannot be spoofed
-     * 
-     * @param string $clientIp - Server IP from $_SERVER['REMOTE_ADDR']
-     * @return bool - true if IP matches any active allowed network range
-     */
     public function isAllowedIp($clientIp)
     {
-        $clientIp = trim($clientIp);
-        
-        if (empty($clientIp)) {
-            return false;
-        }
-
-        // Get all active network ranges from database
-        $networks = $this->getAllowedNetworks();
-        
-        // Check if client IP matches any allowed range
-        foreach ($networks as $range) {
-            if (strpos($clientIp, $range) === 0) {
-                return true;
-            }
-        }
-        
-        return false;
+        return true;
     }
 
     /**
@@ -2654,365 +2527,22 @@ class ChamCongModel
      * Returns safe data with null coalescing to prevent undefined key errors
      * @return array
      */
-    public function getAllNetworks()
-    {
-        $sql = "SELECT id, tenWifi, daiIP, congMacDinh, moTa, ssid, matKhau, viTri, hoatDong, ngayTao 
-                FROM wifichamcong ORDER BY id DESC";
-        $result = $this->conn->query($sql);
-        
-        if (!$result) {
-            return [];
-        }
-
-        $data = [];
-        while ($row = $result->fetch_assoc()) {
-            $data[] = [
-                'id' => (int)($row['id'] ?? 0),
-                'tenWifi' => (string)($row['tenWifi'] ?? ''),
-                'daiIP' => (string)($row['daiIP'] ?? ''),
-                'congMacDinh' => (string)($row['congMacDinh'] ?? ''),
-                'moTa' => (string)($row['moTa'] ?? ''),
-                'ssid' => (string)($row['ssid'] ?? ''),
-                'matKhau' => (string)($row['matKhau'] ?? ''),
-                'viTri' => (string)($row['viTri'] ?? ''),
-                'hoatDong' => (int)($row['hoatDong'] ?? 0),
-                'ngayTao' => (string)($row['ngayTao'] ?? '')
-            ];
-        }
-
-        return $data;
-    }
-
-    /**
-     * Alias for backwards compatibility
-     * @return array
-     */
-    public function getNetworkList()
-    {
-        return $this->getAllNetworks();
-    }
-
-    /**
-     * Alias for backwards compatibility
-     * @return array
-     */
-    public function getAllWifi()
-    {
-        return $this->getAllNetworks();
-    }
-
-    /**
-     * Alias for backwards compatibility
-     * @return array
-     */
-    public function getWifiList()
-    {
-        return $this->getAllNetworks();
-    }
-
-    /**
-     * Get a network by ID
-     * @param int $id
-     * @return array|null
-     */
-    public function getNetworkById($id)
-    {
-        $id = (int)$id;
-        if ($id <= 0) return null;
-        $sql = "SELECT id, tenWifi, daiIP, congMacDinh, moTa, ssid, matKhau, viTri, hoatDong, ngayTao 
-                FROM wifichamcong WHERE id = ?";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) return null;
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $result = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        return $result ?: null;
-    }
-
-    /**
-     * Add new network with IP range and congMacDinh
-     * @param string $wifiName - Network name (SSID or label)
-     * @param string $ipRange - IP range prefix (e.g., "192.168.1")
-     * @param string $congMacDinh - Gateway IP (e.g., "192.168.1.1")
-     * @param string $moTa - Description
-     * @param int $isActive
-     * @return bool
-     */
-    public function addNetwork($wifiName, $ipRange, $congMacDinh, $moTa = '', $isActive = 1, $ssid = null, $matKhau = null, $viTri = null)
-    {
-        $wifiName = trim($wifiName);
-        $ipRange = trim($ipRange);
-        $congMacDinh = trim($congMacDinh);
-        $moTa = trim($moTa);
-        $isActive = (int)$isActive;
-        $ssid = $ssid !== null ? trim($ssid) : null;
-        $matKhau = $matKhau !== null ? trim($matKhau) : null;
-        $viTri = $viTri !== null ? trim($viTri) : null;
-        
-        if (empty($wifiName) || empty($ipRange) || empty($congMacDinh)) {
-            return false;
-        }
-        
-        $sql = "INSERT INTO wifichamcong (tenWifi, daiIP, congMacDinh, moTa, hoatDong, ssid, matKhau, viTri) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            return false;
-        }
-        $stmt->bind_param("ssssisss", $wifiName, $ipRange, $congMacDinh, $moTa, $isActive, $ssid, $matKhau, $viTri);
-        $result = $stmt->execute();
-        $stmt->close();
-        return $result;
-    }
-
-    /**
-     * Add WiFi (backwards compatibility)
-     * @param string $wifiName
-     * @param int $isActive
-     * @return bool
-     */
-    public function addWifi($wifiName, $isActive = 1)
-    {
-        // Legacy phuongThuc - just insert with tenWifi only
-        $wifiName = trim($wifiName);
-        $isActive = (int)$isActive;
-        
-        if (empty($wifiName)) {
-            return false;
-        }
-        
-        $sql = "INSERT INTO wifichamcong (tenWifi, hoatDong) VALUES (?, ?)";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            return false;
-        }
-        $stmt->bind_param("si", $wifiName, $isActive);
-        $result = $stmt->execute();
-        $stmt->close();
-        return $result;
-    }
-
-    /**
-     * Update network with all fields
-     * @param int $networkId
-     * @param string $wifiName
-     * @param string $ipRange
-     * @param string $congMacDinh
-     * @param string $moTa
-     * @param int $isActive
-     * @return bool
-     */
-    public function updateNetwork($networkId, $wifiName, $ipRange, $congMacDinh, $moTa = '', $isActive = 1, $ssid = null, $matKhau = null, $viTri = null)
-    {
-        $networkId = (int)$networkId;
-        $wifiName = trim($wifiName);
-        $ipRange = trim($ipRange);
-        $congMacDinh = trim($congMacDinh);
-        $moTa = trim($moTa);
-        $isActive = (int)$isActive;
-        $ssid = $ssid !== null ? trim($ssid) : null;
-        $matKhau = $matKhau !== null ? trim($matKhau) : null;
-        $viTri = $viTri !== null ? trim($viTri) : null;
-        
-        if ($networkId <= 0 || empty($wifiName) || empty($ipRange) || empty($congMacDinh)) {
-            return false;
-        }
-
-        $sql = "UPDATE wifichamcong 
-                SET tenWifi = ?, daiIP = ?, congMacDinh = ?, moTa = ?, hoatDong = ?, ssid = ?, matKhau = ?, viTri = ? 
-                WHERE id = ?";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            return false;
-        }
-        $stmt->bind_param("ssssisssi", $wifiName, $ipRange, $congMacDinh, $moTa, $isActive, $ssid, $matKhau, $viTri, $networkId);
-        $result = $stmt->execute();
-        $stmt->close();
-        return $result;
-    }
-
-    /**
-     * Update WiFi (backwards compatibility)
-     * @param int $wifiId
-     * @param string $wifiName
-     * @param int|null $isActive
-     * @return bool
-     */
-    public function updateWifi($wifiId, $wifiName, $isActive = null)
-    {
-        $wifiId = (int)$wifiId;
-        $wifiName = trim($wifiName);
-        
-        if ($wifiId <= 0 || empty($wifiName)) {
-            return false;
-        }
-
-        if ($isActive !== null) {
-            $isActive = (int)$isActive;
-            $sql = "UPDATE wifichamcong SET tenWifi = ?, hoatDong = ? WHERE id = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("sii", $wifiName, $isActive, $wifiId);
-        } else {
-            $sql = "UPDATE wifichamcong SET tenWifi = ? WHERE id = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("si", $wifiName, $wifiId);
-        }
-        
-        $result = $stmt->execute();
-        $stmt->close();
-        return $result;
-    }
-
-    /**
-     * Check if network name already exists
-     * @param string $wifiName
-     * @param int|null $excludeId
-     * @return bool
-     */
-    public function checkNetworkExists($wifiName, $excludeId = null)
-    {
-        $wifiName = trim($wifiName);
-        if (empty($wifiName)) {
-            return false;
-        }
-
-        $sql = "SELECT COUNT(*) as count FROM wifichamcong WHERE tenWifi = ?";
-        
-        if ($excludeId !== null) {
-            $sql .= " AND id != ?";
-            $stmt = $this->conn->prepare($sql);
-            if (!$stmt) {
-                return false;
-            }
-            $excludeId = (int)$excludeId;
-            $stmt->bind_param("si", $wifiName, $excludeId);
-        } else {
-            $stmt = $this->conn->prepare($sql);
-            if (!$stmt) {
-                return false;
-            }
-            $stmt->bind_param("s", $wifiName);
-        }
-
-        $stmt->execute();
-        $result = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        
-        return (int)($result['count'] ?? 0) > 0;
-    }
-
-    /**
-     * Check if congMacDinh already exists
-     * @param string $congMacDinh
-     * @param int|null $excludeId
-     * @return bool
-     */
-    public function checkGatewayExists($congMacDinh, $excludeId = null)
-    {
-        $congMacDinh = trim($congMacDinh);
-        if (empty($congMacDinh)) {
-            return false;
-        }
-
-        $sql = "SELECT COUNT(*) as count FROM wifichamcong WHERE congMacDinh = ?";
-        
-        if ($excludeId !== null) {
-            $sql .= " AND id != ?";
-            $stmt = $this->conn->prepare($sql);
-            if (!$stmt) {
-                return false;
-            }
-            $excludeId = (int)$excludeId;
-            $stmt->bind_param("si", $congMacDinh, $excludeId);
-        } else {
-            $stmt = $this->conn->prepare($sql);
-            if (!$stmt) {
-                return false;
-            }
-            $stmt->bind_param("s", $congMacDinh);
-        }
-
-        $stmt->execute();
-        $result = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        
-        return (int)($result['count'] ?? 0) > 0;
-    }
-
-    /**
-     * Check WiFi exists (backwards compatibility)
-     * @param string $wifiName
-     * @param int|null $excludeId
-     * @return bool
-     */
-    public function checkWifiExists($wifiName, $excludeId = null)
-    {
-        return $this->checkNetworkExists($wifiName, $excludeId);
-    }
-
-    /**
-     * Toggle network (enable/disable)
-     * @param int $networkId
-     * @return bool
-     */
-    public function toggleNetwork($networkId)
-    {
-        $networkId = (int)$networkId;
-        if ($networkId <= 0) {
-            return false;
-        }
-
-        $sql = "UPDATE wifichamcong SET hoatDong = !hoatDong WHERE id = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $networkId);
-        $result = $stmt->execute();
-        $stmt->close();
-        return $result;
-    }
-
-    /**
-     * Toggle WiFi (backwards compatibility - redirects to toggleNetwork)
-     * @param int $wifiId
-     * @return bool
-     */
-    public function toggleWifi($wifiId)
-    {
-        return $this->toggleNetwork($wifiId);
-    }
-
-    /**
-     * Delete network
-     * @param int $networkId
-     * @return bool
-     */
-    public function deleteNetwork($networkId)
-    {
-        $networkId = (int)$networkId;
-        if ($networkId <= 0) {
-            return false;
-        }
-
-        $sql = "DELETE FROM wifichamcong WHERE id = ?";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            return false;
-        }
-        $stmt->bind_param("i", $networkId);
-        $result = $stmt->execute();
-        $stmt->close();
-        return $result;
-    }
-    
-    /**
-     * Delete WiFi (backwards compatibility)
-     * @param int $wifiId
-     * @return bool
-     */
-    public function deleteWifi($wifiId)
-    {
-        return $this->deleteNetwork($wifiId);
-    }
+    public function getAllNetworks() { return []; }
+    public function getNetworkList() { return []; }
+    public function getAllWifi() { return []; }
+    public function getWifiList() { return []; }
+    public function getNetworkById($id) { return null; }
+    public function addNetwork($wifiName, $ipRange, $congMacDinh, $moTa = '', $isActive = 1, $ssid = null, $matKhau = null, $viTri = null) { return false; }
+    public function addWifi($wifiName, $isActive = 1) { return false; }
+    public function updateNetwork($networkId, $wifiName, $ipRange, $congMacDinh, $moTa = '', $isActive = 1, $ssid = null, $matKhau = null, $viTri = null) { return false; }
+    public function updateWifi($wifiId, $wifiName, $isActive = null) { return false; }
+    public function checkNetworkExists($wifiName, $excludeId = null) { return false; }
+    public function checkGatewayExists($congMacDinh, $excludeId = null) { return false; }
+    public function checkWifiExists($wifiName, $excludeId = null) { return false; }
+    public function toggleNetwork($networkId) { return false; }
+    public function toggleWifi($wifiId) { return false; }
+    public function deleteNetwork($networkId) { return false; }
+    public function deleteWifi($wifiId) { return false; }
 
     /**
      * ========== NEW: ATTENDANCE CALCULATION WITH HOLIDAYS & LEAVES ==========
@@ -3459,101 +2989,10 @@ class ChamCongModel
      * Láº¥y táº¥t cáº£ settings
      * @return array
      */
-    public function getAllSettings()
-    {
-        $sql = "SELECT id, tenCaiDat, giaTri, ngayCapNhat FROM caidathethong ORDER BY tenCaiDat ASC";
-        $result = $this->conn->query($sql);
-        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
-    }
-
-    /**
-     * Láº¥y táº¥t cáº£ settings (legacy format key => value)
-     * @return array
-     */
-    public function getSettings()
-    {
-        $sql = "SELECT tenCaiDat, giaTri FROM caidathethong ORDER BY tenCaiDat ASC";
-        $result = $this->conn->query($sql);
-        if (!$result) {
-            return [];
-        }
-        $settings = [];
-        while ($row = $result->fetch_assoc()) {
-            $settings[$row['tenCaiDat']] = $row['giaTri'];
-        }
-        return $settings;
-    }
-
-    /**
-     * Láº¥y giÃ¡ trá»‹ 1 setting
-     * @param string $key
-     * @param string $default
-     * @return string|null
-     */
-    public function getSettingValue($key, $default = null)
-    {
-        $key = trim($key);
-        $sql = "SELECT giaTri FROM caidathethong WHERE tenCaiDat = ? LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            return $default;
-        }
-        $stmt->bind_param("s", $key);
-        $stmt->execute();
-        $row = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        
-        return $row['giaTri'] ?? $default;
-    }
-
-    /**
-     * Cáº­p nháº­t setting (insert or update)
-     * @param string $key
-     * @param string $value
-     * @return bool
-     */
-    public function updateSetting($key, $value)
-    {
-        $key = trim($key);
-        $value = trim($value);
-        
-        if (empty($key)) {
-            return false;
-        }
-
-        // Check if exists
-        $checkSql = "SELECT id FROM caidathethong WHERE tenCaiDat = ? LIMIT 1";
-        $checkStmt = $this->conn->prepare($checkSql);
-        if (!$checkStmt) {
-            return false;
-        }
-        $checkStmt->bind_param("s", $key);
-        $checkStmt->execute();
-        $exists = $checkStmt->get_result()->num_rows > 0;
-        $checkStmt->close();
-
-        if ($exists) {
-            // UPDATE
-            $sql = "UPDATE caidathethong SET giaTri = ?, ngayCapNhat = CURRENT_TIMESTAMP WHERE tenCaiDat = ?";
-            $stmt = $this->conn->prepare($sql);
-            if (!$stmt) {
-                return false;
-            }
-            $stmt->bind_param("ss", $value, $key);
-        } else {
-            // INSERT
-            $sql = "INSERT INTO caidathethong (tenCaiDat, giaTri) VALUES (?, ?)";
-            $stmt = $this->conn->prepare($sql);
-            if (!$stmt) {
-                return false;
-            }
-            $stmt->bind_param("ss", $key, $value);
-        }
-
-        $result = $stmt->execute();
-        $stmt->close();
-        return $result;
-    }
+    public function getAllSettings() { return []; }
+    public function getSettings() { return []; }
+    public function getSettingValue($key, $default = null) { return $default; }
+    public function updateSetting($key, $value) { return true; }
 
     // ============================
     // ÄÆ N NGHá»ˆ PHÃ‰P (Leave Request)

@@ -27,47 +27,7 @@ SET time_zone = "+00:00";
 
 -- --------------------------------------------------------
 
---
--- Table structure for table `caidathethong`
---
 
-CREATE TABLE `caidathethong` (
-  `id` int(11) NOT NULL,
-  `tenCaiDat` varchar(120) NOT NULL,
-  `giaTri` text DEFAULT NULL,
-  `moTa` varchar(255) DEFAULT NULL,
-  `nguoiCapNhat` int(11) DEFAULT NULL,
-  `ngayCapNhat` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `caidathethong`
---
-
-INSERT INTO `caidathethong` (`id`, `tenCaiDat`, `giaTri`, `moTa`, `nguoiCapNhat`, `ngayCapNhat`) VALUES
-(1, 'SETTING_1', '1', 'Mo ta 1', NULL, '2026-06-19 19:54:23'),
-(2, 'SETTING_2', '1', 'Mo ta 2', NULL, '2026-06-19 19:54:23'),
-(3, 'SETTING_3', '1', 'Mo ta 3', NULL, '2026-06-19 19:54:23'),
-(4, 'SETTING_4', '1', 'Mo ta 4', NULL, '2026-06-19 19:54:23'),
-(5, 'SETTING_5', '1', 'Mo ta 5', NULL, '2026-06-19 19:54:23'),
-(6, 'SETTING_6', '1', 'Mo ta 6', NULL, '2026-06-19 19:54:23'),
-(7, 'SETTING_7', '1', 'Mo ta 7', NULL, '2026-06-19 19:54:23'),
-(8, 'SETTING_8', '1', 'Mo ta 8', NULL, '2026-06-19 19:54:23'),
-(9, 'SETTING_9', '1', 'Mo ta 9', NULL, '2026-06-19 19:54:23'),
-(10, 'SETTING_10', '1', 'Mo ta 10', NULL, '2026-06-19 19:54:23'),
-(11, 'SETTING_11', '1', 'Mo ta 11', NULL, '2026-06-19 19:54:23'),
-(12, 'SETTING_12', '1', 'Mo ta 12', NULL, '2026-06-19 19:54:23'),
-(13, 'SETTING_13', '1', 'Mo ta 13', NULL, '2026-06-19 19:54:23'),
-(14, 'SETTING_14', '1', 'Mo ta 14', NULL, '2026-06-19 19:54:23'),
-(15, 'SETTING_15', '1', 'Mo ta 15', NULL, '2026-06-19 19:54:23'),
-(16, 'SETTING_16', '1', 'Mo ta 16', NULL, '2026-06-19 19:54:23'),
-(17, 'SETTING_17', '1', 'Mo ta 17', NULL, '2026-06-19 19:54:23'),
-(18, 'SETTING_18', '1', 'Mo ta 18', NULL, '2026-06-19 19:54:23'),
-(19, 'SETTING_19', '1', 'Mo ta 19', NULL, '2026-06-19 19:54:23'),
-(20, 'SETTING_20', '1', 'Mo ta 20', NULL, '2026-06-19 19:54:23'),
-(21, 'LATE_THRESHOLD_MINUTES', '15', NULL, NULL, '2026-06-19 19:58:14'),
-(22, 'OVERTIME_THRESHOLD_MINUTES', '60', NULL, NULL, '2026-06-19 19:58:18'),
-(23, 'ALLOW_QR_CHECKIN', '0', NULL, NULL, '2026-06-19 19:58:21');
 
 -- --------------------------------------------------------
 
@@ -11711,42 +11671,13 @@ INSERT INTO `tonghopngaycong` (`id`, `maND`, `ngayLamViec`, `gioVaoDau`, `gioRaC
 
 -- --------------------------------------------------------
 
---
--- Table structure for table `wifichamcong`
---
 
-CREATE TABLE `wifichamcong` (
-  `id` int(11) NOT NULL,
-  `tenWifi` varchar(120) NOT NULL,
-  `hoatDong` tinyint(1) NOT NULL DEFAULT 1,
-  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
-  `daiIP` varchar(50) DEFAULT NULL,
-  `congMacDinh` varchar(50) DEFAULT NULL,
-  `moTa` varchar(255) DEFAULT NULL,
-  `ssid` varchar(120) DEFAULT NULL,
-  `matKhau` varchar(120) DEFAULT NULL,
-  `viTri` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `wifichamcong`
---
-
-INSERT INTO `wifichamcong` (`id`, `tenWifi`, `hoatDong`, `ngayTao`, `daiIP`, `congMacDinh`, `moTa`, `ssid`, `matKhau`, `viTri`) VALUES
-(1, 'WIFI_1', 1, '2026-06-19 19:54:23', '192.168.1', '192.168.1.1', NULL, NULL, NULL, NULL),
-(2, 'WIFI_2', 1, '2026-06-19 19:54:23', '192.168.2', '192.168.2.1', NULL, NULL, NULL, NULL);
 
 --
 -- Indexes for dumped tables
 --
 
---
--- Indexes for table `caidathethong`
---
-ALTER TABLE `caidathethong`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_setting_key` (`tenCaiDat`),
-  ADD KEY `fk_settings_user` (`nguoiCapNhat`);
+
 
 --
 -- Indexes for table `calamviec`
@@ -11854,22 +11785,13 @@ ALTER TABLE `tonghopngaycong`
   ADD UNIQUE KEY `uk_summary_user_date` (`maND`,`ngayLamViec`),
   ADD KEY `idx_summary_date` (`ngayLamViec`);
 
---
--- Indexes for table `wifichamcong`
---
-ALTER TABLE `wifichamcong`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_wifi_name` (`tenWifi`);
+
 
 --
 -- AUTO_INCREMENT for dumped tables
 --
 
---
--- AUTO_INCREMENT for table `caidathethong`
---
-ALTER TABLE `caidathethong`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+
 
 --
 -- AUTO_INCREMENT for table `calamviec`
@@ -11937,21 +11859,13 @@ ALTER TABLE `taikhoan`
 ALTER TABLE `tonghopngaycong`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3661;
 
---
--- AUTO_INCREMENT for table `wifichamcong`
---
-ALTER TABLE `wifichamcong`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+
 
 --
 -- Constraints for dumped tables
 --
 
---
--- Constraints for table `caidathethong`
---
-ALTER TABLE `caidathethong`
-  ADD CONSTRAINT `fk_settings_user` FOREIGN KEY (`nguoiCapNhat`) REFERENCES `nguoidung` (`maND`) ON DELETE SET NULL ON UPDATE CASCADE;
+
 
 --
 -- Constraints for table `canhanvien`
