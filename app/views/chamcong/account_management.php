@@ -690,27 +690,27 @@
             <input type="hidden" id="modalMaTK" value="">
 
             <label style="font-weight: 700; font-size: 14px; color: #1e293b; display: block; margin-bottom: 8px;">
-                Chọn Vai trò (Role) mới:
+                Chọn Vai trò (Roles) cho tài khoản (có thể chọn nhiều):
             </label>
 
             <div class="role-option-list">
-                <label class="role-option-card" id="card_nhanvien" onclick="selectRoleRadio('nhanvien')">
-                    <input type="radio" name="selectedRole" value="nhanvien" id="role_nhanvien">
+                <label class="role-option-card" id="card_nhanvien" onclick="toggleRoleCheckbox('nhanvien', event)">
+                    <input type="checkbox" name="selectedRoles[]" value="nhanvien" id="role_nhanvien">
                     <span class="badge-role role-nhanvien"><i class="fas fa-user"></i> Nhân viên</span>
                 </label>
 
-                <label class="role-option-card" id="card_hr" onclick="selectRoleRadio('hr')">
-                    <input type="radio" name="selectedRole" value="hr" id="role_hr">
+                <label class="role-option-card" id="card_hr" onclick="toggleRoleCheckbox('hr', event)">
+                    <input type="checkbox" name="selectedRoles[]" value="hr" id="role_hr">
                     <span class="badge-role role-hr"><i class="fas fa-user-tie"></i> Bộ phận nhân sự (HR)</span>
                 </label>
 
-                <label class="role-option-card" id="card_tech" onclick="selectRoleRadio('tech')">
-                    <input type="radio" name="selectedRole" value="tech" id="role_tech">
+                <label class="role-option-card" id="card_tech" onclick="toggleRoleCheckbox('tech', event)">
+                    <input type="checkbox" name="selectedRoles[]" value="tech" id="role_tech">
                     <span class="badge-role role-tech"><i class="fas fa-laptop-code"></i> Bộ phận kỹ thuật (Tech/IT)</span>
                 </label>
 
-                <label class="role-option-card" id="card_manager" onclick="selectRoleRadio('manager')">
-                    <input type="radio" name="selectedRole" value="manager" id="role_manager">
+                <label class="role-option-card" id="card_manager" onclick="toggleRoleCheckbox('manager', event)">
+                    <input type="checkbox" name="selectedRoles[]" value="manager" id="role_manager">
                     <span class="badge-role role-manager"><i class="fas fa-briefcase"></i> Quản lý / Ban lãnh đạo</span>
                 </label>
             </div>
@@ -816,8 +816,11 @@ function renderAccountsTable(data) {
             actionToggleBtn = `<button class="btn-action-toggle" onclick="toggleAccountStatus(${item.maTK}, '${escapeHtml(item.tenDangNhap)}', 'lock')"><i class="fas fa-lock"></i> Khóa</button>`;
         }
         
-        const roleInfo = roleLabels[item.role] || roleLabels['nhanvien'];
-        const roleBadge = `<span class="badge-role ${roleInfo.class}"><i class="fas ${roleInfo.icon}"></i> ${roleInfo.label}</span>`;
+        const userRoles = Array.isArray(item.roles) && item.roles.length > 0 ? item.roles : [item.role || 'nhanvien'];
+        const roleBadges = userRoles.map(r => {
+            const roleInfo = roleLabels[r] || roleLabels['nhanvien'];
+            return `<span class="badge-role ${roleInfo.class}" style="margin-right: 4px; margin-bottom: 2px;"><i class="fas ${roleInfo.icon}"></i> ${roleInfo.label}</span>`;
+        }).join('');
         
         const createdDate = item.ngayTaoTK ? new Date(item.ngayTaoTK).toLocaleDateString('vi-VN') : '--';
         const hoTen = item.hoTen || '(Chưa cập nhật)';
@@ -832,7 +835,7 @@ function renderAccountsTable(data) {
                 </td>
                 <td><code style="background: #f1f5f9; padding: 3px 6px; border-radius: 6px; color: #0f172a; font-weight: 600;">${escapeHtml(item.tenDangNhap)}</code></td>
                 <td class="col-dept">${escapeHtml(phongBan)}</td>
-                <td>${roleBadge}</td>
+                <td>${roleBadges}</td>
                 <td>${statusBadge}</td>
                 <td><small style="color: #64748b;">${createdDate}</small></td>
                 <td class="action-cell">
@@ -875,24 +878,43 @@ function openRoleModal(maTK) {
     document.getElementById('modalMaND').value = acc.maND;
     document.getElementById('modalMaTK').value = acc.maTK;
 
-    selectRoleRadio(acc.role || 'nhanvien');
+    const roles = Array.isArray(acc.roles) && acc.roles.length > 0 ? acc.roles : [acc.role || 'nhanvien'];
+    setRoleCheckboxes(roles);
 
     document.getElementById('roleModal').classList.add('active');
 }
 
-function selectRoleRadio(role) {
-    const radios = document.getElementsByName('selectedRole');
-    radios.forEach(r => {
-        r.checked = (r.value === role);
-    });
-
+function setRoleCheckboxes(rolesArray) {
     ['nhanvien', 'hr', 'tech', 'manager'].forEach(r => {
+        const chk = document.getElementById('role_' + r);
         const card = document.getElementById('card_' + r);
+        const isChecked = rolesArray.includes(r);
+        if (chk) chk.checked = isChecked;
         if (card) {
-            if (r === role) card.classList.add('selected');
+            if (isChecked) card.classList.add('selected');
             else card.classList.remove('selected');
         }
     });
+}
+
+function toggleRoleCheckbox(role, event) {
+    if (event && event.target && event.target.tagName === 'INPUT') {
+        const card = document.getElementById('card_' + role);
+        if (card) {
+            if (event.target.checked) card.classList.add('selected');
+            else card.classList.remove('selected');
+        }
+        return;
+    }
+    const chk = document.getElementById('role_' + role);
+    if (chk) {
+        chk.checked = !chk.checked;
+        const card = document.getElementById('card_' + role);
+        if (card) {
+            if (chk.checked) card.classList.add('selected');
+            else card.classList.remove('selected');
+        }
+    }
 }
 
 function closeRoleModal() {
@@ -901,23 +923,29 @@ function closeRoleModal() {
 
 function submitRoleUpdate() {
     const maND = document.getElementById('modalMaND').value;
-    const radios = document.getElementsByName('selectedRole');
-    let selectedRole = 'nhanvien';
-    for (let r of radios) {
-        if (r.checked) {
-            selectedRole = r.value;
-            break;
+    const selectedRoles = [];
+    ['nhanvien', 'hr', 'tech', 'manager'].forEach(r => {
+        const chk = document.getElementById('role_' + r);
+        if (chk && chk.checked) {
+            selectedRoles.push(r);
         }
-    }
+    });
 
     if (!maND) {
         showToast('Không tìm thấy thông tin mã người dùng', 'error');
         return;
     }
 
+    if (selectedRoles.length === 0) {
+        showToast('Vui lòng chọn ít nhất một vai trò', 'error');
+        return;
+    }
+
     const formData = new FormData();
     formData.append('maND', maND);
-    formData.append('role', selectedRole);
+    selectedRoles.forEach(r => {
+        formData.append('roles[]', r);
+    });
 
     fetch('index.php?page=tech-update-role', {
         method: 'POST',

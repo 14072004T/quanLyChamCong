@@ -1,21 +1,10 @@
 <?php
-$role = $_SESSION['role'] ?? 'nhanvien';
+$roles = $_SESSION['roles'] ?? [$_SESSION['role'] ?? 'nhanvien'];
 $currentPage = $_GET['page'] ?? 'home';
 
 $menus = [
-    'nhanvien' => [
-        ['page' => 'lich-su-cham-cong', 'label' => 'Xem lịch sử', 'icon' => 'fa-clock-rotate-left'],
-        ['page' => 'bang-cong-thang', 'label' => 'Bảng công tháng', 'icon' => 'fa-file-invoice'],
-        ['page' => 'yeu-cau-chinh-sua-cham-cong', 'label' => 'Gửi yêu cầu chỉnh sửa', 'icon' => 'fa-pen-to-square'],
-        ['page' => 'create-leave-request', 'label' => 'Đơn nghỉ phép', 'icon' => 'fa-calendar-check'],
-        ['page' => 'create-ot-request', 'label' => 'Đăng ký OT', 'icon' => 'fa-business-time'],
-    ],
-    'hr' => [
-        ['page' => 'quan-ly-nhanvien', 'label' => 'Quản lý Nhân viên', 'icon' => 'fa-users'],
-        ['page' => 'quan-ly-ca-lam', 'label' => 'Quản lý Ca làm việc', 'icon' => 'fa-business-time'],
-        ['page' => 'tinh-cong', 'label' => 'Tính công & Báo cáo', 'icon' => 'fa-calculator'],
-        ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
-        ['divider' => true, 'label' => 'Cá nhân'],
+    'tech' => [
+        ['page' => 'tech-accounts', 'label' => 'Quản lý Tài khoản', 'icon' => 'fa-users-cog'],
     ],
     'manager' => [
         ['page' => 'bao-cao-tong-hop', 'label' => 'Báo cáo tổng hợp', 'icon' => 'fa-file-lines'],
@@ -23,37 +12,104 @@ $menus = [
         ['page' => 'list-leave-requests', 'label' => 'Quản lý Đơn phép', 'icon' => 'fa-calendar-check'],
         ['page' => 'manager-ot-requests', 'label' => 'Duyệt đơn OT', 'icon' => 'fa-business-time'],
     ],
-    'tech' => [
-        ['page' => 'tech-accounts', 'label' => 'Quản lý Tài khoản', 'icon' => 'fa-users-cog'],
-        ['divider' => true, 'label' => 'Cá nhân'],
+    'hr' => [
+        ['page' => 'quan-ly-nhanvien', 'label' => 'Quản lý Nhân viên', 'icon' => 'fa-users'],
+        ['page' => 'quan-ly-ca-lam', 'label' => 'Quản lý Ca làm việc', 'icon' => 'fa-business-time'],
+        ['page' => 'tinh-cong', 'label' => 'Tính công & Báo cáo', 'icon' => 'fa-calculator'],
+        ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
     ],
-
+    'nhanvien' => [
+        ['page' => 'lich-su-cham-cong', 'label' => 'Xem lịch sử', 'icon' => 'fa-clock-rotate-left'],
+        ['page' => 'bang-cong-thang', 'label' => 'Bảng công tháng', 'icon' => 'fa-file-invoice'],
+        ['page' => 'yeu-cau-chinh-sua-cham-cong', 'label' => 'Gửi yêu cầu chỉnh sửa', 'icon' => 'fa-pen-to-square'],
+        ['page' => 'create-leave-request', 'label' => 'Đơn nghỉ phép', 'icon' => 'fa-calendar-check'],
+        ['page' => 'create-ot-request', 'label' => 'Đăng ký OT', 'icon' => 'fa-business-time'],
+    ],
 ];
 
 $roleLabels = [
+    'tech' => 'Bộ phận Kỹ thuật',
+    'manager' => 'Quản lý / Ban lãnh đạo',
+    'hr' => 'Bộ phận Nhân sự',
     'nhanvien' => 'Nhân viên',
-    'hr' => 'HR',
-    'manager' => 'Quản lý',
-    'tech' => 'Kỹ thuật',
 ];
 
+$roleShortLabels = [
+    'tech' => 'Kỹ thuật',
+    'manager' => 'Quản lý',
+    'hr' => 'HR',
+    'nhanvien' => 'Nhân viên',
+];
+
+$roleMenus = [];
+$displayRoleTitle = 'Menu';
+
 if (AuthMiddleware::isPhone()) {
-    // Điện thoại: Tất cả chỉ hiển thị chức năng nhân viên cá nhân
-    $roleMenus = $menus['nhanvien'];
-    $displayRoleTitle = 'Nhân viên';
-} elseif (AuthMiddleware::isTablet()) {
-    // Tablet: Chỉ hiển thị các chức năng của role HR/Tech (bỏ divider Cá nhân & không gộp menu nhân viên)
-    $rawMenus = $menus[$role] ?? $menus['nhanvien'];
-    $roleMenus = array_values(array_filter($rawMenus, fn($m) => empty($m['divider'])));
-    $displayRoleTitle = $roleLabels[$role] ?? 'Menu';
-} else {
-    // Desktop: Giữ nguyên (gộp menu role + menu nhân viên cho HR & Tech)
-    if ($role === 'hr' || $role === 'tech') {
-        $roleMenus = array_merge($menus[$role] ?? [], $menus['nhanvien']);
+    // Mobile: nếu có chọn Nhân viên thì hiển thị role Nhân viên, ngược lại hiển thị role chính
+    if (in_array('nhanvien', $roles, true)) {
+        $roleMenus = $menus['nhanvien'];
+        $displayRoleTitle = 'Nhân viên';
     } else {
-        $roleMenus = $menus[$role] ?? $menus['nhanvien'];
+        $primary = $roles[0] ?? 'nhanvien';
+        $roleMenus = $menus[$primary] ?? $menus['nhanvien'];
+        $displayRoleTitle = $roleShortLabels[$primary] ?? 'Menu';
     }
-    $displayRoleTitle = $roleLabels[$role] ?? 'Menu';
+} elseif (AuthMiddleware::isTablet()) {
+    // Tablet: Chỉ hiển thị role HR, Tech
+    $tabletRoles = array_intersect(['tech', 'hr'], $roles);
+    if (empty($tabletRoles)) $tabletRoles = array_intersect(['manager', 'nhanvien'], $roles);
+    if (empty($tabletRoles)) $tabletRoles = ['nhanvien'];
+
+    $addedPages = [];
+    $firstGroup = true;
+    foreach ($tabletRoles as $r) {
+        $groupItems = [];
+        foreach ($menus[$r] ?? [] as $m) {
+            if (!in_array($m['page'], $addedPages, true)) {
+                $groupItems[] = $m;
+                $addedPages[] = $m['page'];
+            }
+        }
+        if (!empty($groupItems)) {
+            if (!$firstGroup) {
+                $roleMenus[] = ['divider' => true, 'label' => $roleShortLabels[$r] ?? $r];
+            } else {
+                $firstGroup = false;
+            }
+            foreach ($groupItems as $gi) {
+                $roleMenus[] = $gi;
+            }
+        }
+    }
+    $displayRoleTitle = implode(' & ', array_map(fn($r) => $roleShortLabels[$r] ?? $r, $tabletRoles));
+} else {
+    // Laptop / Desktop: Hiển thị đầy đủ tất cả role đã chọn, có ngăn cách rõ ràng
+    $displayOrder = ['tech', 'manager', 'hr', 'nhanvien'];
+    $activeRoles = array_intersect($displayOrder, $roles);
+    if (empty($activeRoles)) $activeRoles = ['nhanvien'];
+
+    $addedPages = [];
+    $firstGroup = true;
+    foreach ($activeRoles as $r) {
+        $groupItems = [];
+        foreach ($menus[$r] ?? [] as $m) {
+            if (!in_array($m['page'], $addedPages, true)) {
+                $groupItems[] = $m;
+                $addedPages[] = $m['page'];
+            }
+        }
+        if (!empty($groupItems)) {
+            if (!$firstGroup) {
+                $roleMenus[] = ['divider' => true, 'label' => $roleShortLabels[$r] ?? $r];
+            } else {
+                $firstGroup = false;
+            }
+            foreach ($groupItems as $gi) {
+                $roleMenus[] = $gi;
+            }
+        }
+    }
+    $displayRoleTitle = implode(' | ', array_map(fn($r) => $roleShortLabels[$r] ?? $r, $activeRoles));
 }
 
 

@@ -231,24 +231,25 @@ class LoginController {
                 $resetStmt->close();
             }
 
-            // Lấy danh sách roles từ bảng nguoidung_roles
-            $maND = $user['maND'] ?? null;
+            // Lấy danh sách roles từ các bảng vai trò (nhanvien, nhansu, kythuat, quanly)
+            $maND = (int)($user['maND'] ?? 0);
             $userRoles = [];
-            if ($maND) {
-                $roleStmt = $conn->prepare("SELECT role FROM nguoidung_roles WHERE maND = ?");
-                if ($roleStmt) {
-                    $roleStmt->bind_param('i', $maND);
-                    $roleStmt->execute();
-                    $roleRows = $roleStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-                    $roleStmt->close();
-                    $userRoles = array_column($roleRows, 'role');
-                }
+            if ($maND > 0) {
+                $checkNV = $conn->query("SELECT maND FROM nhanvien WHERE maND = $maND");
+                if ($checkNV && $checkNV->num_rows > 0) $userRoles[] = 'nhanvien';
+
+                $checkHR = $conn->query("SELECT maND FROM nhansu WHERE maND = $maND");
+                if ($checkHR && $checkHR->num_rows > 0) $userRoles[] = 'hr';
+
+                $checkTech = $conn->query("SELECT maND FROM kythuat WHERE maND = $maND");
+                if ($checkTech && $checkTech->num_rows > 0) $userRoles[] = 'tech';
+
+                $checkQL = $conn->query("SELECT maND FROM quanly WHERE maND = $maND");
+                if ($checkQL && $checkQL->num_rows > 0) $userRoles[] = 'manager';
             }
 
-            // Fallback: nếu chưa có roles trong bảng mới, dùng mapRoleFromChucVu
             if (empty($userRoles)) {
-                $chucVu = trim($user['chucVu'] ?? 'Nhan vien');
-                $userRoles = [$this->mapRoleFromChucVu($chucVu)];
+                $userRoles = ['nhanvien'];
             }
 
             // Xác định primary role theo ưu tiên: manager > hr > tech > nhanvien
