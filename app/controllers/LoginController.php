@@ -231,45 +231,62 @@ class LoginController {
                 $resetStmt->close();
             }
 
-            $roleMapping = [
-                'nhan vien' => 'nhanvien',
-                'bo phan nhan su' => 'hr',
-                'quan ly / ban lanh dao' => 'manager',
-                'bo phan ky thuat' => 'tech'
-            ];
-            
-            $chucVu = trim($user['chucVu'] ?? 'Nhan vien');
-            
-            // Map the chucVu to a role
-            $role = $this->mapRoleFromChucVu($chucVu);
-            
-            // DEBUG LOG to file
-            $debugFile = __DIR__ . '/../../login_debug.log';
-            $debugMsg = date('Y-m-d H:i:s') . " | username=$username | chucVu=$chucVu | role=$role\n";
-            file_put_contents($debugFile, $debugMsg, FILE_APPEND);
-
-            require_once 'app/middleware/AuthMiddleware.php';
-            // Cho phép nhanvien, hr, tech đăng nhập trên mobile phone (chỉ dùng chức năng nhân viên)
-            if (AuthMiddleware::isMobile() && !in_array($role, ['nhanvien', 'hr', 'tech'], true)) {
-                header("Location: index.php?page=login&error=ib_only");
-                exit;
+            // Lấy danh sách roles từ bảng nguoidung_roles
+            $maND = $user['maND'] ?? null;
+            $userRoles = [];
+            if ($maND) {
+                $roleStmt = $conn->prepare("SELECT role FROM nguoidung_roles WHERE maND = ?");
+                if ($roleStmt) {
+                    $roleStmt->bind_param('i', $maND);
+                    $roleStmt->execute();
+                    $roleRows = $roleStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+                    $roleStmt->close();
+                    $userRoles = array_column($roleRows, 'role');
+                }
             }
 
-            if (AuthMiddleware::isTablet() && $role === 'tech') {
+            // Fallback: nếu chưa có roles trong bảng mới, dùng mapRoleFromChucVu
+            if (empty($userRoles)) {
+                $chucVu = trim($user['chucVu'] ?? 'Nhan vien');
+                $userRoles = [$this->mapRoleFromChucVu($chucVu)];
+            }
+
+            // Xác định primary role theo ưu tiên: manager > hr > tech > nhanvien
+            $priority = ['manager' => 4, 'hr' => 3, 'tech' => 2, 'nhanvien' => 1];
+            usort($userRoles, fn($a, $b) => ($priority[$b] ?? 0) - ($priority[$a] ?? 0));
+            $role = $userRoles[0] ?? 'nhanvien';
+
+            require_once 'app/middleware/AuthMiddleware.php';
+
+            // Mobile: chỉ cho đăng nhập nếu có role nhanvien
+            if (AuthMiddleware::isMobile()) {
+                if (!in_array('nhanvien', $userRoles, true)) {
+                    header("Location: index.php?page=login&error=ib_only");
+                    exit;
+                }
+            }
+
+            // Tablet: không cho tech đăng nhập (chỉ HR + Manager)
+            if (AuthMiddleware::isTablet() && $role === 'tech' && !in_array('hr', $userRoles) && !in_array('manager', $userRoles)) {
                 header("Location: index.php?page=login&error=tablet_tech_not_allowed");
                 exit;
             }
+
+            // DEBUG LOG to file
+            $debugFile = __DIR__ . '/../../login_debug.log';
+            $debugMsg = date('Y-m-d H:i:s') . " | username=$username | roles=" . implode(',', $userRoles) . " | primaryRole=$role\n";
+            file_put_contents($debugFile, $debugMsg, FILE_APPEND);
 
             $_SESSION['user'] = [
                 'maTK' => $user['maTK'],
                 'maND' => $user['maND'] ?? null,
                 'tenDangNhap' => $user['tenDangNhap'],
                 'hoTen' => $user['hoTen'] ?? '',
-                'chucVu' => $chucVu,
                 'phongBan' => $user['phongBan'] ?? ''
             ];
             
-            $_SESSION['role'] = $role;
+            $_SESSION['role'] = $role;          // primary role (backward compat)
+            $_SESSION['roles'] = $userRoles;    // all roles (multi-role)
             // Ghi lại thời điểm đăng nhập để kiểm tra hết phiên
             $_SESSION['login_time'] = time();
 

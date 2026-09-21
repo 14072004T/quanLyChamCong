@@ -143,18 +143,20 @@ class AuthMiddleware
      * Lấy danh sách quyền của role hiện tại
      * @return array
      */
-    /**
-     * Lấy danh sách quyền của role hiện tại
-     * @return array
-     */
     public static function getCurrentPermissions()
     {
         self::checkLogin();
-        $role = $_SESSION['role'] ?? 'nhanvien';
         if (self::isPhone()) {
             return self::$permissions['nhanvien'] ?? [];
         }
-        return self::$permissions[$role] ?? [];
+        // Multi-role: merge permissions của tất cả roles
+        $roles = $_SESSION['roles'] ?? [$_SESSION['role'] ?? 'nhanvien'];
+        $merged = [];
+        foreach ($roles as $r) {
+            $perms = self::$permissions[$r] ?? [];
+            $merged = array_unique(array_merge($merged, $perms));
+        }
+        return $merged;
     }
 
     /**
@@ -165,12 +167,12 @@ class AuthMiddleware
     public static function hasPermissionForPage($page)
     {
         self::checkLogin();
-        $role = $_SESSION['role'] ?? 'nhanvien';
         if (self::isPhone()) {
             $permissions = self::$permissions['nhanvien'] ?? [];
-        } else {
-            $permissions = self::$permissions[$role] ?? [];
+            return in_array($page, $permissions, true);
         }
+        // Multi-role: kiểm tra trong merged permissions
+        $permissions = self::getCurrentPermissions();
         return in_array($page, $permissions, true);
     }
 
@@ -182,11 +184,15 @@ class AuthMiddleware
     public static function hasRole($requiredRoles)
     {
         self::checkLogin();
-        $userRole = $_SESSION['role'] ?? 'nhanvien';
+        // Multi-role: kiểm tra trong SESSION['roles'] (array)
+        $userRoles = $_SESSION['roles'] ?? [$_SESSION['role'] ?? 'nhanvien'];
         if (is_array($requiredRoles)) {
-            return in_array($userRole, $requiredRoles);
+            foreach ($requiredRoles as $req) {
+                if (in_array($req, $userRoles, true)) return true;
+            }
+            return false;
         }
-        return $userRole === $requiredRoles;
+        return in_array($requiredRoles, $userRoles, true);
     }
 
     /**

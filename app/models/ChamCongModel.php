@@ -268,6 +268,66 @@ class ChamCongModel
         $this->addColumnIfMissing('face_profile', 'embedding_left', 'TEXT DEFAULT NULL AFTER embedding_front');
         $this->addColumnIfMissing('face_profile', 'embedding_right', 'TEXT DEFAULT NULL AFTER embedding_left');
         $this->addColumnIfMissing('lichsuchamcong', 'anhMinhChung', 'VARCHAR(255) DEFAULT NULL');
+
+        // ===== MULTI-ROLE: nguoidung_roles table =====
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS nguoidung_roles (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                maND INT NOT NULL,
+                role VARCHAR(20) NOT NULL,
+                UNIQUE KEY uk_user_role (maND, role)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        // Migration: chuyển chucVu cũ → nguoidung_roles (chỉ chạy 1 lần)
+        $migCheck = $this->conn->query("SELECT COUNT(*) AS cnt FROM nguoidung_roles");
+        if ($migCheck && ($migCheck->fetch_assoc()['cnt'] ?? 0) == 0) {
+            // Kiểm tra cột chucVu còn tồn tại không
+            if ($this->columnExists('nguoidung', 'chucVu')) {
+                $ndRows = $this->conn->query("SELECT maND, chucVu FROM nguoidung WHERE chucVu IS NOT NULL AND chucVu != ''");
+                if ($ndRows) {
+                    $roleMap = [
+                        'nhan vien'              => 'nhanvien',
+                        'bo phan nhan su'        => 'hr',
+                        'quan ly / ban lanh dao' => 'manager',
+                        'bo phan ky thuat'       => 'tech',
+                    ];
+                    $insStmt = $this->conn->prepare("INSERT IGNORE INTO nguoidung_roles (maND, role) VALUES (?, ?)");
+                    while ($ndRow = $ndRows->fetch_assoc()) {
+                        $cv = mb_strtolower(trim((string)($ndRow['chucVu'] ?? '')), 'UTF-8');
+                        // Remove diacritics simply
+                        $cv = strtr($cv, [
+                            'á'=>'a','à'=>'a','ả'=>'a','ã'=>'a','ạ'=>'a',
+                            'ă'=>'a','ắ'=>'a','ằ'=>'a','ẳ'=>'a','ẵ'=>'a','ặ'=>'a',
+                            'â'=>'a','ấ'=>'a','ầ'=>'a','ẩ'=>'a','ẫ'=>'a','ậ'=>'a',
+                            'é'=>'e','è'=>'e','ẻ'=>'e','ẽ'=>'e','ẹ'=>'e',
+                            'ê'=>'e','ế'=>'e','ề'=>'e','ể'=>'e','ễ'=>'e','ệ'=>'e',
+                            'í'=>'i','ì'=>'i','ỉ'=>'i','ĩ'=>'i','ị'=>'i',
+                            'ó'=>'o','ò'=>'o','ỏ'=>'o','õ'=>'o','ọ'=>'o',
+                            'ô'=>'o','ố'=>'o','ồ'=>'o','ổ'=>'o','ỗ'=>'o','ộ'=>'o',
+                            'ơ'=>'o','ớ'=>'o','ờ'=>'o','ở'=>'o','ỡ'=>'o','ợ'=>'o',
+                            'ú'=>'u','ù'=>'u','ủ'=>'u','ũ'=>'u','ụ'=>'u',
+                            'ư'=>'u','ứ'=>'u','ừ'=>'u','ử'=>'u','ữ'=>'u','ự'=>'u',
+                            'ý'=>'y','ỳ'=>'y','ỷ'=>'y','ỹ'=>'y','ỵ'=>'y',
+                            'đ'=>'d',
+                        ]);
+                        $mapped = isset($roleMap[$cv]) ? $roleMap[$cv] : null;
+                        if (!$mapped) {
+                            if (strpos($cv, 'nhan su') !== false || strpos($cv, 'hr') !== false) $mapped = 'hr';
+                            elseif (strpos($cv, 'quan ly') !== false || strpos($cv, 'manager') !== false) $mapped = 'manager';
+                            elseif (strpos($cv, 'ky thuat') !== false || strpos($cv, 'tech') !== false) $mapped = 'tech';
+                            else $mapped = 'nhanvien';
+                        }
+                        if ($insStmt) {
+                            $maND = (int)$ndRow['maND'];
+                            $insStmt->bind_param('is', $maND, $mapped);
+                            $insStmt->execute();
+                        }
+                    }
+                    if ($insStmt) $insStmt->close();
+                }
+            }
+        }
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
@@ -3974,10 +4034,11 @@ class ChamCongModel
                     nd.maND,
                     nd.hoTen,
                     nd.phongBan,
-                    nd.chucVu,
-                    nd.trangThai AS trangThaiND
+                    nd.trangThai AS trangThaiND,
+                    GROUP_CONCAT(nr.role ORDER BY nr.role ASC SEPARATOR ',') AS roles_csv
                 FROM taikhoan tk
                 LEFT JOIN nguoidung nd ON tk.maTK = nd.maTK
+                LEFT JOIN nguoidung_roles nr ON nd.maND = nr.maND
                 WHERE 1=1";
         
         $params = [];
@@ -4009,6 +4070,7 @@ class ChamCongModel
             $types .= "s";
         }
 
+        $sql .= " GROUP BY tk.maTK, tk.tenDangNhap, tk.trangThai, tk.ngayTao, nd.maND, nd.hoTen, nd.phongBan, nd.trangThai";
         $sql .= " ORDER BY tk.maTK DESC";
 
         if (!empty($types)) {
@@ -4016,11 +4078,18 @@ class ChamCongModel
             if (!$stmt) return [];
             $stmt->bind_param($types, ...$params);
             $stmt->execute();
-            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        } else {
+            $result = $this->conn->query($sql);
+            $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
         }
 
-        $result = $this->conn->query($sql);
-        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+        // Convert roles_csv to array
+        foreach ($rows as &$row) {
+            $row['roles'] = !empty($row['roles_csv']) ? explode(',', $row['roles_csv']) : ['nhanvien'];
+            unset($row['roles_csv']);
+        }
+        return $rows;
     }
 
     /**
@@ -4036,29 +4105,88 @@ class ChamCongModel
                     nd.maND,
                     nd.hoTen,
                     nd.phongBan,
-                    nd.chucVu,
-                    nd.trangThai AS trangThaiND
+                    nd.trangThai AS trangThaiND,
+                    GROUP_CONCAT(nr.role ORDER BY nr.role ASC SEPARATOR ',') AS roles_csv
                 FROM taikhoan tk
                 LEFT JOIN nguoidung nd ON tk.maTK = nd.maTK
-                WHERE tk.maTK = ?";
+                LEFT JOIN nguoidung_roles nr ON nd.maND = nr.maND
+                WHERE tk.maTK = ?
+                GROUP BY tk.maTK, tk.tenDangNhap, tk.trangThai, tk.ngayTao, nd.maND, nd.hoTen, nd.phongBan, nd.trangThai";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return null;
         $stmt->bind_param('i', $maTK);
         $stmt->execute();
         $res = $stmt->get_result();
-        return $res ? $res->fetch_assoc() : null;
+        $row = $res ? $res->fetch_assoc() : null;
+        if ($row) {
+            $row['roles'] = !empty($row['roles_csv']) ? explode(',', $row['roles_csv']) : ['nhanvien'];
+            unset($row['roles_csv']);
+        }
+        return $row;
     }
 
     /**
-     * Tech: Cập nhật chức vụ (role) cho người dùng trong bảng nguoidung
+     * Tech: Lấy danh sách roles của một người dùng
+     */
+    public function getUserRoles($maND)
+    {
+        $maND = (int)$maND;
+        if ($maND <= 0) return ['nhanvien'];
+        $stmt = $this->conn->prepare("SELECT role FROM nguoidung_roles WHERE maND = ? ORDER BY role ASC");
+        if (!$stmt) return ['nhanvien'];
+        $stmt->bind_param('i', $maND);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        $roles = array_column($rows, 'role');
+        return !empty($roles) ? $roles : ['nhanvien'];
+    }
+
+    /**
+     * Tech: Cập nhật nhiều roles cho người dùng (xóa cũ, insert mới)
+     */
+    public function updateUserRoles($maND, array $roles)
+    {
+        $maND = (int)$maND;
+        if ($maND <= 0) return false;
+
+        $allowed = ['nhanvien', 'hr', 'tech', 'manager'];
+        $roles = array_values(array_unique(array_filter($roles, fn($r) => in_array($r, $allowed, true))));
+        if (empty($roles)) $roles = ['nhanvien'];
+
+        // Delete existing roles
+        $del = $this->conn->prepare("DELETE FROM nguoidung_roles WHERE maND = ?");
+        if (!$del) return false;
+        $del->bind_param('i', $maND);
+        $del->execute();
+        $del->close();
+
+        // Insert new roles
+        $ins = $this->conn->prepare("INSERT IGNORE INTO nguoidung_roles (maND, role) VALUES (?, ?)");
+        if (!$ins) return false;
+        foreach ($roles as $role) {
+            $ins->bind_param('is', $maND, $role);
+            $ins->execute();
+        }
+        $ins->close();
+        return true;
+    }
+
+    /**
+     * Tech: Backward compat — cập nhật single role (dùng updateUserRoles)
+     * @deprecated Dùng updateUserRoles thay thế
      */
     public function updateUserRole($maND, $chucVu)
     {
-        $sql = "UPDATE nguoidung SET chucVu = ? WHERE maND = ?";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) return false;
-        $stmt->bind_param('si', $chucVu, $maND);
-        return $stmt->execute();
+        // Map chucVu string → role code nếu cần
+        $chucVuMap = [
+            'Bộ phận nhân sự'        => 'hr',
+            'Bộ phận kỹ thuật'       => 'tech',
+            'Quản lý / Ban lãnh đạo' => 'manager',
+            'Nhân viên'              => 'nhanvien',
+        ];
+        $role = $chucVuMap[$chucVu] ?? 'nhanvien';
+        return $this->updateUserRoles($maND, [$role]);
     }
 
     /**
@@ -4145,11 +4273,12 @@ class ChamCongModel
      */
     public function getManagersList()
     {
-        // Chức vụ có chữ quản lý hoặc ban lãnh đạo hoặc hr
-        $sql = "SELECT maND, hoTen, chucVu, phongBan FROM nguoidung 
-                WHERE (chucVu LIKE '%quản lý%' OR chucVu LIKE '%lanh dao%' OR chucVu LIKE '%giám đốc%') 
-                AND trangThai = 1 
-                ORDER BY hoTen ASC";
+        // Lấy danh sách người dùng có role 'manager' từ bảng nguoidung_roles
+        $sql = "SELECT nd.maND, nd.hoTen, nd.phongBan 
+                FROM nguoidung nd
+                INNER JOIN nguoidung_roles nr ON nd.maND = nr.maND AND nr.role = 'manager'
+                WHERE nd.trangThai = 1 
+                ORDER BY nd.hoTen ASC";
         $result = $this->conn->query($sql);
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }

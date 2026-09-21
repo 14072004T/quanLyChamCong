@@ -473,11 +473,7 @@ class TechController
         ];
 
         $accounts = $this->model->getAllAccountsWithUsers($filters) ?? [];
-
-        // Format system role for each account
-        foreach ($accounts as &$acc) {
-            $acc['role'] = $this->mapChucVuToRole($acc['chucVu'] ?? '');
-        }
+        // roles field already included as array from model
 
         echo json_encode([
             'success' => true,
@@ -488,8 +484,8 @@ class TechController
     }
 
     /**
-     * API: Update role (chucVu) for a user
-     * POST: maND, role ('hr' | 'tech' | 'manager' | 'nhanvien')
+     * API: Cập nhật nhiều roles cho user
+     * POST: maND, roles[] (array: 'hr' | 'tech' | 'manager' | 'nhanvien')
      */
     public function updateRole()
     {
@@ -502,29 +498,27 @@ class TechController
         }
 
         $maND = (int)($_POST['maND'] ?? 0);
-        $role = trim($_POST['role'] ?? '');
+        $roles = $_POST['roles'] ?? [];
 
         if ($maND <= 0) {
             echo json_encode(['success' => false, 'message' => 'Mã người dùng không hợp lệ']);
             exit;
         }
 
+        // Accept both array and single string
+        if (!is_array($roles)) {
+            $roles = !empty($roles) ? [$roles] : [];
+        }
+
         $allowedRoles = ['hr', 'tech', 'manager', 'nhanvien'];
-        if (!in_array($role, $allowedRoles, true)) {
-            echo json_encode(['success' => false, 'message' => 'Quyền (role) không hợp lệ']);
+        $roles = array_values(array_unique(array_filter($roles, fn($r) => in_array($r, $allowedRoles, true))));
+
+        if (empty($roles)) {
+            echo json_encode(['success' => false, 'message' => 'Vui lòng chọn ít nhất một quyền']);
             exit;
         }
 
-        $chucVuMap = [
-            'hr' => 'Bộ phận nhân sự',
-            'tech' => 'Bộ phận kỹ thuật',
-            'manager' => 'Quản lý / Ban lãnh đạo',
-            'nhanvien' => 'Nhân viên'
-        ];
-
-        $chucVu = $chucVuMap[$role];
-
-        $result = $this->model->updateUserRole($maND, $chucVu);
+        $result = $this->model->updateUserRoles($maND, $roles);
         if ($result) {
             $this->model->activateAccountByUserId($maND);
             echo json_encode([
@@ -580,7 +574,7 @@ class TechController
     }
 
     /**
-     * Map chucVu to system role code
+     * Map chucVu to system role code (legacy compatibility)
      */
     private function mapChucVuToRole($chucVu)
     {
@@ -598,5 +592,3 @@ class TechController
         return 'nhanvien';
     }
 }
-
-
