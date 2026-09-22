@@ -11,9 +11,9 @@ $history = $history ?? [];
 $stats = $stats ?? [
     'total' => count($history),
     'face_error' => 0,
+    'accident_face' => 0,
     'tablet_power' => 0,
     'wifi_loss' => 0,
-    'other' => 0,
 ];
 
 include 'app/views/layouts/header.php';
@@ -33,7 +33,7 @@ include 'app/views/layouts/nav.php';
                         <span>HR</span> <i class="fa-solid fa-chevron-right"></i> <span>Chấm công hộ nhân viên</span>
                     </div>
                     <h1 class="cch-page-title">Chấm công hộ nhân viên</h1>
-                    <p class="cch-page-subtitle">Ghi nhận công cho nhân sự khi gặp sự cố máy quét FaceID, lỗi tablet hoặc mất kết nối thiết bị tại điểm danh</p>
+                    <p class="cch-page-subtitle">Ghi nhận công cho nhân sự khi gặp sự cố máy quét FaceID, lỗi tablet, mất kết nối hoặc tai nạn/sự cố khuôn mặt</p>
                 </div>
                 <div class="cch-header-actions">
                     <button type="button" class="cch-btn-create" id="btnOpenOverrideModal">
@@ -55,22 +55,22 @@ include 'app/views/layouts/nav.php';
                 <div class="cch-stat-card card-face">
                     <div class="cch-stat-icon"><i class="fa-solid fa-user-slash"></i></div>
                     <div class="cch-stat-info">
-                        <span class="cch-stat-label">Sự cố FaceID</span>
+                        <span class="cch-stat-label">Sự cố máy quét FaceID</span>
                         <div class="cch-stat-value" id="statFace"><?= (int)$stats['face_error'] ?></div>
                     </div>
                 </div>
-                <div class="cch-stat-card card-tablet">
-                    <div class="cch-stat-icon"><i class="fa-solid fa-tablet-screen-button"></i></div>
+                <div class="cch-stat-card card-accident">
+                    <div class="cch-stat-icon"><i class="fa-solid fa-user-injured"></i></div>
                     <div class="cch-stat-info">
-                        <span class="cch-stat-label">Tablet / Hết nguồn</span>
-                        <div class="cch-stat-value" id="statTablet"><?= (int)$stats['tablet_power'] ?></div>
+                        <span class="cch-stat-label">Tai nạn / Sự cố khuôn mặt</span>
+                        <div class="cch-stat-value" id="statAccident"><?= (int)($stats['accident_face'] ?? 0) ?></div>
                     </div>
                 </div>
-                <div class="cch-stat-card card-wifi">
-                    <div class="cch-stat-icon"><i class="fa-solid fa-wifi"></i></div>
+                <div class="cch-stat-card card-device">
+                    <div class="cch-stat-icon"><i class="fa-solid fa-network-wired"></i></div>
                     <div class="cch-stat-info">
-                        <span class="cch-stat-label">Mất kết nối Wi-Fi</span>
-                        <div class="cch-stat-value" id="statWifi"><?= (int)$stats['wifi_loss'] ?></div>
+                        <span class="cch-stat-label">Lỗi Tablet / Wi-Fi</span>
+                        <div class="cch-stat-value" id="statDevice"><?= (int)(($stats['tablet_power'] ?? 0) + ($stats['wifi_loss'] ?? 0)) ?></div>
                     </div>
                 </div>
             </div>
@@ -132,7 +132,9 @@ include 'app/views/layouts/nav.php';
                                     }
                                     $r = $row['lyDo'] ?? '';
                                     $badgeClass = 'badge-other';
-                                    if (stripos($r, 'FaceID') !== false || stripos($r, 'nhận diện') !== false) {
+                                    if (stripos($r, 'tai nạn') !== false || stripos($r, 'tổn thương') !== false || stripos($r, 'chấn thương') !== false || stripos($r, 'dị ứng') !== false || stripos($r, 'sự cố khuôn mặt') !== false) {
+                                        $badgeClass = 'badge-accident';
+                                    } elseif (stripos($r, 'FaceID') !== false || stripos($r, 'nhận diện') !== false) {
                                         $badgeClass = 'badge-face';
                                     } elseif (stripos($r, 'Tablet') !== false || stripos($r, 'nguồn') !== false || stripos($r, 'treo') !== false) {
                                         $badgeClass = 'badge-tablet';
@@ -216,7 +218,7 @@ include 'app/views/layouts/nav.php';
                         <h3>Tạo lượt chấm công hộ mới</h3>
                         <span class="cch-override-tag">HR OVERRIDE</span>
                     </div>
-                    <p class="cch-head-subtitle">Ghi nhận công cho nhân sự khi gặp sự cố máy quét FaceID hoặc sự cố thiết bị tại điểm danh</p>
+                    <p class="cch-head-subtitle">Ghi nhận công cho nhân sự khi gặp sự cố máy quét FaceID, lỗi thiết bị hoặc sự cố khuôn mặt</p>
                 </div>
             </div>
             <button type="button" class="cch-btn-close" id="btnCloseModal" aria-label="Đóng">
@@ -393,10 +395,10 @@ include 'app/views/layouts/nav.php';
                     </label>
                 </div>
 
-                <!-- Technical Reason Cards (3 selectable cards) -->
+                <!-- Technical & Personal Reason Cards (4 selectable cards) -->
                 <div class="cch-form-group">
                     <div class="cch-reason-header">
-                        <label class="cch-label" style="margin-bottom:0;">Lý do sự cố kỹ thuật <span class="cch-req">*</span></label>
+                        <label class="cch-label" style="margin-bottom:0;">Lý do sự cố / Nguyên nhân chấm hộ <span class="cch-req">*</span></label>
                         <span class="cch-reason-hint">Nhấn để chọn nguyên nhân</span>
                     </div>
 
@@ -413,7 +415,19 @@ include 'app/views/layouts/nav.php';
                             <div class="cch-reason-check"><i class="fa-solid fa-check"></i></div>
                         </div>
 
-                        <!-- Card 2: Tablet power / crash -->
+                        <!-- Card 2: Accident / Face Issue -->
+                        <div class="cch-reason-card" data-reason="Sự cố khuôn mặt / Tai nạn (Không thể nhận diện)">
+                            <div class="cch-reason-icon icon-accident">
+                                <i class="fa-solid fa-user-injured"></i>
+                            </div>
+                            <div class="cch-reason-info">
+                                <div class="cch-reason-title">Tai nạn / Sự cố khuôn mặt</div>
+                                <div class="cch-reason-sub">Chấn thương, băng gạc, dị ứng...</div>
+                            </div>
+                            <div class="cch-reason-check"><i class="fa-solid fa-check"></i></div>
+                        </div>
+
+                        <!-- Card 3: Tablet power / crash -->
                         <div class="cch-reason-card" data-reason="Tablet treo / Mất nguồn">
                             <div class="cch-reason-icon icon-tablet">
                                 <i class="fa-solid fa-tablet-screen-button"></i>
@@ -425,14 +439,14 @@ include 'app/views/layouts/nav.php';
                             <div class="cch-reason-check"><i class="fa-solid fa-check"></i></div>
                         </div>
 
-                        <!-- Card 3: Wi-Fi Disconnect -->
+                        <!-- Card 4: Wi-Fi Disconnect -->
                         <div class="cch-reason-card" data-reason="Mất kết nối Wi-Fi">
                             <div class="cch-reason-icon icon-wifi">
                                 <i class="fa-solid fa-wifi"></i>
                             </div>
                             <div class="cch-reason-info">
                                 <div class="cch-reason-title">Mất kết nối Wi-Fi</div>
-                                <div class="cch-reason-sub">Đứt cáp quang / Ngoại lệ</div>
+                                <div class="cch-reason-sub">Đứt cáp quang / Ngoại lệ mạng</div>
                             </div>
                             <div class="cch-reason-check"><i class="fa-solid fa-check"></i></div>
                         </div>
@@ -472,16 +486,18 @@ include 'app/views/layouts/nav.php';
 <style>
 /* Page Layout */
 .cham-cong-ho-page {
-    padding: 0;
+    padding: 24px 28px 40px 28px;
     width: 100%;
+    max-width: 1400px;
     margin: 0 auto;
+    box-sizing: border-box;
 }
 
 .cch-page-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 22px;
+    margin-bottom: 24px;
     flex-wrap: wrap;
     gap: 16px;
 }
@@ -541,7 +557,7 @@ include 'app/views/layouts/nav.php';
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
-    margin-bottom: 22px;
+    margin-bottom: 24px;
 }
 
 .cch-stat-card {
@@ -568,8 +584,8 @@ include 'app/views/layouts/nav.php';
 
 .card-total .cch-stat-icon { background: #eff6ff; color: #2563eb; }
 .card-face .cch-stat-icon { background: #fef3c7; color: #d97706; }
-.card-tablet .cch-stat-icon { background: #f3e8ff; color: #9333ea; }
-.card-wifi .cch-stat-icon { background: #fee2e2; color: #dc2626; }
+.card-accident .cch-stat-icon { background: #fee2e2; color: #e11d48; }
+.card-device .cch-stat-icon { background: #f3e8ff; color: #9333ea; }
 
 .cch-stat-label {
     font-size: 0.82rem;
@@ -783,8 +799,9 @@ include 'app/views/layouts/nav.php';
 }
 
 .badge-face { background: #fef3c7; color: #b45309; }
+.badge-accident { background: #fee2e2; color: #be123c; border: 1px solid #fecdd3; }
 .badge-tablet { background: #f3e8ff; color: #7e22ce; }
-.badge-wifi { background: #fee2e2; color: #b91c1c; }
+.badge-wifi { background: #ffedd5; color: #c2410c; }
 .badge-other { background: #f1f5f9; color: #475569; }
 
 .cch-exempt-badge {
@@ -857,7 +874,7 @@ include 'app/views/layouts/nav.php';
     background: #ffffff;
     border-radius: 20px;
     width: 100%;
-    max-width: 680px;
+    max-width: 720px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
@@ -1375,7 +1392,7 @@ include 'app/views/layouts/nav.php';
     margin-top: 2px;
 }
 
-/* Reason Cards */
+/* Reason Cards (4 Columns) */
 .cch-reason-header {
     display: flex;
     justify-content: space-between;
@@ -1390,7 +1407,7 @@ include 'app/views/layouts/nav.php';
 
 .cch-reasons-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
 }
 
@@ -1398,10 +1415,11 @@ include 'app/views/layouts/nav.php';
     background: #ffffff;
     border: 1.5px solid #e2e8f0;
     border-radius: 12px;
-    padding: 12px 12px;
+    padding: 12px 14px;
     cursor: pointer;
     display: flex;
-    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
     position: relative;
     transition: all 0.2s ease;
 }
@@ -1418,19 +1436,22 @@ include 'app/views/layouts/nav.php';
 }
 
 .cch-reason-icon {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     border-radius: 9px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.05rem;
-    margin-bottom: 8px;
+    font-size: 1.1rem;
+    flex-shrink: 0;
 }
 
-.icon-face { background: #fee2e2; color: #dc2626; }
-.icon-tablet { background: #f1f5f9; color: #475569; }
-.icon-wifi { background: #fef3c7; color: #d97706; }
+.icon-face { background: #fef3c7; color: #b45309; }
+.icon-accident { background: #fee2e2; color: #e11d48; }
+.icon-tablet { background: #f3e8ff; color: #7e22ce; }
+.icon-wifi { background: #ffedd5; color: #c2410c; }
+
+.cch-reason-info { flex: 1; padding-right: 18px; }
 
 .cch-reason-title {
     font-size: 0.85rem;
@@ -1561,7 +1582,7 @@ include 'app/views/layouts/nav.php';
 }
 
 @media (max-width: 640px) {
-    .cham-cong-ho-page { padding: 0; }
+    .cham-cong-ho-page { padding: 16px; }
     .cch-stats-grid { grid-template-columns: 1fr; }
     .cch-form-row { flex-direction: column; gap: 12px; }
     .cch-time-boxes-row { grid-template-columns: 1fr; }
@@ -1812,7 +1833,15 @@ document.addEventListener('DOMContentLoaded', function () {
         card.addEventListener('click', function () {
             reasonCards.forEach(c => c.classList.remove('selected'));
             this.classList.add('selected');
-            selectedReasonInput.value = this.getAttribute('data-reason') || '';
+            const r = this.getAttribute('data-reason') || '';
+            selectedReasonInput.value = r;
+
+            if (r.includes('Tai nạn') || r.includes('khuôn mặt')) {
+                noteInput.placeholder = 'Vui lòng ghi rõ chi tiết sự cố (ví dụ: Nhân viên bị dị ứng/chấn thương mắt, đã xác nhận có mặt trực tiếp...)';
+                noteInput.focus();
+            } else {
+                noteInput.placeholder = 'Ví dụ: Trưởng nhóm Backend (Anh Tuấn) đã xác nhận nhân viên có mặt tại bàn làm việc từ 08:25 sáng...';
+            }
         });
     });
 
@@ -1935,7 +1964,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const r = row.lyDo || '';
             let badgeClass = 'badge-other';
-            if (r.toLowerCase().includes('faceid') || r.toLowerCase().includes('nhận diện')) {
+            if (r.toLowerCase().includes('tai nạn') || r.toLowerCase().includes('tổn thương') || r.toLowerCase().includes('chấn thương') || r.toLowerCase().includes('dị ứng') || r.toLowerCase().includes('sự cố khuôn mặt')) {
+                badgeClass = 'badge-accident';
+            } else if (r.toLowerCase().includes('faceid') || r.toLowerCase().includes('nhận diện')) {
                 badgeClass = 'badge-face';
             } else if (r.toLowerCase().includes('tablet') || r.toLowerCase().includes('nguồn') || r.toLowerCase().includes('treo')) {
                 badgeClass = 'badge-tablet';
@@ -1999,18 +2030,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateStats(rows) {
         let total = rows.length;
-        let face = 0, tablet = 0, wifi = 0;
+        let face = 0, accident = 0, device = 0;
         rows.forEach(r => {
             const reason = (r.lyDo || '').toLowerCase();
-            if (reason.includes('faceid') || reason.includes('nhận diện')) face++;
-            else if (reason.includes('tablet') || reason.includes('nguồn') || reason.includes('treo')) tablet++;
-            else if (reason.includes('wi-fi') || reason.includes('wifi') || reason.includes('mạng')) wifi++;
+            if (reason.includes('tai nạn') || reason.includes('tổn thương') || reason.includes('chấn thương') || reason.includes('dị ứng') || reason.includes('sự cố khuôn mặt') || reason.includes('khác')) {
+                accident++;
+            } else if (reason.includes('faceid') || reason.includes('nhận diện')) {
+                face++;
+            } else if (reason.includes('tablet') || reason.includes('nguồn') || reason.includes('treo') || reason.includes('wi-fi') || reason.includes('wifi') || reason.includes('mạng')) {
+                device++;
+            } else {
+                accident++;
+            }
         });
 
         document.getElementById('statTotal').textContent = total;
         document.getElementById('statFace').textContent = face;
-        document.getElementById('statTablet').textContent = tablet;
-        document.getElementById('statWifi').textContent = wifi;
+        document.getElementById('statAccident').textContent = accident;
+        document.getElementById('statDevice').textContent = device;
     }
 
     function escapeHtml(str) {

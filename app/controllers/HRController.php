@@ -547,20 +547,22 @@ class HRController
         $stats = [
             'total' => $overrideCount,
             'face_error' => 0,
+            'accident_face' => 0,
             'tablet_power' => 0,
             'wifi_loss' => 0,
-            'other' => 0,
         ];
         foreach ($history as $h) {
             $r = $h['lyDo'] ?? '';
-            if (stripos($r, 'FaceID') !== false || stripos($r, 'nhận diện') !== false || stripos($r, 'khuôn mặt') !== false) {
+            if (stripos($r, 'tai nạn') !== false || stripos($r, 'tổn thương') !== false || stripos($r, 'chấn thương') !== false || stripos($r, 'dị ứng') !== false || stripos($r, 'sự cố khuôn mặt') !== false || stripos($r, 'khác') !== false) {
+                $stats['accident_face']++;
+            } elseif (stripos($r, 'FaceID') !== false || stripos($r, 'nhận diện') !== false) {
                 $stats['face_error']++;
             } elseif (stripos($r, 'Tablet') !== false || stripos($r, 'mất nguồn') !== false || stripos($r, 'treo') !== false || stripos($r, 'pin') !== false) {
                 $stats['tablet_power']++;
             } elseif (stripos($r, 'Wi-Fi') !== false || stripos($r, 'wifi') !== false || stripos($r, 'mạng') !== false || stripos($r, 'kết nối') !== false) {
                 $stats['wifi_loss']++;
             } else {
-                $stats['other']++;
+                $stats['accident_face']++;
             }
         }
 
