@@ -17,12 +17,13 @@ $stats = $stats ?? [
 ];
 
 include 'app/views/layouts/header.php';
+include 'app/views/layouts/nav.php';
 ?>
 
 <div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
 
-    <div class="main-content">
+    <div class="dashboard-container">
         <div class="cham-cong-ho-page">
 
             <!-- Top Header & Breadcrumb -->
@@ -31,7 +32,7 @@ include 'app/views/layouts/header.php';
                     <div class="cch-breadcrumb">
                         <span>HR</span> <i class="fa-solid fa-chevron-right"></i> <span>Chấm công hộ nhân viên</span>
                     </div>
-                    <h1 class="cch-page-title">Nhật ký chấm công hộ</h1>
+                    <h1 class="cch-page-title">Chấm công hộ nhân viên</h1>
                     <p class="cch-page-subtitle">Ghi nhận công cho nhân sự khi gặp sự cố máy quét FaceID, lỗi tablet hoặc mất kết nối thiết bị tại điểm danh</p>
                 </div>
                 <div class="cch-header-actions">
@@ -85,7 +86,6 @@ include 'app/views/layouts/header.php';
                         <div class="cch-search-box">
                             <i class="fa-solid fa-magnifying-glass"></i>
                             <input type="text" id="cchSearchInput" placeholder="Tìm kiếm theo tên, mã NV, phòng ban, lý do..." value="<?= htmlspecialchars($keyword) ?>">
-                            <button type="button" id="cchClearSearch" style="display:none;"><i class="fa-solid fa-xmark"></i></button>
                         </div>
                     </div>
                     <div class="cch-filter-right">
@@ -350,11 +350,10 @@ include 'app/views/layouts/header.php';
                         <div class="cch-time-box">
                             <div class="cch-time-box-top">
                                 <span class="cch-time-box-label">GIỜ VÀO (CHECK-IN)</span>
-                                <span class="cch-time-tag">Đầu ca</span>
+                                <span class="cch-time-tag" id="cchTimeInPeriod">08:30 AM</span>
                             </div>
                             <div class="cch-time-input-wrap">
-                                <input type="time" id="cchTimeIn" class="cch-time-field" value="08:30">
-                                <span class="cch-time-period" id="cchTimeInPeriod">AM</span>
+                                <input type="time" step="60" id="cchTimeIn" class="cch-time-field" value="08:30">
                             </div>
                         </div>
 
@@ -362,11 +361,10 @@ include 'app/views/layouts/header.php';
                         <div class="cch-time-box">
                             <div class="cch-time-box-top">
                                 <span class="cch-time-box-label">GIỜ RA (CHECK-OUT)</span>
-                                <span class="cch-time-tag">Cuối ca</span>
+                                <span class="cch-time-tag" id="cchTimeOutPeriod">05:35 PM</span>
                             </div>
                             <div class="cch-time-input-wrap">
-                                <input type="time" id="cchTimeOut" class="cch-time-field" value="17:35">
-                                <span class="cch-time-period" id="cchTimeOutPeriod">PM</span>
+                                <input type="time" step="60" id="cchTimeOut" class="cch-time-field" value="17:35">
                             </div>
                         </div>
                     </div>
@@ -443,7 +441,7 @@ include 'app/views/layouts/header.php';
                 </div>
 
                 <!-- Manager / HR Verification Notes -->
-                <div class="cch-form-group">
+                <div class="cch-form-group" style="margin-bottom: 8px;">
                     <label class="cch-label">Ghi chú xác minh của Quản lý / HR <span class="cch-opt">(Tùy chọn)</span></label>
                     <textarea id="cchNoteInput" class="cch-textarea" rows="2" 
                               placeholder="Ví dụ: Trưởng nhóm Backend (Anh Tuấn) đã xác nhận nhân viên có mặt tại bàn làm việc từ 08:25 sáng..."></textarea>
@@ -474,8 +472,8 @@ include 'app/views/layouts/header.php';
 <style>
 /* Page Layout */
 .cham-cong-ho-page {
-    padding: 24px;
-    max-width: 1380px;
+    padding: 0;
+    width: 100%;
     margin: 0 auto;
 }
 
@@ -483,7 +481,7 @@ include 'app/views/layouts/header.php';
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
     flex-wrap: wrap;
     gap: 16px;
 }
@@ -492,15 +490,15 @@ include 'app/views/layouts/header.php';
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.78rem;
+    font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     margin-bottom: 6px;
 }
 
-.cch-breadcrumb i { font-size: 0.65rem; }
+.cch-breadcrumb i { font-size: 0.65rem; color: #94a3b8; }
 
 .cch-page-title {
     font-size: 1.65rem;
@@ -512,7 +510,7 @@ include 'app/views/layouts/header.php';
 
 .cch-page-subtitle {
     color: #64748b;
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     margin: 0;
 }
 
@@ -522,8 +520,8 @@ include 'app/views/layouts/header.php';
     gap: 8px;
     background: #2563eb;
     color: #ffffff;
-    font-size: 0.92rem;
-    font-weight: 600;
+    font-size: 0.9rem;
+    font-weight: 700;
     padding: 10px 18px;
     border-radius: 10px;
     border: none;
@@ -543,7 +541,7 @@ include 'app/views/layouts/header.php';
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
 }
 
 .cch-stat-card {
@@ -575,14 +573,14 @@ include 'app/views/layouts/header.php';
 
 .cch-stat-label {
     font-size: 0.82rem;
-    font-weight: 500;
+    font-weight: 600;
     color: #64748b;
     display: block;
     margin-bottom: 2px;
 }
 
 .cch-stat-value {
-    font-size: 1.55rem;
+    font-size: 1.6rem;
     font-weight: 800;
     color: #0f172a;
     line-height: 1.2;
@@ -601,7 +599,7 @@ include 'app/views/layouts/header.php';
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
+    padding: 14px 20px;
     border-bottom: 1px solid #f1f5f9;
     flex-wrap: wrap;
     gap: 12px;
@@ -669,9 +667,12 @@ include 'app/views/layouts/header.php';
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.cch-btn-refresh:hover { background: #f8fafc; color: #1e293b; }
+.cch-btn-refresh:hover { background: #f8fafc; color: #1e293b; border-color: #94a3b8; }
 
 /* Data Table */
 .cch-table-responsive { overflow-x: auto; }
@@ -842,7 +843,7 @@ include 'app/views/layouts/header.php';
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
     opacity: 0;
     transition: opacity 0.25s ease;
 }
@@ -857,7 +858,7 @@ include 'app/views/layouts/header.php';
     border-radius: 20px;
     width: 100%;
     max-width: 680px;
-    max-height: 92vh;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -875,26 +876,27 @@ include 'app/views/layouts/header.php';
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding: 24px 28px 20px 28px;
+    padding: 22px 28px 18px 28px;
     border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
 }
 
 .cch-head-left {
     display: flex;
     align-items: flex-start;
-    gap: 16px;
+    gap: 14px;
 }
 
 .cch-head-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
     background: #eff6ff;
     color: #2563eb;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     flex-shrink: 0;
 }
 
@@ -902,12 +904,12 @@ include 'app/views/layouts/header.php';
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
 }
 
 .cch-title-wrap h3 {
     margin: 0;
-    font-size: 1.28rem;
+    font-size: 1.25rem;
     font-weight: 800;
     color: #0f172a;
     letter-spacing: -0.01em;
@@ -927,7 +929,7 @@ include 'app/views/layouts/header.php';
     margin: 0;
     font-size: 0.84rem;
     color: #64748b;
-    line-height: 1.4;
+    line-height: 1.35;
 }
 
 .cch-btn-close {
@@ -945,9 +947,9 @@ include 'app/views/layouts/header.php';
 
 /* Modal Body */
 .cch-modal-body {
-    padding: 24px 28px;
+    padding: 20px 28px;
     overflow-y: auto;
-    max-height: calc(92vh - 160px);
+    flex: 1 1 auto;
 }
 
 .cch-modal-body::-webkit-scrollbar { width: 6px; }
@@ -959,14 +961,14 @@ include 'app/views/layouts/header.php';
     background: #f1f5f9;
     padding: 4px;
     border-radius: 12px;
-    margin-bottom: 22px;
+    margin-bottom: 18px;
 }
 
 .cch-mode-btn {
     flex: 1;
     border: none;
     background: transparent;
-    padding: 9px 14px;
+    padding: 8px 14px;
     font-size: 0.85rem;
     font-weight: 600;
     color: #64748b;
@@ -995,7 +997,7 @@ include 'app/views/layouts/header.php';
 .cch-mode-btn.active .dot { background: #2563eb; }
 
 /* Form Elements */
-.cch-form-group { margin-bottom: 20px; }
+.cch-form-group { margin-bottom: 18px; }
 
 .cch-label {
     display: block;
@@ -1016,10 +1018,10 @@ include 'app/views/layouts/header.php';
 
 .cch-select {
     width: 100%;
-    padding: 11px 40px 11px 38px;
+    padding: 10px 38px 10px 36px;
     border: 1.5px solid #cbd5e1;
     border-radius: 10px;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 600;
     color: #0f172a;
     background: #ffffff;
@@ -1036,17 +1038,17 @@ include 'app/views/layouts/header.php';
 
 .cch-select-search-icon {
     position: absolute;
-    left: 14px;
+    left: 12px;
     color: #64748b;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     pointer-events: none;
 }
 
 .cch-select-arrow {
     position: absolute;
-    right: 14px;
+    right: 12px;
     color: #64748b;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     pointer-events: none;
 }
 
@@ -1146,7 +1148,7 @@ include 'app/views/layouts/header.php';
 .cch-form-row {
     display: flex;
     gap: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 
 .cch-col { flex: 1; margin-bottom: 0; }
@@ -1159,17 +1161,18 @@ include 'app/views/layouts/header.php';
 
 .cch-input-icon {
     position: absolute;
-    left: 14px;
+    left: 12px;
     color: #64748b;
     pointer-events: none;
+    font-size: 0.85rem;
 }
 
 .cch-input {
     width: 100%;
-    padding: 11px 80px 11px 38px;
+    padding: 10px 80px 10px 36px;
     border: 1.5px solid #cbd5e1;
     border-radius: 10px;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 600;
     color: #0f172a;
     outline: none;
@@ -1201,22 +1204,22 @@ include 'app/views/layouts/header.php';
     background: #f8fafc;
     border: 1.5px solid #e2e8f0;
     border-radius: 14px;
-    padding: 18px 20px;
-    margin-bottom: 22px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
 }
 
 .cch-time-card-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .cch-time-head-title {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 700;
     color: #0f172a;
 }
@@ -1225,7 +1228,7 @@ include 'app/views/layouts/header.php';
     background: #eff6ff;
     color: #2563eb;
     border: 1px solid #bfdbfe;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 700;
     padding: 3px 10px;
     border-radius: 9999px;
@@ -1245,7 +1248,7 @@ include 'app/views/layouts/header.php';
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .cch-time-box {
@@ -1273,38 +1276,31 @@ include 'app/views/layouts/header.php';
 }
 
 .cch-time-tag {
-    background: #f1f5f9;
-    color: #475569;
-    font-size: 0.68rem;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 0.72rem;
     font-weight: 700;
-    padding: 1px 6px;
+    padding: 2px 7px;
     border-radius: 4px;
 }
 
 .cch-time-input-wrap {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    width: 100%;
 }
 
 .cch-time-field {
+    width: 100%;
     border: none;
     outline: none;
-    font-size: 1.35rem;
+    font-size: 1.45rem;
     font-weight: 800;
     color: #0f172a;
     font-family: inherit;
-    width: 120px;
     background: transparent;
-}
-
-.cch-time-period {
-    background: #f1f5f9;
-    color: #475569;
-    font-size: 0.76rem;
-    font-weight: 800;
-    padding: 3px 8px;
-    border-radius: 6px;
+    padding: 2px 0;
+    box-sizing: border-box;
 }
 
 /* Quick Shift Buttons */
@@ -1313,7 +1309,7 @@ include 'app/views/layouts/header.php';
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .cch-quick-label {
@@ -1354,7 +1350,7 @@ include 'app/views/layouts/header.php';
     background: #ffffff;
     border: 1.5px solid #e2e8f0;
     border-radius: 10px;
-    padding: 12px 14px;
+    padding: 10px 14px;
     cursor: pointer;
 }
 
@@ -1402,7 +1398,7 @@ include 'app/views/layouts/header.php';
     background: #ffffff;
     border: 1.5px solid #e2e8f0;
     border-radius: 12px;
-    padding: 14px 12px;
+    padding: 12px 12px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -1422,14 +1418,14 @@ include 'app/views/layouts/header.php';
 }
 
 .cch-reason-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
-    margin-bottom: 10px;
+    font-size: 1.05rem;
+    margin-bottom: 8px;
 }
 
 .icon-face { background: #fee2e2; color: #dc2626; }
@@ -1454,12 +1450,12 @@ include 'app/views/layouts/header.php';
     position: absolute;
     top: 10px;
     right: 10px;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: #2563eb;
     color: #ffffff;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     display: none;
     align-items: center;
     justify-content: center;
@@ -1478,6 +1474,7 @@ include 'app/views/layouts/header.php';
     color: #0f172a;
     outline: none;
     resize: vertical;
+    box-sizing: border-box;
     transition: border-color 0.2s;
 }
 
@@ -1491,9 +1488,10 @@ include 'app/views/layouts/header.php';
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 18px 28px;
+    padding: 16px 28px;
     background: #f8fafc;
     border-top: 1px solid #f1f5f9;
+    flex-shrink: 0;
     flex-wrap: wrap;
     gap: 12px;
 }
@@ -1563,7 +1561,7 @@ include 'app/views/layouts/header.php';
 }
 
 @media (max-width: 640px) {
-    .cham-cong-ho-page { padding: 16px; }
+    .cham-cong-ho-page { padding: 0; }
     .cch-stats-grid { grid-template-columns: 1fr; }
     .cch-form-row { flex-direction: column; gap: 12px; }
     .cch-time-boxes-row { grid-template-columns: 1fr; }
@@ -1627,6 +1625,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let currentMode = 'single';
     let currentCredit = 1.0;
+
+    // Helper format 12h label
+    function formatTimeLabel(timeStr) {
+        if (!timeStr) return '--:--';
+        const [hStr, mStr] = timeStr.split(':');
+        let h = parseInt(hStr, 10);
+        const m = mStr || '00';
+        const period = h >= 12 ? 'PM' : 'AM';
+        let h12 = h % 12;
+        if (h12 === 0) h12 = 12;
+        return (h12 < 10 ? '0' + h12 : h12) + ':' + m + ' ' + period;
+    }
 
     // Open/Close Modal
     function openModal() {
@@ -1742,12 +1752,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const vOut = timeOut.value;
         
         if (vIn) {
-            const h = parseInt(vIn.split(':')[0], 10);
-            timeInPeriod.textContent = h >= 12 ? 'PM' : 'AM';
+            timeInPeriod.textContent = formatTimeLabel(vIn);
         }
         if (vOut) {
-            const h = parseInt(vOut.split(':')[0], 10);
-            timeOutPeriod.textContent = h >= 12 ? 'PM' : 'AM';
+            timeOutPeriod.textContent = formatTimeLabel(vOut);
         }
 
         if (vIn && vOut) {
@@ -1755,7 +1763,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const [h2, m2] = vOut.split(':').map(Number);
             let diffMins = (h2 * 60 + m2) - (h1 * 60 + m1);
             if (diffMins < 0) diffMins = 0;
-            // Subtract 60m lunch break if > 5 hours
+            // Subtract 60m lunch break if >= 5 hours
             if (diffMins >= 300) diffMins -= 60;
             const hours = (diffMins / 60).toFixed(1);
             
@@ -1870,7 +1878,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (data.success) {
                 alert(data.message || 'Chấm công hộ thành công!');
                 closeModal();
-                // Reset form
                 noteInput.value = '';
                 loadHistory();
             } else {
