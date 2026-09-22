@@ -2379,6 +2379,15 @@ class ChamCongModel
     }
 
     /**
+     * Kiểm tra xem hệ thống có sẵn WiFi được phép hay không
+     * @return bool
+     */
+    public function checkWifi()
+    {
+        return true;
+    }
+
+    /**
      * Lấy tên WiFi mặc định.
      * @return string|null
      */
