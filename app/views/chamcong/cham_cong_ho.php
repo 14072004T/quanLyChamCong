@@ -24,24 +24,22 @@ include 'app/views/layouts/nav.php';
     <?php include 'app/views/layouts/sidebar.php'; ?>
 
     <div class="dashboard-container">
-        <div class="cham-cong-ho-page">
 
-            <!-- Top Header & Breadcrumb -->
-            <div class="cch-page-header">
+        <!-- Top Header Panel -->
+        <div class="panel">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
                 <div>
-                    <div class="cch-breadcrumb">
-                        <span>HR</span> <i class="fa-solid fa-chevron-right"></i> <span>Chấm công hộ nhân viên</span>
-                    </div>
-                    <h1 class="cch-page-title">Chấm công hộ nhân viên</h1>
-                    <p class="cch-page-subtitle">Ghi nhận công cho nhân sự khi gặp sự cố máy quét FaceID, lỗi tablet, mất kết nối hoặc tai nạn/sự cố khuôn mặt</p>
+                    <h2 style="border:none;padding:0;margin:0 0 6px;">CHẤM CÔNG HỘ NHÂN VIÊN</h2>
+                    <p style="color:#64748b;margin:0;">Ghi nhận công cho nhân sự khi gặp sự cố máy quét FaceID, lỗi tablet, mất kết nối hoặc tai nạn/sự cố khuôn mặt.</p>
                 </div>
-                <div class="cch-header-actions">
-                    <button type="button" class="cch-btn-create" id="btnOpenOverrideModal">
+                <div>
+                    <button type="button" class="btn btn-primary" id="btnOpenOverrideModal" style="display:inline-flex;align-items:center;gap:8px;">
                         <i class="fa-solid fa-plus"></i>
                         <span>Tạo lượt chấm công hộ mới</span>
                     </button>
                 </div>
             </div>
+        </div>
 
             <!-- Metric Cards -->
             <div class="cch-stats-grid">
@@ -76,7 +74,7 @@ include 'app/views/layouts/nav.php';
             </div>
 
             <!-- Filter Bar & History Table -->
-            <div class="cch-table-card">
+            <div class="panel cch-table-card" style="padding:0;overflow:hidden;">
                 <div class="cch-filter-bar">
                     <div class="cch-filter-left">
                         <div class="cch-month-box">
@@ -198,7 +196,6 @@ include 'app/views/layouts/nav.php';
                 </div>
             </div>
 
-        </div>
     </div>
 </div>
 
@@ -240,26 +237,41 @@ include 'app/views/layouts/nav.php';
                 </div>
 
                 <!-- Single Employee Picker -->
+                <!-- Single Employee Picker -->
                 <div class="cch-form-group" id="groupSingleEmployee">
                     <label class="cch-label">Nhân viên cần chấm hộ <span class="cch-req">*</span></label>
-                    <div class="cch-select-wrap">
-                        <select id="cchSingleEmpSelect" class="cch-select">
-                            <option value="" disabled selected>-- Chọn nhân viên cần chấm công hộ --</option>
-                            <?php foreach ($employees as $emp): 
-                                $empCode = $emp['maNV'] ?? $emp['tenDangNhap'] ?? ('NV' . str_pad($emp['maND'], 4, '0', STR_PAD_LEFT));
-                                $empTitle = $emp['chucVu'] ?? ($emp['phongBan'] ?? 'Nhân viên');
-                            ?>
-                                <option value="<?= (int)$emp['maND'] ?>" 
-                                        data-name="<?= htmlspecialchars($emp['hoTen']) ?>" 
-                                        data-dept="<?= htmlspecialchars($empTitle) ?>" 
-                                        data-code="<?= htmlspecialchars($empCode) ?>">
-                                    <?= htmlspecialchars($emp['hoTen']) ?> • <?= htmlspecialchars($empTitle) ?> [<?= htmlspecialchars($empCode) ?>]
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <i class="fa-solid fa-magnifying-glass cch-select-search-icon"></i>
-                        <i class="fa-solid fa-chevron-down cch-select-arrow"></i>
+                    
+                    <div class="cch-emp-picker-grid">
+                        <div class="cch-code-input-wrap">
+                            <i class="fa-solid fa-id-card cch-code-icon"></i>
+                            <input type="text" id="cchEmpCodeInput" class="cch-code-input" placeholder="🔍 Nhập mã NV (VD: nv3560, 38)..." autocomplete="off">
+                            <button type="button" class="cch-code-clear" id="btnClearEmpCode" title="Xoá tìm kiếm" style="display:none;">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <div class="cch-select-wrap">
+                            <select id="cchSingleEmpSelect" class="cch-select">
+                                <option value="" disabled selected>-- Hoặc chọn từ danh sách nhân viên --</option>
+                                <?php foreach ($employees as $emp): 
+                                    $empCode = $emp['maNV'] ?? $emp['tenDangNhap'] ?? ('NV' . str_pad($emp['maND'], 4, '0', STR_PAD_LEFT));
+                                    $empTitle = $emp['chucVu'] ?? ($emp['phongBan'] ?? 'Nhân viên');
+                                ?>
+                                    <option value="<?= (int)$emp['maND'] ?>" 
+                                            data-name="<?= htmlspecialchars($emp['hoTen']) ?>" 
+                                            data-dept="<?= htmlspecialchars($empTitle) ?>" 
+                                            data-code="<?= htmlspecialchars($empCode) ?>"
+                                            data-id="<?= (int)$emp['maND'] ?>">
+                                        <?= htmlspecialchars($emp['hoTen']) ?> • <?= htmlspecialchars($empTitle) ?> [<?= htmlspecialchars($empCode) ?>]
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <i class="fa-solid fa-users cch-select-search-icon"></i>
+                            <i class="fa-solid fa-chevron-down cch-select-arrow"></i>
+                        </div>
                     </div>
+
+                    <!-- Autocomplete suggestion dropdown when typing code/name -->
+                    <div id="cchEmpSuggestList" class="cch-emp-suggest-list" style="display:none;"></div>
 
                     <!-- Visual Selected Employee Card Preview -->
                     <div class="cch-selected-emp-card" id="cchSelectedEmpCard" style="display:none;">
@@ -269,6 +281,9 @@ include 'app/views/layouts/nav.php';
                             <span class="cch-card-sub" id="cchEmpCardDept">• Senior Backend Dev</span>
                             <span class="cch-card-code" id="cchEmpCardCode">NV0142</span>
                         </div>
+                        <button type="button" class="cch-btn-change-emp" id="btnChangeSelectedEmp" title="Đổi nhân viên">
+                            <i class="fa-solid fa-rotate-left"></i> Đổi
+                        </button>
                         <i class="fa-solid fa-circle-check cch-card-check"></i>
                     </div>
                 </div>
@@ -283,12 +298,16 @@ include 'app/views/layouts/nav.php';
                             <button type="button" class="cch-btn-link" id="btnUnselectAllBatch">Bỏ chọn</button>
                         </div>
                     </div>
-                    <div class="cch-batch-list-box">
+                    <div class="cch-batch-search-wrap" style="position:relative;margin-bottom:8px;">
+                        <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:0.85rem;"></i>
+                        <input type="text" id="cchBatchSearchInput" placeholder="🔍 Lọc danh sách nhân viên theo mã hoặc tên..." style="width:100%;padding:8px 12px 8px 34px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;outline:none;">
+                    </div>
+                    <div class="cch-batch-list-box" id="cchBatchListBox">
                         <?php foreach ($employees as $emp): 
                             $empCode = $emp['maNV'] ?? $emp['tenDangNhap'] ?? ('NV' . str_pad($emp['maND'], 4, '0', STR_PAD_LEFT));
                             $empTitle = $emp['chucVu'] ?? ($emp['phongBan'] ?? 'Nhân viên');
                         ?>
-                            <label class="cch-batch-item">
+                            <label class="cch-batch-item" data-name="<?= htmlspecialchars(mb_strtolower($emp['hoTen'])) ?>" data-code="<?= htmlspecialchars(mb_strtolower($empCode)) ?>" data-id="<?= (int)$emp['maND'] ?>">
                                 <input type="checkbox" name="batch_emp[]" value="<?= (int)$emp['maND'] ?>" class="cch-batch-check">
                                 <span class="cch-batch-name"><?= htmlspecialchars($emp['hoTen']) ?></span>
                                 <span class="cch-batch-dept"><?= htmlspecialchars($empTitle) ?></span>
@@ -486,10 +505,7 @@ include 'app/views/layouts/nav.php';
 <style>
 /* Page Layout */
 .cham-cong-ho-page {
-    padding: 24px 28px 40px 28px;
     width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
     box-sizing: border-box;
 }
 
@@ -605,10 +621,11 @@ include 'app/views/layouts/nav.php';
 /* Table Card */
 .cch-table-card {
     background: #ffffff;
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     overflow: hidden;
+    margin-bottom: 24px;
 }
 
 .cch-filter-bar {
@@ -1104,6 +1121,149 @@ include 'app/views/layouts/nav.php';
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 4px;
+}
+.cch-emp-picker-grid {
+    display: grid;
+    grid-template-columns: minmax(200px, 240px) 1fr;
+    gap: 10px;
+}
+
+@media (max-width: 640px) {
+    .cch-emp-picker-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cch-code-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.cch-code-input {
+    width: 100%;
+    padding: 10px 32px 10px 36px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.cch-code-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.cch-code-icon {
+    position: absolute;
+    left: 12px;
+    color: #2563eb;
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.cch-code-clear {
+    position: absolute;
+    right: 10px;
+    background: #e2e8f0;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.cch-code-clear:hover {
+    background: #cbd5e1;
+    color: #0f172a;
+}
+
+.cch-emp-suggest-list {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    max-height: 210px;
+    overflow-y: auto;
+    margin-top: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.cch-suggest-item {
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+
+.cch-suggest-item:last-child { border-bottom: none; }
+.cch-suggest-item:hover, .cch-suggest-item.highlighted {
+    background: #eff6ff;
+}
+
+.cch-suggest-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cch-suggest-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #3b82f6;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cch-suggest-name {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #0f172a;
+}
+
+.cch-suggest-dept {
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+.cch-btn-change-emp {
+    background: #e2e8f0;
+    border: none;
+    color: #475569;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s;
+    margin-right: 6px;
+}
+
+.cch-btn-change-emp:hover {
+    background: #cbd5e1;
+    color: #0f172a;
 }
 .cch-card-check { color: #16a34a; font-size: 1.1rem; }
 
@@ -1664,12 +1824,16 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.classList.add('show');
         modal.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
+        setTimeout(() => {
+            if (empCodeInput) empCodeInput.focus();
+        }, 100);
     }
 
     function closeModal() {
         modal.classList.remove('show');
         modal.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
+        if (empSuggestList) empSuggestList.style.display = 'none';
     }
 
     if (btnOpen) btnOpen.addEventListener('click', openModal);
@@ -1703,29 +1867,171 @@ document.addEventListener('DOMContentLoaded', function () {
         groupBatch.style.display = 'block';
     });
 
-    // Single Employee Selection Change -> Update Visual Card
-    singleEmpSelect.addEventListener('change', function () {
-        const opt = this.options[this.selectedIndex];
-        if (opt && opt.value) {
-            const name = opt.getAttribute('data-name') || '';
-            const dept = opt.getAttribute('data-dept') || '';
-            const code = opt.getAttribute('data-code') || '';
-            
-            let initials = name ? name.substring(0, 1).toUpperCase() : 'NV';
-            const parts = name.split(' ');
+    const empCodeInput = document.getElementById('cchEmpCodeInput');
+    const btnClearEmpCode = document.getElementById('btnClearEmpCode');
+    const empSuggestList = document.getElementById('cchEmpSuggestList');
+    const btnChangeSelectedEmp = document.getElementById('btnChangeSelectedEmp');
+    const batchSearchInput = document.getElementById('cchBatchSearchInput');
+
+    function escapeHtml(str) {
+        return String(str || '').replace(/[&<>"']/g, function (m) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+        });
+    }
+
+    // Cache employee list
+    const empDataList = Array.from(singleEmpSelect.options)
+        .filter(opt => opt.value)
+        .map(opt => ({
+            id: opt.value,
+            name: opt.getAttribute('data-name') || '',
+            dept: opt.getAttribute('data-dept') || '',
+            code: opt.getAttribute('data-code') || '',
+            text: opt.textContent.trim(),
+            rawSearch: (opt.getAttribute('data-code') + ' ' + opt.getAttribute('data-name') + ' ' + opt.value + ' ' + opt.getAttribute('data-dept')).toLowerCase()
+        }));
+
+    function selectEmployeeById(empId, updateInputVal = true) {
+        if (!empId) {
+            singleEmpSelect.value = '';
+            empCard.style.display = 'none';
+            if (updateInputVal && empCodeInput) empCodeInput.value = '';
+            if (btnClearEmpCode) btnClearEmpCode.style.display = 'none';
+            return;
+        }
+        singleEmpSelect.value = empId;
+        const emp = empDataList.find(e => String(e.id) === String(empId));
+        if (emp) {
+            if (updateInputVal && empCodeInput) empCodeInput.value = emp.code;
+            if (btnClearEmpCode) btnClearEmpCode.style.display = 'flex';
+
+            let initials = emp.name ? emp.name.substring(0, 1).toUpperCase() : 'NV';
+            const parts = emp.name.split(' ');
             if (parts.length > 1) {
                 initials = (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
             }
 
             empCardAvatar.textContent = initials;
-            empCardName.textContent = name;
-            empCardDept.textContent = '• ' + dept;
-            empCardCode.textContent = code;
+            empCardName.textContent = emp.name;
+            empCardDept.textContent = '• ' + emp.dept;
+            empCardCode.textContent = emp.code;
             empCard.style.display = 'flex';
-        } else {
-            empCard.style.display = 'none';
+        }
+        if (empSuggestList) empSuggestList.style.display = 'none';
+    }
+
+    if (empCodeInput) {
+        empCodeInput.addEventListener('input', function () {
+            const val = this.value.trim().toLowerCase();
+            if (!val) {
+                if (btnClearEmpCode) btnClearEmpCode.style.display = 'none';
+                if (empSuggestList) empSuggestList.style.display = 'none';
+                selectEmployeeById(null, false);
+                return;
+            }
+            if (btnClearEmpCode) btnClearEmpCode.style.display = 'flex';
+
+            const matches = empDataList.filter(e => e.rawSearch.includes(val));
+            
+            // Exact match test
+            const exactMatch = empDataList.find(e => 
+                e.code.toLowerCase() === val || 
+                String(e.id) === val ||
+                e.code.toLowerCase().replace(/^nv/i, '') === val.replace(/^nv/i, '')
+            );
+
+            if (exactMatch) {
+                selectEmployeeById(exactMatch.id, false);
+            }
+
+            // Render suggestions
+            if (matches.length > 0) {
+                empSuggestList.innerHTML = matches.slice(0, 10).map((e, idx) => `
+                    <div class="cch-suggest-item ${idx === 0 ? 'highlighted' : ''}" data-id="${e.id}">
+                        <div class="cch-suggest-info">
+                            <div class="cch-suggest-avatar">${(e.name.substring(0,1)).toUpperCase()}</div>
+                            <div>
+                                <span class="cch-suggest-name">${escapeHtml(e.name)}</span>
+                                <span class="cch-suggest-dept">• ${escapeHtml(e.dept)}</span>
+                            </div>
+                        </div>
+                        <span class="cch-code-pill">${escapeHtml(e.code)}</span>
+                    </div>
+                `).join('');
+                empSuggestList.style.display = 'block';
+            } else {
+                empSuggestList.innerHTML = '<div style="padding:12px 14px;color:#94a3b8;font-size:0.85rem;text-align:center;">Không tìm thấy nhân viên phù hợp</div>';
+                empSuggestList.style.display = 'block';
+            }
+        });
+
+        empCodeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const firstItem = empSuggestList ? empSuggestList.querySelector('.cch-suggest-item') : null;
+                if (firstItem) {
+                    const empId = firstItem.getAttribute('data-id');
+                    selectEmployeeById(empId, true);
+                    dateInput.focus();
+                }
+            } else if (e.key === 'Escape') {
+                if (empSuggestList) empSuggestList.style.display = 'none';
+            }
+        });
+    }
+
+    if (empSuggestList) {
+        empSuggestList.addEventListener('click', function (e) {
+            const item = e.target.closest('.cch-suggest-item');
+            if (item) {
+                const empId = item.getAttribute('data-id');
+                selectEmployeeById(empId, true);
+            }
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        if (empSuggestList && !e.target.closest('#groupSingleEmployee')) {
+            empSuggestList.style.display = 'none';
         }
     });
+
+    if (btnClearEmpCode) {
+        btnClearEmpCode.addEventListener('click', function () {
+            selectEmployeeById(null, true);
+            if (empCodeInput) empCodeInput.focus();
+        });
+    }
+
+    if (btnChangeSelectedEmp) {
+        btnChangeSelectedEmp.addEventListener('click', function () {
+            selectEmployeeById(null, true);
+            if (empCodeInput) empCodeInput.focus();
+        });
+    }
+
+    // Single Employee Selection Change -> Update Visual Card
+    singleEmpSelect.addEventListener('change', function () {
+        selectEmployeeById(this.value, true);
+    });
+
+    // Batch Quick Search
+    if (batchSearchInput) {
+        batchSearchInput.addEventListener('input', function () {
+            const q = this.value.trim().toLowerCase();
+            const items = document.querySelectorAll('.cch-batch-item');
+            items.forEach(item => {
+                const name = item.getAttribute('data-name') || '';
+                const code = item.getAttribute('data-code') || '';
+                const id = item.getAttribute('data-id') || '';
+                if (!q || name.includes(q) || code.includes(q) || id.includes(q)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
 
     // Batch Selection Logic
     function updateBatchCount() {
