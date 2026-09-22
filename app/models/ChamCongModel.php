@@ -265,9 +265,9 @@ class ChamCongModel
                 ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Audit trail chấm công hộ bởi HR'
         ");
-        @$this->conn->query("ALTER TABLE chamconghothay ADD COLUMN maCa INT DEFAULT 1 AFTER ngayChamHo");
-        @$this->conn->query("ALTER TABLE chamconghothay ADD COLUMN congChuan DECIMAL(3,2) DEFAULT 1.00 AFTER gioRa");
-        @$this->conn->query("ALTER TABLE chamconghothay ADD COLUMN mienTruDiTre TINYINT DEFAULT 1 AFTER congChuan");
+        $this->addColumnIfMissing('chamconghothay', 'maCa', 'INT DEFAULT 1 AFTER ngayChamHo');
+        $this->addColumnIfMissing('chamconghothay', 'congChuan', 'DECIMAL(3,2) DEFAULT 1.00 AFTER gioRa');
+        $this->addColumnIfMissing('chamconghothay', 'mienTruDiTre', 'TINYINT DEFAULT 1 AFTER congChuan');
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
