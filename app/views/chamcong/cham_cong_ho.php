@@ -199,7 +199,6 @@ include 'app/views/layouts/nav.php';
                     <h3>Tạo lượt chấm công hộ mới</h3>
                     <span class="cch-override-tag">HR OVERRIDE</span>
                 </div>
-                <p class="cch-head-subtitle">Ghi nhận công cho nhân sự khi gặp sự cố máy quét FaceID, lỗi thiết bị hoặc sự cố khuôn mặt</p>
             </div>
             <button type="button" class="cch-btn-close" id="btnCloseModal" aria-label="Đóng">✕</button>
         </div>
@@ -213,7 +212,7 @@ include 'app/views/layouts/nav.php';
                         Chấm đơn lẻ (1 nhân viên)
                     </button>
                     <button type="button" class="cch-mode-btn" data-mode="batch" id="btnModeBatch">
-                        Chấm hàng loạt (Mất điện / Sự cố toàn bộ)
+                        Chấm hàng loạt (Sự cố toàn bộ)
                     </button>
                 </div>
 
@@ -223,12 +222,12 @@ include 'app/views/layouts/nav.php';
                     
                     <div class="cch-emp-picker-grid">
                         <div class="cch-code-input-wrap">
-                            <input type="text" id="cchEmpCodeInput" class="cch-code-input" placeholder="Nhập mã NV (VD: nv3560, 38)..." autocomplete="off">
+                            <input type="text" id="cchEmpCodeInput" class="cch-code-input" placeholder="Nhập mã nhân viên..." autocomplete="off">
                             <button type="button" class="cch-code-clear" id="btnClearEmpCode" title="Xoá tìm kiếm" style="display:none;">✕</button>
                         </div>
                         <div class="cch-select-wrap">
                             <select id="cchSingleEmpSelect" class="cch-select">
-                                <option value="" disabled selected>-- Hoặc chọn từ danh sách nhân viên --</option>
+                                <option value="" disabled selected>-- Chọn từ danh sách nhân viên --</option>
                                 <?php foreach ($employees as $emp): 
                                     $empCode = $emp['maNV'] ?? $emp['tenDangNhap'] ?? ('NV' . str_pad($emp['maND'], 4, '0', STR_PAD_LEFT));
                                     $empTitle = $emp['chucVu'] ?? ($emp['phongBan'] ?? 'Nhân viên');
@@ -271,7 +270,7 @@ include 'app/views/layouts/nav.php';
                         </div>
                     </div>
                     <div class="cch-batch-search-wrap" style="margin-bottom:8px;">
-                        <input type="text" id="cchBatchSearchInput" placeholder="Lọc danh sách nhân viên theo mã hoặc tên..." style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;outline:none;">
+                        <input type="text" id="cchBatchSearchInput" placeholder="Tìm theo mã hoặc tên nhân viên..." style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;outline:none;">
                     </div>
                     <div class="cch-batch-list-box" id="cchBatchListBox">
                         <?php foreach ($employees as $emp): 
@@ -376,8 +375,7 @@ include 'app/views/layouts/nav.php';
                     <label class="cch-exempt-row">
                         <input type="checkbox" id="cchMienTruCheck" checked class="cch-checkbox">
                         <div class="cch-exempt-text">
-                            <div class="cch-exempt-title">Miễn trừ tính phạt đi trễ do sự cố thiết bị FaceID</div>
-                            <div class="cch-exempt-desc">Nhân viên vẫn được tính chuyên cần và không bị trừ điểm KPI đi trễ của tháng này.</div>
+                            <div class="cch-exempt-title">Miễn trừ tính phạt đi trễ do sự cố thiết bị</div>
                         </div>
                     </label>
                 </div>
@@ -386,7 +384,6 @@ include 'app/views/layouts/nav.php';
                 <div class="cch-form-group">
                     <div class="cch-reason-header">
                         <label class="cch-label" style="margin-bottom:0;">Lý do sự cố / Nguyên nhân chấm hộ <span class="cch-req">*</span></label>
-                        <span class="cch-reason-hint">Nhấn để chọn nguyên nhân</span>
                     </div>
 
                     <div class="cch-reasons-grid">
@@ -394,15 +391,13 @@ include 'app/views/layouts/nav.php';
                         <div class="cch-reason-card selected" data-reason="Lỗi nhận diện FaceID">
                             <div class="cch-reason-info">
                                 <div class="cch-reason-title">Lỗi nhận diện FaceID</div>
-                                <div class="cch-reason-sub">Camera mờ / Sai góc độ quét</div>
                             </div>
                         </div>
 
                         <!-- Card 2: Accident / Face Issue -->
-                        <div class="cch-reason-card" data-reason="Sự cố khuôn mặt / Tai nạn (Không thể nhận diện)">
+                        <div class="cch-reason-card" data-reason="Sự cố khuôn mặt / Tai nạn">
                             <div class="cch-reason-info">
                                 <div class="cch-reason-title">Tai nạn / Sự cố khuôn mặt</div>
-                                <div class="cch-reason-sub">Chấn thương, băng gạc, dị ứng...</div>
                             </div>
                         </div>
 
@@ -410,7 +405,6 @@ include 'app/views/layouts/nav.php';
                         <div class="cch-reason-card" data-reason="Tablet treo / Mất nguồn">
                             <div class="cch-reason-info">
                                 <div class="cch-reason-title">Tablet treo / Mất nguồn</div>
-                                <div class="cch-reason-sub">App thoát đột ngột, hết pin</div>
                             </div>
                         </div>
 
@@ -418,7 +412,6 @@ include 'app/views/layouts/nav.php';
                         <div class="cch-reason-card" data-reason="Mất kết nối Wi-Fi">
                             <div class="cch-reason-info">
                                 <div class="cch-reason-title">Mất kết nối Wi-Fi</div>
-                                <div class="cch-reason-sub">Đứt cáp quang / Ngoại lệ mạng</div>
                             </div>
                         </div>
                     </div>
@@ -429,7 +422,7 @@ include 'app/views/layouts/nav.php';
                 <div class="cch-form-group" style="margin-bottom: 8px;">
                     <label class="cch-label">Ghi chú xác minh của Quản lý / HR <span class="cch-opt">(Tùy chọn)</span></label>
                     <textarea id="cchNoteInput" class="cch-textarea" rows="2" 
-                              placeholder="Ví dụ: Trưởng nhóm Backend (Anh Tuấn) đã xác nhận nhân viên có mặt tại bàn làm việc từ 08:25 sáng..."></textarea>
+                              placeholder="Nhập ghi chú xác minh (nếu có)..."></textarea>
                 </div>
             </form>
         </div>
@@ -1480,33 +1473,26 @@ include 'app/views/layouts/nav.php';
     margin-bottom: 10px;
 }
 
-.cch-reason-hint {
-    font-size: 0.78rem;
-    color: #64748b;
-}
-
 .cch-reasons-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    gap: 10px;
 }
 
 .cch-reason-card {
     background: #ffffff;
     border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 12px 14px;
+    border-radius: 8px;
+    padding: 10px 14px;
     cursor: pointer;
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    position: relative;
+    align-items: center;
     transition: all 0.2s ease;
 }
 
 .cch-reason-card:hover {
     border-color: #94a3b8;
-    transform: translateY(-1px);
+    background: #f8fafc;
 }
 
 .cch-reason-card.selected {
@@ -1515,54 +1501,16 @@ include 'app/views/layouts/nav.php';
     box-shadow: 0 0 0 1px #2563eb;
 }
 
-.cch-reason-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    flex-shrink: 0;
+.cch-reason-info {
+    width: 100%;
 }
-
-.icon-face { background: #fef3c7; color: #b45309; }
-.icon-accident { background: #fee2e2; color: #e11d48; }
-.icon-tablet { background: #f3e8ff; color: #7e22ce; }
-.icon-wifi { background: #ffedd5; color: #c2410c; }
-
-.cch-reason-info { flex: 1; padding-right: 18px; }
 
 .cch-reason-title {
     font-size: 0.85rem;
-    font-weight: 700;
+    font-weight: 600;
     color: #0f172a;
     line-height: 1.3;
-    margin-bottom: 2px;
 }
-
-.cch-reason-sub {
-    font-size: 0.72rem;
-    color: #64748b;
-    line-height: 1.3;
-}
-
-.cch-reason-check {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #2563eb;
-    color: #ffffff;
-    font-size: 0.6rem;
-    display: none;
-    align-items: center;
-    justify-content: center;
-}
-
-.cch-reason-card.selected .cch-reason-check { display: flex; }
 
 /* Textarea */
 .cch-textarea {
@@ -2063,10 +2011,10 @@ document.addEventListener('DOMContentLoaded', function () {
             selectedReasonInput.value = r;
 
             if (r.includes('Tai nạn') || r.includes('khuôn mặt')) {
-                noteInput.placeholder = 'Vui lòng ghi rõ chi tiết sự cố (ví dụ: Nhân viên bị dị ứng/chấn thương mắt, đã xác nhận có mặt trực tiếp...)';
+                noteInput.placeholder = 'Nhập chi tiết sự cố xác minh...';
                 noteInput.focus();
             } else {
-                noteInput.placeholder = 'Ví dụ: Trưởng nhóm Backend (Anh Tuấn) đã xác nhận nhân viên có mặt tại bàn làm việc từ 08:25 sáng...';
+                noteInput.placeholder = 'Nhập ghi chú xác minh (nếu có)...';
             }
         });
     });
