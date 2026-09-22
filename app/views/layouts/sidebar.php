@@ -17,7 +17,7 @@ $menus = [
         ['page' => 'quan-ly-ca-lam', 'label' => 'Quản lý Ca làm việc', 'icon' => 'fa-business-time'],
         ['page' => 'tinh-cong', 'label' => 'Tính công & Báo cáo', 'icon' => 'fa-calculator'],
         ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
-        ['page' => 'cham-cong-ho', 'label' => 'Chấm công hộ nhân viên', 'icon' => 'fa-fingerprint', 'badge' => 'Mới'],
+        ['page' => 'cham-cong-ho', 'label' => 'Chấm công hộ nhân viên', 'icon' => 'fa-fingerprint'],
         ['page' => 'cham-cong', 'label' => 'Máy quét chấm công', 'icon' => 'fa-tablet-screen-button'],
     ],
     'nhanvien' => [
