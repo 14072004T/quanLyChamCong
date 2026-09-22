@@ -43,33 +43,21 @@ include 'app/views/layouts/nav.php';
 
             <!-- Metric Cards -->
             <div class="cch-stats-grid">
-                <div class="cch-stat-card card-total">
-                    <div class="cch-stat-icon"><i class="fa-solid fa-clipboard-check"></i></div>
-                    <div class="cch-stat-info">
-                        <span class="cch-stat-label">Tổng lượt trong tháng</span>
-                        <div class="cch-stat-value" id="statTotal"><?= (int)$stats['total'] ?></div>
-                    </div>
+                <div class="cch-stat-card">
+                    <span class="cch-stat-label">Tổng lượt trong tháng</span>
+                    <div class="cch-stat-value" id="statTotal"><?= (int)$stats['total'] ?></div>
                 </div>
-                <div class="cch-stat-card card-face">
-                    <div class="cch-stat-icon"><i class="fa-solid fa-user-slash"></i></div>
-                    <div class="cch-stat-info">
-                        <span class="cch-stat-label">Sự cố máy quét FaceID</span>
-                        <div class="cch-stat-value" id="statFace"><?= (int)$stats['face_error'] ?></div>
-                    </div>
+                <div class="cch-stat-card">
+                    <span class="cch-stat-label">Sự cố máy quét FaceID</span>
+                    <div class="cch-stat-value" id="statFace"><?= (int)$stats['face_error'] ?></div>
                 </div>
-                <div class="cch-stat-card card-accident">
-                    <div class="cch-stat-icon"><i class="fa-solid fa-user-injured"></i></div>
-                    <div class="cch-stat-info">
-                        <span class="cch-stat-label">Tai nạn / Sự cố khuôn mặt</span>
-                        <div class="cch-stat-value" id="statAccident"><?= (int)($stats['accident_face'] ?? 0) ?></div>
-                    </div>
+                <div class="cch-stat-card">
+                    <span class="cch-stat-label">Tai nạn / Sự cố khuôn mặt</span>
+                    <div class="cch-stat-value" id="statAccident"><?= (int)($stats['accident_face'] ?? 0) ?></div>
                 </div>
-                <div class="cch-stat-card card-device">
-                    <div class="cch-stat-icon"><i class="fa-solid fa-network-wired"></i></div>
-                    <div class="cch-stat-info">
-                        <span class="cch-stat-label">Lỗi Tablet / Wi-Fi</span>
-                        <div class="cch-stat-value" id="statDevice"><?= (int)(($stats['tablet_power'] ?? 0) + ($stats['wifi_loss'] ?? 0)) ?></div>
-                    </div>
+                <div class="cch-stat-card">
+                    <span class="cch-stat-label">Lỗi Tablet / Wi-Fi</span>
+                    <div class="cch-stat-value" id="statDevice"><?= (int)(($stats['tablet_power'] ?? 0) + ($stats['wifi_loss'] ?? 0)) ?></div>
                 </div>
             </div>
 
@@ -206,48 +194,37 @@ include 'app/views/layouts/nav.php';
     <div class="cch-modal-card">
         <!-- Modal Head -->
         <div class="cch-modal-head">
-            <div class="cch-head-left">
-                <div class="cch-head-icon">
-                    <i class="fa-solid fa-user-shield"></i>
+            <div>
+                <div class="cch-title-wrap">
+                    <h3>Tạo lượt chấm công hộ mới</h3>
+                    <span class="cch-override-tag">HR OVERRIDE</span>
                 </div>
-                <div>
-                    <div class="cch-title-wrap">
-                        <h3>Tạo lượt chấm công hộ mới</h3>
-                        <span class="cch-override-tag">HR OVERRIDE</span>
-                    </div>
-                    <p class="cch-head-subtitle">Ghi nhận công cho nhân sự khi gặp sự cố máy quét FaceID, lỗi thiết bị hoặc sự cố khuôn mặt</p>
-                </div>
+                <p class="cch-head-subtitle">Ghi nhận công cho nhân sự khi gặp sự cố máy quét FaceID, lỗi thiết bị hoặc sự cố khuôn mặt</p>
             </div>
-            <button type="button" class="cch-btn-close" id="btnCloseModal" aria-label="Đóng">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+            <button type="button" class="cch-btn-close" id="btnCloseModal" aria-label="Đóng">✕</button>
         </div>
 
         <!-- Modal Body -->
         <div class="cch-modal-body">
             <form id="cchOverrideForm" autocomplete="off">
-                <!-- Mode Switcher (Pill tabs) -->
+                <!-- Mode Switcher -->
                 <div class="cch-mode-switch">
                     <button type="button" class="cch-mode-btn active" data-mode="single" id="btnModeSingle">
-                        <span class="dot"></span> Chấm đơn lẻ (1 nhân viên)
+                        Chấm đơn lẻ (1 nhân viên)
                     </button>
                     <button type="button" class="cch-mode-btn" data-mode="batch" id="btnModeBatch">
-                        <span class="dot"></span> Chấm hàng loạt (Mất điện / Sự cố toàn bộ)
+                        Chấm hàng loạt (Mất điện / Sự cố toàn bộ)
                     </button>
                 </div>
 
-                <!-- Single Employee Picker -->
                 <!-- Single Employee Picker -->
                 <div class="cch-form-group" id="groupSingleEmployee">
                     <label class="cch-label">Nhân viên cần chấm hộ <span class="cch-req">*</span></label>
                     
                     <div class="cch-emp-picker-grid">
                         <div class="cch-code-input-wrap">
-                            <i class="fa-solid fa-id-card cch-code-icon"></i>
-                            <input type="text" id="cchEmpCodeInput" class="cch-code-input" placeholder="🔍 Nhập mã NV (VD: nv3560, 38)..." autocomplete="off">
-                            <button type="button" class="cch-code-clear" id="btnClearEmpCode" title="Xoá tìm kiếm" style="display:none;">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
+                            <input type="text" id="cchEmpCodeInput" class="cch-code-input" placeholder="Nhập mã NV (VD: nv3560, 38)..." autocomplete="off">
+                            <button type="button" class="cch-code-clear" id="btnClearEmpCode" title="Xoá tìm kiếm" style="display:none;">✕</button>
                         </div>
                         <div class="cch-select-wrap">
                             <select id="cchSingleEmpSelect" class="cch-select">
@@ -265,7 +242,6 @@ include 'app/views/layouts/nav.php';
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <i class="fa-solid fa-users cch-select-search-icon"></i>
                             <i class="fa-solid fa-chevron-down cch-select-arrow"></i>
                         </div>
                     </div>
@@ -275,16 +251,12 @@ include 'app/views/layouts/nav.php';
 
                     <!-- Visual Selected Employee Card Preview -->
                     <div class="cch-selected-emp-card" id="cchSelectedEmpCard" style="display:none;">
-                        <div class="cch-card-avatar" id="cchEmpCardAvatar">LC</div>
                         <div class="cch-card-info">
-                            <span class="cch-card-name" id="cchEmpCardName">Lê Hoàng Châu</span>
+                            <strong class="cch-card-name" id="cchEmpCardName">Lê Hoàng Châu</strong>
                             <span class="cch-card-sub" id="cchEmpCardDept">• Senior Backend Dev</span>
                             <span class="cch-card-code" id="cchEmpCardCode">NV0142</span>
                         </div>
-                        <button type="button" class="cch-btn-change-emp" id="btnChangeSelectedEmp" title="Đổi nhân viên">
-                            <i class="fa-solid fa-rotate-left"></i> Đổi
-                        </button>
-                        <i class="fa-solid fa-circle-check cch-card-check"></i>
+                        <button type="button" class="cch-btn-change-emp" id="btnChangeSelectedEmp">Đổi nhân viên</button>
                     </div>
                 </div>
 
@@ -298,9 +270,8 @@ include 'app/views/layouts/nav.php';
                             <button type="button" class="cch-btn-link" id="btnUnselectAllBatch">Bỏ chọn</button>
                         </div>
                     </div>
-                    <div class="cch-batch-search-wrap" style="position:relative;margin-bottom:8px;">
-                        <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:0.85rem;"></i>
-                        <input type="text" id="cchBatchSearchInput" placeholder="🔍 Lọc danh sách nhân viên theo mã hoặc tên..." style="width:100%;padding:8px 12px 8px 34px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;outline:none;">
+                    <div class="cch-batch-search-wrap" style="margin-bottom:8px;">
+                        <input type="text" id="cchBatchSearchInput" placeholder="Lọc danh sách nhân viên theo mã hoặc tên..." style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.85rem;box-sizing:border-box;outline:none;">
                     </div>
                     <div class="cch-batch-list-box" id="cchBatchListBox">
                         <?php foreach ($employees as $emp): 
@@ -323,7 +294,6 @@ include 'app/views/layouts/nav.php';
                     <div class="cch-form-group cch-col">
                         <label class="cch-label">Ngày chấm công <span class="cch-req">*</span></label>
                         <div class="cch-date-input-wrap">
-                            <i class="fa-regular fa-calendar cch-input-icon"></i>
                             <input type="date" id="cchDateInput" class="cch-input" max="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
                             <button type="button" class="cch-btn-today" id="btnSetToday">Hôm nay</button>
                         </div>
@@ -348,7 +318,6 @@ include 'app/views/layouts/nav.php';
                                     <?php endforeach; ?>
                                 <?php endif; ?>
                             </select>
-                            <i class="fa-regular fa-clock cch-select-search-icon"></i>
                             <i class="fa-solid fa-chevron-down cch-select-arrow"></i>
                         </div>
                     </div>
@@ -358,11 +327,10 @@ include 'app/views/layouts/nav.php';
                 <div class="cch-time-card">
                     <div class="cch-time-card-head">
                         <div class="cch-time-head-title">
-                            <i class="fa-regular fa-clock"></i>
                             <span>Mốc giờ Check-in / Check-out</span>
                         </div>
                         <div class="cch-time-badge" id="cchWorkCreditBadge">
-                            <span class="dot"></span> <span id="cchCreditText">1.0 công chuẩn • 8.0 giờ làm</span>
+                            <span id="cchCreditText">1.0 công chuẩn • 8.0 giờ làm</span>
                         </div>
                     </div>
 
@@ -394,7 +362,7 @@ include 'app/views/layouts/nav.php';
                     <div class="cch-quick-select-row">
                         <span class="cch-quick-label">Chọn nhanh:</span>
                         <button type="button" class="cch-quick-btn active" id="btnQuickFull">
-                            <i class="fa-solid fa-bolt"></i> Đúng ca chuẩn (08:30 - 17:30)
+                            Đúng ca chuẩn (08:30 - 17:30)
                         </button>
                         <button type="button" class="cch-quick-btn" id="btnQuickMorning">
                             Nửa ca sáng (0.5 công)
@@ -424,50 +392,34 @@ include 'app/views/layouts/nav.php';
                     <div class="cch-reasons-grid">
                         <!-- Card 1: FaceID -->
                         <div class="cch-reason-card selected" data-reason="Lỗi nhận diện FaceID">
-                            <div class="cch-reason-icon icon-face">
-                                <i class="fa-solid fa-user-slash"></i>
-                            </div>
                             <div class="cch-reason-info">
                                 <div class="cch-reason-title">Lỗi nhận diện FaceID</div>
                                 <div class="cch-reason-sub">Camera mờ / Sai góc độ quét</div>
                             </div>
-                            <div class="cch-reason-check"><i class="fa-solid fa-check"></i></div>
                         </div>
 
                         <!-- Card 2: Accident / Face Issue -->
                         <div class="cch-reason-card" data-reason="Sự cố khuôn mặt / Tai nạn (Không thể nhận diện)">
-                            <div class="cch-reason-icon icon-accident">
-                                <i class="fa-solid fa-user-injured"></i>
-                            </div>
                             <div class="cch-reason-info">
                                 <div class="cch-reason-title">Tai nạn / Sự cố khuôn mặt</div>
                                 <div class="cch-reason-sub">Chấn thương, băng gạc, dị ứng...</div>
                             </div>
-                            <div class="cch-reason-check"><i class="fa-solid fa-check"></i></div>
                         </div>
 
                         <!-- Card 3: Tablet power / crash -->
                         <div class="cch-reason-card" data-reason="Tablet treo / Mất nguồn">
-                            <div class="cch-reason-icon icon-tablet">
-                                <i class="fa-solid fa-tablet-screen-button"></i>
-                            </div>
                             <div class="cch-reason-info">
                                 <div class="cch-reason-title">Tablet treo / Mất nguồn</div>
                                 <div class="cch-reason-sub">App thoát đột ngột, hết pin</div>
                             </div>
-                            <div class="cch-reason-check"><i class="fa-solid fa-check"></i></div>
                         </div>
 
                         <!-- Card 4: Wi-Fi Disconnect -->
                         <div class="cch-reason-card" data-reason="Mất kết nối Wi-Fi">
-                            <div class="cch-reason-icon icon-wifi">
-                                <i class="fa-solid fa-wifi"></i>
-                            </div>
                             <div class="cch-reason-info">
                                 <div class="cch-reason-title">Mất kết nối Wi-Fi</div>
                                 <div class="cch-reason-sub">Đứt cáp quang / Ngoại lệ mạng</div>
                             </div>
-                            <div class="cch-reason-check"><i class="fa-solid fa-check"></i></div>
                         </div>
                     </div>
                     <input type="hidden" id="cchSelectedReason" value="Lỗi nhận diện FaceID">
@@ -485,14 +437,12 @@ include 'app/views/layouts/nav.php';
         <!-- Modal Foot -->
         <div class="cch-modal-foot">
             <div class="cch-foot-audit">
-                <i class="fa-solid fa-shield-halved"></i>
                 <span>Lưu vết Audit Log bởi HR: <strong><?= $hrName ?></strong></span>
             </div>
             <div class="cch-foot-actions">
                 <button type="button" class="cch-btn-cancel" id="btnCancelModal">Hủy bỏ</button>
                 <button type="button" class="cch-btn-submit" id="btnSubmitOverride">
-                    <i class="fa-solid fa-shield-halved"></i>
-                    <span>Lưu & Xác nhận chấm hộ</span>
+                    Lưu & Xác nhận chấm hộ
                 </button>
             </div>
         </div>
@@ -578,37 +528,20 @@ include 'app/views/layouts/nav.php';
 
 .cch-stat-card {
     background: #ffffff;
-    border-radius: 14px;
-    padding: 18px 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-}
-
-.cch-stat-icon {
-    width: 46px;
-    height: 46px;
     border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    flex-shrink: 0;
+    padding: 16px 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
-
-.card-total .cch-stat-icon { background: #eff6ff; color: #2563eb; }
-.card-face .cch-stat-icon { background: #fef3c7; color: #d97706; }
-.card-accident .cch-stat-icon { background: #fee2e2; color: #e11d48; }
-.card-device .cch-stat-icon { background: #f3e8ff; color: #9333ea; }
 
 .cch-stat-label {
-    font-size: 0.82rem;
-    font-weight: 600;
+    font-size: 0.78rem;
+    font-weight: 700;
     color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     display: block;
-    margin-bottom: 2px;
+    margin-bottom: 6px;
 }
 
 .cch-stat-value {
@@ -1052,7 +985,7 @@ include 'app/views/layouts/nav.php';
 
 .cch-select {
     width: 100%;
-    padding: 10px 38px 10px 36px;
+    padding: 10px 38px 10px 14px;
     border: 1.5px solid #cbd5e1;
     border-radius: 10px;
     font-size: 0.88rem;
@@ -1142,7 +1075,7 @@ include 'app/views/layouts/nav.php';
 
 .cch-code-input {
     width: 100%;
-    padding: 10px 32px 10px 36px;
+    padding: 10px 32px 10px 14px;
     border: 1.5px solid #cbd5e1;
     border-radius: 10px;
     font-size: 0.88rem;
@@ -1151,19 +1084,6 @@ include 'app/views/layouts/nav.php';
     outline: none;
     transition: all 0.2s;
     box-sizing: border-box;
-}
-
-.cch-code-input:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-
-.cch-code-icon {
-    position: absolute;
-    left: 12px;
-    color: #2563eb;
-    font-size: 0.9rem;
-    pointer-events: none;
 }
 
 .cch-code-clear {
@@ -2199,7 +2119,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         btnSubmit.disabled = true;
-        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang ghi nhận...';
+        btnSubmit.innerHTML = 'Đang ghi nhận...';
 
         fetch('index.php?page=hr-api-override-attendance', {
             method: 'POST',
@@ -2208,7 +2128,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(res => res.json())
         .then(data => {
             btnSubmit.disabled = false;
-            btnSubmit.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Lưu & Xác nhận chấm hộ';
+            btnSubmit.innerHTML = 'Lưu & Xác nhận chấm hộ';
 
             if (data.success) {
                 alert(data.message || 'Chấm công hộ thành công!');
@@ -2221,7 +2141,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(err => {
             btnSubmit.disabled = false;
-            btnSubmit.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Lưu & Xác nhận chấm hộ';
+            btnSubmit.innerHTML = 'Lưu & Xác nhận chấm hộ';
             alert('Lỗi kết nối máy chủ: ' + err.message);
         });
     });
