@@ -799,6 +799,22 @@ body {
 
 .sidebar-nav ul li a.active i { color: #60a5fa; opacity: 1; }
 
+.badge-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    background: #2563eb;
+    color: #ffffff;
+    letter-spacing: 0.02em;
+    margin-left: auto;
+    text-transform: uppercase;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.4);
+}
+
 
 /* ===== FOOTER ===== */
 

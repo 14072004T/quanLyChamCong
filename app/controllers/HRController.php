@@ -528,19 +528,65 @@ class HRController
         ]);
     }
 
+    public function chamCongHo()
+    {
+        AuthMiddleware::requirePermission('cham-cong-ho');
+
+        $selectedMonth = $_GET['month'] ?? date('Y-m');
+        if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
+            $selectedMonth = date('Y-m');
+        }
+        $keyword = trim($_GET['q'] ?? '');
+
+        $employees = $this->model->getEmployees('', true, 0);
+        $shifts = $this->model->getShifts();
+        $history = $this->model->getHrOverrideHistory($selectedMonth, $keyword, 300);
+        $overrideCount = count($history);
+
+        // Phân loại thống kê sự cố
+        $stats = [
+            'total' => $overrideCount,
+            'face_error' => 0,
+            'tablet_power' => 0,
+            'wifi_loss' => 0,
+            'other' => 0,
+        ];
+        foreach ($history as $h) {
+            $r = $h['lyDo'] ?? '';
+            if (stripos($r, 'FaceID') !== false || stripos($r, 'nhận diện') !== false || stripos($r, 'khuôn mặt') !== false) {
+                $stats['face_error']++;
+            } elseif (stripos($r, 'Tablet') !== false || stripos($r, 'mất nguồn') !== false || stripos($r, 'treo') !== false || stripos($r, 'pin') !== false) {
+                $stats['tablet_power']++;
+            } elseif (stripos($r, 'Wi-Fi') !== false || stripos($r, 'wifi') !== false || stripos($r, 'mạng') !== false || stripos($r, 'kết nối') !== false) {
+                $stats['wifi_loss']++;
+            } else {
+                $stats['other']++;
+            }
+        }
+
+        require __DIR__ . '/../views/chamcong/cham_cong_ho.php';
+    }
+
     public function hrOverrideApi()
     {
         AuthMiddleware::requirePermission('hr-api-override-attendance');
         $this->jsonOnly(['POST']);
 
-        $maNV  = (int)($_POST['maNV'] ?? 0);
-        $ngay  = trim($_POST['ngay'] ?? '');
-        $lyDo  = trim($_POST['lyDo'] ?? '');
-        $ghiChu = trim($_POST['ghiChu'] ?? '');
-        $maHR  = (int)($_SESSION['user']['maND'] ?? 0);
+        $mode        = trim($_POST['mode'] ?? 'single'); // 'single' hoặc 'batch'
+        $maNV        = (int)($_POST['maNV'] ?? 0);
+        $maNVs       = $_POST['maNVs'] ?? [];
+        $ngay        = trim($_POST['ngay'] ?? '');
+        $maCa        = (int)($_POST['maCa'] ?? 1);
+        $gioVao      = trim($_POST['gioVao'] ?? '08:30');
+        $gioRa       = trim($_POST['gioRa'] ?? '17:35');
+        $congChuan   = (float)($_POST['congChuan'] ?? 1.0);
+        $mienTru     = !empty($_POST['mienTruDiTre']) && $_POST['mienTruDiTre'] !== '0' && $_POST['mienTruDiTre'] !== 'false';
+        $lyDo        = trim($_POST['lyDo'] ?? '');
+        $ghiChu      = trim($_POST['ghiChu'] ?? '');
+        $maHR        = (int)($_SESSION['user']['maND'] ?? 0);
 
-        if ($maNV <= 0 || !$ngay || !$lyDo) {
-            $this->respond(['success' => false, 'message' => 'Thiếu thông tin bắt buộc (nhân viên, ngày, lý do)'], 422);
+        if (!$ngay || !$lyDo) {
+            $this->respond(['success' => false, 'message' => 'Vui lòng chọn ngày và lý do sự cố kỹ thuật'], 422);
         }
 
         // Không cho chấm hộ ngày tương lai
@@ -548,8 +594,23 @@ class HRController
             $this->respond(['success' => false, 'message' => 'Không thể chấm công hộ cho ngày trong tương lai'], 422);
         }
 
-        $result = $this->model->hrOverrideChamCong($maNV, $maHR, $ngay, $lyDo, $ghiChu);
-        $this->respond($result, $result['success'] ? 200 : 422);
+        if ($mode === 'batch') {
+            if (empty($maNVs) || !is_array($maNVs)) {
+                $this->respond(['success' => false, 'message' => 'Vui lòng chọn ít nhất 1 nhân viên để chấm hàng loạt'], 422);
+            }
+            $result = $this->model->hrOverrideChamCongBatch(
+                $maNVs, $maHR, $ngay, $lyDo, $ghiChu, $gioVao, $gioRa, $maCa, $congChuan, $mienTru
+            );
+            $this->respond($result, $result['success'] ? 200 : 422);
+        } else {
+            if ($maNV <= 0) {
+                $this->respond(['success' => false, 'message' => 'Vui lòng chọn nhân viên cần chấm công hộ'], 422);
+            }
+            $result = $this->model->hrOverrideChamCong(
+                $maNV, $maHR, $ngay, $lyDo, $ghiChu, $gioVao, $gioRa, $maCa, $congChuan, $mienTru
+            );
+            $this->respond($result, $result['success'] ? 200 : 422);
+        }
     }
 
     public function hrOverrideHistoryApi()
@@ -560,8 +621,9 @@ class HRController
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
             $monthKey = date('Y-m');
         }
+        $keyword = trim($_GET['q'] ?? '');
 
-        $rows = $this->model->getHrOverrideHistory($monthKey, 200);
+        $rows = $this->model->getHrOverrideHistory($monthKey, $keyword, 300);
         $this->respond([
             'success' => true,
             'data'    => $rows,

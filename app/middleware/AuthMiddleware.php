@@ -46,6 +46,7 @@ class AuthMiddleware
             'hr-api-tablet-scans-delete',
             'hr-api-approval-detail',
             'hr-api-timesheet-approval-details',
+            'cham-cong-ho',
             'hr-api-override-attendance',
             'hr-api-override-history',
             'lich-su-cham-cong',

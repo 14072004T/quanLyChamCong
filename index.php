@@ -120,6 +120,7 @@ $allowedPages = [
     'quan-ly-nhanvien',
     'quan-ly-ca-lam',
     'tinh-cong',
+    'cham-cong-ho',
     'xuat-bao-cao',
     'gui-bang-cong-phe-duyet',
     'xuly-yeucau',
@@ -395,6 +396,11 @@ switch ($page) {
     case 'hr-api-timesheet-approval-details':
         require_once 'app/controllers/HRController.php';
         (new HRController())->timesheetApprovalDetailsApi();
+        break;
+
+    case 'cham-cong-ho':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->chamCongHo();
         break;
 
     case 'hr-api-override-attendance':

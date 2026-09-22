@@ -17,6 +17,8 @@ $menus = [
         ['page' => 'quan-ly-ca-lam', 'label' => 'Quản lý Ca làm việc', 'icon' => 'fa-business-time'],
         ['page' => 'tinh-cong', 'label' => 'Tính công & Báo cáo', 'icon' => 'fa-calculator'],
         ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
+        ['page' => 'cham-cong-ho', 'label' => 'Chấm công hộ', 'icon' => 'fa-fingerprint', 'badge' => 'Mới'],
+        ['page' => 'cham-cong', 'label' => 'Máy quét chấm công', 'icon' => 'fa-tablet-screen-button'],
     ],
     'nhanvien' => [
         ['page' => 'lich-su-cham-cong', 'label' => 'Xem lịch sử', 'icon' => 'fa-clock-rotate-left'],
@@ -174,6 +176,9 @@ foreach ($roleMenus as $menu) {
                          title="<?= htmlspecialchars($menu['label']) ?>">
                     <i class="fa-solid <?= htmlspecialchars($menu['icon']) ?>"></i>
                     <span><?= htmlspecialchars($menu['label']) ?></span>
+                    <?php if (!empty($menu['badge'])): ?>
+                        <span class="badge-menu"><?= htmlspecialchars($menu['badge']) ?></span>
+                    <?php endif; ?>
                 </a>
             </li>
             <?php endif; ?>

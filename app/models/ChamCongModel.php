@@ -252,9 +252,12 @@ class ChamCongModel
                 maNguoiDuocChamHo INT NOT NULL COMMENT 'Nhân viên được chấm công hộ',
                 maHR INT NOT NULL COMMENT 'HR thực hiện chấm công hộ',
                 ngayChamHo DATE NOT NULL COMMENT 'Ngày được chấm hộ',
+                maCa INT DEFAULT 1 COMMENT 'Ca làm việc áp dụng',
                 hanhDong ENUM('IN','OUT','FULL') NOT NULL DEFAULT 'FULL' COMMENT 'Vào/Ra/Cả ngày',
                 gioVao DATETIME DEFAULT NULL COMMENT 'Giờ vào được ghi nhận',
                 gioRa DATETIME DEFAULT NULL COMMENT 'Giờ ra được ghi nhận',
+                congChuan DECIMAL(3,2) DEFAULT 1.00 COMMENT 'Hệ số công',
+                mienTruDiTre TINYINT DEFAULT 1 COMMENT 'Miễn trừ phạt đi trễ do sự cố',
                 lyDo TEXT NOT NULL COMMENT 'Lý do chấm hộ',
                 ghiChuHR VARCHAR(500) DEFAULT NULL COMMENT 'Ghi chú thêm của HR',
                 lichSuVaoId INT DEFAULT NULL COMMENT 'ID bản ghi lichsuchamcong vào',
@@ -262,6 +265,9 @@ class ChamCongModel
                 ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Audit trail chấm công hộ bởi HR'
         ");
+        @$this->conn->query("ALTER TABLE chamconghothay ADD COLUMN maCa INT DEFAULT 1 AFTER ngayChamHo");
+        @$this->conn->query("ALTER TABLE chamconghothay ADD COLUMN congChuan DECIMAL(3,2) DEFAULT 1.00 AFTER gioRa");
+        @$this->conn->query("ALTER TABLE chamconghothay ADD COLUMN mienTruDiTre TINYINT DEFAULT 1 AFTER congChuan");
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
@@ -3896,25 +3902,40 @@ class ChamCongModel
     }
 
     /**
-     * HR chấm công hộ cho nhân viên.
+     * HR chấm công hộ cho nhân viên (đơn lẻ).
      * Ghi vào lichsuchamcong (để tính công) VÀ chamconghothay (để audit).
      */
-    public function hrOverrideChamCong(int $maNV, int $maHR, string $ngay, string $lyDo, string $ghiChu = ''): array
-    {
+    public function hrOverrideChamCong(
+        int $maNV, 
+        int $maHR, 
+        string $ngay, 
+        string $lyDo, 
+        string $ghiChu = '',
+        string $gioVaoTime = '08:30',
+        string $gioRaTime = '17:35',
+        int $maCa = 1,
+        float $congChuan = 1.0,
+        bool $mienTruDiTre = true
+    ): array {
         if ($maNV <= 0 || $maHR <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $ngay) || empty(trim($lyDo))) {
-            return ['success' => false, 'message' => 'Dữ liệu không hợp lệ'];
+            return ['success' => false, 'message' => 'Dữ liệu không hợp lệ (nhân viên, ngày hoặc lý do thiếu)'];
         }
 
-        // Tạo timestamp giờ vào 08:00 và giờ ra 17:00 của ngày đó
-        $gioVao = $ngay . ' 08:00:00';
-        $gioRa  = $ngay . ' 17:00:00';
+        // Format giờ vào / giờ ra
+        if (strlen($gioVaoTime) === 5) $gioVaoTime .= ':00';
+        if (strlen($gioRaTime) === 5) $gioRaTime .= ':00';
+        $gioVao = $ngay . ' ' . $gioVaoTime;
+        $gioRa  = $ngay . ' ' . $gioRaTime;
 
-        // 1. Ghi vào lichsuchamcong - giờ vào
+        $mienTruVal = $mienTruDiTre ? 1 : 0;
+        $notePrefix = '[HR chấm hộ: ' . trim($lyDo) . ($mienTruDiTre ? ' - Miễn trừ phạt FaceID' : '') . ']';
+
+        // 1. Ghi vào lichsuchamcong - Check-in
         $idVao = null;
         $stmt = $this->conn->prepare(
             "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) VALUES (?, 'IN', 'HR_OVERRIDE', NULL, ?, ?)"
         );
-        $noteIn = '[Chấm hộ bởi HR] ' . trim($lyDo);
+        $noteIn = $notePrefix . ' Vào ca';
         if ($stmt) {
             $stmt->bind_param('iss', $maNV, $noteIn, $gioVao);
             $stmt->execute();
@@ -3922,12 +3943,12 @@ class ChamCongModel
             $stmt->close();
         }
 
-        // 2. Ghi vào lichsuchamcong - giờ ra
+        // 2. Ghi vào lichsuchamcong - Check-out
         $idRa = null;
         $stmt2 = $this->conn->prepare(
             "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) VALUES (?, 'OUT', 'HR_OVERRIDE', NULL, ?, ?)"
         );
-        $noteOut = '[Chấm hộ bởi HR] ' . trim($lyDo);
+        $noteOut = $notePrefix . ' Ra ca';
         if ($stmt2) {
             $stmt2->bind_param('iss', $maNV, $noteOut, $gioRa);
             $stmt2->execute();
@@ -3937,63 +3958,118 @@ class ChamCongModel
 
         // 3. Ghi vào bảng audit chamconghothay
         $stmt3 = $this->conn->prepare(
-            "INSERT INTO chamconghothay (maNguoiDuocChamHo, maHR, ngayChamHo, hanhDong, gioVao, gioRa, lyDo, ghiChuHR, lichSuVaoId, lichSuRaId)
-             VALUES (?, ?, ?, 'FULL', ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO chamconghothay (maNguoiDuocChamHo, maHR, ngayChamHo, maCa, hanhDong, gioVao, gioRa, congChuan, mienTruDiTre, lyDo, ghiChuHR, lichSuVaoId, lichSuRaId)
+             VALUES (?, ?, ?, ?, 'FULL', ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         if ($stmt3) {
-            $stmt3->bind_param('iisssssii', $maNV, $maHR, $ngay, $gioVao, $gioRa, $lyDo, $ghiChu, $idVao, $idRa);
+            $stmt3->bind_param('iisisddissii', $maNV, $maHR, $ngay, $maCa, $gioVao, $gioRa, $congChuan, $mienTruVal, $lyDo, $ghiChu, $idVao, $idRa);
             $stmt3->execute();
             $stmt3->close();
         }
 
-        return ['success' => true, 'message' => 'Đã chấm công hộ thành công cho ngày ' . $ngay];
+        return [
+            'success' => true, 
+            'message' => 'Đã chấm công hộ thành công cho ngày ' . date('d/m/Y', strtotime($ngay)),
+            'idVao'   => $idVao,
+            'idRa'    => $idRa
+        ];
     }
 
     /**
-     * Lấy lịch sử chấm công hộ bởi HR (audit trail).
+     * HR chấm công hộ hàng loạt (sự cố mất điện / toàn công ty).
      */
-    public function getHrOverrideHistory(string $monthKey = '', int $limit = 100): array
+    public function hrOverrideChamCongBatch(
+        array $maNVList,
+        int $maHR,
+        string $ngay,
+        string $lyDo,
+        string $ghiChu = '',
+        string $gioVaoTime = '08:30',
+        string $gioRaTime = '17:35',
+        int $maCa = 1,
+        float $congChuan = 1.0,
+        bool $mienTruDiTre = true
+    ): array {
+        if (empty($maNVList) || $maHR <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $ngay) || empty(trim($lyDo))) {
+            return ['success' => false, 'message' => 'Dữ liệu hàng loạt không hợp lệ'];
+        }
+
+        $successCount = 0;
+        $errors = [];
+
+        foreach ($maNVList as $maNV) {
+            $maNV = (int)$maNV;
+            if ($maNV <= 0) continue;
+            $res = $this->hrOverrideChamCong($maNV, $maHR, $ngay, $lyDo, $ghiChu, $gioVaoTime, $gioRaTime, $maCa, $congChuan, $mienTruDiTre);
+            if ($res['success']) {
+                $successCount++;
+            } else {
+                $errors[] = "NV #$maNV: " . ($res['message'] ?? 'Lỗi');
+            }
+        }
+
+        return [
+            'success' => $successCount > 0,
+            'count'   => $successCount,
+            'total'   => count($maNVList),
+            'message' => "Đã ghi nhận chấm công hộ thành công cho {$successCount}/" . count($maNVList) . " nhân sự.",
+            'errors'  => $errors
+        ];
+    }
+
+    /**
+     * Lấy lịch sử chấm công hộ bởi HR (audit trail) kèm thông tin ca và nhân viên.
+     */
+    public function getHrOverrideHistory(string $monthKey = '', string $keyword = '', int $limit = 200): array
     {
-        $where = '';
+        $where = [];
         $params = [];
         $types  = '';
 
         if ($monthKey && preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
-            $where   = 'WHERE c.ngayChamHo LIKE ?';
-            $like    = $monthKey . '-%';
-            $params  = [&$like];
-            $types   = 's';
+            $where[] = "c.ngayChamHo LIKE ?";
+            $likeMonth = $monthKey . '-%';
+            $params[] = $likeMonth;
+            $types   .= 's';
         }
 
+        if (!empty(trim($keyword))) {
+            $where[] = "(nv.hoTen LIKE ? OR t.tenDangNhap LIKE ? OR nv.phongBan LIKE ? OR c.lyDo LIKE ?)";
+            $likeKw = '%' . trim($keyword) . '%';
+            $params[] = $likeKw;
+            $params[] = $likeKw;
+            $params[] = $likeKw;
+            $params[] = $likeKw;
+            $types   .= 'ssss';
+        }
+
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
         $sql = "
-            SELECT c.id, c.maNguoiDuocChamHo, c.maHR, c.ngayChamHo, c.hanhDong,
-                   c.gioVao, c.gioRa, c.lyDo, c.ghiChuHR, c.ngayTao,
-                   nv.hoTen AS tenNhanVien, nv.phongBan,
-                   hr.hoTen AS tenHR
+            SELECT c.id, c.maNguoiDuocChamHo, c.maHR, c.ngayChamHo, c.maCa, c.hanhDong,
+                   c.gioVao, c.gioRa, c.congChuan, c.mienTruDiTre, c.lyDo, c.ghiChuHR, c.ngayTao,
+                   nv.hoTen AS tenNhanVien, nv.phongBan, nv.chucVu,
+                   t.tenDangNhap AS maNhanVienCode,
+                   hr.hoTen AS tenHR,
+                   ca.tenCa, ca.gioBatDau AS caGioVao, ca.gioKetThuc AS caGioRa
             FROM chamconghothay c
-            LEFT JOIN (
-                SELECT t.maND, t.hoTen,
-                       COALESCE(t.phongBan, '') AS phongBan
-                FROM taikhoan t
-            ) nv ON nv.maND = c.maNguoiDuocChamHo
-            LEFT JOIN taikhoan hr ON hr.maND = c.maHR
-            $where
-            ORDER BY c.ngayTao DESC
+            LEFT JOIN nguoidung nv ON nv.maND = c.maNguoiDuocChamHo
+            LEFT JOIN taikhoan t ON t.maTK = nv.maTK
+            LEFT JOIN nguoidung hr ON hr.maND = c.maHR
+            LEFT JOIN calamviec ca ON ca.id = c.maCa
+            $whereClause
+            ORDER BY c.ngayTao DESC, c.id DESC
             LIMIT ?
         ";
 
         $limit = max(1, min((int)$limit, 500));
+        $params[] = $limit;
+        $types   .= 'i';
+
         $stmt  = $this->conn->prepare($sql);
         if (!$stmt) return [];
 
-        if ($types) {
-            $params[] = &$limit;
-            $types   .= 'i';
-            $stmt->bind_param($types, ...$params);
-        } else {
-            $stmt->bind_param('i', $limit);
-        }
-
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
