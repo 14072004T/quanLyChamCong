@@ -244,6 +244,24 @@ class ChamCongModel
         // Clean up nguoidung_roles table if it exists (no new table added per requirement)
         $this->conn->query("DROP TABLE IF EXISTS nguoidung_roles");
         $this->conn->query("DROP TABLE IF EXISTS nguoidung_role");
+
+        // Bảng lưu lịch sử chấm công hộ bởi HR (audit trail)
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS chamconghothay (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                maNguoiDuocChamHo INT NOT NULL COMMENT 'Nhân viên được chấm công hộ',
+                maHR INT NOT NULL COMMENT 'HR thực hiện chấm công hộ',
+                ngayChamHo DATE NOT NULL COMMENT 'Ngày được chấm hộ',
+                hanhDong ENUM('IN','OUT','FULL') NOT NULL DEFAULT 'FULL' COMMENT 'Vào/Ra/Cả ngày',
+                gioVao DATETIME DEFAULT NULL COMMENT 'Giờ vào được ghi nhận',
+                gioRa DATETIME DEFAULT NULL COMMENT 'Giờ ra được ghi nhận',
+                lyDo TEXT NOT NULL COMMENT 'Lý do chấm hộ',
+                ghiChuHR VARCHAR(500) DEFAULT NULL COMMENT 'Ghi chú thêm của HR',
+                lichSuVaoId INT DEFAULT NULL COMMENT 'ID bản ghi lichsuchamcong vào',
+                lichSuRaId INT DEFAULT NULL COMMENT 'ID bản ghi lichsuchamcong ra',
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Audit trail chấm công hộ bởi HR'
+        ");
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
@@ -3875,6 +3893,129 @@ class ChamCongModel
         $affected = $stmt->affected_rows > 0;
         $stmt->close();
         return $result && $affected;
+    }
+
+    /**
+     * HR chấm công hộ cho nhân viên.
+     * Ghi vào lichsuchamcong (để tính công) VÀ chamconghothay (để audit).
+     */
+    public function hrOverrideChamCong(int $maNV, int $maHR, string $ngay, string $lyDo, string $ghiChu = ''): array
+    {
+        if ($maNV <= 0 || $maHR <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $ngay) || empty(trim($lyDo))) {
+            return ['success' => false, 'message' => 'Dữ liệu không hợp lệ'];
+        }
+
+        // Tạo timestamp giờ vào 08:00 và giờ ra 17:00 của ngày đó
+        $gioVao = $ngay . ' 08:00:00';
+        $gioRa  = $ngay . ' 17:00:00';
+
+        // 1. Ghi vào lichsuchamcong - giờ vào
+        $idVao = null;
+        $stmt = $this->conn->prepare(
+            "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) VALUES (?, 'IN', 'HR_OVERRIDE', NULL, ?, ?)"
+        );
+        $noteIn = '[Chấm hộ bởi HR] ' . trim($lyDo);
+        if ($stmt) {
+            $stmt->bind_param('iss', $maNV, $noteIn, $gioVao);
+            $stmt->execute();
+            $idVao = (int)$this->conn->insert_id;
+            $stmt->close();
+        }
+
+        // 2. Ghi vào lichsuchamcong - giờ ra
+        $idRa = null;
+        $stmt2 = $this->conn->prepare(
+            "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) VALUES (?, 'OUT', 'HR_OVERRIDE', NULL, ?, ?)"
+        );
+        $noteOut = '[Chấm hộ bởi HR] ' . trim($lyDo);
+        if ($stmt2) {
+            $stmt2->bind_param('iss', $maNV, $noteOut, $gioRa);
+            $stmt2->execute();
+            $idRa = (int)$this->conn->insert_id;
+            $stmt2->close();
+        }
+
+        // 3. Ghi vào bảng audit chamconghothay
+        $stmt3 = $this->conn->prepare(
+            "INSERT INTO chamconghothay (maNguoiDuocChamHo, maHR, ngayChamHo, hanhDong, gioVao, gioRa, lyDo, ghiChuHR, lichSuVaoId, lichSuRaId)
+             VALUES (?, ?, ?, 'FULL', ?, ?, ?, ?, ?, ?)"
+        );
+        if ($stmt3) {
+            $stmt3->bind_param('iisssssii', $maNV, $maHR, $ngay, $gioVao, $gioRa, $lyDo, $ghiChu, $idVao, $idRa);
+            $stmt3->execute();
+            $stmt3->close();
+        }
+
+        return ['success' => true, 'message' => 'Đã chấm công hộ thành công cho ngày ' . $ngay];
+    }
+
+    /**
+     * Lấy lịch sử chấm công hộ bởi HR (audit trail).
+     */
+    public function getHrOverrideHistory(string $monthKey = '', int $limit = 100): array
+    {
+        $where = '';
+        $params = [];
+        $types  = '';
+
+        if ($monthKey && preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            $where   = 'WHERE c.ngayChamHo LIKE ?';
+            $like    = $monthKey . '-%';
+            $params  = [&$like];
+            $types   = 's';
+        }
+
+        $sql = "
+            SELECT c.id, c.maNguoiDuocChamHo, c.maHR, c.ngayChamHo, c.hanhDong,
+                   c.gioVao, c.gioRa, c.lyDo, c.ghiChuHR, c.ngayTao,
+                   nv.hoTen AS tenNhanVien, nv.phongBan,
+                   hr.hoTen AS tenHR
+            FROM chamconghothay c
+            LEFT JOIN (
+                SELECT t.maND, t.hoTen,
+                       COALESCE(t.phongBan, '') AS phongBan
+                FROM taikhoan t
+            ) nv ON nv.maND = c.maNguoiDuocChamHo
+            LEFT JOIN taikhoan hr ON hr.maND = c.maHR
+            $where
+            ORDER BY c.ngayTao DESC
+            LIMIT ?
+        ";
+
+        $limit = max(1, min((int)$limit, 500));
+        $stmt  = $this->conn->prepare($sql);
+        if (!$stmt) return [];
+
+        if ($types) {
+            $params[] = &$limit;
+            $types   .= 'i';
+            $stmt->bind_param($types, ...$params);
+        } else {
+            $stmt->bind_param('i', $limit);
+        }
+
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    /**
+     * Đếm số lần chấm công hộ trong tháng (cho metric card).
+     */
+    public function getHrOverrideCount(string $monthKey): int
+    {
+        if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) return 0;
+        $like = $monthKey . '-%';
+        $stmt = $this->conn->prepare(
+            "SELECT COUNT(*) AS cnt FROM chamconghothay WHERE ngayChamHo LIKE ?"
+        );
+        if (!$stmt) return 0;
+        $stmt->bind_param('s', $like);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (int)($row['cnt'] ?? 0);
     }
 }
 

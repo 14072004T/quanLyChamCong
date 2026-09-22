@@ -397,6 +397,16 @@ switch ($page) {
         (new HRController())->timesheetApprovalDetailsApi();
         break;
 
+    case 'hr-api-override-attendance':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->hrOverrideApi();
+        break;
+
+    case 'hr-api-override-history':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->hrOverrideHistoryApi();
+        break;
+
     // === MANAGER PANEL ===
     case 'quan-ly-cham-cong':
         require_once 'app/controllers/ChamCongController.php';

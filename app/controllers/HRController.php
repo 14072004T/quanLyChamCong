@@ -161,6 +161,7 @@ class HRController
         
         $monthlyApproval = $this->model->getMonthlyApprovalByMonth($selectedMonth);
         $approvalHistory = $this->model->getTimesheetApprovalSummary();
+        $overrideCount   = $this->model->getHrOverrideCount($selectedMonth);
         require __DIR__ . '/../views/chamcong/tinhcong.php';
     }
 
@@ -524,6 +525,48 @@ class HRController
         $this->respond([
             'success' => true,
             'data' => $details
+        ]);
+    }
+
+    public function hrOverrideApi()
+    {
+        AuthMiddleware::requirePermission('hr-api-override-attendance');
+        $this->jsonOnly(['POST']);
+
+        $maNV  = (int)($_POST['maNV'] ?? 0);
+        $ngay  = trim($_POST['ngay'] ?? '');
+        $lyDo  = trim($_POST['lyDo'] ?? '');
+        $ghiChu = trim($_POST['ghiChu'] ?? '');
+        $maHR  = (int)($_SESSION['user']['maND'] ?? 0);
+
+        if ($maNV <= 0 || !$ngay || !$lyDo) {
+            $this->respond(['success' => false, 'message' => 'Thiếu thông tin bắt buộc (nhân viên, ngày, lý do)'], 422);
+        }
+
+        // Không cho chấm hộ ngày tương lai
+        if ($ngay > date('Y-m-d')) {
+            $this->respond(['success' => false, 'message' => 'Không thể chấm công hộ cho ngày trong tương lai'], 422);
+        }
+
+        $result = $this->model->hrOverrideChamCong($maNV, $maHR, $ngay, $lyDo, $ghiChu);
+        $this->respond($result, $result['success'] ? 200 : 422);
+    }
+
+    public function hrOverrideHistoryApi()
+    {
+        AuthMiddleware::requirePermission('hr-api-override-history');
+
+        $monthKey = trim($_GET['month'] ?? date('Y-m'));
+        if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            $monthKey = date('Y-m');
+        }
+
+        $rows = $this->model->getHrOverrideHistory($monthKey, 200);
+        $this->respond([
+            'success' => true,
+            'data'    => $rows,
+            'month'   => $monthKey,
+            'total'   => count($rows),
         ]);
     }
 
