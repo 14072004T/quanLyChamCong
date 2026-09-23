@@ -240,6 +240,72 @@ class HRController
         AuthMiddleware::requirePermission('hr-api-tablet-scans-delete');
         $this->jsonOnly(['POST']);
 
+        $deleteType = trim($_POST['delete_type'] ?? 'selected');
+        $uploadDir = 'uploads/attendance_faces/';
+
+        if ($deleteType === 'all') {
+            $photos = $this->model->getTabletScanPhotosByMonth(null);
+            $deleted = $this->model->deleteTabletScansByMonth(null);
+
+            foreach ($photos as $photo) {
+                $photoName = basename($photo);
+                if ($photoName !== '') {
+                    $path = $uploadDir . $photoName;
+                    if (is_file($path)) {
+                        @unlink($path);
+                    }
+                }
+            }
+
+            if (is_dir($uploadDir)) {
+                $files = glob($uploadDir . '*');
+                if (is_array($files)) {
+                    foreach ($files as $file) {
+                        if (is_file($file) && basename($file) !== '.gitkeep') {
+                            @unlink($file);
+                        }
+                    }
+                }
+            }
+
+            $this->respond([
+                'success' => true,
+                'message' => $deleted > 0 ? "Đã xoá toàn bộ {$deleted} bản ghi và hình ảnh lịch sử quét." : 'Đã dọn dẹp toàn bộ hình ảnh lịch sử quét.',
+                'deleted' => $deleted,
+            ]);
+            return;
+        }
+
+        if ($deleteType === 'month') {
+            $monthKey = trim($_POST['month'] ?? '');
+            if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+                $this->respond([
+                    'success' => false,
+                    'message' => 'Kỳ tháng không hợp lệ.',
+                ], 422);
+            }
+
+            $photos = $this->model->getTabletScanPhotosByMonth($monthKey);
+            $deleted = $this->model->deleteTabletScansByMonth($monthKey);
+
+            foreach ($photos as $photo) {
+                $photoName = basename($photo);
+                if ($photoName !== '') {
+                    $path = $uploadDir . $photoName;
+                    if (is_file($path)) {
+                        @unlink($path);
+                    }
+                }
+            }
+
+            $this->respond([
+                'success' => true,
+                'message' => $deleted > 0 ? "Đã xoá {$deleted} bản ghi và hình ảnh của tháng {$monthKey}." : "Không có bản ghi nào trong tháng {$monthKey} để xoá.",
+                'deleted' => $deleted,
+            ]);
+            return;
+        }
+
         $ids = $_POST['ids'] ?? [];
         if (is_string($ids)) {
             $ids = json_decode($ids, true) ?: [];
@@ -254,11 +320,13 @@ class HRController
         $photos = $this->model->getTabletScanPhotos($ids);
         $deleted = $this->model->deleteTabletScans($ids);
 
-        $uploadDir = 'uploads/attendance_faces/';
         foreach ($photos as $photo) {
-            $path = $uploadDir . $photo;
-            if ($photo !== '' && is_file($path)) {
-                @unlink($path);
+            $photoName = basename($photo);
+            if ($photoName !== '') {
+                $path = $uploadDir . $photoName;
+                if (is_file($path)) {
+                    @unlink($path);
+                }
             }
         }
 

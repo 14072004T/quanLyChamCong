@@ -536,6 +536,34 @@ class ChamCongModel
     }
 
     /**
+     * Lấy tên file ảnh minh chứng theo tháng hoặc toàn bộ (nếu $monthKey null).
+     */
+    public function getTabletScanPhotosByMonth(?string $monthKey = null)
+    {
+        $monthKey = trim((string)$monthKey);
+        if ($monthKey !== '' && preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            $monthStart = $monthKey . '-01';
+            $monthEnd = date('Y-m-t', strtotime($monthStart));
+            $stmt = $this->conn->prepare("SELECT anhMinhChung FROM tablet_face_scans WHERE DATE(thoiGianQuet) >= ? AND DATE(thoiGianQuet) <= ?");
+            if (!$stmt) {
+                return [];
+            }
+            $stmt->bind_param('ss', $monthStart, $monthEnd);
+            $stmt->execute();
+            $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+            return array_values(array_filter(array_map(function ($r) { return $r['anhMinhChung'] ?? null; }, $rows)));
+        }
+
+        $res = $this->conn->query("SELECT anhMinhChung FROM tablet_face_scans");
+        if (!$res) {
+            return [];
+        }
+        $rows = $res->fetch_all(MYSQLI_ASSOC);
+        return array_values(array_filter(array_map(function ($r) { return $r['anhMinhChung'] ?? null; }, $rows)));
+    }
+
+    /**
      * Xoá các bản ghi quét tablet theo danh sách id. Trả về số dòng đã xoá.
      */
     public function deleteTabletScans(array $ids)
@@ -555,6 +583,30 @@ class ChamCongModel
         $affected = $stmt->affected_rows;
         $stmt->close();
         return $affected;
+    }
+
+    /**
+     * Xoá các bản ghi quét tablet theo tháng hoặc toàn bộ.
+     */
+    public function deleteTabletScansByMonth(?string $monthKey = null)
+    {
+        $monthKey = trim((string)$monthKey);
+        if ($monthKey !== '' && preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
+            $monthStart = $monthKey . '-01';
+            $monthEnd = date('Y-m-t', strtotime($monthStart));
+            $stmt = $this->conn->prepare("DELETE FROM tablet_face_scans WHERE DATE(thoiGianQuet) >= ? AND DATE(thoiGianQuet) <= ?");
+            if (!$stmt) {
+                return 0;
+            }
+            $stmt->bind_param('ss', $monthStart, $monthEnd);
+            $stmt->execute();
+            $affected = $stmt->affected_rows;
+            $stmt->close();
+            return $affected;
+        }
+
+        $this->conn->query("DELETE FROM tablet_face_scans");
+        return $this->conn->affected_rows;
     }
 
     /**

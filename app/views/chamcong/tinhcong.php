@@ -598,11 +598,16 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                     </div>
 
                     <div class="tab-content" id="tab-lichsuquet">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
                             <h3 style="margin:0;">Lịch sử chấm công tablet - Tháng <span id="scan-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
-                            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                                 <span id="scan-total-label" style="color:#64748b;font-size:.9em;"></span>
-                                <button type="button" class="btn btn-danger btn-sm" id="scan-delete-btn" disabled><i class="fas fa-trash"></i> Xoá đã chọn (<span id="scan-selected-count">0</span>)</button>
+                                <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;user-select:none;margin-right:2px;font-weight:500;color:#334155;">
+                                    <input type="checkbox" id="scan-select-all" style="cursor:pointer;width:16px;height:16px;"> Chọn trang này
+                                </label>
+                                <button type="button" class="btn btn-outline-danger btn-sm" id="scan-delete-btn" disabled><i class="fas fa-trash"></i> Xoá đã chọn (<span id="scan-selected-count">0</span>)</button>
+                                <button type="button" class="btn btn-warning btn-sm" id="scan-delete-month-btn" style="color:#7c2d12;background:#fef3c7;border-color:#fde68a;" title="Xoá tất cả hình ảnh lịch sử trong tháng đang chọn"><i class="fas fa-calendar-times"></i> Xoá tất cả trong tháng</button>
+                                <button type="button" class="btn btn-danger btn-sm" id="scan-delete-all-btn" title="Xoá toàn bộ lịch sử hình ảnh tất cả các tháng"><i class="fas fa-trash-alt"></i> Xoá tất cả hình ảnh</button>
                             </div>
                         </div>
                         <div class="scan-history-grid" id="scan-history-grid">
@@ -1559,6 +1564,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var scanHistoryLoaded = false;
     var scanCurrentPage = 1;
     var scanDeleteBtn = document.getElementById('scan-delete-btn');
+    var scanDeleteMonthBtn = document.getElementById('scan-delete-month-btn');
+    var scanDeleteAllBtn = document.getElementById('scan-delete-all-btn');
+    var scanSelectAll = document.getElementById('scan-select-all');
     var scanSelectedCountEl = document.getElementById('scan-selected-count');
     var scanSelectedIds = new Set();
 
@@ -1594,18 +1602,40 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.key === 'Escape') closeScanImage();
     });
 
+    function updateScanSelectionUI() {
+        if (scanSelectedCountEl) scanSelectedCountEl.textContent = String(scanSelectedIds.size);
+        if (scanDeleteBtn) scanDeleteBtn.disabled = scanSelectedIds.size === 0;
+
+        if (scanSelectAll && scanGrid) {
+            var cbs = scanGrid.querySelectorAll('.scan-select');
+            if (cbs.length === 0) {
+                scanSelectAll.checked = false;
+                scanSelectAll.indeterminate = false;
+            } else {
+                var checkedCount = 0;
+                cbs.forEach(function (cb) {
+                    if (cb.checked) checkedCount++;
+                });
+                scanSelectAll.checked = (checkedCount === cbs.length);
+                scanSelectAll.indeterminate = (checkedCount > 0 && checkedCount < cbs.length);
+            }
+        }
+    }
+
     function renderScanCards(rows) {
         if (!rows || rows.length === 0) {
             scanGrid.innerHTML = '<div class="empty-state">Không có dữ liệu quét trong tháng này.</div>';
+            updateScanSelectionUI();
             return;
         }
         scanGrid.innerHTML = rows.map(function (row) {
+            var isChecked = scanSelectedIds.has(String(row.id));
             var img = row.anhMinhChung ? ('uploads/attendance_faces/' + encodeURIComponent(row.anhMinhChung)) : '';
             var thumb = img
                 ? '<img class="scan-thumb" src="' + img + '" loading="lazy" onclick="window.__openScanImage(\'' + img + '\')">'
                 : '<div class="scan-thumb" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;">Không có ảnh</div>';
-            return '<div class="scan-card" data-id="' + row.id + '">' +
-                '<input type="checkbox" class="scan-select" data-id="' + row.id + '">' +
+            return '<div class="scan-card ' + (isChecked ? 'selected' : '') + '" data-id="' + row.id + '">' +
+                '<input type="checkbox" class="scan-select" data-id="' + row.id + '" ' + (isChecked ? 'checked' : '') + '>' +
                 thumb +
                 '<div class="scan-meta">' +
                 '<div class="scan-name">' + escapeHtmlLocal(row.hoTen || ('NV #' + row.maND)) + '</div>' +
@@ -1685,9 +1715,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
     window.__openScanImage = openScanImage;
 
-    function updateScanSelectionUI() {
-        if (scanSelectedCountEl) scanSelectedCountEl.textContent = String(scanSelectedIds.size);
-        if (scanDeleteBtn) scanDeleteBtn.disabled = scanSelectedIds.size === 0;
+    if (scanSelectAll) {
+        scanSelectAll.addEventListener('change', function () {
+            var isChecked = scanSelectAll.checked;
+            var cbs = scanGrid ? scanGrid.querySelectorAll('.scan-select') : [];
+            cbs.forEach(function (cb) {
+                cb.checked = isChecked;
+                var id = cb.getAttribute('data-id');
+                var card = cb.closest('.scan-card');
+                if (isChecked) {
+                    scanSelectedIds.add(id);
+                    if (card) card.classList.add('selected');
+                } else {
+                    scanSelectedIds.delete(id);
+                    if (card) card.classList.remove('selected');
+                }
+            });
+            updateScanSelectionUI();
+        });
     }
 
     if (scanGrid) {
@@ -1714,6 +1759,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             var form = new FormData();
+            form.append('delete_type', 'selected');
             form.append('ids', JSON.stringify(Array.from(scanSelectedIds)));
             scanDeleteBtn.disabled = true;
             fetch('index.php?page=hr-api-tablet-scans-delete', {
@@ -1724,10 +1770,67 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(function (r) { return r.json(); })
             .then(function (json) {
                 alert(json.message || (json.success ? 'Đã xoá.' : 'Không thể xoá.'));
-                if (json.success) loadScanHistory(scanCurrentPage);
+                if (json.success) {
+                    scanSelectedIds.clear();
+                    loadScanHistory(scanCurrentPage);
+                }
             })
             .catch(function () { alert('Lỗi kết nối máy chủ khi xoá.'); })
             .finally(function () { updateScanSelectionUI(); });
+        });
+    }
+
+    if (scanDeleteMonthBtn) {
+        scanDeleteMonthBtn.addEventListener('click', function () {
+            var m = scanMonth();
+            if (!window.confirm('Bạn có chắc chắn muốn xoá TẤT CẢ bản ghi và hình ảnh quét lịch sử trong tháng ' + m + ' không?\n\nToàn bộ ảnh minh chứng trong tháng này sẽ bị xoá vĩnh viễn khỏi server!')) {
+                return;
+            }
+            var form = new FormData();
+            form.append('delete_type', 'month');
+            form.append('month', m);
+            scanDeleteMonthBtn.disabled = true;
+            fetch('index.php?page=hr-api-tablet-scans-delete', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: form
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
+                alert(json.message || (json.success ? 'Đã xoá.' : 'Không thể xoá.'));
+                if (json.success) {
+                    scanSelectedIds.clear();
+                    loadScanHistory(1);
+                }
+            })
+            .catch(function () { alert('Lỗi kết nối máy chủ khi xoá.'); })
+            .finally(function () { scanDeleteMonthBtn.disabled = false; updateScanSelectionUI(); });
+        });
+    }
+
+    if (scanDeleteAllBtn) {
+        scanDeleteAllBtn.addEventListener('click', function () {
+            if (!window.confirm('CẢNH BÁO NGUY HIỂM:\n\nBạn có chắc chắn muốn xoá TOÀN BỘ hình ảnh và lịch sử quét khuôn mặt của TẤT CẢ các tháng không?\n\nToàn bộ file ảnh minh chứng trên hệ thống sẽ bị xoá vĩnh viễn!')) {
+                return;
+            }
+            var form = new FormData();
+            form.append('delete_type', 'all');
+            scanDeleteAllBtn.disabled = true;
+            fetch('index.php?page=hr-api-tablet-scans-delete', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: form
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
+                alert(json.message || (json.success ? 'Đã xoá.' : 'Không thể xoá.'));
+                if (json.success) {
+                    scanSelectedIds.clear();
+                    loadScanHistory(1);
+                }
+            })
+            .catch(function () { alert('Lỗi kết nối máy chủ khi xoá.'); })
+            .finally(function () { scanDeleteAllBtn.disabled = false; updateScanSelectionUI(); });
         });
     }
 });
