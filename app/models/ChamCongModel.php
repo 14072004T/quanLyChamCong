@@ -2882,6 +2882,33 @@ class ChamCongModel
             }
         }
 
+        // 3. Fetch HR Overrides from chamconghothay (and OVERRIDE/SUPPLEMENT logs)
+        $sqlOverride = "SELECT ngayChamHo, gioVao, gioRa 
+                        FROM chamconghothay 
+                        WHERE maNguoiDuocChamHo = ? 
+                        AND ngayChamHo >= ? AND ngayChamHo <= ?
+                        ORDER BY ngayTao ASC";
+        $stmtOver = $this->conn->prepare($sqlOverride);
+        if ($stmtOver) {
+            $stmtOver->bind_param('iss', $maND, $fromDate, $toDate);
+            $stmtOver->execute();
+            $overrides = $stmtOver->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmtOver->close();
+
+            foreach ($overrides as $ov) {
+                $date = $ov['ngayChamHo'];
+                if (!isset($data[$date])) {
+                    $data[$date] = ['checkIn' => null, 'checkOut' => null];
+                }
+                if (!empty($ov['gioVao'])) {
+                    $data[$date]['checkIn'] = $ov['gioVao'];
+                }
+                if (!empty($ov['gioRa'])) {
+                    $data[$date]['checkOut'] = $ov['gioRa'];
+                }
+            }
+        }
+
         ksort($data); // Keep chronological order
         return $data;
     }
@@ -3982,6 +4009,14 @@ class ChamCongModel
         $mienTruVal = $mienTruDiTre ? 1 : 0;
         $notePrefix = '[HR chấm hộ: ' . trim($lyDo) . ($mienTruDiTre ? ' - Miễn trừ phạt FaceID' : '') . ']';
 
+        // Xoá bản ghi HR_OVERRIDE cũ trong ngày (nếu HR cập nhật/chấm lại cùng ngày)
+        $stmtDel = $this->conn->prepare("DELETE FROM lichsuchamcong WHERE maND = ? AND DATE(ngayTao) = ? AND phuongThuc = 'HR_OVERRIDE'");
+        if ($stmtDel) {
+            $stmtDel->bind_param('is', $maNV, $ngay);
+            $stmtDel->execute();
+            $stmtDel->close();
+        }
+
         // 1. Ghi vào lichsuchamcong - Check-in
         $idVao = null;
         $stmt = $this->conn->prepare(
@@ -4014,7 +4049,9 @@ class ChamCongModel
              VALUES (?, ?, ?, ?, 'FULL', ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         if ($stmt3) {
-            $stmt3->bind_param('iisisddissii', $maNV, $maHR, $ngay, $maCa, $gioVao, $gioRa, $congChuan, $mienTruVal, $lyDo, $ghiChu, $idVao, $idRa);
+            $idVaoVal = $idVao !== null ? (int)$idVao : 0;
+            $idRaVal = $idRa !== null ? (int)$idRa : 0;
+            $stmt3->bind_param('isisssdissii', $maNV, $maHR, $ngay, $maCa, $gioVao, $gioRa, $congChuan, $mienTruVal, $lyDo, $ghiChu, $idVaoVal, $idRaVal);
             $stmt3->execute();
             $stmt3->close();
         }

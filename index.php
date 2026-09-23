@@ -121,6 +121,8 @@ $allowedPages = [
     'quan-ly-ca-lam',
     'tinh-cong',
     'cham-cong-ho',
+    'hr-api-override-attendance',
+    'hr-api-override-history',
     'xuat-bao-cao',
     'gui-bang-cong-phe-duyet',
     'xuly-yeucau',
