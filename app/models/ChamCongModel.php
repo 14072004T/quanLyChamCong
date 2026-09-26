@@ -1,4 +1,4 @@
-<?php
+﻿﻿<?php
 require_once __DIR__ . '/ketNoi.php';
 
 class ChamCongModel
@@ -2665,26 +2665,22 @@ class ChamCongModel
         // Láº¥y danh sÃ¡ch táº¥t cáº£ nhÃ¢n viÃªn hoáº¡t Ä‘á»™ng
         $allEmployees = $this->getEmployees('', true);
         
-        // Chá»‰ láº¥y nhÃ¢n viÃªn (filter theo phÃ²ng ban náº¿u cÃ³)
+        // Lấy tất cả nhân viên đang hoạt động (filter theo phòng ban nếu có)
         $employees = array_filter($allEmployees, function($e) use ($monthEnd, $phongBan, $validDepts) {
-            if (mb_strtolower(trim($e['chucVu'] ?? ''), 'UTF-8') !== 'nhân viên') {
-                return false;
-            }
-            
-            // Filter theo phÃ²ng ban há»£p lá»‡
+            // Chỉ bỏ qua tài khoản không thuộc phòng ban hợp lệ
             $empDept = (string)($e['phongBan'] ?? '');
             if (!in_array($empDept, $validDepts, true)) {
                 return false;
             }
             
-            // Filter theo phÃ²ng ban cá»¥ thá»ƒ náº¿u cÃ³
+            // Filter theo phòng ban cụ thể nếu có
             if ($phongBan !== '') {
                 if ($empDept !== $phongBan) {
                     return false;
                 }
             }
             
-            // Bá» qua nhÃ¢n viÃªn Ä‘Æ°á»£c táº¡o sau thÃ¡ng Ä‘ang xem
+            // Bỏ qua nhân viên được tạo sau tháng đang xem
             $createdAt = !empty($e['ngayTao']) ? substr($e['ngayTao'], 0, 10) : null;
             if ($createdAt && $createdAt > $monthEnd) {
                 return false;
