@@ -1,4 +1,4 @@
-﻿﻿<?php
+﻿﻿﻿<?php
 require_once __DIR__ . '/ketNoi.php';
 
 class ChamCongModel
@@ -676,11 +676,22 @@ class ChamCongModel
     {
         $dow = (int)date('w', strtotime($date));
         $isWeekend = ($dow === 0 || $dow === 6);
-        $fallback = $this->getDefaultShift();
         if ($isWeekend) {
-            return $this->getShiftByCode('OFF') ?: $fallback;
+            // T7/CN luon la OFF du DB co hay khong co ca OFF — khong bao gio fallback ve HC
+            $offShift = $this->getShiftByCode('OFF');
+            if ($offShift) {
+                return $offShift;
+            }
+            // Tra ve cau truc OFF ao dam bao AttendanceCalculator nhan ra la ngay nghi
+            return [
+                'maCa'       => null,
+                'tenCa'      => 'OFF',
+                'kyHieu'     => 'OFF',
+                'gioBatDau'  => '00:00:00',
+                'gioKetThuc' => '00:00:00',
+            ];
         }
-        return $this->getShiftByCode('HC') ?: $fallback;
+        return $this->getShiftByCode('HC') ?: $this->getDefaultShift();
     }
 
     /**

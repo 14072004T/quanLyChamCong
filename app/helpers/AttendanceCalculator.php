@@ -1,4 +1,4 @@
-<?php
+﻿﻿<?php
 /**
  * AttendanceCalculator - Tính toán ngày công chi tiết tháng
  *
@@ -94,11 +94,16 @@ class AttendanceCalculator
         $isOffShift = false;
         if ($shift) {
             $shiftName = mb_strtolower(trim($shift['tenCa'] ?? ''), 'UTF-8');
-            if ($shiftName === 'off' 
-                || strpos($shiftName, 'off') !== false 
-                || strpos($shiftName, 'nghỉ') !== false 
-                || strpos($shiftName, 'nghi') !== false 
+            if ($shiftName === 'off'
+                || strpos($shiftName, 'off') !== false
+                || strpos($shiftName, 'nghi') !== false
                 || ($shift['gioBatDau'] ?? '') === ($shift['gioKetThuc'] ?? '')) {
+                $isOffShift = true;
+            }
+        } else {
+            // Khong co ca nao - neu ngay la T7/CN thi mac dinh la OFF
+            $dow = (int)date('w', strtotime($date));
+            if ($dow === 0 || $dow === 6) {
                 $isOffShift = true;
             }
         }
