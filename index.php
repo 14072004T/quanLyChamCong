@@ -9,14 +9,19 @@ define('APP_VERSION', 'v2.5.1');
 
 // Cấu hình session duy trì lâu dài (30 ngày), không tự động hết hạn sau 20-30 phút
 ini_set('session.gc_maxlifetime', 2592000); // 30 ngày
+ini_set('session.cookie_lifetime', 2592000);
 if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params([
-        'lifetime' => 2592000,
-        'path' => '/',
-        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
+    if (PHP_VERSION_ID >= 70300) {
+        session_set_cookie_params([
+            'lifetime' => 2592000,
+            'path' => '/',
+            'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+    } else {
+        session_set_cookie_params(2592000, '/');
+    }
     session_start();
 }
 
