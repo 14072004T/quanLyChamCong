@@ -268,6 +268,13 @@ class ChamCongModel
         $this->addColumnIfMissing('chamconghothay', 'maCa', 'INT DEFAULT 1 AFTER ngayChamHo');
         $this->addColumnIfMissing('chamconghothay', 'congChuan', 'DECIMAL(3,2) DEFAULT 1.00 AFTER gioRa');
         $this->addColumnIfMissing('chamconghothay', 'mienTruDiTre', 'TINYINT DEFAULT 1 AFTER congChuan');
+
+        // Tự động khôi phục ngayChamHo cho các bản ghi cũ bị lưu 0000-00-00
+        $this->conn->query("
+            UPDATE chamconghothay 
+            SET ngayChamHo = COALESCE(NULLIF(DATE(gioVao), '0000-00-00'), NULLIF(DATE(gioRa), '0000-00-00'), NULLIF(DATE(ngayTao), '0000-00-00'), CURDATE()) 
+            WHERE ngayChamHo = '0000-00-00' OR ngayChamHo IS NULL OR ngayChamHo = ''
+        ");
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
@@ -2883,10 +2890,11 @@ class ChamCongModel
         }
 
         // 3. Fetch HR Overrides from chamconghothay (and OVERRIDE/SUPPLEMENT logs)
-        $sqlOverride = "SELECT ngayChamHo, gioVao, gioRa 
+        $sqlOverride = "SELECT COALESCE(NULLIF(ngayChamHo, '0000-00-00'), DATE(gioVao), DATE(ngayTao)) AS ngayChamHo, gioVao, gioRa 
                         FROM chamconghothay 
                         WHERE maNguoiDuocChamHo = ? 
-                        AND ngayChamHo >= ? AND ngayChamHo <= ?
+                        AND COALESCE(NULLIF(ngayChamHo, '0000-00-00'), DATE(gioVao), DATE(ngayTao)) >= ? 
+                        AND COALESCE(NULLIF(ngayChamHo, '0000-00-00'), DATE(gioVao), DATE(ngayTao)) <= ?
                         ORDER BY ngayTao ASC";
         $stmtOver = $this->conn->prepare($sqlOverride);
         if ($stmtOver) {
@@ -4000,6 +4008,16 @@ class ChamCongModel
             return ['success' => false, 'message' => 'Dữ liệu không hợp lệ (nhân viên, ngày hoặc lý do thiếu)'];
         }
 
+        // 1. Kiểm tra ca làm việc của nhân viên trong ngày chỉ định
+        $shift = $this->getShiftForUser($maNV, $ngay);
+        if (!$shift || $this->isOffShift($shift)) {
+            $shiftName = $shift['tenCa'] ?? 'Nghỉ (OFF)';
+            return [
+                'success' => false, 
+                'message' => 'Ngày ' . date('d/m/Y', strtotime($ngay)) . " nhân viên không có lịch làm việc (Ca: {$shiftName}). Không được phép chấm công."
+            ];
+        }
+
         // Format giờ vào / giờ ra
         if (strlen($gioVaoTime) === 5) $gioVaoTime .= ':00';
         if (strlen($gioRaTime) === 5) $gioRaTime .= ':00';
@@ -4051,7 +4069,8 @@ class ChamCongModel
         if ($stmt3) {
             $idVaoVal = $idVao !== null ? (int)$idVao : 0;
             $idRaVal = $idRa !== null ? (int)$idRa : 0;
-            $stmt3->bind_param('isisssdissii', $maNV, $maHR, $ngay, $maCa, $gioVao, $gioRa, $congChuan, $mienTruVal, $lyDo, $ghiChu, $idVaoVal, $idRaVal);
+            $actualMaCa = !empty($shift['maCa']) ? (int)$shift['maCa'] : (!empty($shift['id']) ? (int)$shift['id'] : $maCa);
+            $stmt3->bind_param('iisissdissii', $maNV, $maHR, $ngay, $actualMaCa, $gioVao, $gioRa, $congChuan, $mienTruVal, $lyDo, $ghiChu, $idVaoVal, $idRaVal);
             $stmt3->execute();
             $stmt3->close();
         }
@@ -4101,7 +4120,9 @@ class ChamCongModel
             'success' => $successCount > 0,
             'count'   => $successCount,
             'total'   => count($maNVList),
-            'message' => "Đã ghi nhận chấm công hộ thành công cho {$successCount}/" . count($maNVList) . " nhân sự.",
+            'message' => $successCount > 0 
+                ? "Đã ghi nhận chấm công hộ thành công cho {$successCount}/" . count($maNVList) . " nhân sự."
+                : (count($errors) > 0 ? implode('; ', $errors) : "Không thể chấm công hộ cho các nhân sự đã chọn do không có lịch làm việc."),
             'errors'  => $errors
         ];
     }
@@ -4116,7 +4137,7 @@ class ChamCongModel
         $types  = '';
 
         if ($monthKey && preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
-            $where[] = "c.ngayChamHo LIKE ?";
+            $where[] = "COALESCE(NULLIF(c.ngayChamHo, '0000-00-00'), DATE(c.gioVao), DATE(c.ngayTao)) LIKE ?";
             $likeMonth = $monthKey . '-%';
             $params[] = $likeMonth;
             $types   .= 's';
@@ -4135,7 +4156,9 @@ class ChamCongModel
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
         $sql = "
-            SELECT c.id, c.maNguoiDuocChamHo, c.maHR, c.ngayChamHo, c.maCa, c.hanhDong,
+            SELECT c.id, c.maNguoiDuocChamHo, c.maHR,
+                   COALESCE(NULLIF(c.ngayChamHo, '0000-00-00'), DATE(c.gioVao), DATE(c.ngayTao)) AS ngayChamHo,
+                   c.maCa, c.hanhDong,
                    c.gioVao, c.gioRa, c.congChuan, c.mienTruDiTre, c.lyDo, c.ghiChuHR, c.ngayTao,
                    nv.hoTen AS tenNhanVien, nv.phongBan, nv.chucVu,
                    t.tenDangNhap AS maNhanVienCode,
@@ -4173,7 +4196,7 @@ class ChamCongModel
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) return 0;
         $like = $monthKey . '-%';
         $stmt = $this->conn->prepare(
-            "SELECT COUNT(*) AS cnt FROM chamconghothay WHERE ngayChamHo LIKE ?"
+            "SELECT COUNT(*) AS cnt FROM chamconghothay WHERE COALESCE(NULLIF(ngayChamHo, '0000-00-00'), DATE(gioVao), DATE(ngayTao)) LIKE ?"
         );
         if (!$stmt) return 0;
         $stmt->bind_param('s', $like);

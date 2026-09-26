@@ -103,12 +103,10 @@ class AttendanceCalculator
             }
         }
 
-        // Có dữ liệu chấm công thực tế (ví dụ đi làm vào ngày OFF) thì vẫn tính công,
-        // không bỏ qua chỉ vì hôm đó không có lịch làm việc.
         $hasRealAttendance = !empty($checkInOutData['checkIn']) && !empty($checkInOutData['checkOut']);
 
-        // Chỉ dựa vào lịch phân công thực tế của nhân viên, không phân biệt ngày lễ/cuối tuần.
-        if ($isOffShift && !$hasRealAttendance) {
+        // Chỉ dựa vào ca làm việc thực tế: Nếu là ca OFF (không có lịch làm việc) thì không ghi nhận công
+        if ($isOffShift) {
             return [
                 'date' => $date,
                 'day_type' => 'off_shift',
@@ -116,7 +114,7 @@ class AttendanceCalculator
                 'work_value' => 0.0,
                 'work_hours' => 0,
                 'ot_hours' => 0,
-                'has_attendance' => false,
+                'has_attendance' => $hasRealAttendance,
                 'shift_name' => $shift['tenCa'] ?? 'OFF',
                 'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
             ];

@@ -7,23 +7,17 @@ date_default_timezone_set('Asia/Ho_Chi_Minh');
 
 define('APP_VERSION', 'v2.5.1');
 
+// Cấu hình session duy trì lâu dài (30 ngày), không tự động hết hạn sau 20-30 phút
+ini_set('session.gc_maxlifetime', 2592000); // 30 ngày
 if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 2592000,
+        'path' => '/',
+        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
     session_start();
-}
-
-// Kiểm tra phiên đăng nhập hết hạn dựa vào cài đặt SESSION_TIMEOUT_MINUTES
-if (isset($_SESSION['user']) && isset($_SESSION['login_time'])) {
-    // Phiên đăng nhập là 60 phút
-    $sessionTimeout = 60;
-
-    if ((time() - $_SESSION['login_time']) > ($sessionTimeout * 60)) {
-        session_unset();
-        session_destroy();
-        header('Location: index.php?page=login&error=session_expired');
-        exit;
-    }
-    // Cập nhật thời gian hoạt động cuối
-    $_SESSION['login_time'] = time();
 }
 
 // Require middleware

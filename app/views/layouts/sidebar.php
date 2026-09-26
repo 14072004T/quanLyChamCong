@@ -18,7 +18,6 @@ $menus = [
         ['page' => 'tinh-cong', 'label' => 'Tính công & Báo cáo', 'icon' => 'fa-calculator'],
         ['page' => 'face-register', 'label' => 'Đăng ký khuôn mặt', 'icon' => 'fa-portrait'],
         ['page' => 'cham-cong-ho', 'label' => 'Chấm công hộ nhân viên', 'icon' => 'fa-fingerprint'],
-        ['page' => 'cham-cong', 'label' => 'Máy quét chấm công', 'icon' => 'fa-tablet-screen-button'],
     ],
     'nhanvien' => [
         ['page' => 'lich-su-cham-cong', 'label' => 'Xem lịch sử', 'icon' => 'fa-clock-rotate-left'],

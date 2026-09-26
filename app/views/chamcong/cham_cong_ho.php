@@ -296,6 +296,10 @@ include 'app/views/layouts/nav.php';
                             <input type="date" id="cchDateInput" class="cch-input" max="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>">
                             <button type="button" class="cch-btn-today" id="btnSetToday">Hôm nay</button>
                         </div>
+                        <div id="cchDateWarning" style="display:none;margin-top:6px;font-size:0.78rem;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;padding:6px 10px;border-radius:6px;line-height:1.4;">
+                            <i class="fa-solid fa-triangle-exclamation" style="margin-right:4px;"></i>
+                            <span></span>
+                        </div>
                     </div>
                     <div class="cch-form-group cch-col">
                         <label class="cch-label">Ca làm việc áp dụng <span class="cch-req">*</span></label>
@@ -1692,6 +1696,7 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.classList.add('show');
         modal.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
+        checkDateSchedule();
         setTimeout(() => {
             if (empCodeInput) empCodeInput.focus();
         }, 100);
@@ -1923,13 +1928,33 @@ document.addEventListener('DOMContentLoaded', function () {
 
     batchChecks.forEach(cb => cb.addEventListener('change', updateBatchCount));
 
+    function checkDateSchedule() {
+        const dVal = dateInput.value;
+        const warningEl = document.getElementById('cchDateWarning');
+        if (!dVal || !warningEl) return;
+        
+        const d = new Date(dVal + 'T00:00:00');
+        const dayOfWeek = d.getDay(); // 0 = Chủ nhật, 6 = Thứ 7
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            const dayName = (dayOfWeek === 0) ? 'Chủ Nhật' : 'Thứ Bảy';
+            warningEl.style.display = 'block';
+            warningEl.querySelector('span').textContent = `Lưu ý: ${dayName} (${dVal}) theo lịch mặc định là ca nghỉ (OFF). Nếu nhân sự không có lịch làm việc, hệ thống sẽ từ chối chấm công.`;
+        } else {
+            warningEl.style.display = 'none';
+        }
+    }
+
     // Date today shortcut
     if (btnSetToday) {
         btnSetToday.addEventListener('click', function () {
             const today = new Date().toISOString().split('T')[0];
             dateInput.value = today;
+            checkDateSchedule();
         });
     }
+
+    dateInput.addEventListener('change', checkDateSchedule);
+    dateInput.addEventListener('input', checkDateSchedule);
 
     // Shift selection changes default times
     shiftSelect.addEventListener('change', function () {
