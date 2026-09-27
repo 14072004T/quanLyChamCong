@@ -46,6 +46,32 @@ if (isset($_SESSION['user'])) {
 
 $page = $_GET['page'] ?? $defaultPage;
 
+// Các route trả JSON (API) cần tắt display_errors sớm nhất có thể — bất kỳ
+// warning/notice nào lọt ra trước json_encode() sẽ phá hỏng JSON response,
+// khiến client fetch().json() báo lỗi "kết nối máy chủ" dù server vẫn chạy.
+$apiPages = [
+    'face-liveness-session', 'face-api-verify', 'face-api-register', 'face-api-delete',
+    'tablet-face-api-verify', 'attendance-check-in', 'attendance-check-out',
+    'attendance-validate-network', 'attendance-today', 'attendance-history',
+    'hr-api-employees', 'hr-api-shifts', 'hr-api-shift-assignments',
+    'hr-api-payroll', 'hr-api-payroll-submit', 'hr-api-tablet-scans',
+    'hr-api-tablet-scans-delete', 'hr-api-approval-detail',
+    'hr-api-timesheet-approval-details', 'hr-api-corrections',
+    'hr-api-correction-hanhDong', 'manager-api-requests', 'manager-api-request-hanhDong',
+    'nv-api-monthly-timesheet', 'nv-api-approve-timesheet',
+    'get-menu-by-role', 'get-leave-detail', 'get-correction-detail',
+    'store-leave-request', 'store-edit-request', 'store-ot-request',
+    'approve-leave-request', 'approve-ot-request',
+    'tech-accounts-api', 'tech-update-role', 'tech-toggle-account',
+    'hr-api-override-attendance', 'hr-api-override-history',
+    'gui-bang-cong-phe-duyet',
+];
+$isApiRoute = in_array($page, $apiPages, true);
+if ($isApiRoute) {
+    ini_set('display_errors', '0');
+    error_reporting(0);
+}
+
 // Login / Logout
 if ($page === 'login' || $page === 'login-process' || $page === 'logout') {
     require_once 'app/controllers/LoginController.php';
@@ -181,6 +207,13 @@ if (!in_array($page, $allowedPages, true)) {
 
 // Kiểm tra xác thực (không check login cho home và login pages)
 if (!isset($_SESSION['user']) && !in_array($page, ['login', 'login-process', 'logout'])) {
+    if ($isApiRoute) {
+        // API route: trả JSON 401 thay vì redirect HTML để fetch() parse được
+        header('Content-Type: application/json');
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.']);
+        exit;
+    }
     header('Location: index.php?page=login');
     exit;
 }
@@ -213,6 +246,12 @@ $logMsg = sprintf("[%s] Request page=%s, role=%s, hasPerm=%s\n", date('Y-m-d H:i
 // Kiểm tra quyền hạn nếu user đã login
 if (isset($_SESSION['user']) && !in_array($page, ['home', 'logout'])) {
     if (!AuthMiddleware::hasPermissionForPage($page)) {
+        if ($isApiRoute) {
+            header('Content-Type: application/json');
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Không có quyền truy cập chức năng này.']);
+            exit;
+        }
         header('Location: index.php?page=home');
         exit;
     }

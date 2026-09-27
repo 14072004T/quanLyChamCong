@@ -122,20 +122,34 @@ class LivenessDetector {
         if (!this.sessionSecret) {
             const maxRetries = 3;
             let lastError = null;
+            let isAuthError = false;
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     const res = await fetch('index.php?page=face-liveness-session', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' }
                     });
-                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    // Xử lý HTTP errors — đọc body JSON nếu có (server trả JSON error)
+                    if (!res.ok) {
+                        let serverMsg = 'HTTP ' + res.status;
+                        try {
+                            const errData = await res.json();
+                            if (errData.message) serverMsg = errData.message;
+                        } catch (_) {}
+                        if (res.status === 401) {
+                            isAuthError = true;
+                            lastError = serverMsg;
+                            break; // Không retry — phiên đã hết hạn
+                        }
+                        throw new Error(serverMsg);
+                    }
                     const data = await res.json();
                     if (data.success && data.sessionSecret) {
                         this.sessionSecret = data.sessionSecret;
                         lastError = null;
                         break;
                     } else {
-                        lastError = 'Không thể khởi tạo phiên bảo mật.';
+                        lastError = data.message || 'Không thể khởi tạo phiên bảo mật.';
                     }
                 } catch (e) {
                     lastError = e;
@@ -147,8 +161,13 @@ class LivenessDetector {
                 }
             }
             if (!this.sessionSecret) {
+                if (isAuthError) {
+                    this._fail(lastError || 'Phiên đăng nhập đã hết hạn. Đang tải lại trang...');
+                    setTimeout(function() { window.location.reload(); }, 2000);
+                    return;
+                }
                 const msg = (lastError instanceof Error)
-                    ? 'Lỗi kết nối máy chủ khi tạo phiên bảo mật. Đang thử lại...'
+                    ? 'Lỗi kết nối máy chủ: ' + lastError.message
                     : (lastError || 'Không thể khởi tạo phiên bảo mật. Vui lòng tải lại trang.');
                 this._fail(msg);
                 return;

@@ -78,10 +78,21 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
             headers: { 'Content-Type': 'application/json' }
         })
         .then(function (res) {
-            if (!res.ok) throw new Error('HTTP ' + res.status);
+            if (!res.ok) {
+                // Phiên đăng nhập hết hạn — reload ngay, không retry
+                if (res.status === 401) {
+                    message('Phiên đăng nhập đã hết hạn. Đang tải lại...', 'error');
+                    setTimeout(function() { window.location.reload(); }, 2000);
+                    return null;
+                }
+                throw new Error('HTTP ' + res.status);
+            }
             return res.json();
         })
-        .then(function (data) { return (data.success && data.sessionSecret) ? data.sessionSecret : null; })
+        .then(function (data) {
+            if (!data) return null;
+            return (data.success && data.sessionSecret) ? data.sessionSecret : null;
+        })
         .catch(function (err) {
             console.warn('[Liveness] fetchSessionSecret failed:', err, 'retries left:', retries - 1);
             if (retries > 1) {

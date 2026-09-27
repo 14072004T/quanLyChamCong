@@ -18,8 +18,33 @@ class FaceController extends Controller
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        $this->faceModel = new FaceModel();
-        $this->chamCongModel = new ChamCongModel();
+        // Khởi tạo model lười (lazy) — chỉ kết nối DB khi thực sự cần.
+        // Các API chỉ dùng session (vd: livenessSession) sẽ không bị chết
+        // nếu DB hosting chậm/lỗi kết nối.
+        $this->faceModel = null;
+        $this->chamCongModel = null;
+    }
+
+    /**
+     * Lazy getter cho FaceModel — chỉ kết nối DB lần đầu gọi.
+     */
+    private function getFaceModel()
+    {
+        if ($this->faceModel === null) {
+            $this->faceModel = new FaceModel();
+        }
+        return $this->faceModel;
+    }
+
+    /**
+     * Lazy getter cho ChamCongModel — chỉ kết nối DB lần đầu gọi.
+     */
+    private function getChamCongModel()
+    {
+        if ($this->chamCongModel === null) {
+            $this->chamCongModel = new ChamCongModel();
+        }
+        return $this->chamCongModel;
     }
 
     /**
@@ -49,7 +74,7 @@ class FaceController extends Controller
         $this->requireLogin();
         
         $maND = $_SESSION['user']['maND'] ?? null;
-        $existingProfile = $this->faceModel->getFaceProfile($maND);
+        $existingProfile = $this->getFaceModel()->getFaceProfile($maND);
         
         // Chỉ HR mới có thể đăng ký khuôn mặt cho nhân viên
         $isHR = ($_SESSION['role'] ?? '') === 'hr';
@@ -62,8 +87,8 @@ class FaceController extends Controller
         } else {
             // Lấy tất cả nhân viên đang hoạt động để hiển thị danh sách đầy đủ.
             // Không khóa theo 4 phòng ban cố định vì dữ liệu thực tế trong DB có thể khác nhau hoặc bị mojibake.
-            $rawList = $this->chamCongModel->getEmployees('', true) ?? [];
-            $departmentsList = $this->chamCongModel->getValidDepartments();
+            $rawList = $this->getChamCongModel()->getEmployees('', true) ?? [];
+            $departmentsList = $this->getChamCongModel()->getValidDepartments();
             $allEmployees = [];
             $unregisteredList = [];
             $registeredList = [];
@@ -78,7 +103,7 @@ class FaceController extends Controller
                     $departmentsList[] = $empDept;
                 }
                 
-                $profile = $this->faceModel->getFaceProfile($emp['maND']);
+                $profile = $this->getFaceModel()->getFaceProfile($emp['maND']);
                 if ($profile === null) {
                     $emp['hasFace'] = false;
                     $unregisteredList[] = $emp;
@@ -184,7 +209,7 @@ class FaceController extends Controller
         }
 
         // 2. Kiểm tra tính độc nhất, bỏ qua profile cũ của chính nhân viên này.
-        $allProfiles = $this->faceModel->getAllFaceProfiles($maND);
+        $allProfiles = $this->getFaceModel()->getAllFaceProfiles($maND);
         // Face-API descriptors in this employee set can be close for two real
         // different people. Only block very strong matches; keep softer matches
         // in the log for HR review instead of preventing registration.
@@ -239,7 +264,7 @@ class FaceController extends Controller
 
                 if ($isDuplicate) {
                     $duplicateMatchFound = true;
-                    $otherName = $this->faceModel->getUserName($prof['maND']);
+                    $otherName = $this->getFaceModel()->getUserName($prof['maND']);
                     $now = time();
                     $pending = $_SESSION[$duplicateProbeSessionKey] ?? null;
 
@@ -296,7 +321,7 @@ class FaceController extends Controller
         ), FILE_APPEND | LOCK_EX);
 
         // 4. Lưu khuôn mặt mới (INSERT)
-        $ok = $this->faceModel->saveFaceProfile(
+        $ok = $this->getFaceModel()->saveFaceProfile(
             $maND,
             $embedding,
             json_encode($templateEmbeddings['front']),
@@ -339,13 +364,13 @@ class FaceController extends Controller
         }
 
         // Kiểm tra nhân viên có dữ liệu khuôn mặt hay không
-        $profile = $this->faceModel->getFaceProfile($maND);
+        $profile = $this->getFaceModel()->getFaceProfile($maND);
         if (!$profile) {
             echo json_encode(['success' => false, 'message' => 'Nhân viên này chưa đăng ký khuôn mặt.']);
             exit;
         }
 
-        $ok = $this->faceModel->deleteFaceProfile($maND);
+        $ok = $this->getFaceModel()->deleteFaceProfile($maND);
         if ($ok) {
             echo json_encode(['success' => true, 'message' => 'Đã xóa dữ liệu khuôn mặt thành công!']);
         } else {
@@ -429,7 +454,7 @@ class FaceController extends Controller
 
         $candidates = [];
         $incoming = $this->normalizeEmbedding($embedding);
-        foreach ($this->faceModel->getAllFaceProfiles() as $profile) {
+        foreach ($this->getFaceModel()->getAllFaceProfiles() as $profile) {
             $storedJsons = [$profile['embedding'] ?? ''];
             foreach (['embedding_front', 'embedding_left', 'embedding_right'] as $field) {
                 if (!empty($profile[$field])) $storedJsons[] = $profile[$field];
@@ -509,26 +534,26 @@ class FaceController extends Controller
         file_put_contents($uploadDir . $photoFilename, base64_decode($photo));
 
         // Ghi mọi lần quét vào bảng riêng — nguồn dữ liệu để tính giờ vào/ra.
-        $this->chamCongModel->insertTabletScan($matchedId, $photoFilename);
-        $scanRange = $this->chamCongModel->getTabletScanRangeToday($matchedId);
+        $this->getChamCongModel()->insertTabletScan($matchedId, $photoFilename);
+        $scanRange = $this->getChamCongModel()->getTabletScanRangeToday($matchedId);
         $isFirstScanToday = (int)($scanRange['soLanQuet'] ?? 0) <= 1;
-        $employeeName = $this->faceModel->getUserName($matchedId);
+        $employeeName = $this->getFaceModel()->getUserName($matchedId);
 
         if ($isFirstScanToday) {
             // Ca OFF: không đồng bộ giờ vào, báo rõ hôm nay không có lịch làm việc.
             // getShiftForUser() luôn trả về ca mặc định (HC/OFF) nếu chưa gán ca cụ thể.
-            $shift = $this->chamCongModel->getShiftForUser($matchedId);
-            if ($shift && $this->chamCongModel->isOffShift($shift)) {
+            $shift = $this->getChamCongModel()->getShiftForUser($matchedId);
+            if ($shift && $this->getChamCongModel()->isOffShift($shift)) {
                 echo json_encode(['success' => false, 'message' => 'Hôm nay ' . $employeeName . ' (Mã NV: ' . $matchedId . ') không có lịch làm việc (ca OFF).']);
                 exit;
             }
-            $ok = $this->chamCongModel->chamCong($matchedId, 'IN', 'LAN', 'TABLET', 'Chấm vào bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+            $ok = $this->getChamCongModel()->chamCong($matchedId, 'IN', 'LAN', 'TABLET', 'Chấm vào bằng tablet khuôn mặt', 'TABLET', $photoFilename);
             echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã ghi nhận giờ vào cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
         // Các lần quét sau trong ngày luôn cập nhật giờ ra thành lần quét gần nhất.
-        $ok = $this->chamCongModel->chamCong($matchedId, 'OUT', 'LAN', 'TABLET', 'Cập nhật giờ ra bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+        $ok = $this->getChamCongModel()->chamCong($matchedId, 'OUT', 'LAN', 'TABLET', 'Cập nhật giờ ra bằng tablet khuôn mặt', 'TABLET', $photoFilename);
         echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã cập nhật giờ ra cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -604,7 +629,7 @@ class FaceController extends Controller
         // Only reached after liveness verification succeeds.
 
         // 1. Lấy profile khuôn mặt đã lưu của người dùng
-        $profile = $this->faceModel->getFaceProfile($maND);
+        $profile = $this->getFaceModel()->getFaceProfile($maND);
         if (!$profile) {
             echo json_encode(['success' => false, 'message' => 'Bạn chưa đăng ký khuôn mặt trên hệ thống. Vui lòng đăng ký trước khi chấm công.']);
             exit;
@@ -665,7 +690,7 @@ class FaceController extends Controller
         }
 
         // Kiểm tra số lần chấm công hôm nay
-        $todayAttendance = $this->chamCongModel->getAttendanceByUser($maND, 1);
+        $todayAttendance = $this->getChamCongModel()->getAttendanceByUser($maND, 1);
         $hasIn = false;
         $hasOut = false;
         if (!empty($todayAttendance) && $todayAttendance[0]['ngayLamViec'] === date('Y-m-d')) {
@@ -688,12 +713,12 @@ class FaceController extends Controller
 
         // Kiểm tra giờ ca làm việc khi IN
         if ($hanhDong === 'IN') {
-            $shift = $this->chamCongModel->getShiftForUser($maND);
+            $shift = $this->getChamCongModel()->getShiftForUser($maND);
             if (!$shift) {
                 echo json_encode(['success' => false, 'message' => 'Bạn chưa được gán ca làm việc. Vui lòng liên hệ HR.']);
                 exit;
             }
-            if ($this->chamCongModel->isOffShift($shift)) {
+            if ($this->getChamCongModel()->isOffShift($shift)) {
                 echo json_encode(['success' => false, 'message' => 'Hôm nay bạn được xếp ca OFF (nghỉ). Không thể chấm công.']);
                 exit;
             }
@@ -748,7 +773,7 @@ class FaceController extends Controller
 
         // 5. Ghi nhận chấm công vào CSDL
         $ghiChu = ($hanhDong === 'IN') ? 'Chấm vào bằng khuôn mặt (Liveness verified)' : 'Chấm ra bằng khuôn mặt (Liveness verified)';
-        $ok = $this->chamCongModel->chamCong($maND, $hanhDong, $phuongThuc, $tenWifi, $ghiChu, $clientIp, $photoFilename);
+        $ok = $this->getChamCongModel()->chamCong($maND, $hanhDong, $phuongThuc, $tenWifi, $ghiChu, $clientIp, $photoFilename);
 
         if ($ok) {
             echo json_encode([
