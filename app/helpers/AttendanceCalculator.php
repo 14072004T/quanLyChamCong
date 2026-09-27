@@ -1,4 +1,4 @@
-﻿﻿<?php
+<?php
 /**
  * AttendanceCalculator - Tính toán ngày công chi tiết tháng
  *

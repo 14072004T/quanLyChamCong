@@ -136,7 +136,8 @@ class FaceController extends Controller
      */
     public function registerApi()
     {
-        header('Content-Type: application/json');
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
         $this->requireLogin();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -384,7 +385,11 @@ class FaceController extends Controller
      */
     public function livenessSession()
     {
-        header('Content-Type: application/json');
+        // Xoá mọi output đã lọt ra trước JSON (BOM, whitespace từ closing tag ?>,
+        // PHP notice bị display_errors=1 ở index.php in ra, hoặc hosting inject).
+        while (ob_get_level()) ob_end_clean();
+
+        header('Content-Type: application/json; charset=utf-8');
         $this->requireLogin();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -414,6 +419,7 @@ class FaceController extends Controller
 
     public function tabletVerifyApi()
     {
+        while (ob_get_level()) ob_end_clean();
         header('Content-Type: application/json; charset=utf-8');
         $this->requireLogin();
         if (($_SESSION['role'] ?? '') !== 'hr' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -564,7 +570,8 @@ class FaceController extends Controller
      */
     public function verifyApi()
     {
-        header('Content-Type: application/json');
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
         $this->requireLogin();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
