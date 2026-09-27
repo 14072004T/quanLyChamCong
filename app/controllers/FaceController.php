@@ -385,7 +385,7 @@ class FaceController extends Controller
      */
     public function livenessSession()
     {
-        // Xoá mọi output đã lọt ra trước JSON (BOM, whitespace từ closing tag ?>,
+        // Xoá mọi output đã lọt ra trước JSON (BOM, whitespace từ closing tag,
         // PHP notice bị display_errors=1 ở index.php in ra, hoặc hosting inject).
         while (ob_get_level()) ob_end_clean();
 
