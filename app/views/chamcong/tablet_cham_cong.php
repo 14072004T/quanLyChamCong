@@ -38,7 +38,7 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
             box-shadow: 0 0 0 999px #0006;
             pointer-events: none;
         }
-        #status { position: absolute; left: 50%; bottom: 32px; transform: translateX(-50%); min-width: min(560px, 90vw); text-align: center; padding: 18px 28px; background: rgba(15, 33, 56, 0.92); border: 1px solid #274568; border-radius: 16px; color: #bfdbfe; font-size: clamp(16px, 2.4vw, 22px); font-weight: 700; box-shadow: 0 10px 40px #0008; }
+        #status { position: absolute; left: 50%; top: 24px; transform: translateX(-50%); min-width: min(560px, 90vw); text-align: center; padding: 18px 28px; background: rgba(15, 33, 56, 0.92); border: 1px solid #274568; border-radius: 16px; color: #bfdbfe; font-size: clamp(16px, 2.4vw, 22px); font-weight: 700; box-shadow: 0 10px 40px #0008; z-index: 10; }
         .bottom { display: none; }
         @media (max-width: 800px) { .topbar { padding: 14px; } }
     </style>
@@ -71,14 +71,25 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
 
     function message(text, type) { status.textContent = text; status.style.color = type === 'error' ? '#fecaca' : type === 'success' ? '#bbf7d0' : '#bfdbfe'; }
 
-    function fetchSessionSecret() {
+    function fetchSessionSecret(retries) {
+        if (retries === undefined) retries = 3;
         return fetch('index.php?page=face-liveness-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
-        .then(function (res) { return res.json(); })
+        .then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
         .then(function (data) { return (data.success && data.sessionSecret) ? data.sessionSecret : null; })
-        .catch(function () { return null; });
+        .catch(function (err) {
+            console.warn('[Liveness] fetchSessionSecret failed:', err, 'retries left:', retries - 1);
+            if (retries > 1) {
+                return new Promise(function (resolve) { setTimeout(resolve, 1000); })
+                    .then(function () { return fetchSessionSecret(retries - 1); });
+            }
+            return null;
+        });
     }
 
     // Chỉ giữ TỐI ĐA 1 request đang chờ tại một thời điểm — server chỉ lưu được

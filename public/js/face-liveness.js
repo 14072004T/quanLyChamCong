@@ -120,21 +120,37 @@ class LivenessDetector {
         // Nếu đã có sẵn secret (chuẩn bị trước trong lúc hiển thị kết quả lần quét
         // trước), bỏ qua round-trip mạng để rút ngắn thời gian chờ mỗi lượt quét.
         if (!this.sessionSecret) {
-            try {
-                const res = await fetch('index.php?page=face-liveness-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await res.json();
-                if (data.success && data.sessionSecret) {
-                    this.sessionSecret = data.sessionSecret;
-                } else {
-                    this._fail('Không thể khởi tạo phiên bảo mật. Vui lòng tải lại trang.');
-                    return;
+            const maxRetries = 3;
+            let lastError = null;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const res = await fetch('index.php?page=face-liveness-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json();
+                    if (data.success && data.sessionSecret) {
+                        this.sessionSecret = data.sessionSecret;
+                        lastError = null;
+                        break;
+                    } else {
+                        lastError = 'Không thể khởi tạo phiên bảo mật.';
+                    }
+                } catch (e) {
+                    lastError = e;
+                    console.warn('[Liveness] Lỗi khởi tạo phiên (lần ' + attempt + '/' + maxRetries + '):', e);
+                    if (attempt < maxRetries) {
+                        this._updateStatus('Đang thử kết nối lại... (lần ' + (attempt + 1) + '/' + maxRetries + ')', 'info');
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                    }
                 }
-            } catch (e) {
-                console.error('Lỗi khởi tạo phiên liveness:', e);
-                this._fail('Lỗi kết nối máy chủ khi tạo phiên bảo mật.');
+            }
+            if (!this.sessionSecret) {
+                const msg = (lastError instanceof Error)
+                    ? 'Lỗi kết nối máy chủ khi tạo phiên bảo mật. Đang thử lại...'
+                    : (lastError || 'Không thể khởi tạo phiên bảo mật. Vui lòng tải lại trang.');
+                this._fail(msg);
                 return;
             }
         }
