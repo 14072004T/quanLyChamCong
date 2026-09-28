@@ -950,8 +950,8 @@ if (!isset($_SESSION['user'])) {
                 <?php if (empty($employeesList)): ?>
                     <div class="status-banner status-ready" style="flex-direction: column; gap: 8px; padding: 32px;">
                         <i class="fas fa-check-circle" style="font-size: 36px;"></i>
-                        <strong style="font-size: 18px;">Tất cả nhân viên đã được đăng ký khuôn mặt!</strong>
-                        <p style="margin: 0; font-weight: 400;">Không còn nhân viên nào cần đăng ký trong hệ thống.</p>
+                        <strong style="font-size: 18px;">Không tìm thấy nhân viên đang hoạt động.</strong>
+                        <p style="margin: 0; font-weight: 400;">Vui lòng kiểm tra danh sách nhân viên và trạng thái tài khoản.</p>
                         <a href="index.php?page=home" class="btn-action" style="max-width: 300px; margin-top: 12px; text-decoration: none;">
                             <i class="fas fa-arrow-left"></i> Quay về trang chủ
                         </a>
@@ -1193,8 +1193,8 @@ function normalizeComparableText(value) {
 }
 
 // Data từ PHP - khai báo global để camera code dùng được
-const unregisteredEmployees = <?= json_encode($employeesList ?? [], JSON_UNESCAPED_UNICODE) ?>;
-const registeredEmployees   = <?= json_encode($registeredList ?? [], JSON_UNESCAPED_UNICODE) ?>;
+const unregisteredEmployees = <?= json_encode($employeesList ?? [], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '[]' ?>;
+const registeredEmployees   = <?= json_encode($registeredList ?? [], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '[]' ?>;
 // Combine all employees with hasFace flag
 const allEmployees = unregisteredEmployees.filter(e => e.hasFace === false).concat(
     registeredEmployees.filter(e => e.hasFace === true)
