@@ -597,7 +597,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                         </div>
                     </div>
 
-                    <div class="tab-content" id="tab-lichsuquet">
+                    <div class="tab-content" id="tab-lichsuquet" style="display:none;">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
                             <h3 style="margin:0;">Lịch sử chấm công tablet - Tháng <span id="scan-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
                             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
