@@ -5,7 +5,7 @@ ini_set('display_errors', 1);
 // Đặt múi giờ Việt Nam để mọi hàm date() trả về giờ địa phương đúng
 date_default_timezone_set('Asia/Ho_Chi_Minh');
 
-define('APP_VERSION', 'v2.5.2');
+define('APP_VERSION', 'v2.5.3');
 
 // Cấu hình session duy trì lâu dài (30 ngày), không tự động hết hạn sau 20-30 phút
 ini_set('session.gc_maxlifetime', 2592000); // 30 ngày
