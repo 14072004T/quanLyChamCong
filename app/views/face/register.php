@@ -2100,9 +2100,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 statusDisplay.className = 'status-banner status-noface';
                 statusDisplay.textContent = result.message;
                 showRegisterResult(false, 'Cần quét lại khuôn mặt', result.message, function() {
+                    stopCamera();
                     resetRegistrationScan();
                     statusDisplay.textContent = 'Vui lòng quét lại từ Bước 1: Nhìn thẳng vào camera.';
-                    if (!cameraStream) initFaceApiAndCamera();
+                    initFaceApiAndCamera();
                 });
             } else {
                 // ❌ THẤT BẠI — trùng face hoặc lỗi khác
