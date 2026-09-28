@@ -1587,6 +1587,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     let cameraStream = null;
     let isDetecting = false;
     let detectionTimeout = null;
+    let registrationPending = false;
 
     // Các biến trạng thái của Stepper quét 3 bước
     let currentStep = 'front'; // 'front', 'turn1', 'turn2', 'completed'
@@ -1605,7 +1606,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // (Wizard Bước 2 - chọn nhân viên - đã xử lý ở script riêng phía trên face-api.js)
 
 
-    window.startRegistrationCamera = async function() {
+    function resetRegistrationScan() {
+        registrationPending = false;
         currentStep = 'front';
         successFrames = 0;
         savedFrontDescriptor = null;
@@ -1619,7 +1621,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (btnRegister) btnRegister.disabled = true;
         window.regWarmupFrames = 0;
         updateStepperUI();
+    }
 
+    window.startRegistrationCamera = async function() {
+        resetRegistrationScan();
         await initFaceApiAndCamera();
     };
 
@@ -1955,7 +1960,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     } else if (currentStep === 'completed') {
                         statusDisplay.className = 'status-banner status-ready';
                         statusDisplay.innerHTML = '<i class="fas fa-check-circle"></i> Đã quét đủ 3 góc khuôn mặt! Nhấn nút bên dưới để lưu.';
-                        btnRegister.disabled = false;
+                        btnRegister.disabled = registrationPending;
                         if (!lastDescriptor || detectionScore > lastDescriptorConfidence) {
                             lastDescriptor = buildAverageDescriptor(collectedDescriptors) || detection.descriptor;
                             lastDescriptorConfidence = detectionScore;
@@ -1974,7 +1979,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 } else if (currentStep === 'completed') {
                     statusDisplay.innerHTML = '<i class="fas fa-check-circle"></i> Đã quét đủ 3 góc khuôn mặt! Nhấn nút bên dưới để lưu.';
                 }
-                btnRegister.disabled = (currentStep !== 'completed');
+                btnRegister.disabled = registrationPending || currentStep !== 'completed';
             }
         } catch (err) {
             console.error('Lỗi phân tích khuôn mặt:', err);
@@ -1997,17 +2002,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         if (!userConfirmed) {
             // Người dùng chọn HỦY — reset quét
-            currentStep = 'front';
-            successFrames = 0;
-            savedFrontDescriptor = null;
-            firstTurnSide = null;
-            lastDescriptor = null;
-            frontDescriptors = [];
-            leftDescriptors = [];
-            rightDescriptors = [];
-            btnRegister.disabled = true;
-            window.regWarmupFrames = 0;
-            updateStepperUI();
+            resetRegistrationScan();
             
             statusDisplay.className = 'status-banner status-noface';
             statusDisplay.innerHTML = '<i class="fas fa-redo"></i> Đã hủy. Vui lòng thực hiện lại từ Bước 1: Nhìn thẳng vào camera.';
@@ -2044,6 +2039,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         formData.append('targetMaND', targetMaND);
         formData.append('confidence', String(lastDescriptorConfidence));
 
+        registrationPending = true;
         statusDisplay.className = 'status-banner status-loading';
         statusDisplay.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu dữ liệu khuôn mặt...';
 
@@ -2075,8 +2071,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                 );
                 setTimeout(() => { window.location.reload(); }, 2500);
 
+            } else if (result.code === 'RETRY') {
+                statusDisplay.className = 'status-banner status-noface';
+                statusDisplay.textContent = result.message;
+                showRegisterResult(false, 'Cần quét lại khuôn mặt', result.message, function() {
+                    resetRegistrationScan();
+                    statusDisplay.textContent = 'Vui lòng quét lại từ Bước 1: Nhìn thẳng vào camera.';
+                    if (!cameraStream) initFaceApiAndCamera();
+                });
             } else {
                 // ❌ THẤT BẠI — trùng face hoặc lỗi khác
+                registrationPending = false;
                 statusDisplay.className = 'status-banner status-error';
                 statusDisplay.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + (result.message || 'Lỗi lưu dữ liệu');
                 btnRegister.disabled = false;
@@ -2090,6 +2095,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         } catch (err) {
             console.error('Lỗi khi gửi API:', err);
+            registrationPending = false;
             statusDisplay.className = 'status-banner status-error';
             statusDisplay.innerHTML = '<i class="fas fa-wifi"></i> Lỗi kết nối mạng hoặc máy chủ.';
             btnRegister.disabled = false;
@@ -2133,15 +2139,16 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         document.body.appendChild(overlay);
 
-        document.getElementById('reg-result-close').onclick = function() {
+        function closeResult() {
             overlay.remove();
             if (typeof onClose === 'function') onClose();
-        };
+        }
+        document.getElementById('reg-result-close').onclick = closeResult;
 
         // Bấm ra ngoài để đóng (chỉ khi không thành công)
         if (!isSuccess) {
             overlay.addEventListener('click', function(e) {
-                if (e.target === overlay) overlay.remove();
+                if (e.target === overlay) closeResult();
             });
         }
     }

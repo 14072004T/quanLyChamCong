@@ -304,6 +304,7 @@ class FaceController extends Controller
 
                     echo json_encode([
                         'success' => false,
+                        'code' => 'RETRY',
                         'message' => '⚠ Hệ thống phát hiện mức tương đồng cao với nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Vui lòng quét lại lần nữa ở góc nhìn khác/ánh sáng tốt hơn để xác nhận.'
                     ]);
                     exit;
