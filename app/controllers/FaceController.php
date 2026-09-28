@@ -227,6 +227,7 @@ class FaceController extends Controller
         ];
 
         foreach ($allProfiles as $prof) {
+            $duplicateField = null;
             foreach ($incomingByField as $field => $candidateEmbedding) {
                 $storedJson = $prof[$field] ?? '';
                 $otherEmbedding = json_decode($storedJson, true);
@@ -256,53 +257,57 @@ class FaceController extends Controller
                 @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND | LOCK_EX);
 
                 if ($isDuplicate) {
-                    $duplicateMatchFound = true;
-                    $otherName = $this->getFaceModel()->getUserName($prof['maND']);
-                    $now = time();
-                    $pending = $_SESSION[$duplicateProbeSessionKey] ?? null;
+                    $duplicateField = $duplicateField ?? $field;
+                }
+            }
 
-                    // Chỉ chặn đăng ký khi phát hiện trùng 2 lần liên tiếp với cùng một nhân viên
-                    // trong cửa sổ thời gian ngắn, giúp giảm báo trùng giả do snapshot nhiễu.
-                    if (
-                        is_array($pending)
-                        && intval($pending['otherMaND'] ?? 0) === intval($prof['maND'])
-                        && ($now - intval($pending['ts'] ?? 0)) <= 300
-                    ) {
-                        unset($_SESSION[$duplicateProbeSessionKey]);
-                        @file_put_contents($logDir . 'duplicate_debug.log', sprintf(
-                            "[%s] Register decision=BLOCK target=%s existing=%s reason=duplicate_confirmed\n",
-                            date('Y-m-d H:i:s'),
-                            $maND,
-                            $prof['maND']
-                        ), FILE_APPEND | LOCK_EX);
-                        echo json_encode([
-                            'success' => false,
-                            'message' => '🚫 Đăng ký thất bại! Khuôn mặt này trùng khớp với khuôn mặt đã đăng ký của nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Mỗi người chỉ được sở hữu duy nhất 1 tài khoản chấm công khuôn mặt!'
-                        ]);
-                        exit;
-                    }
+            if ($duplicateField !== null) {
+                $duplicateMatchFound = true;
+                $otherName = $this->getFaceModel()->getUserName($prof['maND']);
+                $now = time();
+                $pending = $_SESSION[$duplicateProbeSessionKey] ?? null;
 
-                    $_SESSION[$duplicateProbeSessionKey] = [
-                        'otherMaND' => intval($prof['maND']),
-                        'ts' => $now,
-                        'dist' => (float)$dist,
-                        'cosine' => (float)$cosine,
-                    ];
-
+                // Chỉ chặn đăng ký khi phát hiện trùng 2 lần liên tiếp với cùng một nhân viên
+                // trong cửa sổ thời gian ngắn, giúp giảm báo trùng giả do snapshot nhiễu.
+                if (
+                    is_array($pending)
+                    && intval($pending['otherMaND'] ?? 0) === intval($prof['maND'])
+                    && ($now - intval($pending['ts'] ?? 0)) <= 300
+                ) {
+                    unset($_SESSION[$duplicateProbeSessionKey]);
                     @file_put_contents($logDir . 'duplicate_debug.log', sprintf(
-                        "[%s] Register decision=RETRY target=%s existing=%s reason=duplicate_probe_first_hit\n",
+                        "[%s] Register decision=BLOCK target=%s existing=%s template=%s reason=duplicate_confirmed\n",
                         date('Y-m-d H:i:s'),
                         $maND,
-                        $prof['maND']
+                        $prof['maND'],
+                        $duplicateField
                     ), FILE_APPEND | LOCK_EX);
-
                     echo json_encode([
                         'success' => false,
-                        'code' => 'RETRY',
-                        'message' => '⚠ Hệ thống phát hiện mức tương đồng cao với nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Vui lòng quét lại lần nữa ở góc nhìn khác/ánh sáng tốt hơn để xác nhận.'
+                        'message' => '🚫 Đăng ký thất bại! Khuôn mặt này trùng khớp với khuôn mặt đã đăng ký của nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Mỗi người chỉ được sở hữu duy nhất 1 tài khoản chấm công khuôn mặt!'
                     ]);
                     exit;
                 }
+
+                $_SESSION[$duplicateProbeSessionKey] = [
+                    'otherMaND' => intval($prof['maND']),
+                    'ts' => $now,
+                ];
+
+                @file_put_contents($logDir . 'duplicate_debug.log', sprintf(
+                    "[%s] Register decision=RETRY target=%s existing=%s template=%s reason=duplicate_probe_first_hit\n",
+                    date('Y-m-d H:i:s'),
+                    $maND,
+                    $prof['maND'],
+                    $duplicateField
+                ), FILE_APPEND | LOCK_EX);
+
+                echo json_encode([
+                    'success' => false,
+                    'code' => 'RETRY',
+                    'message' => '⚠ Hệ thống phát hiện mức tương đồng cao với nhân viên "' . $otherName . '" (ID: ' . $prof['maND'] . '). Vui lòng quét lại lần nữa ở góc nhìn khác/ánh sáng tốt hơn để xác nhận.'
+                ]);
+                exit;
             }
         }
 
