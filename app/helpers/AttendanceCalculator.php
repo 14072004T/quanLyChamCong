@@ -44,8 +44,32 @@ class AttendanceCalculator
             'working_hours' => 0,
         ];
 
+        // Xac dinh ngay nhan vien bat dau duoc tinh cong (ngay gia nhap)
+        // joinDate = ngay tao tai khoan nhan vien trong he thong (YYYY-MM-DD)
+        $joinDate = null;
+        if (!empty($employeeInfo['joinDate'])) {
+            $joinDate = substr((string)$employeeInfo['joinDate'], 0, 10);
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $joinDate)) {
+                $joinDate = null;
+            }
+        }
+
         for ($day = 1; $day <= $lastDay; $day++) {
             $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
+
+            // Neu ngay nay truoc ngay nhan vien gia nhap -> khong tinh cong
+            if ($joinDate !== null && $dateStr < $joinDate) {
+                $dailyBreakdown[$dateStr] = [
+                    'date'           => $dateStr,
+                    'day_type'       => 'pre_join',
+                    'day_type_label' => 'Chua gia nhap',
+                    'work_value'     => 0.0,
+                    'work_hours'     => 0,
+                    'ot_hours'       => 0,
+                    'has_attendance' => false,
+                ];
+                continue;
+            }
 
             $dayData = self::calculateDailyAttendance(
                 $dateStr,

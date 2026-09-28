@@ -2732,6 +2732,9 @@ class ChamCongModel
             }
 
             // TÃ­nh toÃ¡n chi tiáº¿t
+            // Them joinDate vao leaveInfo de tinh cong tu ngay gia nhap
+            $leaveInfo['joinDate'] = !empty($employee['ngayTao']) ? substr((string)$employee['ngayTao'], 0, 10) : null;
+
             $monthlyCalc = AttendanceCalculator::calculateMonthlyAttendance(
                 $monthKey,
                 $attendanceData,
