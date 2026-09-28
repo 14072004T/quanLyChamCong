@@ -63,10 +63,8 @@ class FaceController extends Controller
             return $text;
         }
 
-        // Chuỗi mojibake là UTF-8 của các byte ISO-8859-1. Đổi ngược
-        // UTF-8 -> ISO-8859-1 sẽ khôi phục lại chuỗi tiếng Việt ban đầu.
-        $fixed = @iconv('UTF-8', 'ISO-8859-1//IGNORE', $text);
-        return ($fixed !== false && $fixed !== '') ? $fixed : $text;
+        $fixed = @iconv('UTF-8', 'Windows-1252', $text);
+        return ($fixed !== false && preg_match('//u', $fixed)) ? $fixed : $text;
     }
 
     public function registerView()
