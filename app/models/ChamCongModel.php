@@ -272,8 +272,13 @@ class ChamCongModel
         // Tự động khôi phục ngayChamHo cho các bản ghi cũ bị lưu 0000-00-00
         $this->conn->query("
             UPDATE chamconghothay 
-            SET ngayChamHo = COALESCE(NULLIF(DATE(gioVao), '0000-00-00'), NULLIF(DATE(gioRa), '0000-00-00'), NULLIF(DATE(ngayTao), '0000-00-00'), CURDATE()) 
-            WHERE ngayChamHo = '0000-00-00' OR ngayChamHo IS NULL OR ngayChamHo = ''
+            SET ngayChamHo = COALESCE(
+                DATE(NULLIF(CAST(gioVao AS CHAR), '0000-00-00 00:00:00')),
+                DATE(NULLIF(CAST(gioRa AS CHAR), '0000-00-00 00:00:00')),
+                DATE(NULLIF(CAST(ngayTao AS CHAR), '0000-00-00 00:00:00')),
+                CURDATE()
+            )
+            WHERE CAST(ngayChamHo AS CHAR) = '0000-00-00' OR ngayChamHo IS NULL
         ");
     }
 
