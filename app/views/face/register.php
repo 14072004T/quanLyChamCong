@@ -1871,7 +1871,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const box = resizedDetection.detection.box;
                 const detectionScore = Number(detection?.detection?.score || 0);
                 const isFaceConfident = detectionScore >= 0.80;
-                if (isFaceConfident && Array.isArray(detection.descriptor)) {
+                if (isFaceConfident && detection.descriptor?.length === 128) {
                     collectedDescriptors.push(Array.from(detection.descriptor));
                     if (collectedDescriptors.length > 12) {
                         collectedDescriptors.shift();
@@ -2025,10 +2025,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        const descriptorToSave = buildAverageDescriptor(collectedDescriptors) || lastDescriptor;
-        const frontDescriptor = buildAverageDescriptor(frontDescriptors) || descriptorToSave;
-        const leftDescriptor = buildAverageDescriptor(leftDescriptors) || descriptorToSave;
-        const rightDescriptor = buildAverageDescriptor(rightDescriptors) || descriptorToSave;
+        const frontDescriptor = buildAverageDescriptor(frontDescriptors) || lastDescriptor;
+        const leftDescriptor = buildAverageDescriptor(leftDescriptors) || lastDescriptor;
+        const rightDescriptor = buildAverageDescriptor(rightDescriptors) || lastDescriptor;
+        const descriptorToSave = buildAverageDescriptor([frontDescriptor, leftDescriptor, rightDescriptor]) || lastDescriptor;
         const embeddingString = JSON.stringify(Array.from(descriptorToSave));
 
         const formData = new FormData();

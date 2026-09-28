@@ -219,36 +219,30 @@ class FaceController extends Controller
 
         $duplicateProbeSessionKey = 'face_duplicate_probe_' . $maND;
         $duplicateMatchFound = false;
+        $incomingByField = [
+            'embedding' => $incomingEmbedding,
+            'embedding_front' => $templateEmbeddings['front'],
+            'embedding_left' => $templateEmbeddings['left'],
+            'embedding_right' => $templateEmbeddings['right'],
+        ];
 
         foreach ($allProfiles as $prof) {
-            $profileEmbeddings = [$prof['embedding'] ?? ''];
-            foreach (['embedding_front', 'embedding_left', 'embedding_right'] as $field) {
-                if (!empty($prof[$field])) $profileEmbeddings[] = $prof[$field];
-            }
-            foreach ($profileEmbeddings as $storedJson) {
+            foreach ($incomingByField as $field => $candidateEmbedding) {
+                $storedJson = $prof[$field] ?? '';
                 $otherEmbedding = json_decode($storedJson, true);
                 if (!is_array($otherEmbedding) || count($otherEmbedding) !== 128) continue;
                 $otherEmbedding = $this->normalizeEmbedding($otherEmbedding);
-                $bestTemplateDist = $this->euclideanDistance($incomingEmbedding, $otherEmbedding);
-                $bestTemplateCosine = $this->cosineSimilarity($incomingEmbedding, $otherEmbedding);
-                foreach ($templateEmbeddings as $templateEmbedding) {
-                    $candidateDist = $this->euclideanDistance($templateEmbedding, $otherEmbedding);
-                    $candidateCosine = $this->cosineSimilarity($templateEmbedding, $otherEmbedding);
-                    if ($candidateDist < $bestTemplateDist) {
-                        $bestTemplateDist = $candidateDist;
-                        $bestTemplateCosine = $candidateCosine;
-                    }
-                }
-                $dist = $bestTemplateDist;
-                $cosine = $bestTemplateCosine;
+                $dist = $this->euclideanDistance($candidateEmbedding, $otherEmbedding);
+                $cosine = $this->cosineSimilarity($candidateEmbedding, $otherEmbedding);
 
                 $isDuplicate = $dist <= $threshold && $cosine >= $cosineThreshold;
                 $isNearDuplicate = !$isDuplicate && $dist <= $warningThreshold && $cosine >= $warningCosineThreshold;
                 $logMsg = sprintf(
-                    "[%s] Register compare target=%s existing=%s dist=%.4f cosine=%.4f confidence=%.4f thresholdDist=%.2f thresholdCosine=%.3f warningDist=%.2f warningCosine=%.2f duplicate=%s nearDuplicate=%s\n",
+                    "[%s] Register compare target=%s existing=%s template=%s dist=%.4f cosine=%.4f confidence=%.4f thresholdDist=%.2f thresholdCosine=%.3f warningDist=%.2f warningCosine=%.2f duplicate=%s nearDuplicate=%s\n",
                     date('Y-m-d H:i:s'),
                     $maND,
                     $prof['maND'],
+                    $field,
                     $dist,
                     $cosine,
                     $confidence,
