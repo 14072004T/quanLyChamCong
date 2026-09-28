@@ -126,10 +126,11 @@ if (!isset($_SESSION['user'])) {
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                width: 55%;
+                width: auto;
                 height: 70%;
+                aspect-ratio: 4/5;
                 border: 2px dashed rgba(255, 255, 255, 0.25);
-                border-radius: 50%/45%;
+                border-radius: 50%;
                 z-index: 1;
                 pointer-events: none;
                 transition: all 0.3s ease;
@@ -1621,6 +1622,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (btnRegister) btnRegister.disabled = true;
         window.regWarmupFrames = 0;
         updateStepperUI();
+        if (cameraStream && isModelLoaded && !isDetecting) {
+            if (detectionTimeout) clearTimeout(detectionTimeout);
+            detectionTimeout = setTimeout(detectFace, 16);
+        }
     }
 
     window.startRegistrationCamera = async function() {
@@ -1846,7 +1851,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Phân tích khuôn mặt tuần tự
     async function detectFace() {
-        if (!isModelLoaded || !cameraStream || video.paused || video.ended || video.readyState < 2) {
+        if (!cameraStream || currentStep === 'completed') return;
+        if (!isModelLoaded || video.paused || video.ended || video.readyState < 2) {
             detectionTimeout = setTimeout(detectFace, 16);
             return;
         }
@@ -1863,7 +1869,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         try {
-            const displaySize = { width: video.videoWidth || 640, height: video.videoHeight || 480 };
+            const displaySize = { width: canvas.clientWidth, height: canvas.clientHeight };
             faceapi.matchDimensions(canvas, displaySize);
 
             const detection = await faceapi.detectSingleFace(
@@ -1964,6 +1970,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 currentStep = 'completed';
                                 successFrames = 0;
                                 updateStepperUI();
+                                btnRegister.disabled = false;
+                                statusDisplay.className = 'status-banner status-ready';
+                                statusDisplay.innerHTML = '<i class="fas fa-check-circle"></i> Đã quét đủ 3 góc khuôn mặt! Nhấn nút bên dưới để lưu.';
+                                btnRegister.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                             }
                         } else {
                             successFrames = 0;
@@ -1999,7 +2009,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         isDetecting = false;
-        detectionTimeout = setTimeout(detectFace, 16);
+        if (cameraStream && currentStep !== 'completed') {
+            detectionTimeout = setTimeout(detectFace, 16);
+        }
     }
 
     // Hủy timeout khi trang unload
