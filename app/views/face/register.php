@@ -1809,8 +1809,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             cameraStream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: 'user',
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
+                    width: { ideal: 1280 },
+                    height: { ideal: 960 }
                 }
             });
             video.srcObject = cameraStream;
@@ -1823,6 +1823,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 detectFace();
             };
             await video.play();
+            const cameraFrame = document.getElementById('camera-frame-container');
+            if (cameraFrame && video.videoWidth && video.videoHeight) {
+                cameraFrame.style.aspectRatio = video.videoWidth + ' / ' + video.videoHeight;
+            }
             setTimeout(detectFace, 300);
         } catch (err) {
             console.error('Không thể truy cập camera:', err);
@@ -1834,6 +1838,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             statusDisplay.className = 'status-banner status-error';
             statusDisplay.innerHTML = '<i class="fas fa-camera-slash"></i> Không thể truy cập Camera. Vui lòng cho phép quyền camera trên trình duyệt.' + permissionHint;
         }
+    }
+
+    function isFaceLargeEnough(box, frameWidth, frameHeight) {
+        return box.width >= frameWidth * 0.22 && box.height >= frameHeight * 0.28;
     }
 
     // Phân tích khuôn mặt tuần tự
@@ -1860,7 +1868,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             const detection = await faceapi.detectSingleFace(
                 video,
-                new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.7 })
+                new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.7 })
             ).withFaceLandmarks().withFaceDescriptor();
 
             const ctx = canvas.getContext('2d');
@@ -1871,7 +1879,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const box = resizedDetection.detection.box;
                 const detectionScore = Number(detection?.detection?.score || 0);
                 const isFaceConfident = detectionScore >= 0.80;
-                if (isFaceConfident && detection.descriptor?.length === 128) {
+                const isFaceCloseEnough = isFaceLargeEnough(box, displaySize.width, displaySize.height);
+                if (isFaceConfident && isFaceCloseEnough && detection.descriptor?.length === 128) {
                     collectedDescriptors.push(Array.from(detection.descriptor));
                     if (collectedDescriptors.length > 12) {
                         collectedDescriptors.shift();
@@ -1892,7 +1901,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (dRight !== 0) {
                     const ratio = dLeft / dRight;
                     
-                    if (!isFaceConfident) {
+                    if (!isFaceCloseEnough) {
+                        successFrames = 0;
+                        statusDisplay.className = 'status-banner status-noface';
+                        statusDisplay.innerHTML = '<i class="fas fa-expand"></i> Khuôn mặt đang quá xa. Vui lòng đưa iPad lại gần để khuôn mặt lớn và rõ hơn trong khung hình.';
+                    } else if (!isFaceConfident) {
                         successFrames = 0;
                         statusDisplay.className = 'status-banner status-noface';
                         statusDisplay.innerHTML = '<i class="fas fa-adjust"></i> Vui lòng đưa khuôn mặt rõ nét vào khung hình và giữ cố định.';
