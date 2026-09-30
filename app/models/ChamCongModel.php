@@ -3281,9 +3281,10 @@ class ChamCongModel
 
         $sql = "SELECT DISTINCT n.maND
                 FROM nguoidung n
+                INNER JOIN nhanvien nv ON nv.maND = n.maND
                 INNER JOIN tongHopNgayCong ads ON ads.maND = n.maND
                     AND ads.ngayLamViec >= ? AND ads.ngayLamViec <= ?
-                WHERE n.trangThai = 1 AND n.chucVu = 'Nhân viên'";
+                WHERE n.trangThai = 1";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return false;
         $stmt->bind_param('ss', $startDate, $endDate);

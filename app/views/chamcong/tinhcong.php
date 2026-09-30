@@ -519,8 +519,8 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                     <div class="tab-content" id="tab-bangchamcong">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                             <h3 style="margin:0;">Tổng toán tháng <span id="list-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
-                            <button class="btn btn-success btn-sm" type="submit" form="payroll-export-form" id="payroll-export-btn" title="<?= $canExport ? 'Tất cả nhân viên đã duyệt, có thể xuất.' : 'Chỉ xuất khi tất cả nhân viên đã duyệt bảng công.' ?>" <?= $canExport ? '' : 'disabled' ?>>
-                                Xuất Excel
+                            <button class="btn btn-success btn-sm" type="submit" form="payroll-export-form" id="payroll-export-btn" title="Xuất bảng công tháng ra file Excel.">
+                                <i class="fas fa-file-excel"></i> Xuất Excel
                             </button>
                         </div>
                         <table class="table" id="payroll-summary-table">
@@ -1176,12 +1176,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!exportBtn) return;
         var row = Array.isArray(summary) ? summary[0] : summary;
         var total = row ? Number(row.total || 0) : 0;
-        var pending = row ? Number(row.pending || 0) : total;
-        var canExport = total > 0 && pending === 0;
-        exportBtn.disabled = !canExport;
-        exportBtn.title = canExport
+        var pending = row ? Number(row.pending || 0) : 0;
+        // Luôn cho phép xuất Excel khi có dữ liệu nhân viên
+        exportBtn.disabled = false;
+        exportBtn.title = total > 0 && pending === 0
             ? 'Tất cả nhân viên đã duyệt, có thể xuất.'
-            : 'Chỉ xuất khi tất cả nhân viên đã duyệt bảng công.';
+            : 'Xuất bảng công tháng ra file Excel.';
     }
 
     function openDetailModal() {

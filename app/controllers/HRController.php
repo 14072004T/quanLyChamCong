@@ -359,11 +359,6 @@ class HRController
         $canExport = $summaryRow && (int)($summaryRow['total'] ?? 0) > 0 && (int)($summaryRow['pending'] ?? 0) === 0;
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $export && in_array($format, ['excel', 'csv'], true)) {
-            if (!$canExport) {
-                $_SESSION['error'] = 'Chỉ xuất khi tất cả nhân viên đã duyệt bảng công.';
-                header('Location: index.php?page=tinh-cong&month=' . urlencode($monthKey));
-                exit;
-            }
             if ($format === 'excel') {
                 require_once __DIR__ . '/../helpers/ExcelExporter.php';
                 $exporter = new ExcelExporter();
