@@ -477,10 +477,11 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                         <h3>BẢNG CÔNG CHI TIẾT - THÁNG <span id="grid-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
                         <div class="attendance-grid-wrapper">
                             <table class="attendance-grid" id="attendance-detail-grid">
+                                <?php $daysInMonth = (int)date('t', strtotime($selectedMonth . '-01')); ?>
                                 <thead id="attendance-grid-head">
                                     <tr>
                                         <th>Nhân viên<br>Name/Dept</th>
-                                        <?php for ($d = 1; $d <= 31; $d++): ?>
+                                        <?php for ($d = 1; $d <= $daysInMonth; $d++): ?>
                                             <th><?= $d ?></th>
                                         <?php endfor; ?>
                                         <th>TỔNG CÔNG</th>
@@ -494,18 +495,13 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                                 <td><?= htmlspecialchars($row['hoTen'] ?? '') ?></td>
                                                 <?php 
                                                 $yearMonth = $selectedMonth;
-                                                $lastDay = (int)date('t', strtotime($yearMonth . '-01'));
-                                                for ($d = 1; $d <= 31; $d++): 
-                                                    if ($d > $lastDay) {
-                                                        echo '<td class="day-n"></td>';
-                                                    } else {
-                                                        $dateStr = sprintf('%s-%02d', $yearMonth, $d);
-                                                        $dayData = $row['daily_breakdown'][$dateStr] ?? null;
-                                                        $workValue = $dayData ? (float)($dayData['work_value'] ?? 0) : 0;
-                                                        $valStr = $workValue > 0 ? ($workValue == 1.0 ? '1.0' : '0.5') : '';
-                                                        $cls = $workValue > 0 ? 'day-val' : 'day-n';
-                                                        echo '<td class="' . $cls . '">' . htmlspecialchars($valStr) . '</td>';
-                                                    }
+                                                for ($d = 1; $d <= $daysInMonth; $d++): 
+                                                    $dateStr = sprintf('%s-%02d', $yearMonth, $d);
+                                                    $dayData = $row['daily_breakdown'][$dateStr] ?? null;
+                                                    $workValue = $dayData ? (float)($dayData['work_value'] ?? 0) : 0;
+                                                    $valStr = $workValue > 0 ? ($workValue == 1.0 ? '1.0' : '0.5') : '';
+                                                    $cls = $workValue > 0 ? 'day-val' : 'day-n';
+                                                    echo '<td class="' . $cls . '">' . htmlspecialchars($valStr) . '</td>';
                                                 endfor; 
                                                 ?>
                                                 <td class="col-total"><?= htmlspecialchars((string)($row['work_days'] ?? 0)) ?></td>
@@ -513,7 +509,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
-                                        <tr><td colspan="33" class="empty-state">Không có dữ liệu chấm công.</td></tr>
+                                        <tr><td colspan="<?= $daysInMonth + 3 ?>" class="empty-state">Không có dữ liệu chấm công.</td></tr>
                                     <?php endif; ?>
                                 </tbody>
                             </table>
