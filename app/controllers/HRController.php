@@ -435,9 +435,9 @@ class HRController
         $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
         $this->respond([
             'success' => $ok,
-            'message' => $ok ? 'Đã gửi bảng công đến từng nhân viên' : 'Không thể gửi bảng công. Kiểm tra dữ liệu chấm công.',
+            'message' => $ok ? 'Đã gửi bảng công đến từng nhân viên' : 'Không thể gửi bảng công. Kiểm tra dữ liệu nhân viên.',
             'approvalSummary' => $this->model->getTimesheetApprovalSummary($monthKey),
-        ], $ok ? 200 : 500);
+        ], 200);
     }
 
     public function approvalDetailApi()

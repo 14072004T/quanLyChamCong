@@ -3275,19 +3275,13 @@ class ChamCongModel
             return false;
         }
 
-        // Láº¥y danh sÃ¡ch nhÃ¢n viÃªn cÃ³ dá»¯ liá»‡u cháº¥m cÃ´ng trong thÃ¡ng
-        $startDate = $monthKey . '-01';
-        $endDate = date('Y-m-t', strtotime($startDate));
-
+        // Lấy danh sách nhân viên đang hoạt động
         $sql = "SELECT DISTINCT n.maND
                 FROM nguoidung n
-                INNER JOIN nhanvien nv ON nv.maND = n.maND
-                INNER JOIN tongHopNgayCong ads ON ads.maND = n.maND
-                    AND ads.ngayLamViec >= ? AND ads.ngayLamViec <= ?
+                LEFT JOIN nhanvien nv ON nv.maND = n.maND
                 WHERE n.trangThai = 1";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return false;
-        $stmt->bind_param('ss', $startDate, $endDate);
         $stmt->execute();
         $employees = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
