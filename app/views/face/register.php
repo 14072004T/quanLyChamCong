@@ -2056,6 +2056,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         const descriptorToSave = buildAverageDescriptor([frontDescriptor, leftDescriptor, rightDescriptor]) || lastDescriptor;
         const embeddingString = JSON.stringify(Array.from(descriptorToSave));
 
+        const registrationCanvas = document.createElement('canvas');
+        registrationCanvas.width = video.videoWidth || 640;
+        registrationCanvas.height = video.videoHeight || 480;
+        const registrationContext = registrationCanvas.getContext('2d');
+        registrationContext.translate(registrationCanvas.width, 0);
+        registrationContext.scale(-1, 1);
+        registrationContext.drawImage(video, 0, 0, registrationCanvas.width, registrationCanvas.height);
+
         const formData = new FormData();
         formData.append('embedding', embeddingString);
         formData.append('embedding_front', JSON.stringify(Array.from(frontDescriptor)));
@@ -2063,6 +2071,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         formData.append('embedding_right', JSON.stringify(Array.from(rightDescriptor)));
         formData.append('targetMaND', targetMaND);
         formData.append('confidence', String(lastDescriptorConfidence));
+        formData.append('photo', registrationCanvas.toDataURL('image/jpeg', 0.9));
 
         registrationPending = true;
         statusDisplay.className = 'status-banner status-loading';

@@ -3,6 +3,7 @@ require_once 'app/models/FaceModel.php';
 require_once 'app/models/ChamCongModel.php';
 require_once 'app/controllers/Controller.php';
 require_once 'app/helpers/LivenessHelper.php';
+require_once 'app/helpers/FaceServiceClient.php';
 
 class FaceController extends Controller
 {
@@ -207,7 +208,15 @@ class FaceController extends Controller
             }
         }
 
+        $arcFaceResult = FaceServiceClient::getArcFaceEmbedding($_POST['photo'] ?? '');
+        if (!$arcFaceResult['success']) {
+            echo json_encode(['success' => false, 'message' => 'Không thể tạo embedding ArcFace: ' . $arcFaceResult['message']]);
+            exit;
+        }
+        $arcFaceEmbeddingJson = json_encode($arcFaceResult['embedding']);
+
         // 2. Kiểm tra tính độc nhất, bỏ qua profile cũ của chính nhân viên này.
+        $this->getChamCongModel();
         $allProfiles = $this->getFaceModel()->getAllFaceProfiles($maND);
         // Face-API descriptors in this employee set can be close for two real
         // different people. Only block very strong matches; keep softer matches
@@ -325,7 +334,8 @@ class FaceController extends Controller
             $embedding,
             json_encode($templateEmbeddings['front']),
             json_encode($templateEmbeddings['left']),
-            json_encode($templateEmbeddings['right'])
+            json_encode($templateEmbeddings['right']),
+            $arcFaceEmbeddingJson
         );
         if ($ok) {
             echo json_encode(['success' => true, 'message' => '✅ Đăng ký khuôn mặt thành công!']);
@@ -456,9 +466,32 @@ class FaceController extends Controller
         $logDir = __DIR__ . '/../../uploads/liveness_logs/';
         if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
 
+        $this->getChamCongModel();
+        $profiles = $this->getFaceModel()->getAllFaceProfiles();
+        $hasArcFaceProfiles = false;
+        foreach ($profiles as $profile) {
+            if (!empty($profile['embedding_arcface'])) {
+                $hasArcFaceProfiles = true;
+                break;
+            }
+        }
+        $arcFaceInput = $hasArcFaceProfiles ? FaceServiceClient::getArcFaceEmbedding($photo) : ['success' => false];
+        $arcFaceCandidates = [];
         $candidates = [];
         $incoming = $this->normalizeEmbedding($embedding);
-        foreach ($this->getFaceModel()->getAllFaceProfiles() as $profile) {
+        foreach ($profiles as $profile) {
+            if (!empty($profile['embedding_arcface'])) {
+                $storedArcFace = json_decode($profile['embedding_arcface'], true);
+                if ($arcFaceInput['success'] && is_array($storedArcFace) && count($storedArcFace) === count($arcFaceInput['embedding'])) {
+                    $similarity = $this->cosineSimilarity(
+                        $this->normalizeEmbedding($storedArcFace),
+                        $this->normalizeEmbedding($arcFaceInput['embedding'])
+                    );
+                    $arcFaceCandidates[] = ['maND' => (int)$profile['maND'], 'similarity' => $similarity];
+                }
+                continue;
+            }
+
             $storedJsons = [$profile['embedding'] ?? ''];
             foreach (['embedding_front', 'embedding_left', 'embedding_right'] as $field) {
                 if (!empty($profile[$field])) $storedJsons[] = $profile[$field];
@@ -490,9 +523,28 @@ class FaceController extends Controller
             ), FILE_APPEND | LOCK_EX);
         }
 
+        $arcFaceThreshold = isset($_ENV['ARCFACE_COSINE_THRESHOLD']) ? (float)$_ENV['ARCFACE_COSINE_THRESHOLD'] : 0.40;
+        if (!empty($arcFaceCandidates)) {
+            usort($arcFaceCandidates, function ($a, $b) { return $b['similarity'] <=> $a['similarity']; });
+            $isArcFaceMatch = $arcFaceCandidates[0]['similarity'] >= $arcFaceThreshold;
+            if (
+                $isArcFaceMatch
+                && count($arcFaceCandidates) > 1
+                && $arcFaceCandidates[0]['similarity'] < $arcFaceThreshold + 0.15
+                && ($arcFaceCandidates[0]['similarity'] - $arcFaceCandidates[1]['similarity']) < 0.05
+            ) {
+                $isArcFaceMatch = false;
+            }
+            if ($isArcFaceMatch) {
+                $matchedId = $arcFaceCandidates[0]['maND'];
+                $bestCosine = $arcFaceCandidates[0]['similarity'];
+                $bestDistance = 1.0 - $bestCosine;
+            }
+        }
+
         usort($candidates, function ($a, $b) { return $a['distance'] <=> $b['distance']; });
 
-        if (!empty($candidates)) {
+        if ($matchedId <= 0 && !empty($candidates)) {
             $best = $candidates[0];
             $isMatch = $best['distance'] <= $distanceThreshold && $best['cosine'] >= $cosineThreshold;
             if ($isMatch && count($candidates) > 1 && $best['distance'] >= $ambiguousZoneStart) {
@@ -634,6 +686,7 @@ class FaceController extends Controller
         // Only reached after liveness verification succeeds.
 
         // 1. Lấy profile khuôn mặt đã lưu của người dùng
+        $this->getChamCongModel();
         $profile = $this->getFaceModel()->getFaceProfile($maND);
         if (!$profile) {
             echo json_encode(['success' => false, 'message' => 'Bạn chưa đăng ký khuôn mặt trên hệ thống. Vui lòng đăng ký trước khi chấm công.']);
@@ -648,37 +701,61 @@ class FaceController extends Controller
             exit;
         }
 
-        $incomingEmbedding = $this->normalizeEmbedding($incomingEmbedding);
-        $storedEmbeddings = [$profile['embedding'] ?? ''];
-        foreach (['embedding_front', 'embedding_left', 'embedding_right'] as $field) {
-            if (!empty($profile[$field])) $storedEmbeddings[] = $profile[$field];
-        }
         $distance = 999.0;
-        $cosine = -1.0;
-        foreach ($storedEmbeddings as $storedJson) {
-            $storedEmbedding = json_decode($storedJson, true);
-            if (!is_array($storedEmbedding)) continue;
-            $storedEmbedding = $this->normalizeEmbedding($storedEmbedding);
-            $candidateDistance = $this->euclideanDistance($storedEmbedding, $incomingEmbedding);
-            $candidateCosine = $this->cosineSimilarity($storedEmbedding, $incomingEmbedding);
-            if ($candidateDistance < $distance) {
-                $distance = $candidateDistance;
-                $cosine = $candidateCosine;
+        if (!empty($profile['embedding_arcface'])) {
+            $arcFaceInput = FaceServiceClient::getArcFaceEmbedding($photo);
+            if (!$arcFaceInput['success']) {
+                echo json_encode(['success' => false, 'message' => 'Không thể xác thực bằng ArcFace: ' . $arcFaceInput['message']]);
+                exit;
             }
-        }
-        if ($distance === 999.0) {
-            echo json_encode(['success' => false, 'message' => 'Dữ liệu khuôn mặt bị lỗi định dạng.']);
-            exit;
-        }
-        $threshold = 0.8; // Cho phép khớp ổn hơn giữa descriptor đã đăng ký và frame chấm công
-        $cosineThreshold = 0.75;
+            $storedArcFace = json_decode($profile['embedding_arcface'], true);
+            if (!is_array($storedArcFace) || count($storedArcFace) !== count($arcFaceInput['embedding'])) {
+                echo json_encode(['success' => false, 'message' => 'Embedding ArcFace đã đăng ký bị lỗi định dạng.']);
+                exit;
+            }
+            $cosine = $this->cosineSimilarity(
+                $this->normalizeEmbedding($storedArcFace),
+                $this->normalizeEmbedding($arcFaceInput['embedding'])
+            );
+            $arcFaceThreshold = isset($_ENV['ARCFACE_COSINE_THRESHOLD']) ? (float)$_ENV['ARCFACE_COSINE_THRESHOLD'] : 0.40;
+            if ($cosine < $arcFaceThreshold) {
+                echo json_encode(['success' => false, 'message' => sprintf('Nhận diện ArcFace thất bại (độ tương đồng: %.4f).', $cosine)]);
+                exit;
+            }
+            $distance = 1.0 - $cosine;
+        } else {
+            $incomingEmbedding = $this->normalizeEmbedding($incomingEmbedding);
+            $storedEmbeddings = [$profile['embedding'] ?? ''];
+            foreach (['embedding_front', 'embedding_left', 'embedding_right'] as $field) {
+                if (!empty($profile[$field])) $storedEmbeddings[] = $profile[$field];
+            }
+            $distance = 999.0;
+            $cosine = -1.0;
+            foreach ($storedEmbeddings as $storedJson) {
+                $storedEmbedding = json_decode($storedJson, true);
+                if (!is_array($storedEmbedding)) continue;
+                $storedEmbedding = $this->normalizeEmbedding($storedEmbedding);
+                $candidateDistance = $this->euclideanDistance($storedEmbedding, $incomingEmbedding);
+                $candidateCosine = $this->cosineSimilarity($storedEmbedding, $incomingEmbedding);
+                if ($candidateDistance < $distance) {
+                    $distance = $candidateDistance;
+                    $cosine = $candidateCosine;
+                }
+            }
+            if ($distance === 999.0) {
+                echo json_encode(['success' => false, 'message' => 'Dữ liệu khuôn mặt bị lỗi định dạng.']);
+                exit;
+            }
+            $threshold = 0.8;
+            $cosineThreshold = 0.75;
 
-        if ($distance > $threshold && $cosine < $cosineThreshold) {
-            echo json_encode([
-                'success' => false,
-                'message' => sprintf('Nhận diện thất bại! Không trùng khớp khuôn mặt đã đăng ký (Khoảng cách: %.4f, cosine: %.4f).', $distance, $cosine)
-            ]);
-            exit;
+            if ($distance > $threshold && $cosine < $cosineThreshold) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => sprintf('Nhận diện thất bại! Không trùng khớp khuôn mặt đã đăng ký (Khoảng cách: %.4f, cosine: %.4f).', $distance, $cosine)
+                ]);
+                exit;
+            }
         }
 
         // === 3. KIỂM TRA QUY TẮC CHẤM CÔNG (MẠNG + CA LÀM VIỆC + LẦN CHẤM) ===

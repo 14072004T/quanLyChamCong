@@ -18,7 +18,7 @@ class FaceModel
      */
     public function getFaceProfile($maND)
     {
-        $sql = "SELECT id, maND, embedding, embedding_front, embedding_left, embedding_right, ngayTao, ngayCapNhat FROM face_profile WHERE maND = ?";
+        $sql = "SELECT id, maND, embedding, embedding_front, embedding_left, embedding_right, embedding_arcface, ngayTao, ngayCapNhat FROM face_profile WHERE maND = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return null;
@@ -36,23 +36,23 @@ class FaceModel
      * @param string $embeddingJson
      * @return bool
      */
-    public function saveFaceProfile($maND, $embeddingJson, $frontJson = null, $leftJson = null, $rightJson = null)
+    public function saveFaceProfile($maND, $embeddingJson, $frontJson = null, $leftJson = null, $rightJson = null, $arcFaceJson = null)
     {
         $existing = $this->getFaceProfile($maND);
         if ($existing) {
-            $sql = "UPDATE face_profile SET embedding = ?, embedding_front = ?, embedding_left = ?, embedding_right = ? WHERE maND = ?";
+            $sql = "UPDATE face_profile SET embedding = ?, embedding_front = ?, embedding_left = ?, embedding_right = ?, embedding_arcface = ? WHERE maND = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
             }
-            $stmt->bind_param("ssssi", $embeddingJson, $frontJson, $leftJson, $rightJson, $maND);
+            $stmt->bind_param("sssssi", $embeddingJson, $frontJson, $leftJson, $rightJson, $arcFaceJson, $maND);
         } else {
-            $sql = "INSERT INTO face_profile (maND, embedding, embedding_front, embedding_left, embedding_right) VALUES (?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO face_profile (maND, embedding, embedding_front, embedding_left, embedding_right, embedding_arcface) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return false;
             }
-            $stmt->bind_param("issss", $maND, $embeddingJson, $frontJson, $leftJson, $rightJson);
+            $stmt->bind_param("isssss", $maND, $embeddingJson, $frontJson, $leftJson, $rightJson, $arcFaceJson);
         }
         $res = $stmt->execute();
         $stmt->close();
@@ -86,7 +86,7 @@ class FaceModel
     {
         $profiles = [];
         if ($excludeMaND !== null) {
-            $sql = "SELECT id, maND, embedding, embedding_front, embedding_left, embedding_right FROM face_profile WHERE maND != ?";
+            $sql = "SELECT id, maND, embedding, embedding_front, embedding_left, embedding_right, embedding_arcface FROM face_profile WHERE maND != ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 return [];
@@ -99,7 +99,7 @@ class FaceModel
             }
             $stmt->close();
         } else {
-            $sql = "SELECT id, maND, embedding, embedding_front, embedding_left, embedding_right FROM face_profile";
+            $sql = "SELECT id, maND, embedding, embedding_front, embedding_left, embedding_right, embedding_arcface FROM face_profile";
             $result = $this->conn->query($sql);
             if ($result) {
                 while ($row = $result->fetch_assoc()) {
@@ -133,7 +133,7 @@ class FaceModel
      */
     public function getFaceProfileV2($maND)
     {
-        $sql = "SELECT id, maND, embedding_v2, embedding_version, ngayTao, ngayCapNhat FROM face_profile WHERE maND = ?";
+        $sql = "SELECT id, maND, embedding_arcface, ngayTao, ngayCapNhat FROM face_profile WHERE maND = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return null;
         $stmt->bind_param("i", $maND);
@@ -144,18 +144,18 @@ class FaceModel
     }
 
     /**
-     * Lưu hoặc cập nhật embedding_v2 (ArcFace 512-dim)
+    * Lưu hoặc cập nhật embedding ArcFace (512 chiều)
      */
     public function saveFaceProfileV2($maND, $embeddingV2Json)
     {
         $existing = $this->getFaceProfile($maND);
         if ($existing) {
-            $sql = "UPDATE face_profile SET embedding_v2 = ?, embedding_version = 2, last_registered_at = NOW() WHERE maND = ?";
+            $sql = "UPDATE face_profile SET embedding_arcface = ? WHERE maND = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) return false;
             $stmt->bind_param("si", $embeddingV2Json, $maND);
         } else {
-            $sql = "INSERT INTO face_profile (maND, embedding_v2, embedding_version, last_registered_at) VALUES (?, ?, 2, NOW())";
+            $sql = "INSERT INTO face_profile (maND, embedding, embedding_arcface) VALUES (?, '', ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) return false;
             $stmt->bind_param("is", $maND, $embeddingV2Json);
@@ -172,7 +172,7 @@ class FaceModel
     {
         $profiles = [];
         if ($excludeMaND !== null) {
-            $sql = "SELECT id, maND, embedding_v2 FROM face_profile WHERE maND != ? AND embedding_v2 IS NOT NULL";
+            $sql = "SELECT id, maND, embedding_arcface FROM face_profile WHERE maND != ? AND embedding_arcface IS NOT NULL";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) return [];
             $stmt->bind_param("i", $excludeMaND);
@@ -183,7 +183,7 @@ class FaceModel
             }
             $stmt->close();
         } else {
-            $sql = "SELECT id, maND, embedding_v2 FROM face_profile WHERE embedding_v2 IS NOT NULL";
+            $sql = "SELECT id, maND, embedding_arcface FROM face_profile WHERE embedding_arcface IS NOT NULL";
             $result = $this->conn->query($sql);
             if ($result) {
                 while ($row = $result->fetch_assoc()) {

@@ -383,6 +383,7 @@ CREATE TABLE `face_profile` (
   `embedding_front` text DEFAULT NULL,
   `embedding_left` text DEFAULT NULL,
   `embedding_right` text DEFAULT NULL,
+  `embedding_arcface` longtext DEFAULT NULL,
   `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
   `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

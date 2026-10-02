@@ -239,6 +239,7 @@ class ChamCongModel
         $this->addColumnIfMissing('face_profile', 'embedding_front', 'TEXT DEFAULT NULL AFTER embedding');
         $this->addColumnIfMissing('face_profile', 'embedding_left', 'TEXT DEFAULT NULL AFTER embedding_front');
         $this->addColumnIfMissing('face_profile', 'embedding_right', 'TEXT DEFAULT NULL AFTER embedding_left');
+        $this->addColumnIfMissing('face_profile', 'embedding_arcface', 'LONGTEXT DEFAULT NULL AFTER embedding_right');
         $this->addColumnIfMissing('lichsuchamcong', 'anhMinhChung', 'VARCHAR(255) DEFAULT NULL');
 
         // Clean up nguoidung_roles table if it exists (no new table added per requirement)
