@@ -213,7 +213,8 @@ class FaceController extends Controller
             echo json_encode(['success' => false, 'message' => 'Không thể tạo embedding ArcFace: ' . $arcFaceResult['message']]);
             exit;
         }
-        $arcFaceEmbeddingJson = json_encode($arcFaceResult['embedding']);
+        $incomingArcFaceEmbedding = $this->normalizeEmbedding($arcFaceResult['embedding']);
+        $arcFaceEmbeddingJson = json_encode($incomingArcFaceEmbedding);
 
         // 2. Kiểm tra tính độc nhất, bỏ qua profile cũ của chính nhân viên này.
         $this->getChamCongModel();
@@ -225,6 +226,9 @@ class FaceController extends Controller
         $cosineThreshold = 0.955;
         $warningThreshold = 0.40;
         $warningCosineThreshold = 0.92;
+        $arcFaceDuplicateThreshold = isset($_ENV['ARCFACE_DUPLICATE_COSINE_THRESHOLD'])
+            ? (float)$_ENV['ARCFACE_DUPLICATE_COSINE_THRESHOLD']
+            : 0.75;
 
         $duplicateProbeSessionKey = 'face_duplicate_probe_' . $maND;
         $duplicateMatchFound = false;
@@ -237,36 +241,60 @@ class FaceController extends Controller
 
         foreach ($allProfiles as $prof) {
             $duplicateField = null;
-            foreach ($incomingByField as $field => $candidateEmbedding) {
-                $storedJson = $prof[$field] ?? '';
-                $otherEmbedding = json_decode($storedJson, true);
-                if (!is_array($otherEmbedding) || count($otherEmbedding) !== 128) continue;
-                $otherEmbedding = $this->normalizeEmbedding($otherEmbedding);
-                $dist = $this->euclideanDistance($candidateEmbedding, $otherEmbedding);
-                $cosine = $this->cosineSimilarity($candidateEmbedding, $otherEmbedding);
+            if (!empty($prof['embedding_arcface'])) {
+                $otherArcFaceEmbedding = json_decode($prof['embedding_arcface'], true);
+                if (is_array($otherArcFaceEmbedding) && count($otherArcFaceEmbedding) === 512) {
+                    $cosine = $this->cosineSimilarity(
+                        $incomingArcFaceEmbedding,
+                        $this->normalizeEmbedding($otherArcFaceEmbedding)
+                    );
+                    $isDuplicate = $cosine >= $arcFaceDuplicateThreshold;
+                    @file_put_contents($logDir . 'duplicate_debug.log', sprintf(
+                        "[%s] Register compare target=%s existing=%s template=embedding_arcface cosine=%.4f thresholdCosine=%.3f confidence=%.4f duplicate=%s\n",
+                        date('Y-m-d H:i:s'),
+                        $maND,
+                        $prof['maND'],
+                        $cosine,
+                        $arcFaceDuplicateThreshold,
+                        $confidence,
+                        $isDuplicate ? 'YES' : 'NO'
+                    ), FILE_APPEND | LOCK_EX);
+                    if ($isDuplicate) {
+                        $duplicateField = 'embedding_arcface';
+                    }
+                }
+            } else {
+                foreach ($incomingByField as $field => $candidateEmbedding) {
+                    $storedJson = $prof[$field] ?? '';
+                    $otherEmbedding = json_decode($storedJson, true);
+                    if (!is_array($otherEmbedding) || count($otherEmbedding) !== 128) continue;
+                    $otherEmbedding = $this->normalizeEmbedding($otherEmbedding);
+                    $dist = $this->euclideanDistance($candidateEmbedding, $otherEmbedding);
+                    $cosine = $this->cosineSimilarity($candidateEmbedding, $otherEmbedding);
 
-                $isDuplicate = $dist <= $threshold && $cosine >= $cosineThreshold;
-                $isNearDuplicate = !$isDuplicate && $dist <= $warningThreshold && $cosine >= $warningCosineThreshold;
-                $logMsg = sprintf(
-                    "[%s] Register compare target=%s existing=%s template=%s dist=%.4f cosine=%.4f confidence=%.4f thresholdDist=%.2f thresholdCosine=%.3f warningDist=%.2f warningCosine=%.2f duplicate=%s nearDuplicate=%s\n",
-                    date('Y-m-d H:i:s'),
-                    $maND,
-                    $prof['maND'],
-                    $field,
-                    $dist,
-                    $cosine,
-                    $confidence,
-                    $threshold,
-                    $cosineThreshold,
-                    $warningThreshold,
-                    $warningCosineThreshold,
-                    $isDuplicate ? 'YES' : 'NO',
-                    $isNearDuplicate ? 'YES' : 'NO'
-                );
-                @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND | LOCK_EX);
+                    $isDuplicate = $dist <= $threshold && $cosine >= $cosineThreshold;
+                    $isNearDuplicate = !$isDuplicate && $dist <= $warningThreshold && $cosine >= $warningCosineThreshold;
+                    $logMsg = sprintf(
+                        "[%s] Register compare target=%s existing=%s template=%s dist=%.4f cosine=%.4f confidence=%.4f thresholdDist=%.2f thresholdCosine=%.3f warningDist=%.2f warningCosine=%.2f duplicate=%s nearDuplicate=%s\n",
+                        date('Y-m-d H:i:s'),
+                        $maND,
+                        $prof['maND'],
+                        $field,
+                        $dist,
+                        $cosine,
+                        $confidence,
+                        $threshold,
+                        $cosineThreshold,
+                        $warningThreshold,
+                        $warningCosineThreshold,
+                        $isDuplicate ? 'YES' : 'NO',
+                        $isNearDuplicate ? 'YES' : 'NO'
+                    );
+                    @file_put_contents($logDir . 'duplicate_debug.log', $logMsg, FILE_APPEND | LOCK_EX);
 
-                if ($isDuplicate) {
-                    $duplicateField = $duplicateField ?? $field;
+                    if ($isDuplicate) {
+                        $duplicateField = $duplicateField ?? $field;
+                    }
                 }
             }
 
