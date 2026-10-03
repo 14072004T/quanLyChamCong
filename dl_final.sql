@@ -7772,6 +7772,39 @@ INSERT INTO `lichsuchamcong` (`id`, `maND`, `hanhDong`, `phuongThuc`, `tenWifi`,
 -- Table structure for table `nguoidung`
 --
 
+--
+-- Table structure for table `phongban`
+--
+
+CREATE TABLE `phongban` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `tenPhongBan` varchar(150) NOT NULL,
+  `moTa` varchar(255) DEFAULT NULL,
+  `hoatDong` tinyint(1) NOT NULL DEFAULT 1,
+  `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `phongban`
+--
+
+INSERT INTO `phongban` (`id`, `tenPhongBan`, `moTa`, `hoatDong`, `ngayTao`) VALUES
+(1, 'Ban Điều hành', NULL, 1, CURRENT_TIMESTAMP),
+(2, 'Phòng Nhân sự', NULL, 1, CURRENT_TIMESTAMP),
+(3, 'Phòng Kế toán', NULL, 1, CURRENT_TIMESTAMP),
+(4, 'Phòng Kinh doanh & Marketing', NULL, 1, CURRENT_TIMESTAMP),
+(5, 'Phòng Công nghệ thông tin (IT)', NULL, 1, CURRENT_TIMESTAMP),
+(6, 'Phòng Sản xuất', NULL, 1, CURRENT_TIMESTAMP),
+(7, 'Phòng Kiểm soát chất lượng (QC)', NULL, 1, CURRENT_TIMESTAMP),
+(8, 'Phòng Hành chính', NULL, 1, CURRENT_TIMESTAMP);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `nguoidung`
+--
+
 CREATE TABLE `nguoidung` (
   `maND` int(11) NOT NULL,
   `maTK` int(11) NOT NULL,

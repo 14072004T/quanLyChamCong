@@ -294,6 +294,24 @@ class ChamCongModel
         ");
         $this->addColumnIfMissing('phongban', 'moTa', 'VARCHAR(255) DEFAULT NULL AFTER tenPhongBan');
         $this->addColumnIfMissing('phongban', 'hoatDong', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER moTa');
+        $this->conn->query("
+            INSERT INTO phongban (tenPhongBan, hoatDong)
+            SELECT departments.tenPhongBan, 1
+            FROM (
+                SELECT 'Ban Điều hành' AS tenPhongBan
+                UNION ALL SELECT 'Phòng Nhân sự'
+                UNION ALL SELECT 'Phòng Kế toán'
+                UNION ALL SELECT 'Phòng Kinh doanh & Marketing'
+                UNION ALL SELECT 'Phòng Công nghệ thông tin (IT)'
+                UNION ALL SELECT 'Phòng Sản xuất'
+                UNION ALL SELECT 'Phòng Kiểm soát chất lượng (QC)'
+                UNION ALL SELECT 'Phòng Hành chính'
+            ) AS departments
+            WHERE NOT EXISTS (
+                SELECT 1 FROM phongban existing
+                WHERE existing.tenPhongBan = departments.tenPhongBan
+            )
+        ");
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
