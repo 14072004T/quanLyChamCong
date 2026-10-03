@@ -596,7 +596,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                     <div class="tab-content" id="tab-lichsuquet">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
                             <h3 style="margin:0;">Lịch sử chấm công tablet - Tháng <span id="scan-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
-                            <div style="display:none;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                                 <span id="scan-total-label" style="color:#64748b;font-size:.9em;"></span>
                                 <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;user-select:none;margin-right:2px;font-weight:500;color:#334155;">
                                     <input type="checkbox" id="scan-select-all" style="cursor:pointer;width:16px;height:16px;"> Chọn trang này
