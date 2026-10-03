@@ -40,6 +40,7 @@ class AuthMiddleware
             'hr-api-employees',
             'hr-api-shifts',
             'hr-api-shift-assignments',
+            'hr-api-shift-assignments-batch',
             'hr-api-payroll',
             'hr-api-payroll-submit',
             'hr-api-tablet-scans',
