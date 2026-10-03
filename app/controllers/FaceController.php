@@ -649,26 +649,36 @@ class FaceController extends Controller
         file_put_contents($uploadDir . $photoFilename, base64_decode($photo));
 
         // Ghi mọi lần quét vào bảng riêng — nguồn dữ liệu để tính giờ vào/ra.
-        $this->getChamCongModel()->insertTabletScan($matchedId, $photoFilename);
-        $scanRange = $this->getChamCongModel()->getTabletScanRangeToday($matchedId);
-        $isFirstScanToday = (int)($scanRange['soLanQuet'] ?? 0) <= 1;
+        $chamCongModel = $this->getChamCongModel();
+        $chamCongModel->insertTabletScan($matchedId, $photoFilename);
         $employeeName = $this->getFaceModel()->getUserName($matchedId);
+        $assignedShift = $chamCongModel->getShiftForUser($matchedId, date('Y-m-d'), false);
+        if ($assignedShift && strtolower((string)($assignedShift['cotinhcong'] ?? 'yes')) === 'no') {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Đã ghi nhận lượt quét cho ' . $employeeName . ' (Mã NV: ' . $matchedId . '). Ca ' . $assignedShift['tenCa'] . ' được cấu hình không tính công.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $scanRange = $chamCongModel->getTabletScanRangeToday($matchedId);
+        $isFirstScanToday = (int)($scanRange['soLanQuet'] ?? 0) <= 1;
 
         if ($isFirstScanToday) {
             // Ca OFF: không đồng bộ giờ vào, báo rõ hôm nay không có lịch làm việc.
             // getShiftForUser() luôn trả về ca mặc định (HC/OFF) nếu chưa gán ca cụ thể.
-            $shift = $this->getChamCongModel()->getShiftForUser($matchedId);
-            if ($shift && $this->getChamCongModel()->isOffShift($shift)) {
+            $shift = $chamCongModel->getShiftForUser($matchedId);
+            if ($shift && $chamCongModel->isOffShift($shift)) {
                 echo json_encode(['success' => false, 'message' => 'Hôm nay ' . $employeeName . ' (Mã NV: ' . $matchedId . ') không có lịch làm việc (ca OFF).']);
                 exit;
             }
-            $ok = $this->getChamCongModel()->chamCong($matchedId, 'IN', 'LAN', 'TABLET', 'Chấm vào bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+            $ok = $chamCongModel->chamCong($matchedId, 'IN', 'LAN', 'TABLET', 'Chấm vào bằng tablet khuôn mặt', 'TABLET', $photoFilename);
             echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã ghi nhận giờ vào cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
         // Các lần quét sau trong ngày luôn cập nhật giờ ra thành lần quét gần nhất.
-        $ok = $this->getChamCongModel()->chamCong($matchedId, 'OUT', 'LAN', 'TABLET', 'Cập nhật giờ ra bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+        $ok = $chamCongModel->chamCong($matchedId, 'OUT', 'LAN', 'TABLET', 'Cập nhật giờ ra bằng tablet khuôn mặt', 'TABLET', $photoFilename);
         echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã cập nhật giờ ra cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
         exit;
     }

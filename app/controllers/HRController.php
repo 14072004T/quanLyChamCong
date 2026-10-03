@@ -114,6 +114,7 @@ class HRController
             'tenCa' => $_POST['tenCa'] ?? '',
             'kyHieu' => $_POST['kyHieu'] ?? '',
             'mauSac' => $_POST['mauSac'] ?? '#3b82f6',
+            'cotinhcong' => $_POST['cotinhcong'] ?? 'yes',
             'gioBatDau' => $_POST['gioBatDau'] ?? '',
             'gioKetThuc' => $_POST['gioKetThuc'] ?? '',
             'hoatDong' => $_POST['hoatDong'] ?? 1,

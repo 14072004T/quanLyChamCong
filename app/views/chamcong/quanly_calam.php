@@ -86,6 +86,7 @@ function shiftDisplayText($value) {
                                 <th>TÊN CA</th>
                                 <th>KÝ HIỆU</th>
                                 <th>MÀU</th>
+                                <th>TÍNH CÔNG</th>
                                 <th>GIỜ BẮT ĐẦU</th>
                                 <th>GIỜ KẾT THÚC</th>
                                 <th>TRẠNG THÁI</th>
@@ -99,14 +100,15 @@ function shiftDisplayText($value) {
                                         <td><strong><?= htmlspecialchars(shiftDisplayText($shift['tenCa'])) ?></strong></td>
                                         <td><strong><?= htmlspecialchars($shift['kyHieu'] ?? '') ?></strong></td>
                                         <td><span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:<?= htmlspecialchars($shift['mauSac'] ?? '#3b82f6') ?>;vertical-align:middle;"></span> <?= htmlspecialchars($shift['mauSac'] ?? '#3b82f6') ?></td>
+                                        <td><?= ($shift['cotinhcong'] ?? 'yes') === 'no' ? 'Không' : 'Có' ?></td>
                                         <td><?= htmlspecialchars(substr($shift['gioBatDau'], 0, 5)) ?></td>
                                         <td><?= htmlspecialchars(substr($shift['gioKetThuc'], 0, 5)) ?></td>
                                         <td><span class="trangThai-badge <?= (int)$shift['hoatDong'] ? 'trangThai-approved' : 'trangThai-rejected' ?>"><?= (int)$shift['hoatDong'] ? 'Đang dùng' : 'Tắt' ?></span></td>
-                                        <td><button type="button" class="btn btn-secondary btn-sm edit-shift" data-id="<?= (int)$shift['id'] ?>" data-name="<?= htmlspecialchars(shiftDisplayText($shift['tenCa']), ENT_QUOTES) ?>" data-code="<?= htmlspecialchars($shift['kyHieu'] ?? '', ENT_QUOTES) ?>" data-color="<?= htmlspecialchars($shift['mauSac'] ?? '#3b82f6', ENT_QUOTES) ?>" data-start="<?= htmlspecialchars(substr($shift['gioBatDau'], 0, 5), ENT_QUOTES) ?>" data-end="<?= htmlspecialchars(substr($shift['gioKetThuc'], 0, 5), ENT_QUOTES) ?>"><i class="fas fa-pen"></i> Sửa</button> <form method="post" onsubmit="return confirm('Xóa ca này?');" style="display:inline;"><input type="hidden" name="form_action" value="delete_shift"><input type="hidden" name="id" value="<?= (int)$shift['id'] ?>"><button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Xóa</button></form></td>
+                                        <td><button type="button" class="btn btn-secondary btn-sm edit-shift" data-id="<?= (int)$shift['id'] ?>" data-name="<?= htmlspecialchars(shiftDisplayText($shift['tenCa']), ENT_QUOTES) ?>" data-code="<?= htmlspecialchars($shift['kyHieu'] ?? '', ENT_QUOTES) ?>" data-color="<?= htmlspecialchars($shift['mauSac'] ?? '#3b82f6', ENT_QUOTES) ?>" data-cotinhcong="<?= htmlspecialchars($shift['cotinhcong'] ?? 'yes', ENT_QUOTES) ?>" data-start="<?= htmlspecialchars(substr($shift['gioBatDau'], 0, 5), ENT_QUOTES) ?>" data-end="<?= htmlspecialchars(substr($shift['gioKetThuc'], 0, 5), ENT_QUOTES) ?>"><i class="fas fa-pen"></i> Sửa</button> <form method="post" onsubmit="return confirm('Xóa ca này?');" style="display:inline;"><input type="hidden" name="form_action" value="delete_shift"><input type="hidden" name="id" value="<?= (int)$shift['id'] ?>"><button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Xóa</button></form></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <tr><td colspan="7" class="empty-state">Chưa có ca làm việc.</td></tr>
+                                <tr><td colspan="8" class="empty-state">Chưa có ca làm việc.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -127,6 +129,13 @@ function shiftDisplayText($value) {
                         <div class="form-group">
                             <label>Màu hiển thị *</label>
                             <input type="color" name="mauSac" value="#3b82f6" style="height:38px;width:100%;padding:3px;">
+                        </div>
+                        <div class="form-group">
+                            <label>Tính công</label>
+                            <select name="cotinhcong">
+                                <option value="yes">Có tính công</option>
+                                <option value="no">Không tính công</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Giờ bắt đầu *</label>
@@ -228,6 +237,7 @@ document.addEventListener('DOMContentLoaded', function () {
             shiftForm.reset();
             shiftForm.elements.id.value = '0';
             shiftForm.elements.mauSac.value = '#3b82f6';
+            shiftForm.elements.cotinhcong.value = 'yes';
             if (shiftFormTitle) shiftFormTitle.textContent = 'Tạo ca mới';
         }
     });
@@ -238,6 +248,7 @@ document.addEventListener('DOMContentLoaded', function () {
             shiftForm.elements.tenCa.value = this.dataset.name;
             shiftForm.elements.kyHieu.value = this.dataset.code;
             shiftForm.elements.mauSac.value = this.dataset.color;
+            shiftForm.elements.cotinhcong.value = this.dataset.cotinhcong || 'yes';
             shiftForm.elements.gioBatDau.value = this.dataset.start;
             shiftForm.elements.gioKetThuc.value = this.dataset.end;
             if (shiftFormTitle) shiftFormTitle.textContent = 'Sửa ca làm việc';

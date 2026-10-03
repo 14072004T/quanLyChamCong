@@ -99,6 +99,7 @@ class ChamCongModel
                 tenCa VARCHAR(100) NOT NULL,
                 kyHieu VARCHAR(20) NOT NULL DEFAULT '',
                 mauSac VARCHAR(20) NOT NULL DEFAULT '#3b82f6',
+                cotinhcong ENUM('yes', 'no') NOT NULL DEFAULT 'yes',
                 gioBatDau TIME NOT NULL,
                 gioKetThuc TIME NOT NULL,
                 hoatDong TINYINT(1) NOT NULL DEFAULT 1,
@@ -107,6 +108,7 @@ class ChamCongModel
         ");
         $this->addColumnIfMissing('calamviec', 'kyHieu', "VARCHAR(20) NOT NULL DEFAULT '' AFTER tenCa");
         $this->addColumnIfMissing('calamviec', 'mauSac', "VARCHAR(20) NOT NULL DEFAULT '#3b82f6' AFTER kyHieu");
+        $this->addColumnIfMissing('calamviec', 'cotinhcong', "ENUM('yes', 'no') NOT NULL DEFAULT 'yes' AFTER mauSac");
         $this->conn->query("UPDATE calamviec SET tenCa = 'Ca hành chính' WHERE id = 1 AND tenCa LIKE 'Ca h%'");
         $this->conn->query("UPDATE calamviec SET tenCa = 'Ca tối' WHERE id = 2 AND tenCa LIKE 'Ca t%'");
         $this->conn->query("UPDATE calamviec SET kyHieu = CASE WHEN id = 1 THEN 'HC' WHEN id = 2 THEN 'OT' ELSE CONCAT('C', id) END WHERE kyHieu = '' OR kyHieu IS NULL");
@@ -115,7 +117,7 @@ class ChamCongModel
         // kể cả các ngày trong tuần, và cho phép đổi T7/CN sang ca làm việc khác.
         $offShift = $this->conn->query("SELECT id FROM calamviec WHERE kyHieu = 'OFF' LIMIT 1");
         if ($offShift && $offShift->num_rows === 0) {
-            $this->conn->query("INSERT INTO calamviec (tenCa, kyHieu, mauSac, gioBatDau, gioKetThuc, hoatDong) VALUES ('Nghỉ (OFF)', 'OFF', '#94a3b8', '00:00:00', '23:59:00', 1)");
+            $this->conn->query("INSERT INTO calamviec (tenCa, kyHieu, mauSac, cotinhcong, gioBatDau, gioKetThuc, hoatDong) VALUES ('Nghỉ (OFF)', 'OFF', '#94a3b8', 'no', '00:00:00', '23:59:00', 1)");
         }
 
         $this->conn->query(" 
@@ -689,14 +691,14 @@ class ChamCongModel
      * Get the assigned shift for a user on a given date.
      * Returns null if no shift assigned (caller must handle NULL safely).
      */
-    public function getShiftForUser($maND, $date = null)
+    public function getShiftForUser($maND, $date = null, $includeDefault = true)
     {
         $maND = (int)$maND;
         if ($date === null) {
             $date = date('Y-m-d');
         }
 
-        $sql = "SELECT s.id AS maCa, s.tenCa, s.kyHieu, s.gioBatDau, s.gioKetThuc
+        $sql = "SELECT s.id AS maCa, s.tenCa, s.kyHieu, s.cotinhcong, s.gioBatDau, s.gioKetThuc
                 FROM canhanvien aes
                 JOIN calamviec s ON s.id = aes.maCa AND s.hoatDong = 1
                 WHERE aes.maND = ?
@@ -715,7 +717,7 @@ class ChamCongModel
 
         // Fallback to default shift (HÃ nh chÃ­nh) if no explicit assignment exists
         // Không có phân ca cụ thể: mặc định T7/CN là ca OFF, ngày thường là ca HC.
-        if (!$row) {
+        if (!$row && $includeDefault) {
             $row = $this->getDefaultShiftForDate($date);
         }
 
@@ -1347,7 +1349,7 @@ class ChamCongModel
 
     public function getShifts()
     {
-        $sql = "SELECT s.id, s.tenCa, s.kyHieu, s.mauSac, s.gioBatDau, s.gioKetThuc, s.hoatDong, s.ngayTao,
+        $sql = "SELECT s.id, s.tenCa, s.kyHieu, s.mauSac, s.cotinhcong, s.gioBatDau, s.gioKetThuc, s.hoatDong, s.ngayTao,
                        (SELECT COUNT(DISTINCT aes.maND) FROM canhanvien aes
                         JOIN nguoidung nd ON nd.maND = aes.maND
                         WHERE aes.maCa = s.id 
@@ -1365,6 +1367,7 @@ class ChamCongModel
         $name = trim($payload['tenCa'] ?? '');
         $code = trim($payload['kyHieu'] ?? '');
         $color = trim($payload['mauSac'] ?? '#3b82f6');
+        $cotinhcong = strtolower(trim($payload['cotinhcong'] ?? 'yes')) === 'no' ? 'no' : 'yes';
         $start = trim($payload['gioBatDau'] ?? '');
         $end = trim($payload['gioKetThuc'] ?? '');
         $isActive = (int)($payload['hoatDong'] ?? 1);
@@ -1374,15 +1377,15 @@ class ChamCongModel
         }
 
         if ($id > 0) {
-            $sql = "UPDATE calamviec SET tenCa = ?, kyHieu = ?, mauSac = ?, gioBatDau = ?, gioKetThuc = ?, hoatDong = ? WHERE id = ?";
+            $sql = "UPDATE calamviec SET tenCa = ?, kyHieu = ?, mauSac = ?, cotinhcong = ?, gioBatDau = ?, gioKetThuc = ?, hoatDong = ? WHERE id = ?";
             $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("sssssii", $name, $code, $color, $start, $end, $isActive, $id);
+            $stmt->bind_param("ssssssii", $name, $code, $color, $cotinhcong, $start, $end, $isActive, $id);
             return $stmt->execute();
         }
 
-        $sql = "INSERT INTO calamviec (tenCa, kyHieu, mauSac, gioBatDau, gioKetThuc, hoatDong) VALUES (?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO calamviec (tenCa, kyHieu, mauSac, cotinhcong, gioBatDau, gioKetThuc, hoatDong) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("sssssi", $name, $code, $color, $start, $end, $isActive);
+        $stmt->bind_param("ssssssi", $name, $code, $color, $cotinhcong, $start, $end, $isActive);
         return $stmt->execute();
     }
 

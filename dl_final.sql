@@ -38,6 +38,7 @@ SET time_zone = "+00:00";
 CREATE TABLE `calamviec` (
   `id` int(11) NOT NULL,
   `tenCa` varchar(100) NOT NULL,
+  `cotinhcong` enum('yes','no') NOT NULL DEFAULT 'yes',
   `gioBatDau` time NOT NULL,
   `gioKetThuc` time NOT NULL,
   `hoatDong` tinyint(1) NOT NULL DEFAULT 1,
@@ -48,9 +49,9 @@ CREATE TABLE `calamviec` (
 -- Dumping data for table `calamviec`
 --
 
-INSERT INTO `calamviec` (`id`, `tenCa`, `gioBatDau`, `gioKetThuc`, `hoatDong`, `ngayTao`) VALUES
-(1, 'Ca hÃ nh chÃ­nh', '08:00:00', '17:00:00', 1, '2026-06-19 19:54:23'),
-(2, 'Ca tá»‘i', '08:00:00', '17:00:00', 1, '2026-06-19 19:54:23');
+INSERT INTO `calamviec` (`id`, `tenCa`, `cotinhcong`, `gioBatDau`, `gioKetThuc`, `hoatDong`, `ngayTao`) VALUES
+(1, 'Ca hÃ nh chÃ­nh', 'yes', '08:00:00', '17:00:00', 1, '2026-06-19 19:54:23'),
+(2, 'Ca tá»‘i', 'yes', '08:00:00', '17:00:00', 1, '2026-06-19 19:54:23');
 
 -- --------------------------------------------------------
 
