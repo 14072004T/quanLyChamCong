@@ -1280,7 +1280,7 @@ class ChamCongModel
         return ['total_employees' => $totalEmployees, 'today' => $todayMetrics, 'period' => $periodMetrics, 'daily' => array_values($daily)];
     }
 
-    public function getEmployees($keyword = '', $activeOnly = false, $limit = 0)
+    public function getEmployees($keyword = '', $activeOnly = false, $limit = 0, $accountActiveOnly = false)
     {
         $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.maPhongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap, tk.trangThai AS trangThaiTK
                 FROM nguoidung nd
@@ -1300,6 +1300,9 @@ class ChamCongModel
 
         if ($activeOnly) {
             $conditions[] = "nd.trangThai = 1";
+        }
+        if ($accountActiveOnly) {
+            $conditions[] = "tk.trangThai = 1";
         }
 
         if (!empty($conditions)) {
@@ -3038,12 +3041,7 @@ class ChamCongModel
         $monthStart = $monthKey . '-01';
         $monthEnd = date('Y-m-t', strtotime($monthStart));
 
-        $allEmployees = $this->getEmployees('', !$activeAccountsOnly);
-        if ($activeAccountsOnly) {
-            $allEmployees = array_filter($allEmployees, function ($employee) {
-                return (int)($employee['trangThaiTK'] ?? 0) === 1;
-            });
-        }
+        $allEmployees = $this->getEmployees('', !$activeAccountsOnly, 0, $activeAccountsOnly);
         
         // Lấy tất cả nhân viên đang hoạt động (filter theo phòng ban nếu có)
         $employees = array_filter($allEmployees, function($e) use ($monthEnd, $phongBan, $validDepts) {

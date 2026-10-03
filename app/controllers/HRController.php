@@ -196,12 +196,7 @@ class HRController
             $this->model->getMonthlyAttendanceDetailNew($selectedMonth, '', true),
             $employeeKeyword
         );
-        $filterEmployees = array_values(array_filter(
-            $this->model->getEmployees('', false, 0),
-            function ($employee) {
-                return (int)($employee['trangThaiTK'] ?? 0) === 1;
-            }
-        ));
+        $filterEmployees = $this->model->getEmployees('', false, 0, true);
         
         $monthlyApproval = $this->model->getMonthlyApprovalByMonth($selectedMonth);
         $approvalHistory = $this->model->getTimesheetApprovalSummary();

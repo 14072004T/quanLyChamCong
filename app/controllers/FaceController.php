@@ -114,7 +114,7 @@ class FaceController extends Controller
         }
 
         // Include legacy employee department labels that are not in the catalog yet.
-        $rawList = $chamCongModel->getEmployees('', true) ?? [];
+        $rawList = $chamCongModel->getEmployees('', false, 0, true) ?? [];
         foreach ($rawList as $emp) {
             $name = $this->normalizeDisplayText($emp['phongBan'] ?? '');
             $key = $this->normalizeDepartmentKey($name);
