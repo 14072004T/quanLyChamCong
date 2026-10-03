@@ -53,7 +53,7 @@ $apiPages = [
     'face-liveness-session', 'face-api-verify', 'face-api-register', 'face-api-delete',
     'tablet-face-api-verify', 'attendance-check-in', 'attendance-check-out',
     'attendance-validate-network', 'attendance-today', 'attendance-history',
-    'hr-api-employees', 'hr-api-shifts', 'hr-api-shift-assignments',
+    'hr-api-employees', 'hr-api-shifts', 'hr-api-shift-assignments', 'hr-api-shift-assignments-batch',
     'hr-api-payroll', 'hr-api-payroll-submit', 'hr-api-tablet-scans',
     'hr-api-tablet-scans-delete', 'hr-api-approval-detail',
     'hr-api-timesheet-approval-details', 'hr-api-corrections',
@@ -154,6 +154,7 @@ $allowedPages = [
     'hr-api-employees',
     'hr-api-shifts',
     'hr-api-shift-assignments',
+    'hr-api-shift-assignments-batch',
     'hr-api-payroll',
     'hr-api-payroll-submit',
     'hr-api-tablet-scans',
@@ -406,6 +407,11 @@ switch ($page) {
     case 'hr-api-shift-assignments':
         require_once 'app/controllers/HRController.php';
         (new HRController())->shiftAssignmentsApi();
+        break;
+
+    case 'hr-api-shift-assignments-batch':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->shiftAssignmentsBatchApi();
         break;
 
     case 'hr-api-payroll':

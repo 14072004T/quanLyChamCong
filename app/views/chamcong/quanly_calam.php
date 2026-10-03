@@ -292,11 +292,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     window.applyCommonRowToAll = function() {
         var pickers = document.querySelectorAll('.common-shift-row .common-shift-picker');
-        if (!pickers.length || !currentGridEmployees.length) return;
+        if (!pickers.length || !currentGridEmployees.length) {
+            alert('Không có dữ liệu nhân viên hoặc ca để áp dụng.');
+            return;
+        }
 
         var assignments = [];
         pickers.forEach(function(select) {
-            var maCa = select.value;
+            var maCa = parseInt(select.value, 10);
             var hieuLucTu = select.dataset.date;
             currentGridEmployees.forEach(function(emp) {
                 assignments.push({ maND: emp.maND, maCa: maCa, hieuLucTu: hieuLucTu });
@@ -308,22 +311,23 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         var btn = document.getElementById('btn-apply-common-row');
-        if (btn) { btn.disabled = true; btn.textContent = 'Đang áp dụng...'; }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang áp dụng...'; }
 
-        // Dùng lại đúng API gán ca theo từng ô (hr-api-shift-assignments) đã có sẵn,
-        // chỉ gọi lặp lại cho từng nhân viên × từng ngày — không cần API/permission mới.
-        Promise.all(assignments.map(function(item) {
-            var formData = new FormData();
-            formData.append('maND', item.maND);
-            formData.append('maCa', item.maCa);
-            formData.append('hieuLucTu', item.hieuLucTu);
-            return fetch('index.php?page=hr-api-shift-assignments', { method: 'POST', body: formData })
-                .then(function(r) { return r.json(); })
-                .catch(function() { return { success: false }; });
-        })).then(function(results) {
-            var failed = results.filter(function(r) { return !r.success; }).length;
-            alert('Đã áp dụng xong: ' + (results.length - failed) + ' thành công' + (failed > 0 ? ', ' + failed + ' thất bại' : '') + '.');
+        // Gửi 1 request batch thay vì N×D request song song để tránh overload server
+        fetch('index.php?page=hr-api-shift-assignments-batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(assignments)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(result) {
+            var msg = result.message || (result.success ? 'Áp dụng thành công!' : 'Có lỗi xảy ra.');
+            alert(msg);
             loadMonthlyShifts();
+        })
+        .catch(function() {
+            alert('Không thể kết nối máy chủ khi áp dụng ca.');
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-double"></i> Áp dụng cho tất cả NV'; }
         });
     };
 

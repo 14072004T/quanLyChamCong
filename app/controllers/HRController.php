@@ -142,6 +142,39 @@ class HRController
         ], $ok ? 200 : 422);
     }
 
+    public function shiftAssignmentsBatchApi()
+    {
+        AuthMiddleware::requirePermission('hr-api-shift-assignments');
+        $this->jsonOnly(['POST']);
+
+        // Nhận JSON body: [{"maND": 1, "maCa": 2, "hieuLucTu": "2026-10-01"}, ...]
+        $body = file_get_contents('php://input');
+        $assignments = json_decode($body, true);
+
+        if (!is_array($assignments) || empty($assignments)) {
+            $this->respond(['success' => false, 'message' => 'Danh sách gán ca không hợp lệ'], 422);
+            return;
+        }
+
+        $success = 0;
+        $failed  = 0;
+        foreach ($assignments as $item) {
+            $maND      = intval($item['maND'] ?? 0);
+            $maCa      = intval($item['maCa'] ?? 0);
+            $hieuLucTu = $item['hieuLucTu'] ?? date('Y-m-d');
+            if ($maND <= 0 || $maCa <= 0) { $failed++; continue; }
+            $ok = $this->model->assignShiftForDate($maND, $maCa, $hieuLucTu);
+            $ok ? $success++ : $failed++;
+        }
+
+        $this->respond([
+            'success' => $failed === 0,
+            'message' => 'Gán ca thành công: ' . $success . ', thất bại: ' . $failed,
+            'success_count' => $success,
+            'failed_count'  => $failed,
+        ]);
+    }
+
     public function salary()
     {
         AuthMiddleware::requirePermission('tinh-cong');
