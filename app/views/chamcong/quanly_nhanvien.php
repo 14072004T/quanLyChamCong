@@ -147,8 +147,8 @@ if (!empty($_GET['edit']) && !empty($employees)) {
             </td>
             <td><?= htmlspecialchars($emp['phongBan'] ?? '') ?></td>
             <td>
-                <span class="trangThai-badge <?= (int)$emp['trangThai'] === 1 ? 'trangThai-approved' : 'trangThai-rejected' ?>">
-                    <?= (int)$emp['trangThai'] === 1 ? '• Hoạt động' : '• Ngừng' ?>
+                <span class="trangThai-badge <?= (int)($emp['trangThaiTK'] ?? 0) === 1 ? 'trangThai-approved' : 'trangThai-rejected' ?>">
+                    <?= (int)($emp['trangThaiTK'] ?? 0) === 1 ? 'Hoạt động' : 'Ngừng hoạt động' ?>
                 </span>
             </td>
             <td>

@@ -7969,7 +7969,7 @@ CREATE TABLE `taikhoan` (
   `maTK` int(11) NOT NULL,
   `tenDangNhap` varchar(50) NOT NULL,
   `matKhau` varchar(255) NOT NULL,
-  `trangThai` varchar(50) NOT NULL DEFAULT 'pending',
+  `trangThai` varchar(50) NOT NULL DEFAULT '1',
   `lanDangNhapCuoi` datetime DEFAULT NULL,
   `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
   `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp()
@@ -8010,6 +8010,18 @@ INSERT INTO `taikhoan` (`maTK`, `tenDangNhap`, `matKhau`, `trangThai`, `lanDangN
 (28, 'manager03', 'e10adc3949ba59abbe56e057f20f883e', 'Hoạt Động', NULL, '2026-06-19 19:54:23', NULL),
 (29, 'manager04', 'e10adc3949ba59abbe56e057f20f883e', 'Hoạt Động', NULL, '2026-06-19 19:54:23', NULL),
 (30, 'manager05', 'e10adc3949ba59abbe56e057f20f883e', 'Hoạt Động', NULL, '2026-06-19 19:54:23', NULL);
+
+UPDATE `taikhoan`
+SET `trangThai` = CASE
+  WHEN TRIM(CAST(`trangThai` AS CHAR)) = '1'
+    OR LOWER(TRIM(CAST(`trangThai` AS CHAR))) LIKE '%hoạt động%'
+    OR LOWER(TRIM(CAST(`trangThai` AS CHAR))) LIKE '%hoat dong%'
+  THEN 1
+  ELSE 0
+END;
+
+ALTER TABLE `taikhoan`
+  MODIFY `trangThai` tinyint(1) NOT NULL DEFAULT 1;
 
 -- --------------------------------------------------------
 

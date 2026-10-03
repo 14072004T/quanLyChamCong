@@ -203,11 +203,6 @@ class LoginController {
             $isActive = ($trangThaiTK === '1' || strpos($statusLower, 'hoạt động') !== false || strpos($statusLower, 'hoat dong') !== false);
             
             if (!$isActive) {
-                if ($statusLower === 'pending' || $statusLower === 'chua_kich_hoat' || strpos($statusLower, 'pending') !== false || strpos($statusLower, 'chua') !== false || $trangThaiTK === '') {
-                    header("Location: index.php?page=login&error=pending");
-                    exit;
-                }
-                
                 header("Location: index.php?page=login&error=inactive");
                 exit;
             }

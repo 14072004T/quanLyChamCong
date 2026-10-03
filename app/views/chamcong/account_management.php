@@ -798,18 +798,13 @@ function renderAccountsTable(data) {
 
     let html = '';
     data.forEach((item, index) => {
-        const statusRaw = String(item.trangThaiTK || '').trim().toLowerCase();
-        const isPending = (statusRaw === 'pending' || statusRaw === 'chua_kich_hoat' || statusRaw.includes('pending') || statusRaw.includes('chưa') || statusRaw === '');
-        const isBlocked = !isPending && (item.trangThaiTK === 0 || item.trangThaiTK === '0' || statusRaw.includes('khoa') || statusRaw.includes('inactive') || statusRaw === 'ngừng hoạt động');
+        const isActive = Number(item.trangThaiTK) === 1;
 
         let statusBadge = '';
         let actionToggleBtn = '';
 
-        if (isPending) {
-            statusBadge = '<span class="badge-status status-pending"><i class="fas fa-exclamation-circle"></i> Cần kích hoạt</span>';
-            actionToggleBtn = `<button class="btn-action-toggle btn-activate" onclick="toggleAccountStatus(${item.maTK}, '${escapeHtml(item.tenDangNhap)}', 'activate')"><i class="fas fa-check-circle"></i> Kích hoạt</button>`;
-        } else if (isBlocked) {
-            statusBadge = '<span class="badge-status status-locked"><i class="fas fa-lock"></i> Đã khóa</span>';
+        if (!isActive) {
+            statusBadge = '<span class="badge-status status-locked"><i class="fas fa-lock"></i> Đã khoá</span>';
             actionToggleBtn = `<button class="btn-action-toggle" onclick="toggleAccountStatus(${item.maTK}, '${escapeHtml(item.tenDangNhap)}', 'unlock')"><i class="fas fa-unlock"></i> Mở khóa</button>`;
         } else {
             statusBadge = '<span class="badge-status status-active"><i class="fas fa-check"></i> Hoạt động</span>';

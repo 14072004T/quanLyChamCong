@@ -95,10 +95,9 @@ class TechController
 
         $result = $this->model->updateUserRoles($maND, $roles);
         if ($result) {
-            $this->model->activateAccountByUserId($maND);
             echo json_encode([
                 'success' => true,
-                'message' => 'Kích hoạt & cập nhật phân quyền thành công. User sẽ cần đăng nhập lại để áp dụng quyền mới.'
+                'message' => 'Cập nhật phân quyền thành công. User sẽ cần đăng nhập lại để áp dụng quyền mới.'
             ]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Lỗi khi cập nhật phân quyền']);

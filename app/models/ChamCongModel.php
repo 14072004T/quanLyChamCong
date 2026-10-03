@@ -82,11 +82,26 @@ class ChamCongModel
         $this->conn->query("DROP TABLE IF EXISTS caidathethong");
         $this->conn->query("DROP TABLE IF EXISTS cauhinhhethong");
 
-        // Automatically convert taikhoan.trangThai column from ENUM to VARCHAR(50) to allow 'pending'
+        // Normalize account state to the binary active/disabled values.
         $colCheck = $this->conn->query("SHOW COLUMNS FROM taikhoan LIKE 'trangThai'");
         if ($colCheck && $colRow = $colCheck->fetch_assoc()) {
-            if (strpos(strtolower($colRow['Type'] ?? ''), 'enum') !== false) {
-                $this->conn->query("ALTER TABLE taikhoan MODIFY COLUMN trangThai VARCHAR(50) NOT NULL DEFAULT 'pending'");
+            $statusColumnType = strtolower($colRow['Type'] ?? '');
+            if (strpos($statusColumnType, 'enum') !== false) {
+                $this->conn->query("ALTER TABLE taikhoan MODIFY COLUMN trangThai VARCHAR(50) NOT NULL DEFAULT '1'");
+                $statusColumnType = 'varchar(50)';
+            }
+            if (strpos($statusColumnType, 'tinyint') !== 0) {
+                $this->conn->query("UPDATE taikhoan
+                    SET trangThai = CASE
+                        WHEN TRIM(CAST(trangThai AS CHAR)) = '1'
+                          OR LOWER(TRIM(CAST(trangThai AS CHAR))) LIKE '%hoạt động%'
+                          OR LOWER(TRIM(CAST(trangThai AS CHAR))) LIKE '%hoat dong%'
+                        THEN '1'
+                        ELSE '0'
+                    END");
+                $this->conn->query("ALTER TABLE taikhoan MODIFY COLUMN trangThai TINYINT(1) NOT NULL DEFAULT 1");
+            } elseif ((string)($colRow['Default'] ?? '') !== '1') {
+                $this->conn->query("ALTER TABLE taikhoan MODIFY COLUMN trangThai TINYINT(1) NOT NULL DEFAULT 1");
             }
         }
 
@@ -993,7 +1008,9 @@ class ChamCongModel
         $sql = "SELECT cv.maND, s.gioBatDau, s.gioKetThuc, s.cotinhcong,
                        scans.scan_count, scans.first_scan, scans.last_scan
                 FROM canhanvien cv
-            INNER JOIN calamviec s ON s.id = cv.maCa
+                INNER JOIN nguoidung nd ON nd.maND = cv.maND
+                INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
+                INNER JOIN calamviec s ON s.id = cv.maCa
                 LEFT JOIN (
                     SELECT maND, COUNT(*) AS scan_count,
                            MIN(thoiGianQuet) AS first_scan,
@@ -1066,7 +1083,7 @@ class ChamCongModel
         $employeeCountResult = $this->conn->query("SELECT COUNT(DISTINCT nd.maND) AS total_employees
             FROM nguoidung nd
             INNER JOIN taikhoan tk ON tk.maTK = nd.maTK
-            WHERE LOWER(TRIM(tk.trangThai)) IN ('hoạt động', 'hoat dong', '1')");
+            WHERE tk.trangThai = 1");
         $totalEmployees = 0;
         if ($employeeCountResult) {
             $employeeCount = $employeeCountResult->fetch_assoc();
@@ -1096,7 +1113,7 @@ class ChamCongModel
 
     public function getEmployees($keyword = '', $activeOnly = false, $limit = 0)
     {
-        $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.maPhongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap
+        $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.maPhongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap, tk.trangThai AS trangThaiTK
                 FROM nguoidung nd
                 LEFT JOIN taikhoan tk ON nd.maTK = tk.maTK";
         $conditions = [];
@@ -1141,7 +1158,7 @@ class ChamCongModel
         $phongBan = trim((string)$phongBan);
         $keyword = trim((string)$keyword);
         
-        $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.maPhongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap
+        $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.maPhongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap, tk.trangThai AS trangThaiTK
                 FROM nguoidung nd
                 LEFT JOIN taikhoan tk ON nd.maTK = tk.maTK
                 WHERE nd.trangThai = 1
@@ -1270,7 +1287,7 @@ class ChamCongModel
             $username .= rand(10, 99);
 
             $defaultPassword = md5('123456');
-            $insertAccount = $this->conn->prepare("INSERT INTO taikhoan (tenDangNhap, matKhau, trangThai) VALUES (?, ?, 'pending')");
+            $insertAccount = $this->conn->prepare("INSERT INTO taikhoan (tenDangNhap, matKhau, trangThai) VALUES (?, ?, 1)");
             $insertAccount->bind_param("ss", $username, $defaultPassword);
             if (!$insertAccount->execute()) {
                 $this->conn->rollback();
@@ -1362,6 +1379,7 @@ class ChamCongModel
         $sql = "SELECT s.id, s.tenCa, s.kyHieu, s.mauSac, s.cotinhcong, s.gioBatDau, s.gioKetThuc, s.hoatDong, s.ngayTao,
                        (SELECT COUNT(DISTINCT aes.maND) FROM canhanvien aes
                         JOIN nguoidung nd ON nd.maND = aes.maND
+                        JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
                         WHERE aes.maCa = s.id 
                                                     AND aes.hieuLucTu <= CURDATE()
                           AND (aes.hieuLucDen IS NULL OR aes.hieuLucDen >= CURDATE())
@@ -1372,8 +1390,7 @@ class ChamCongModel
                                                                 AND (newer.hieuLucDen IS NULL OR newer.hieuLucDen >= CURDATE())
                                                                 AND (newer.hieuLucTu > aes.hieuLucTu
                                                                          OR (newer.hieuLucTu = aes.hieuLucTu AND newer.id > aes.id))
-                                                    )
-                          AND nd.chucVu = 'Nhân viên' AND nd.trangThai = 1) AS assigned_count
+                                                      )) AS assigned_count
                 FROM calamviec s
                 ORDER BY s.ngayTao DESC";
         $result = $this->conn->query($sql);
@@ -3912,21 +3929,13 @@ class ChamCongModel
         if (!$res || $res->num_rows === 0) return false;
         
         $row = $res->fetch_assoc();
-        $curr = trim((string)($row['trangThai'] ?? '1'));
-        $currLower = strtolower($curr);
+        $curr = (int)($row['trangThai'] ?? 0);
+        $newStatus = $curr === 1 ? 0 : 1;
         
-        // Nếu là pending (chưa kích hoạt) hoặc 0 (đã khóa) -> kích hoạt thành '1'
-        // Nếu đã ở 1 (hoạt động) -> chuyển sang '0' (khóa)
-        if ($currLower === 'pending' || $currLower === 'chua_kich_hoat' || $currLower === '0' || strpos($currLower, 'khoa') !== false || strpos($currLower, 'inactive') !== false) {
-            $newStatus = '1';
-        } else {
-            $newStatus = '0';
-        }
-        
-        $updateSql = "UPDATE taikhoan SET trangThai = ?, soLanDangNhapSai = IF(? = '1', 0, soLanDangNhapSai) WHERE maTK = ?";
+        $updateSql = "UPDATE taikhoan SET trangThai = ?, soLanDangNhapSai = IF(? = 1, 0, soLanDangNhapSai) WHERE maTK = ?";
         $upStmt = $this->conn->prepare($updateSql);
         if (!$upStmt) return false;
-        $upStmt->bind_param('ssi', $newStatus, $newStatus, $maTK);
+        $upStmt->bind_param('iii', $newStatus, $newStatus, $maTK);
         return $upStmt->execute();
     }
 
@@ -3936,28 +3945,13 @@ class ChamCongModel
     public function setAccountStatus($maTK, $newStatus)
     {
         $maTK = (int)$maTK;
-        $newStatus = ($newStatus === '1' || $newStatus === 1) ? '1' : '0';
+        $newStatus = ($newStatus === '1' || $newStatus === 1) ? 1 : 0;
         if ($maTK <= 0) return false;
 
-        $sql = "UPDATE taikhoan SET trangThai = ?, soLanDangNhapSai = IF(? = '1', 0, soLanDangNhapSai) WHERE maTK = ?";
+        $sql = "UPDATE taikhoan SET trangThai = ?, soLanDangNhapSai = IF(? = 1, 0, soLanDangNhapSai) WHERE maTK = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) return false;
-        $stmt->bind_param('ssi', $newStatus, $newStatus, $maTK);
-        return $stmt->execute();
-    }
-
-    /**
-     * Tech: Kích hoạt tài khoản khi phân quyền (nếu đang ở trạng thái pending)
-     */
-    public function activateAccountByUserId($maND)
-    {
-        $sql = "UPDATE taikhoan tk 
-                JOIN nguoidung nd ON tk.maTK = nd.maTK 
-                SET tk.trangThai = '1' 
-                WHERE nd.maND = ? AND (LOWER(tk.trangThai) = 'pending' OR LOWER(tk.trangThai) = 'chua_kich_hoat')";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) return false;
-        $stmt->bind_param('i', $maND);
+        $stmt->bind_param('iii', $newStatus, $newStatus, $maTK);
         return $stmt->execute();
     }
 
