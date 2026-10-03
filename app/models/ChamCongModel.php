@@ -309,16 +309,16 @@ class ChamCongModel
             ) AS departments
             WHERE NOT EXISTS (
                 SELECT 1 FROM phongban existing
-                WHERE existing.tenPhongBan = departments.tenPhongBan
+                WHERE existing.tenPhongBan COLLATE utf8mb4_unicode_ci = departments.tenPhongBan COLLATE utf8mb4_unicode_ci
             )
         ");
         $this->addColumnIfMissing('nguoidung', 'maPhongBan', 'INT DEFAULT NULL AFTER phongBan');
         $this->conn->query("UPDATE nguoidung nd
-            INNER JOIN phongban pb ON TRIM(nd.phongBan) = TRIM(pb.tenPhongBan)
+            INNER JOIN phongban pb ON TRIM(nd.phongBan) COLLATE utf8mb4_unicode_ci = TRIM(pb.tenPhongBan) COLLATE utf8mb4_unicode_ci
             SET nd.maPhongBan = pb.id, nd.phongBan = pb.tenPhongBan
             WHERE nd.maPhongBan IS NULL AND nd.phongBan IS NOT NULL AND TRIM(nd.phongBan) <> ''");
         $this->conn->query("UPDATE nguoidung nd
-            INNER JOIN phongban pb ON pb.tenPhongBan = CASE
+            INNER JOIN phongban pb ON pb.tenPhongBan COLLATE utf8mb4_unicode_ci = (CASE
                 WHEN nd.phongBan LIKE '%(IT)%' THEN 'Phòng Công nghệ thông tin (IT)'
                 WHEN nd.phongBan LIKE '%(QC)%' THEN 'Phòng Kiểm soát chất lượng (QC)'
                 WHEN nd.phongBan LIKE '%Kinh doanh%' THEN 'Phòng Kinh doanh & Marketing'
@@ -328,13 +328,13 @@ class ChamCongModel
                 WHEN nd.phongBan LIKE '%S?n xu?t%' THEN 'Phòng Sản xuất'
                 WHEN nd.phongBan LIKE '%H?nh ch?nh%' THEN 'Phòng Hành chính'
                 ELSE TRIM(nd.phongBan)
-            END
+            END) COLLATE utf8mb4_unicode_ci
             SET nd.maPhongBan = pb.id, nd.phongBan = pb.tenPhongBan
             WHERE nd.maPhongBan IS NULL AND nd.phongBan IS NOT NULL AND TRIM(nd.phongBan) <> ''");
         $this->conn->query("UPDATE nguoidung nd
             INNER JOIN phongban pb ON pb.id = nd.maPhongBan
             SET nd.phongBan = pb.tenPhongBan
-            WHERE nd.phongBan IS NULL OR nd.phongBan <> pb.tenPhongBan");
+            WHERE nd.phongBan IS NULL OR nd.phongBan COLLATE utf8mb4_unicode_ci <> pb.tenPhongBan COLLATE utf8mb4_unicode_ci");
 
         $departmentForeignKey = $this->conn->query("SELECT 1 FROM information_schema.TABLE_CONSTRAINTS
             WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'nguoidung'
@@ -1198,7 +1198,7 @@ class ChamCongModel
         $trangThai = (int)($payload['trangThai'] ?? 1);
 
         if ($phongBan !== '') {
-            $departmentStmt = $this->conn->prepare("SELECT id, tenPhongBan FROM phongban WHERE TRIM(tenPhongBan) = TRIM(?) LIMIT 1");
+            $departmentStmt = $this->conn->prepare("SELECT id, tenPhongBan FROM phongban WHERE TRIM(tenPhongBan) COLLATE utf8mb4_unicode_ci = TRIM(?) COLLATE utf8mb4_unicode_ci LIMIT 1");
             if ($departmentStmt) {
                 $departmentStmt->bind_param('s', $phongBan);
                 $departmentStmt->execute();

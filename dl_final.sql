@@ -11708,11 +11708,11 @@ INSERT INTO `tonghopngaycong` (`id`, `maND`, `ngayLamViec`, `gioVaoDau`, `gioRaC
 
 -- Map legacy department names to the department catalog.
 UPDATE `nguoidung` nd
-INNER JOIN `phongban` pb ON TRIM(nd.`phongBan`) = TRIM(pb.`tenPhongBan`)
+INNER JOIN `phongban` pb ON TRIM(nd.`phongBan`) COLLATE utf8mb4_unicode_ci = TRIM(pb.`tenPhongBan`) COLLATE utf8mb4_unicode_ci
 SET nd.`maPhongBan` = pb.`id`, nd.`phongBan` = pb.`tenPhongBan`
 WHERE nd.`maPhongBan` IS NULL AND nd.`phongBan` IS NOT NULL AND TRIM(nd.`phongBan`) <> '';
 UPDATE `nguoidung` nd
-INNER JOIN `phongban` pb ON pb.`tenPhongBan` = CASE
+INNER JOIN `phongban` pb ON pb.`tenPhongBan` COLLATE utf8mb4_unicode_ci = (CASE
   WHEN nd.`phongBan` LIKE '%(IT)%' THEN 'Phòng Công nghệ thông tin (IT)'
   WHEN nd.`phongBan` LIKE '%(QC)%' THEN 'Phòng Kiểm soát chất lượng (QC)'
   WHEN nd.`phongBan` LIKE '%Kinh doanh%' THEN 'Phòng Kinh doanh & Marketing'
@@ -11722,7 +11722,7 @@ INNER JOIN `phongban` pb ON pb.`tenPhongBan` = CASE
   WHEN nd.`phongBan` LIKE '%S?n xu?t%' THEN 'Phòng Sản xuất'
   WHEN nd.`phongBan` LIKE '%H?nh ch?nh%' THEN 'Phòng Hành chính'
   ELSE TRIM(nd.`phongBan`)
-END
+END) COLLATE utf8mb4_unicode_ci
 SET nd.`maPhongBan` = pb.`id`, nd.`phongBan` = pb.`tenPhongBan`
 WHERE nd.`maPhongBan` IS NULL AND nd.`phongBan` IS NOT NULL AND TRIM(nd.`phongBan`) <> '';
 
