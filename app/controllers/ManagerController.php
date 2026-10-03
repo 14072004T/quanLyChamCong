@@ -73,10 +73,13 @@ class ManagerController
         $format = strtolower($_POST['format'] ?? 'html');
         $export = (int)($_POST['export'] ?? 0);
 
-        $reportRows = $this->model->getAttendanceReport($fromDate, $toDate, $phongBan);
-        $dailyPunctuality = $this->model->getDailyPunctualityReport($fromDate, $toDate, $phongBan);
+        $tabletAttendanceReport = $this->model->getCountableTabletAttendanceReport($fromDate, $toDate, $phongBan);
+        $reportRows = $tabletAttendanceReport['report_rows'];
+        $dailyPunctuality = $tabletAttendanceReport['daily_punctuality'];
         $attendanceMetrics = $this->model->getAttendanceMetrics($fromDate, $toDate, $phongBan);
-        $employeePunctuality = $this->model->getEmployeePunctualityReport($fromDate, $toDate, $phongBan);
+        $attendanceMetrics = array_merge($attendanceMetrics, $tabletAttendanceReport['attendance_metrics']);
+        $employeePunctuality = $tabletAttendanceReport['employee_punctuality'];
+        $totalEmployees = $tabletAttendanceReport['total_employees'];
         $departments = $this->model->getValidDepartments();
         $monthKey = substr($fromDate, 0, 7);
         

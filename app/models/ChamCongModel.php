@@ -991,7 +991,7 @@ class ChamCongModel
         return $data;
     }
 
-    private function getCountableTabletMetricsForDate($date)
+    private function getCountableTabletMetricsForDate($date, $phongBan = '', &$employeeRows = null)
     {
         $metrics = [
             'date' => $date,
@@ -1005,7 +1005,15 @@ class ChamCongModel
         ];
         $scanStart = $date . ' 00:00:00';
         $scanEnd = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
-        $sql = "SELECT cv.maND, s.gioBatDau, s.gioKetThuc, s.cotinhcong,
+        $departmentFilter = '';
+        $params = [$scanStart, $scanEnd, $date, $date];
+        $types = 'ssss';
+        if ($phongBan !== '') {
+            $departmentFilter = 'AND nd.phongBan = ?';
+            $params[] = $phongBan;
+            $types .= 's';
+        }
+        $sql = "SELECT cv.maND, nd.hoTen, nd.phongBan, s.gioBatDau, s.gioKetThuc, s.cotinhcong,
                        scans.scan_count, scans.first_scan, scans.last_scan
                 FROM canhanvien cv
                 INNER JOIN nguoidung nd ON nd.maND = cv.maND
@@ -1021,6 +1029,7 @@ class ChamCongModel
                 ) scans ON scans.maND = cv.maND
                 WHERE cv.hieuLucTu <= ?
                   AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
+                                    $departmentFilter
                 ORDER BY cv.maND, cv.hieuLucTu DESC, cv.id DESC";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -1028,7 +1037,7 @@ class ChamCongModel
             return $metrics;
         }
 
-        $stmt->bind_param('ssss', $scanStart, $scanEnd, $date, $date);
+        $stmt->bind_param($types, ...$params);
         if (!$stmt->execute()) {
             error_log('HR tablet metrics execute failed: ' . $stmt->error);
             $stmt->close();
@@ -1049,6 +1058,24 @@ class ChamCongModel
                 continue;
             }
             $metrics['scheduled']++;
+            if ($employeeRows !== null) {
+                if (!isset($employeeRows[$employeeId])) {
+                    $employeeRows[$employeeId] = [
+                        'maND' => $employeeId,
+                        'hoTen' => $row['hoTen'] ?? '',
+                        'phongBan' => $row['phongBan'] ?? '',
+                        'scheduled_days' => 0,
+                        'work_days' => 0,
+                        'checkin_count' => 0,
+                        'checkout_count' => 0,
+                        'late_count' => 0,
+                        'early_count' => 0,
+                        'late_minutes' => 0,
+                        'early_minutes' => 0,
+                    ];
+                }
+                $employeeRows[$employeeId]['scheduled_days']++;
+            }
 
             $scanCount = (int)($row['scan_count'] ?? 0);
             if ($scanCount === 0 || empty($row['first_scan'])) {
@@ -1057,6 +1084,13 @@ class ChamCongModel
             }
 
             $metrics['present']++;
+            if ($employeeRows !== null) {
+                $employeeRows[$employeeId]['work_days']++;
+                $employeeRows[$employeeId]['checkin_count']++;
+                if ($scanCount > 1) {
+                    $employeeRows[$employeeId]['checkout_count']++;
+                }
+            }
             $checkOut = $scanCount > 1 ? ($row['last_scan'] ?? null) : null;
             $status = $this->calculateShiftStatus(
                 $row['first_scan'],
@@ -1066,15 +1100,150 @@ class ChamCongModel
             );
             if (in_array('late', $status['statuses'], true)) {
                 $metrics['late']++;
+                if ($employeeRows !== null) {
+                    $employeeRows[$employeeId]['late_count']++;
+                    $employeeRows[$employeeId]['late_minutes'] += (int)$status['minutes_late'];
+                }
             } else {
                 $metrics['on_time']++;
             }
             if (in_array('early_leave', $status['statuses'], true)) {
                 $metrics['early']++;
+                if ($employeeRows !== null) {
+                    $employeeRows[$employeeId]['early_count']++;
+                    $employeeRows[$employeeId]['early_minutes'] += (int)$status['minutes_early'];
+                }
             }
         }
 
         return $metrics;
+    }
+
+    public function getCountableTabletAttendanceReport($fromDate, $toDate, $phongBan = '')
+    {
+        $fromTimestamp = strtotime($fromDate);
+        $toTimestamp = strtotime($toDate);
+        $emptyResult = [
+            'total_employees' => 0,
+            'report_rows' => [],
+            'daily_punctuality' => [],
+            'employee_punctuality' => [],
+            'attendance_metrics' => [
+                'scheduled_days' => 0,
+                'work_days' => 0,
+                'absent_days' => 0,
+                'present_days' => 0,
+                'attendance_rate' => 0,
+                'absent_rate' => 0,
+                'workday_distribution' => ['present' => 0, 'absent' => 0],
+            ],
+        ];
+        if ($fromTimestamp === false || $toTimestamp === false || $fromTimestamp > $toTimestamp) {
+            return $emptyResult;
+        }
+
+        $employeeSql = "SELECT DISTINCT nd.maND, nd.hoTen, nd.phongBan
+                        FROM nguoidung nd
+                        INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1";
+        $employeeParams = [];
+        $employeeTypes = '';
+        if ($phongBan !== '') {
+            $employeeSql .= " WHERE nd.phongBan = ?";
+            $employeeParams[] = $phongBan;
+            $employeeTypes = 's';
+        }
+        $employeeSql .= " ORDER BY nd.hoTen";
+        $employeeRows = [];
+        $employeeStmt = $this->conn->prepare($employeeSql);
+        if ($employeeStmt) {
+            if ($employeeTypes !== '') {
+                $employeeStmt->bind_param($employeeTypes, ...$employeeParams);
+            }
+            if ($employeeStmt->execute()) {
+                foreach ($employeeStmt->get_result()->fetch_all(MYSQLI_ASSOC) as $employee) {
+                    $employeeId = (int)$employee['maND'];
+                    $employeeRows[$employeeId] = [
+                        'maND' => $employeeId,
+                        'hoTen' => $employee['hoTen'] ?? '',
+                        'phongBan' => $employee['phongBan'] ?? '',
+                        'work_days' => 0,
+                        'checkin_count' => 0,
+                        'checkout_count' => 0,
+                        'scheduled_days' => 0,
+                        'late_count' => 0,
+                        'early_count' => 0,
+                        'late_minutes' => 0,
+                        'early_minutes' => 0,
+                    ];
+                }
+            }
+            $employeeStmt->close();
+        }
+
+        $dailyPunctuality = [];
+        $scheduledDays = 0;
+        $presentDays = 0;
+        $absentDays = 0;
+        $cursor = $fromTimestamp;
+        while ($cursor <= $toTimestamp) {
+            $date = date('Y-m-d', $cursor);
+            $dateEmployees = [];
+            $dayMetrics = $this->getCountableTabletMetricsForDate($date, $phongBan, $dateEmployees);
+            $dailyPunctuality[] = [
+                'date' => $date,
+                'late' => (int)$dayMetrics['late'],
+                'early' => (int)$dayMetrics['early'],
+            ];
+            $scheduledDays += (int)$dayMetrics['scheduled'];
+            $presentDays += (int)$dayMetrics['present'];
+            $absentDays += (int)$dayMetrics['absent'];
+
+            foreach ($dateEmployees as $employeeId => $dateEmployee) {
+                if (!isset($employeeRows[$employeeId])) {
+                    $employeeRows[$employeeId] = [
+                        'maND' => (int)$employeeId,
+                        'hoTen' => $dateEmployee['hoTen'] ?? '',
+                        'phongBan' => $dateEmployee['phongBan'] ?? '',
+                        'work_days' => 0,
+                        'checkin_count' => 0,
+                        'checkout_count' => 0,
+                        'scheduled_days' => 0,
+                        'late_count' => 0,
+                        'early_count' => 0,
+                        'late_minutes' => 0,
+                        'early_minutes' => 0,
+                    ];
+                }
+                foreach (['work_days', 'checkin_count', 'checkout_count', 'scheduled_days', 'late_count', 'early_count', 'late_minutes', 'early_minutes'] as $key) {
+                    $employeeRows[$employeeId][$key] += (int)($dateEmployee[$key] ?? 0);
+                }
+            }
+
+            $cursor = strtotime('+1 day', $cursor);
+        }
+
+        $reportRows = array_values($employeeRows);
+        $employeePunctuality = array_values(array_filter($reportRows, function ($employee) {
+            return ($employee['late_count'] + $employee['early_count']) > 0;
+        }));
+        $attendanceRate = $scheduledDays > 0 ? round(($presentDays / $scheduledDays) * 100, 1) : 0;
+        $absentRate = $scheduledDays > 0 ? round(($absentDays / $scheduledDays) * 100, 1) : 0;
+
+        return [
+            'total_employees' => count($reportRows),
+            'report_rows' => $reportRows,
+            'daily_punctuality' => $dailyPunctuality,
+            'employee_punctuality' => $employeePunctuality,
+            'attendance_metrics' => [
+                'scheduled_days' => $scheduledDays,
+                'work_days' => $presentDays,
+                'absent_days' => $absentDays,
+                'present_days' => $presentDays,
+                'attendance_rate' => $attendanceRate,
+                'absent_rate' => $absentRate,
+                'workday_distribution' => ['present' => $presentDays, 'absent' => $absentDays],
+            ],
+        ];
     }
 
     public function getHrDashboardMetrics($today = null, $days = null)

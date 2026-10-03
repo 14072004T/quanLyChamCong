@@ -322,8 +322,9 @@ $selectedDept = $phongBan !== '' ? $phongBan : ($managerDept ?: ($departments[0]
 $fromTs = strtotime($fromDate) ?: strtotime(date('Y-m-01'));
 $toTs = strtotime($toDate) ?: strtotime(date('Y-m-d'));
 $dayCount = max(1, (int)floor(($toTs - $fromTs) / 86400) + 1);
-$totalEmployees = count(array_unique(array_map(function ($row) { return (int)($row['maND'] ?? 0); }, $reportRows)));
-$totalEmployees = $totalEmployees ?: count($reportRows);
+$totalEmployees = isset($totalEmployees)
+    ? (int)$totalEmployees
+    : count(array_unique(array_map(function ($row) { return (int)($row['maND'] ?? 0); }, $reportRows)));
 $attendanceMetrics = $attendanceMetrics ?? [];
 $plannedWorkDays = max((int)($attendanceMetrics['scheduled_days'] ?? 0), 1);
 $actualWorkDays = (float)($attendanceMetrics['work_days'] ?? 0);
@@ -340,29 +341,14 @@ $labels = array_map(function ($row) { return date('d/m', strtotime($row['date'])
 $lateLineValues = array_map(function ($row) { return (int)$row['late']; }, $dailyPunctuality);
 $earlyLineValues = array_map(function ($row) { return (int)$row['early']; }, $dailyPunctuality);
 
-$workdayDistribution = ['0' => 0, '0.25' => 0, '0.5' => 0, '0.75' => 0, '1' => 0];
-foreach ($payrollRows as $row) {
-    foreach (($row['daily_breakdown'] ?? []) as $day) {
-        $date = $day['date'] ?? '';
-        if ($date < $fromDate || $date > $toDate) {
-            continue;
-        }
-        $workValue = max(0, min(1, (float)($day['work_value'] ?? 0)));
-        $bucket = number_format(round($workValue * 4) / 4, 2, '.', '');
-        $bucket = rtrim(rtrim($bucket, '0'), '.');
-        $workdayDistribution[$bucket]++;
-    }
-}
+$workdayDistribution = $attendanceMetrics['workday_distribution'] ?? ['present' => 0, 'absent' => 0];
 $workdayEmployeeTotal = array_sum($workdayDistribution);
-$workdayLabels = ['1 công', '0,75 công', '0,5 công', '0,25 công', '0 công'];
+$workdayLabels = ['Đã chấm công', 'Vắng mặt'];
 $workdayValues = [
-    $workdayDistribution['1'],
-    $workdayDistribution['0.75'],
-    $workdayDistribution['0.5'],
-    $workdayDistribution['0.25'],
-    $workdayDistribution['0'],
+    (int)($workdayDistribution['present'] ?? 0),
+    (int)($workdayDistribution['absent'] ?? 0),
 ];
-$workdayColors = ['#12b76a', '#2f7cf6', '#f59e0b', '#ef4444', '#94a3b8'];
+$workdayColors = ['#12b76a', '#94a3b8'];
 $workdayPercentages = array_map(function ($value) use ($workdayEmployeeTotal) {
     return $workdayEmployeeTotal > 0 ? round(($value / $workdayEmployeeTotal) * 100, 1) : 0;
 }, $workdayValues);
@@ -791,12 +777,12 @@ $updatedAt = date('H:i, d/m/Y');
 
             <section class="mgrr-panel">
                 <div class="mgrr-panel-head">
-                    <div class="mgrr-panel-title">Tỷ lệ lượt nhân viên theo mức ngày công</div>
+                    <div class="mgrr-panel-title">Tỷ lệ chấm công theo ca tính công</div>
                 </div>
                 <div class="mgrr-donut-wrap">
                     <div class="mgrr-donut">
                         <canvas id="mgrrDonutChart"></canvas>
-                        <div class="mgrr-donut-center"><div><strong><?= number_format($workdayEmployeeTotal, 0) ?></strong><span>Lượt ngày công</span></div></div>
+                        <div class="mgrr-donut-center"><div><strong><?= number_format($workdayEmployeeTotal, 0) ?></strong><span>Lượt ca tính công</span></div></div>
                     </div>
                     <div class="mgrr-legend">
                         <?php foreach ($workdayLabels as $index => $label): ?>
