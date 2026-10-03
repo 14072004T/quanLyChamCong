@@ -7813,6 +7813,7 @@ CREATE TABLE `nguoidung` (
   `soDienThoai` varchar(20) DEFAULT NULL,
   `chucVu` enum('Nhân viên','Bộ phận Nhân sự','Quản lý / Ban lãnh đạo','Bộ phận Kỹ thuật') NOT NULL DEFAULT 'Nhân viên',
   `phongBan` varchar(100) DEFAULT NULL,
+  `maPhongBan` int(11) DEFAULT NULL,
   `trangThai` tinyint(1) NOT NULL DEFAULT 1,
   `ngayTao` datetime NOT NULL DEFAULT current_timestamp(),
   `ngayCapNhat` datetime DEFAULT NULL ON UPDATE current_timestamp()
@@ -11705,12 +11706,33 @@ INSERT INTO `tonghopngaycong` (`id`, `maND`, `ngayLamViec`, `gioVaoDau`, `gioRaC
 
 -- --------------------------------------------------------
 
+-- Map legacy department names to the department catalog.
+UPDATE `nguoidung` nd
+INNER JOIN `phongban` pb ON TRIM(nd.`phongBan`) = TRIM(pb.`tenPhongBan`)
+SET nd.`maPhongBan` = pb.`id`, nd.`phongBan` = pb.`tenPhongBan`
+WHERE nd.`maPhongBan` IS NULL AND nd.`phongBan` IS NOT NULL AND TRIM(nd.`phongBan`) <> '';
+UPDATE `nguoidung` nd
+INNER JOIN `phongban` pb ON pb.`tenPhongBan` = CASE
+  WHEN nd.`phongBan` LIKE '%(IT)%' THEN 'Phòng Công nghệ thông tin (IT)'
+  WHEN nd.`phongBan` LIKE '%(QC)%' THEN 'Phòng Kiểm soát chất lượng (QC)'
+  WHEN nd.`phongBan` LIKE '%Kinh doanh%' THEN 'Phòng Kinh doanh & Marketing'
+  WHEN nd.`phongBan` LIKE 'Ban%' THEN 'Ban Điều hành'
+  WHEN nd.`phongBan` LIKE '%Nh?n s%' THEN 'Phòng Nhân sự'
+  WHEN nd.`phongBan` LIKE '%K? to?n%' THEN 'Phòng Kế toán'
+  WHEN nd.`phongBan` LIKE '%S?n xu?t%' THEN 'Phòng Sản xuất'
+  WHEN nd.`phongBan` LIKE '%H?nh ch?nh%' THEN 'Phòng Hành chính'
+  ELSE TRIM(nd.`phongBan`)
+END
+SET nd.`maPhongBan` = pb.`id`, nd.`phongBan` = pb.`tenPhongBan`
+WHERE nd.`maPhongBan` IS NULL AND nd.`phongBan` IS NOT NULL AND TRIM(nd.`phongBan`) <> '';
+
 
 
 --
 -- Indexes for dumped tables
 --
-
+  ADD KEY `idx_nguoidung_matk` (`maTK`),
+  ADD KEY `idx_nguoidung_phongban` (`maPhongBan`);
 
 
 --
@@ -11937,7 +11959,8 @@ ALTER TABLE `lichsuchamcong`
 -- Constraints for table `nguoidung`
 --
 ALTER TABLE `nguoidung`
-  ADD CONSTRAINT `fk_nguoidung_taikhoan` FOREIGN KEY (`maTK`) REFERENCES `taikhoan` (`maTK`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_nguoidung_taikhoan` FOREIGN KEY (`maTK`) REFERENCES `taikhoan` (`maTK`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_nguoidung_phongban` FOREIGN KEY (`maPhongBan`) REFERENCES `phongban` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `nhansu`

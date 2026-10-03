@@ -312,6 +312,38 @@ class ChamCongModel
                 WHERE existing.tenPhongBan = departments.tenPhongBan
             )
         ");
+        $this->addColumnIfMissing('nguoidung', 'maPhongBan', 'INT DEFAULT NULL AFTER phongBan');
+        $this->conn->query("UPDATE nguoidung nd
+            INNER JOIN phongban pb ON TRIM(nd.phongBan) = TRIM(pb.tenPhongBan)
+            SET nd.maPhongBan = pb.id, nd.phongBan = pb.tenPhongBan
+            WHERE nd.maPhongBan IS NULL AND nd.phongBan IS NOT NULL AND TRIM(nd.phongBan) <> ''");
+        $this->conn->query("UPDATE nguoidung nd
+            INNER JOIN phongban pb ON pb.tenPhongBan = CASE
+                WHEN nd.phongBan LIKE '%(IT)%' THEN 'Phòng Công nghệ thông tin (IT)'
+                WHEN nd.phongBan LIKE '%(QC)%' THEN 'Phòng Kiểm soát chất lượng (QC)'
+                WHEN nd.phongBan LIKE '%Kinh doanh%' THEN 'Phòng Kinh doanh & Marketing'
+                WHEN nd.phongBan LIKE 'Ban%' THEN 'Ban Điều hành'
+                WHEN nd.phongBan LIKE '%Nh?n s%' THEN 'Phòng Nhân sự'
+                WHEN nd.phongBan LIKE '%K? to?n%' THEN 'Phòng Kế toán'
+                WHEN nd.phongBan LIKE '%S?n xu?t%' THEN 'Phòng Sản xuất'
+                WHEN nd.phongBan LIKE '%H?nh ch?nh%' THEN 'Phòng Hành chính'
+                ELSE TRIM(nd.phongBan)
+            END
+            SET nd.maPhongBan = pb.id, nd.phongBan = pb.tenPhongBan
+            WHERE nd.maPhongBan IS NULL AND nd.phongBan IS NOT NULL AND TRIM(nd.phongBan) <> ''");
+        $this->conn->query("UPDATE nguoidung nd
+            INNER JOIN phongban pb ON pb.id = nd.maPhongBan
+            SET nd.phongBan = pb.tenPhongBan
+            WHERE nd.phongBan IS NULL OR nd.phongBan <> pb.tenPhongBan");
+
+        $departmentForeignKey = $this->conn->query("SELECT 1 FROM information_schema.TABLE_CONSTRAINTS
+            WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'nguoidung'
+              AND CONSTRAINT_NAME = 'fk_nguoidung_phongban' AND CONSTRAINT_TYPE = 'FOREIGN KEY'");
+        if ($departmentForeignKey && $departmentForeignKey->num_rows === 0) {
+            $this->conn->query("ALTER TABLE nguoidung
+                ADD CONSTRAINT fk_nguoidung_phongban FOREIGN KEY (maPhongBan)
+                REFERENCES phongban(id) ON DELETE SET NULL ON UPDATE CASCADE");
+        }
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
@@ -1052,7 +1084,7 @@ class ChamCongModel
 
     public function getEmployees($keyword = '', $activeOnly = false, $limit = 0)
     {
-        $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap
+        $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.maPhongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap
                 FROM nguoidung nd
                 LEFT JOIN taikhoan tk ON nd.maTK = tk.maTK";
         $conditions = [];
@@ -1097,7 +1129,7 @@ class ChamCongModel
         $phongBan = trim((string)$phongBan);
         $keyword = trim((string)$keyword);
         
-        $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap
+        $sql = "SELECT nd.maND, nd.maTK, nd.hoTen, nd.email, nd.soDienThoai, nd.chucVu, nd.phongBan, nd.maPhongBan, nd.trangThai, nd.ngayTao, tk.tenDangNhap
                 FROM nguoidung nd
                 LEFT JOIN taikhoan tk ON nd.maTK = tk.maTK
                 WHERE nd.trangThai = 1
@@ -1162,7 +1194,22 @@ class ChamCongModel
         $soDienThoai = trim($payload['soDienThoai'] ?? '');
         $chucVu = trim($payload['chucVu'] ?? 'Nhân viên');
         $phongBan = trim($payload['phongBan'] ?? '');
+        $maPhongBan = null;
         $trangThai = (int)($payload['trangThai'] ?? 1);
+
+        if ($phongBan !== '') {
+            $departmentStmt = $this->conn->prepare("SELECT id, tenPhongBan FROM phongban WHERE TRIM(tenPhongBan) = TRIM(?) LIMIT 1");
+            if ($departmentStmt) {
+                $departmentStmt->bind_param('s', $phongBan);
+                $departmentStmt->execute();
+                $department = $departmentStmt->get_result()->fetch_assoc();
+                $departmentStmt->close();
+                if ($department) {
+                    $maPhongBan = (int)$department['id'];
+                    $phongBan = $department['tenPhongBan'];
+                }
+            }
+        }
 
         if ($hoTen === '' || $chucVu === '') {
             return false;
@@ -1171,9 +1218,9 @@ class ChamCongModel
         if ($maND > 0) {
             $this->conn->begin_transaction();
             try {
-                $sql = "UPDATE nguoidung SET hoTen = ?, email = ?, soDienThoai = ?, chucVu = ?, phongBan = ?, trangThai = ? WHERE maND = ?";
+                $sql = "UPDATE nguoidung SET hoTen = ?, email = ?, soDienThoai = ?, chucVu = ?, phongBan = ?, maPhongBan = ?, trangThai = ? WHERE maND = ?";
                 $stmt = $this->conn->prepare($sql);
-                $stmt->bind_param("sssssii", $hoTen, $email, $soDienThoai, $chucVu, $phongBan, $trangThai, $maND);
+                $stmt->bind_param("sssssiii", $hoTen, $email, $soDienThoai, $chucVu, $phongBan, $maPhongBan, $trangThai, $maND);
                 if (!$stmt->execute()) {
                     $this->conn->rollback();
                     return false;
@@ -1219,8 +1266,8 @@ class ChamCongModel
             }
 
             $maTK = (int)$this->conn->insert_id;
-            $insertEmployee = $this->conn->prepare("INSERT INTO nguoidung (maTK, hoTen, email, soDienThoai, chucVu, phongBan, trangThai) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $insertEmployee->bind_param("isssssi", $maTK, $hoTen, $email, $soDienThoai, $chucVu, $phongBan, $trangThai);
+            $insertEmployee = $this->conn->prepare("INSERT INTO nguoidung (maTK, hoTen, email, soDienThoai, chucVu, phongBan, maPhongBan, trangThai) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $insertEmployee->bind_param("isssssii", $maTK, $hoTen, $email, $soDienThoai, $chucVu, $phongBan, $maPhongBan, $trangThai);
             if (!$insertEmployee->execute()) {
                 $this->conn->rollback();
                 return false;
@@ -1271,7 +1318,16 @@ class ChamCongModel
             $sql = "UPDATE phongban SET tenPhongBan = ?, moTa = ?, hoatDong = ? WHERE id = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("ssii", $tenPhongBan, $moTa, $hoatDong, $id);
-            return $stmt->execute();
+            if (!$stmt->execute()) {
+                return false;
+            }
+            $syncEmployees = $this->conn->prepare("UPDATE nguoidung SET phongBan = ? WHERE maPhongBan = ?");
+            if ($syncEmployees) {
+                $syncEmployees->bind_param('si', $tenPhongBan, $id);
+                $syncEmployees->execute();
+                $syncEmployees->close();
+            }
+            return true;
         }
 
         $sql = "INSERT INTO phongban (tenPhongBan, moTa, hoatDong) VALUES (?, ?, ?)";

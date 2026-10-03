@@ -38,6 +38,7 @@ class AuthMiddleware
             'xuat-bao-cao',
             'gui-bang-cong-phe-duyet',
             'hr-api-employees',
+            'hr-api-departments',
             'hr-api-shifts',
             'hr-api-shift-assignments',
             'hr-api-shift-assignments-batch',

@@ -132,7 +132,7 @@ class FaceController extends Controller
             $emp['phongBan'] = $this->normalizeDisplayText($emp['phongBan'] ?? '');
             $emp['chucVu'] = $this->normalizeDisplayText($emp['chucVu'] ?? '');
             $department = $departmentLookup[$this->normalizeDepartmentKey($emp['phongBan'])] ?? null;
-            $emp['departmentId'] = $department['id'] ?? 0;
+            $emp['departmentId'] = (int)($emp['maPhongBan'] ?? $department['id'] ?? 0);
 
             $profile = $this->getFaceModel()->getFaceProfile($emp['maND']);
             if ($profile === null) {
