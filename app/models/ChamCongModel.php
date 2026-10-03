@@ -1363,7 +1363,16 @@ class ChamCongModel
                        (SELECT COUNT(DISTINCT aes.maND) FROM canhanvien aes
                         JOIN nguoidung nd ON nd.maND = aes.maND
                         WHERE aes.maCa = s.id 
+                                                    AND aes.hieuLucTu <= CURDATE()
                           AND (aes.hieuLucDen IS NULL OR aes.hieuLucDen >= CURDATE())
+                                                    AND NOT EXISTS (
+                                                            SELECT 1 FROM canhanvien newer
+                                                            WHERE newer.maND = aes.maND
+                                                                AND newer.hieuLucTu <= CURDATE()
+                                                                AND (newer.hieuLucDen IS NULL OR newer.hieuLucDen >= CURDATE())
+                                                                AND (newer.hieuLucTu > aes.hieuLucTu
+                                                                         OR (newer.hieuLucTu = aes.hieuLucTu AND newer.id > aes.id))
+                                                    )
                           AND nd.chucVu = 'Nhân viên' AND nd.trangThai = 1) AS assigned_count
                 FROM calamviec s
                 ORDER BY s.ngayTao DESC";
