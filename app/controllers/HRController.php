@@ -193,11 +193,15 @@ class HRController
         }
 
         $salaryRows = $this->filterPayrollRows(
-            $this->model->getMonthlyAttendanceDetailNew($selectedMonth),
+            $this->model->getMonthlyAttendanceDetailNew($selectedMonth, '', true),
             $employeeKeyword
         );
-        $allActive = $this->model->getEmployees('', true, 0);
-        $filterEmployees = $allActive;
+        $filterEmployees = array_values(array_filter(
+            $this->model->getEmployees('', false, 0),
+            function ($employee) {
+                return (int)($employee['trangThaiTK'] ?? 0) === 1;
+            }
+        ));
         
         $monthlyApproval = $this->model->getMonthlyApprovalByMonth($selectedMonth);
         $approvalHistory = $this->model->getTimesheetApprovalSummary();

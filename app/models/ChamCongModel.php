@@ -3021,7 +3021,7 @@ class ChamCongModel
      * @param string $monthKey - YYYY-MM
      * @return array
      */
-    public function getMonthlyAttendanceDetailNew($monthKey, $phongBan = '')
+    public function getMonthlyAttendanceDetailNew($monthKey, $phongBan = '', $activeAccountsOnly = false)
     {
         require_once 'app/helpers/HolidayCalculator.php';
         require_once 'app/helpers/LeaveCalculator.php';
@@ -3038,8 +3038,12 @@ class ChamCongModel
         $monthStart = $monthKey . '-01';
         $monthEnd = date('Y-m-t', strtotime($monthStart));
 
-        // Láº¥y danh sÃ¡ch táº¥t cáº£ nhÃ¢n viÃªn hoáº¡t Ä‘á»™ng
-        $allEmployees = $this->getEmployees('', true);
+        $allEmployees = $this->getEmployees('', !$activeAccountsOnly);
+        if ($activeAccountsOnly) {
+            $allEmployees = array_filter($allEmployees, function ($employee) {
+                return (int)($employee['trangThaiTK'] ?? 0) === 1;
+            });
+        }
         
         // Lấy tất cả nhân viên đang hoạt động (filter theo phòng ban nếu có)
         $employees = array_filter($allEmployees, function($e) use ($monthEnd, $phongBan, $validDepts) {
