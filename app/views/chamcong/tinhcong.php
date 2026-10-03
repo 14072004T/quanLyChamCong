@@ -598,10 +598,10 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                             <h3 style="margin:0;">Lịch sử chấm công tablet - Tháng <span id="scan-month-label"><?= htmlspecialchars($selectedMonth) ?></span></h3>
                             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                                 <span id="scan-total-label" style="color:#64748b;font-size:.9em;"></span>
-                                <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;user-select:none;margin-right:2px;font-weight:500;color:#334155;">
+                                <label style="display:none;align-items:center;gap:6px;font-size:0.875rem;cursor:pointer;user-select:none;margin-right:2px;font-weight:500;color:#334155;">
                                     <input type="checkbox" id="scan-select-all" style="cursor:pointer;width:16px;height:16px;"> Chọn trang này
                                 </label>
-                                <button type="button" class="btn btn-outline-danger btn-sm" id="scan-delete-btn" disabled><i class="fas fa-trash"></i> Xoá đã chọn (<span id="scan-selected-count">0</span>)</button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" id="scan-delete-btn" style="display:none;" disabled><i class="fas fa-trash"></i> Xoá đã chọn (<span id="scan-selected-count">0</span>)</button>
                                 <button type="button" class="btn btn-warning btn-sm" id="scan-delete-month-btn" style="display:none;color:#7c2d12;background:#fef3c7;border-color:#fde68a;" title="Xoá tất cả hình ảnh lịch sử trong tháng đang chọn"><i class="fas fa-calendar-times"></i> Xoá tất cả trong tháng</button>
                                 <button type="button" class="btn btn-danger btn-sm" id="scan-delete-all-btn" style="display:none;" title="Xoá toàn bộ lịch sử hình ảnh tất cả các tháng"><i class="fas fa-trash-alt"></i> Xoá tất cả hình ảnh</button>
                             </div>
