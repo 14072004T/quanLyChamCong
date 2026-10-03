@@ -3044,10 +3044,10 @@ class ChamCongModel
         $allEmployees = $this->getEmployees('', !$activeAccountsOnly, 0, $activeAccountsOnly);
         
         // Lấy tất cả nhân viên đang hoạt động (filter theo phòng ban nếu có)
-        $employees = array_filter($allEmployees, function($e) use ($monthEnd, $phongBan, $validDepts) {
+        $employees = array_filter($allEmployees, function($e) use ($monthEnd, $phongBan, $validDepts, $activeAccountsOnly) {
             // Chỉ bỏ qua tài khoản không thuộc phòng ban hợp lệ
             $empDept = (string)($e['phongBan'] ?? '');
-            if (!in_array($empDept, $validDepts, true)) {
+            if (!$activeAccountsOnly && !in_array($empDept, $validDepts, true)) {
                 return false;
             }
             
@@ -3060,7 +3060,7 @@ class ChamCongModel
             
             // Bỏ qua nhân viên được tạo sau tháng đang xem
             $createdAt = !empty($e['ngayTao']) ? substr($e['ngayTao'], 0, 10) : null;
-            if ($createdAt && $createdAt > $monthEnd) {
+            if (!$activeAccountsOnly && $createdAt && $createdAt > $monthEnd) {
                 return false;
             }
             return true;

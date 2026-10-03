@@ -399,6 +399,17 @@ foreach (($salaryRows ?? []) as $summaryRow) {
     }
 }
 </style>
+<style>
+#attendance-detail-grid th.employee-id-col,
+#attendance-detail-grid td.employee-id-col {
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    padding-left: 4px;
+    padding-right: 4px;
+    text-align: center;
+}
+</style>
 <div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
     <div class="dashboard-container">
@@ -480,7 +491,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                 <?php $daysInMonth = (int)date('t', strtotime($selectedMonth . '-01')); ?>
                                 <thead id="attendance-grid-head">
                                     <tr>
-                                        <th>Mã NV</th>
+                                        <th class="employee-id-col">Mã NV</th>
                                         <th>Nhân viên<br>Name/Dept</th>
                                         <?php for ($d = 1; $d <= $daysInMonth; $d++): ?>
                                             <th><?= $d ?></th>
@@ -493,7 +504,7 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                     <?php if (!empty($salaryRows)): ?>
                                         <?php foreach ($salaryRows as $row): ?>
                                             <tr>
-                                                <td><?= (int)($row['maND'] ?? 0) ?></td>
+                                                <td class="employee-id-col"><?= (int)($row['maND'] ?? 0) ?></td>
                                                 <td><?= htmlspecialchars($row['hoTen'] ?? '') ?></td>
                                                 <?php 
                                                 $yearMonth = $selectedMonth;
@@ -1206,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         gridBody.innerHTML = rows.map(function (row) {
-            var cells = '<td>' + Number(row.maND || 0) + '</td><td>' + escapeHtml(row.hoTen || '') + '</td>';
+            var cells = '<td class="employee-id-col">' + Number(row.maND || 0) + '</td><td>' + escapeHtml(row.hoTen || '') + '</td>';
             var yearMonth = currentMonth();
             var dt = new Date(yearMonth + '-01T00:00:00');
             var lastDay = new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
