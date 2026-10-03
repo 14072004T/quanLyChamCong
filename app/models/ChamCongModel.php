@@ -698,9 +698,10 @@ class ChamCongModel
             $date = date('Y-m-d');
         }
 
+        $activeShiftFilter = $includeDefault ? 'AND s.hoatDong = 1' : '';
         $sql = "SELECT s.id AS maCa, s.tenCa, s.kyHieu, s.cotinhcong, s.gioBatDau, s.gioKetThuc
                 FROM canhanvien aes
-                JOIN calamviec s ON s.id = aes.maCa AND s.hoatDong = 1
+            JOIN calamviec s ON s.id = aes.maCa $activeShiftFilter
                 WHERE aes.maND = ?
                   AND aes.hieuLucTu <= ?
                   AND (aes.hieuLucDen IS NULL OR aes.hieuLucDen >= ?)
