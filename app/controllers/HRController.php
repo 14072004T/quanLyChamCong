@@ -219,7 +219,7 @@ class HRController
         }
 
         $salaryRows = $this->filterPayrollRows(
-            $this->model->getMonthlyAttendanceDetailNew($monthKey),
+            $this->model->getMonthlyAttendanceDetailNew($monthKey, '', true),
             $employeeKeyword
         );
         $summary = [
