@@ -18,6 +18,12 @@ if (!empty($_GET['edit']) && !empty($employees)) {
 ?>
 <?php include 'app/views/layouts/header.php'; ?>
 <?php include 'app/views/layouts/nav.php'; ?>
+<style>
+/* Department layout */
+.dept-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+.dept-side-panel { position: sticky; top: 16px; }
+@media (max-width: 768px) { .dept-layout { grid-template-columns: 1fr; } .dept-side-panel { position: static; } }
+</style>
 <div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
     <div class="dashboard-container">
@@ -55,26 +61,20 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                 </div>
                 <div class="form-group" style="min-width:160px;">
                     <label>Phòng ban</label>
-                    <select name="phongBan">
+                    <select name="phongBan" id="phongBanSelect">
                         <option value="">-- Chọn phòng ban --</option>
                         <?php
-                        $departments = [
-                            'Ban Điều hành',
-                            'Phòng Nhân sự',
-                            'Phòng Kế toán',
-                            'Phòng Kinh doanh & Marketing',
-                            'Phòng Công nghệ thông tin (IT)',
-                            'Phòng Sản xuất',
-                            'Phòng Kiểm soát chất lượng (QC)',
-                            'Phòng Hành chính'
-                        ];
                         $selectedDept = $editing['phongBan'] ?? '';
-                        if (!empty($selectedDept) && !in_array($selectedDept, $departments, true)):
+                        $deptNames = array_column($departments ?? [], 'tenPhongBan');
+                        if (!empty($selectedDept) && !in_array($selectedDept, $deptNames, true)):
                         ?>
                             <option value="<?= htmlspecialchars($selectedDept) ?>" selected><?= htmlspecialchars($selectedDept) ?> (Hiện tại)</option>
                         <?php endif; ?>
-                        <?php foreach ($departments as $deptLabel): ?>
-                            <option value="<?= htmlspecialchars($deptLabel) ?>" <?= $selectedDept === $deptLabel ? 'selected' : '' ?>><?= htmlspecialchars($deptLabel) ?></option>
+                        <?php foreach ($departments ?? [] as $dept): ?>
+                            <option value="<?= htmlspecialchars($dept['tenPhongBan']) ?>"
+                                <?= $selectedDept === $dept['tenPhongBan'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($dept['tenPhongBan']) ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -105,6 +105,82 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                     <a class="btn btn-secondary btn-sm" href="index.php?page=quan-ly-nhanvien">Làm mới</a>
                 </div>
             </form>
+        </div>
+
+        <div class="panel">
+            <div class="dept-layout">
+                <!-- Danh sách phòng ban -->
+                <div>
+                    <h3 style="margin:0 0 12px;"><i class="fas fa-building" style="color:#3b82f6;"></i> Danh sách Phòng Ban</h3>
+                    <table class="table" id="dept-list-table">
+                        <thead>
+                            <tr>
+                                <th>TÊN PHÒNG BAN</th>
+                                <th>MÔ TẢ</th>
+                                <th>TRẠNG THÁI</th>
+                                <th>THAO TÁC</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dept-list-body">
+                            <?php if (!empty($departments)): ?>
+                                <?php foreach ($departments as $dept): ?>
+                                    <tr>
+                                        <td><strong><?= htmlspecialchars($dept['tenPhongBan']) ?></strong></td>
+                                        <td><?= htmlspecialchars($dept['moTa'] ?? '') ?></td>
+                                        <td><span class="trangThai-badge <?= (int)$dept['hoatDong'] ? 'trangThai-approved' : 'trangThai-rejected' ?>"><?= (int)$dept['hoatDong'] ? 'Đang dùng' : 'Tắt' ?></span></td>
+                                        <td>
+                                            <button type="button" class="btn btn-secondary btn-sm edit-dept"
+                                                data-id="<?= (int)$dept['id'] ?>"
+                                                data-name="<?= htmlspecialchars($dept['tenPhongBan'], ENT_QUOTES) ?>"
+                                                data-mota="<?= htmlspecialchars($dept['moTa'] ?? '', ENT_QUOTES) ?>"
+                                                data-active="<?= (int)$dept['hoatDong'] ?>">
+                                                <i class="fas fa-pen"></i> Sửa
+                                            </button>
+                                            <form method="post" action="index.php?page=quan-ly-nhanvien" onsubmit="return confirm('Xóa phòng ban này?');" style="display:inline;">
+                                                <input type="hidden" name="action" value="delete_department">
+                                                <input type="hidden" name="id" value="<?= (int)$dept['id'] ?>">
+                                                <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Xóa</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr><td colspan="4" class="empty-state">Chưa có phòng ban. Hãy tạo phòng ban đầu tiên!</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                    <button type="button" class="btn btn-primary btn-sm" id="toggle-add-dept" style="margin-top:12px;">
+                        <i class="fas fa-plus"></i> Thêm phòng ban mới
+                    </button>
+                </div>
+
+                <!-- Form thêm/sửa phòng ban -->
+                <div class="dept-side-panel" id="add-dept-form-panel" style="display:none;">
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;">
+                        <h4 id="dept-form-title" style="margin:0 0 16px;font-size:15px;color:#1e293b;">Tạo phòng ban mới</h4>
+                        <form id="dept-form">
+                            <input type="hidden" name="id" value="0">
+                            <div class="form-group">
+                                <label>Tên phòng ban *</label>
+                                <input type="text" name="tenPhongBan" placeholder="VD: Phòng Kế toán" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Mô tả</label>
+                                <input type="text" name="moTa" placeholder="Mô tả ngắn về phòng ban">
+                            </div>
+                            <div class="form-group">
+                                <label>Trạng thái</label>
+                                <select name="hoatDong">
+                                    <option value="1">Đang dùng</option>
+                                    <option value="0">Tắt</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-sm" style="width:100%;">Lưu phòng ban</button>
+                            <button type="button" id="cancel-dept-form" class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px;">Hủy</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="panel">
@@ -183,12 +259,12 @@ if (!empty($_GET['edit']) && !empty($employees)) {
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ===== FORM NHÂN VIÊN =====
     var form = document.getElementById('employeeForm');
     var validationMessage = document.getElementById('validationMessage');
     var hoTenInput = form.querySelector('input[name="hoTen"]');
     var chucVuSelect = form.querySelector('select[name="chucVu"]');
 
-    // Reset validation message when user types
     hoTenInput.addEventListener('input', function() {
         if (validationMessage.style.display !== 'none') {
             validationMessage.style.display = 'none';
@@ -201,11 +277,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Validate on form submit
     form.addEventListener('submit', function(e) {
         var hoTen = hoTenInput.value.trim();
         var chucVu = chucVuSelect.value;
-
         if (!hoTen || !chucVu) {
             e.preventDefault();
             validationMessage.style.display = 'block';
@@ -213,6 +287,78 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
     });
+
+    // ===== FORM PHÒNG BAN =====
+    var deptToggleBtn = document.getElementById('toggle-add-dept');
+    var deptFormPanel = document.getElementById('add-dept-form-panel');
+    var deptForm = document.getElementById('dept-form');
+    var deptFormTitle = document.getElementById('dept-form-title');
+    var cancelDeptBtn = document.getElementById('cancel-dept-form');
+
+    function resetDeptForm() {
+        deptForm.reset();
+        deptForm.elements.id.value = '0';
+        deptFormTitle.textContent = 'Tạo phòng ban mới';
+    }
+
+    deptToggleBtn.addEventListener('click', function() {
+        var isHidden = deptFormPanel.style.display === 'none';
+        deptFormPanel.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) {
+            resetDeptForm();
+            deptFormPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
+    cancelDeptBtn.addEventListener('click', function() {
+        deptFormPanel.style.display = 'none';
+        resetDeptForm();
+    });
+
+    // Nút sửa phòng ban
+    document.querySelectorAll('.edit-dept').forEach(function(button) {
+        button.addEventListener('click', function() {
+            deptForm.elements.id.value = this.dataset.id;
+            deptForm.elements.tenPhongBan.value = this.dataset.name;
+            deptForm.elements.moTa.value = this.dataset.mota;
+            deptForm.elements.hoatDong.value = this.dataset.active;
+            deptFormTitle.textContent = 'Sửa phòng ban';
+            deptFormPanel.style.display = 'block';
+            deptFormPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    });
+
+    // Gửi form phòng ban qua AJAX (giống quanly_calam.php)
+    deptForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var submitBtn = deptForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+
+        fetch('index.php?page=hr-api-departments', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: new FormData(deptForm)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+            alert(json.message || 'OK');
+            if (json.success) {
+                location.reload();
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Lưu phòng ban';
+            }
+        })
+        .catch(function() {
+            alert('Không thể kết nối máy chủ.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Lưu phòng ban';
+        });
+    });
+
+    // Cập nhật select phòng ban nếu dữ liệu từ DB rỗng, load qua API
+    // (đã load server-side nên không cần fetch thêm)
 });
 </script>
 <?php include 'app/views/layouts/footer.php'; ?>

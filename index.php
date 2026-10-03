@@ -65,6 +65,7 @@ $apiPages = [
     'tech-accounts-api', 'tech-update-role', 'tech-toggle-account',
     'hr-api-override-attendance', 'hr-api-override-history',
     'gui-bang-cong-phe-duyet',
+    'hr-api-departments',
 ];
 $isApiRoute = in_array($page, $apiPages, true);
 if ($isApiRoute) {
@@ -163,6 +164,7 @@ $allowedPages = [
     'hr-api-timesheet-approval-details',
     'hr-api-corrections',
     'hr-api-correction-hanhDong',
+    'hr-api-departments',
     'manager-api-requests',
     'manager-api-request-hanhDong',
     // Manager
@@ -457,6 +459,11 @@ switch ($page) {
     case 'hr-api-override-history':
         require_once 'app/controllers/HRController.php';
         (new HRController())->hrOverrideHistoryApi();
+        break;
+
+    case 'hr-api-departments':
+        require_once 'app/controllers/HRController.php';
+        (new HRController())->departmentsApi();
         break;
 
     // === MANAGER PANEL ===

@@ -23,10 +23,15 @@ class HRController
         AuthMiddleware::requirePermission('quan-ly-nhanvien');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (isset($_POST['action']) && $_POST['action'] === 'reset_password') {
+            $action = $_POST['action'] ?? '';
+            if ($action === 'reset_password') {
                 $maND = (int)($_POST['maND'] ?? 0);
                 $ok = $this->model->resetEmployeePassword($maND);
                 $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đặt lại mật khẩu thành công (Mật khẩu mặc định: 123456)' : 'Không thể đặt lại mật khẩu';
+            } elseif ($action === 'delete_department') {
+                $id = (int)($_POST['id'] ?? 0);
+                $ok = $this->model->deleteDepartment($id);
+                $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Xóa phòng ban thành công' : 'Không thể xóa phòng ban';
             } else {
                 $ok = $this->model->saveEmployee($_POST);
                 $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Lưu thông tin nhân viên thành công' : 'Không thể lưu thông tin nhân viên';
@@ -37,6 +42,7 @@ class HRController
 
         $keyword = trim($_GET['q'] ?? '');
         $employees = $this->model->getEmployees($keyword);
+        $departments = $this->model->getDepartments();
         require __DIR__ . '/../views/chamcong/quanly_nhanvien.php';
     }
 
@@ -728,6 +734,48 @@ class HRController
             'month'   => $monthKey,
             'total'   => count($rows),
         ]);
+    }
+
+    public function departmentsApi()
+    {
+        AuthMiddleware::requirePermission('quan-ly-nhanvien');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $this->respond([
+                'success' => true,
+                'data'    => $this->model->getDepartments(),
+            ]);
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $formAction = $_POST['form_action'] ?? 'save_department';
+
+            if ($formAction === 'delete_department') {
+                $id = (int)($_POST['id'] ?? 0);
+                $ok = $this->model->deleteDepartment($id);
+                $this->respond([
+                    'success' => $ok,
+                    'message' => $ok ? 'Xóa phòng ban thành công' : 'Không thể xóa phòng ban',
+                ], $ok ? 200 : 422);
+                return;
+            }
+
+            $payload = [
+                'id'          => $_POST['id'] ?? 0,
+                'tenPhongBan' => $_POST['tenPhongBan'] ?? '',
+                'moTa'        => $_POST['moTa'] ?? '',
+                'hoatDong'    => $_POST['hoatDong'] ?? 1,
+            ];
+            $ok = $this->model->saveDepartment($payload);
+            $this->respond([
+                'success' => $ok,
+                'message' => $ok ? 'Lưu phòng ban thành công' : 'Tên phòng ban không hợp lệ',
+            ], $ok ? 200 : 422);
+            return;
+        }
+
+        $this->respond(['success' => false, 'message' => 'Phương thức không hỗ trợ'], 405);
     }
 
     private function respond(array $payload, int $trangThai = 200)

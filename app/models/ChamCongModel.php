@@ -281,6 +281,19 @@ class ChamCongModel
             )
             WHERE CAST(ngayChamHo AS CHAR) = '0000-00-00' OR ngayChamHo IS NULL
         ");
+
+        // Bảng quản lý danh sách phòng ban
+        $this->conn->query("
+            CREATE TABLE IF NOT EXISTS phongban (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tenPhongBan VARCHAR(150) NOT NULL,
+                moTa VARCHAR(255) DEFAULT NULL,
+                hoatDong TINYINT(1) NOT NULL DEFAULT 1,
+                ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        $this->addColumnIfMissing('phongban', 'moTa', 'VARCHAR(255) DEFAULT NULL AFTER tenPhongBan');
+        $this->addColumnIfMissing('phongban', 'hoatDong', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER moTa');
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
@@ -1214,6 +1227,48 @@ class ChamCongModel
             $this->conn->rollback();
             return false;
         }
+    }
+
+    // ===================== PHÒNG BAN =====================
+
+    public function getDepartments()
+    {
+        $sql = "SELECT id, tenPhongBan, moTa, hoatDong, ngayTao FROM phongban ORDER BY tenPhongBan ASC";
+        $result = $this->conn->query($sql);
+        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    }
+
+    public function saveDepartment(array $payload)
+    {
+        $id = (int)($payload['id'] ?? 0);
+        $tenPhongBan = trim($payload['tenPhongBan'] ?? '');
+        $moTa = trim($payload['moTa'] ?? '');
+        $hoatDong = (int)($payload['hoatDong'] ?? 1);
+
+        if ($tenPhongBan === '') {
+            return false;
+        }
+
+        if ($id > 0) {
+            $sql = "UPDATE phongban SET tenPhongBan = ?, moTa = ?, hoatDong = ? WHERE id = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("ssii", $tenPhongBan, $moTa, $hoatDong, $id);
+            return $stmt->execute();
+        }
+
+        $sql = "INSERT INTO phongban (tenPhongBan, moTa, hoatDong) VALUES (?, ?, ?)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ssi", $tenPhongBan, $moTa, $hoatDong);
+        return $stmt->execute();
+    }
+
+    public function deleteDepartment($id)
+    {
+        $id = (int)$id;
+        if ($id <= 0) return false;
+        $stmt = $this->conn->prepare("DELETE FROM phongban WHERE id = ?");
+        $stmt->bind_param('i', $id);
+        return $stmt->execute();
     }
 
     public function getShifts()
