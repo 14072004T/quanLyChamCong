@@ -976,9 +976,102 @@ class ChamCongModel
         return $data;
     }
 
+    private function getCountableTabletMetricsForDate($date)
+    {
+        $metrics = [
+            'date' => $date,
+            'scheduled' => 0,
+            'present' => 0,
+            'on_time' => 0,
+            'late' => 0,
+            'early' => 0,
+            'absent' => 0,
+            'leave' => 0,
+        ];
+        $scanStart = $date . ' 00:00:00';
+        $scanEnd = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
+        $sql = "SELECT cv.maND, s.gioBatDau, s.gioKetThuc, s.cotinhcong,
+                       scans.scan_count, scans.first_scan, scans.last_scan
+                FROM canhanvien cv
+            INNER JOIN calamviec s ON s.id = cv.maCa
+                LEFT JOIN (
+                    SELECT maND, COUNT(*) AS scan_count,
+                           MIN(thoiGianQuet) AS first_scan,
+                           MAX(thoiGianQuet) AS last_scan
+                    FROM tablet_face_scans
+                    WHERE thoiGianQuet >= ? AND thoiGianQuet < ?
+                    GROUP BY maND
+                ) scans ON scans.maND = cv.maND
+                WHERE cv.hieuLucTu <= ?
+                  AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
+                ORDER BY cv.maND, cv.hieuLucTu DESC, cv.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            error_log('HR tablet metrics prepare failed: ' . $this->conn->error);
+            return $metrics;
+        }
+
+        $stmt->bind_param('ssss', $scanStart, $scanEnd, $date, $date);
+        if (!$stmt->execute()) {
+            error_log('HR tablet metrics execute failed: ' . $stmt->error);
+            $stmt->close();
+            return $metrics;
+        }
+
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        $seenEmployees = [];
+
+        foreach ($rows as $row) {
+            $employeeId = (int)$row['maND'];
+            if (isset($seenEmployees[$employeeId])) {
+                continue;
+            }
+            $seenEmployees[$employeeId] = true;
+            if (($row['cotinhcong'] ?? 'no') !== 'yes') {
+                continue;
+            }
+            $metrics['scheduled']++;
+
+            $scanCount = (int)($row['scan_count'] ?? 0);
+            if ($scanCount === 0 || empty($row['first_scan'])) {
+                $metrics['absent']++;
+                continue;
+            }
+
+            $metrics['present']++;
+            $checkOut = $scanCount > 1 ? ($row['last_scan'] ?? null) : null;
+            $status = $this->calculateShiftStatus(
+                $row['first_scan'],
+                $checkOut,
+                $row['gioBatDau'],
+                $row['gioKetThuc']
+            );
+            if (in_array('late', $status['statuses'], true)) {
+                $metrics['late']++;
+            } else {
+                $metrics['on_time']++;
+            }
+            if (in_array('early_leave', $status['statuses'], true)) {
+                $metrics['early']++;
+            }
+        }
+
+        return $metrics;
+    }
+
     public function getHrDashboardMetrics($today = null, $days = null)
     {
         $today = $today ?: date('Y-m-d');
+        $employeeCountResult = $this->conn->query("SELECT COUNT(DISTINCT nd.maND) AS total_employees
+            FROM nguoidung nd
+            INNER JOIN taikhoan tk ON tk.maTK = nd.maTK
+            WHERE LOWER(TRIM(tk.trangThai)) IN ('hoạt động', 'hoat dong', '1')");
+        $totalEmployees = 0;
+        if ($employeeCountResult) {
+            $employeeCount = $employeeCountResult->fetch_assoc();
+            $totalEmployees = (int)($employeeCount['total_employees'] ?? 0);
+        }
         $fromDate = date('Y-m-01', strtotime($today));
         $emptyDay = function ($date) {
             return ['date' => $date, 'scheduled' => 0, 'present' => 0, 'on_time' => 0, 'late' => 0, 'early' => 0, 'absent' => 0, 'leave' => 0];
@@ -986,91 +1079,7 @@ class ChamCongModel
         $daily = [];
         for ($cursor = strtotime($fromDate); $cursor <= strtotime($today); $cursor = strtotime('+1 day', $cursor)) {
             $date = date('Y-m-d', $cursor);
-            $daily[$date] = $emptyDay($date);
-            $sql = "SELECT nd.maND,
-                           MAX(s.gioBatDau) AS gioBatDau,
-                           MAX(s.gioKetThuc) AS gioKetThuc,
-                           COALESCE(MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END), MAX(t.gioVaoDau)) AS gioVaoDau,
-                           COALESCE(MAX(CASE WHEN l.hanhDong = 'OUT' THEN l.ngayTao END), MAX(t.gioRaCuoi)) AS gioRaCuoi,
-                           MAX(t.phutDiTre) AS phutDiTre,
-                           MAX(t.trangThai) AS trangThai
-                    FROM nguoidung nd
-                    INNER JOIN canhanvien cv ON cv.maND = nd.maND
-                        AND cv.hieuLucTu <= ?
-                        AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
-                    INNER JOIN calamviec s ON s.id = cv.maCa
-                        AND s.hoatDong = 1
-                        AND COALESCE(UPPER(TRIM(s.kyHieu)), '') NOT IN ('OFF', 'LE')
-                    LEFT JOIN tonghopngaycong t ON t.maND = nd.maND
-                        AND t.ngayLamViec = ?
-                    LEFT JOIN lichsuchamcong l ON l.maND = nd.maND
-                        AND l.ngayTao >= CONCAT(?, ' 00:00:00')
-                        AND l.ngayTao <= CONCAT(?, ' 23:59:59')
-                    WHERE nd.trangThai = 1
-                    GROUP BY nd.maND";
-            $stmt = $this->conn->prepare($sql);
-            if (!$stmt) {
-                error_log('HR dashboard metrics prepare failed: ' . $this->conn->error);
-                continue;
-            }
-            $stmt->bind_param('sssss', $date, $date, $date, $date, $date);
-            if (!$stmt->execute()) {
-                error_log('HR dashboard metrics execute failed: ' . $stmt->error);
-                $stmt->close();
-                continue;
-            }
-            $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-            $stmt->close();
-
-            foreach ($rows as $row) {
-                $daily[$date]['scheduled']++;
-                $hasAttendance = !empty($row['gioVaoDau']);
-                if (!$hasAttendance) {
-                    $daily[$date]['absent']++;
-                    continue;
-                }
-                $daily[$date]['present']++;
-                $status = $this->calculateShiftStatus(
-                    $row['gioVaoDau'],
-                    $row['gioRaCuoi'] ?? null,
-                    $row['gioBatDau'],
-                    $row['gioKetThuc']
-                );
-                if (in_array('late', $status['statuses'], true)) {
-                    $daily[$date]['late']++;
-                } else {
-                    $daily[$date]['on_time']++;
-                }
-                if (in_array('early_leave', $status['statuses'], true)) {
-                    $daily[$date]['early']++;
-                }
-            }
-
-            if ($daily[$date]['scheduled'] === 0) {
-                foreach ($this->getShifts() as $shift) {
-                    $shiftCode = strtoupper(trim((string)($shift['kyHieu'] ?? '')));
-                    if ((int)($shift['hoatDong'] ?? 0) === 1 && !in_array($shiftCode, ['OFF', 'LE'], true)) {
-                        $daily[$date]['scheduled'] += (int)($shift['assigned_count'] ?? 0);
-                    }
-                }
-                $fallbackSql = "SELECT COUNT(DISTINCT l.maND) AS present_count
-                                FROM lichsuchamcong l
-                                JOIN nguoidung nd ON nd.maND = l.maND
-                                WHERE nd.trangThai = 1
-                                  AND l.hanhDong = 'IN'
-                                  AND l.ngayTao >= CONCAT(?, ' 00:00:00')
-                                  AND l.ngayTao <= CONCAT(?, ' 23:59:59')";
-                $fallbackStmt = $this->conn->prepare($fallbackSql);
-                if ($fallbackStmt) {
-                    $fallbackStmt->bind_param('ss', $date, $date);
-                    $fallbackStmt->execute();
-                    $fallbackRow = $fallbackStmt->get_result()->fetch_assoc();
-                    $fallbackStmt->close();
-                    $daily[$date]['present'] = (int)($fallbackRow['present_count'] ?? 0);
-                    $daily[$date]['absent'] = max(0, $daily[$date]['scheduled'] - $daily[$date]['present']);
-                    $daily[$date]['on_time'] = max(0, $daily[$date]['present']);
-                }
-            }
+            $daily[$date] = $this->getCountableTabletMetricsForDate($date);
         }
 
         $periodMetrics = $emptyDay($fromDate);
@@ -1082,7 +1091,7 @@ class ChamCongModel
         $todayMetrics = $daily[$today] ?? $emptyDay($today);
         $todayMetrics['absent'] = max(0, (int)$todayMetrics['scheduled'] - (int)$todayMetrics['present']);
 
-        return ['total_employees' => (int)$todayMetrics['scheduled'], 'today' => $todayMetrics, 'period' => $periodMetrics, 'daily' => array_values($daily)];
+        return ['total_employees' => $totalEmployees, 'today' => $todayMetrics, 'period' => $periodMetrics, 'daily' => array_values($daily)];
     }
 
     public function getEmployees($keyword = '', $activeOnly = false, $limit = 0)
