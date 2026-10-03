@@ -993,7 +993,7 @@ if (!isset($_SESSION['user'])) {
                                     <select id="dept-select" class="yc-input-select">
                                         <option value="">-- Chọn phòng ban --</option>
                                         <?php foreach ($departmentsList as $dept): ?>
-                                            <option value="<?= htmlspecialchars($dept) ?>"><?= htmlspecialchars($dept) ?></option>
+                                            <option value="<?= htmlspecialchars($dept['name']) ?>" data-department-id="<?= (int)$dept['id'] ?>"><?= htmlspecialchars($dept['name']) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
@@ -1244,10 +1244,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 '<td><strong>#' + emp.maND + '</strong></td>' +
                 '<td><strong style="font-family: Arial, Helvetica, sans-serif;">' + empName + '</strong></td>' +
                 '<td>' + empRole + '</td>' +
-                '<td style="font-family: Arial, Helvetica, sans-serif;">' + empDept + '</td>' +
+                '<td></td>' +
                 '<td><span class="badge-status" ' + badgeStyle + '>' + badgeText + '</span></td>' +
                 '<td style="text-align:right;">' + actionBtn + '</td>';
+            const departmentLink = document.createElement('button');
+            departmentLink.type = 'button';
+            departmentLink.className = 'employee-department-link';
+            departmentLink.textContent = empDept;
+            departmentLink.dataset.departmentId = String(emp.departmentId || '');
+            departmentLink.dataset.departmentName = emp.phongBan || '';
+            departmentLink.title = 'Lọc danh sách theo phòng ban này';
+            departmentLink.style.cssText = 'border: 0; background: none; padding: 0; color: #2563eb; text-decoration: underline; cursor: pointer; font: inherit; text-align: left;';
+            tr.children[3].appendChild(departmentLink);
             allEmployeesListBody.appendChild(tr);
+        });
+
+        allEmployeesListBody.addEventListener('click', function(event) {
+            const departmentLink = event.target.closest('.employee-department-link');
+            if (!departmentLink) return;
+
+            const departmentSelect = document.getElementById('dept-select');
+            if (!departmentSelect) return;
+            const departmentId = departmentLink.dataset.departmentId;
+            const departmentKey = normalizeComparableText(departmentLink.dataset.departmentName);
+            const option = Array.from(departmentSelect.options).find(function(item) {
+                return (departmentId && departmentId !== '0' && item.dataset.departmentId === departmentId)
+                    || normalizeComparableText(item.value) === departmentKey;
+            });
+            if (option) {
+                departmentSelect.value = option.value;
+                departmentSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         });
         
         if (totalCount) totalCount.textContent = allEmployees.length + ' Tổng';

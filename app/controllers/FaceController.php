@@ -68,55 +68,86 @@ class FaceController extends Controller
         return ($fixed !== false && preg_match('//u', $fixed)) ? $fixed : $text;
     }
 
+    private function normalizeDepartmentKey($value)
+    {
+        $text = $this->normalizeDisplayText($value);
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        $normalized = strtolower($ascii !== false ? $ascii : $text);
+        return trim(preg_replace('/[^a-z0-9]+/', ' ', $normalized));
+    }
+
     public function registerView()
     {
         $this->requireLogin();
-        
+
         $maND = $_SESSION['user']['maND'] ?? null;
-        $existingProfile = $this->getFaceModel()->getFaceProfile($maND);
-        
         // Chỉ HR mới có thể đăng ký khuôn mặt cho nhân viên
         $isHR = ($_SESSION['role'] ?? '') === 'hr';
-        $employeesList = [];
-        $departmentsList = [];
-        
         if (!$isHR) {
             header('Location: index.php?page=home');
             exit();
-        } else {
-            // Lấy tất cả nhân viên đang hoạt động để hiển thị danh sách đầy đủ.
-            // Không khóa theo 4 phòng ban cố định vì dữ liệu thực tế trong DB có thể khác nhau hoặc bị mojibake.
-            $rawList = $this->getChamCongModel()->getEmployees('', true) ?? [];
-            $departmentsList = $this->getChamCongModel()->getValidDepartments();
-            $allEmployees = [];
-            $unregisteredList = [];
-            $registeredList = [];
-            
-            foreach ($rawList as $emp) {
-                $emp['hoTen'] = $this->normalizeDisplayText($emp['hoTen'] ?? '');
-                $emp['phongBan'] = $this->normalizeDisplayText($emp['phongBan'] ?? '');
-                $emp['chucVu'] = $this->normalizeDisplayText($emp['chucVu'] ?? '');
-
-                $empDept = trim((string)($emp['phongBan'] ?? ''));
-                if ($empDept !== '' && !in_array($empDept, $departmentsList, true)) {
-                    $departmentsList[] = $empDept;
-                }
-                
-                $profile = $this->getFaceModel()->getFaceProfile($emp['maND']);
-                if ($profile === null) {
-                    $emp['hasFace'] = false;
-                    $unregisteredList[] = $emp;
-                } else {
-                    $emp['hasFace'] = true;
-                    $registeredList[] = $emp;
-                }
-                
-                $allEmployees[] = $emp;
-            }
-            
-            // Sắp xếp dữ liệu để hiển thị nhân viên chưa đăng ký ở trên.
-            $employeesList = array_merge($unregisteredList, $registeredList);
         }
+
+        $chamCongModel = $this->getChamCongModel();
+        $existingProfile = $this->getFaceModel()->getFaceProfile($maND);
+        $employeesList = [];
+        $departmentsList = [];
+
+        $departmentLookup = [];
+        foreach ($chamCongModel->getDepartments() as $department) {
+            $name = $this->normalizeDisplayText($department['tenPhongBan'] ?? '');
+            $key = $this->normalizeDepartmentKey($name);
+            if ($name !== '' && $key !== '' && !isset($departmentLookup[$key])) {
+                $departmentLookup[$key] = [
+                    'id' => (int)$department['id'],
+                    'name' => $name
+                ];
+            }
+        }
+
+        foreach ($chamCongModel->getValidDepartments() as $departmentName) {
+            $name = $this->normalizeDisplayText($departmentName);
+            $key = $this->normalizeDepartmentKey($name);
+            if ($name !== '' && $key !== '' && !isset($departmentLookup[$key])) {
+                $departmentLookup[$key] = ['id' => 0, 'name' => $name];
+            }
+        }
+
+        // Include legacy employee department labels that are not in the catalog yet.
+        $rawList = $chamCongModel->getEmployees('', true) ?? [];
+        foreach ($rawList as $emp) {
+            $name = $this->normalizeDisplayText($emp['phongBan'] ?? '');
+            $key = $this->normalizeDepartmentKey($name);
+            if ($name !== '' && $key !== '' && !isset($departmentLookup[$key])) {
+                $departmentLookup[$key] = ['id' => 0, 'name' => $name];
+            }
+        }
+        $departmentsList = array_values($departmentLookup);
+
+        $allEmployees = [];
+        $unregisteredList = [];
+        $registeredList = [];
+        foreach ($rawList as $emp) {
+            $emp['hoTen'] = $this->normalizeDisplayText($emp['hoTen'] ?? '');
+            $emp['phongBan'] = $this->normalizeDisplayText($emp['phongBan'] ?? '');
+            $emp['chucVu'] = $this->normalizeDisplayText($emp['chucVu'] ?? '');
+            $department = $departmentLookup[$this->normalizeDepartmentKey($emp['phongBan'])] ?? null;
+            $emp['departmentId'] = $department['id'] ?? 0;
+
+            $profile = $this->getFaceModel()->getFaceProfile($emp['maND']);
+            if ($profile === null) {
+                $emp['hasFace'] = false;
+                $unregisteredList[] = $emp;
+            } else {
+                $emp['hasFace'] = true;
+                $registeredList[] = $emp;
+            }
+
+            $allEmployees[] = $emp;
+        }
+
+        // Sắp xếp dữ liệu để hiển thị nhân viên chưa đăng ký ở trên.
+        $employeesList = array_merge($unregisteredList, $registeredList);
 
         $data = [
             'existingProfile' => $existingProfile,
