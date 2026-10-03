@@ -95,9 +95,9 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                 </div>
                 <div class="form-group" style="min-width:130px;">
                     <label>Trạng thái</label>
-                    <select name="trangThai">
-                        <option value="1" <?= (int)($editing['trangThai'] ?? 1) === 1 ? 'selected' : '' ?>>Hoạt động</option>
-                        <option value="0" <?= (int)($editing['trangThai'] ?? 1) === 0 ? 'selected' : '' ?>>Ngừng</option>
+                    <select name="trangThaiTK">
+                        <option value="1" <?= (int)($editing['trangThaiTK'] ?? 1) === 1 ? 'selected' : '' ?>>Hoạt động</option>
+                        <option value="0" <?= (int)($editing['trangThaiTK'] ?? 1) === 0 ? 'selected' : '' ?>>Ngừng hoạt động</option>
                     </select>
                 </div>
                 <div class="form-group" style="min-width:130px;">

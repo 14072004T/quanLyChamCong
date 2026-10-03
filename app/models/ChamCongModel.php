@@ -1224,7 +1224,10 @@ class ChamCongModel
         $chucVu = trim($payload['chucVu'] ?? 'Nhân viên');
         $phongBan = trim($payload['phongBan'] ?? '');
         $maPhongBan = null;
-        $trangThai = (int)($payload['trangThai'] ?? 1);
+        $trangThaiND = array_key_exists('trangThai', $payload) ? (int)$payload['trangThai'] : null;
+        $trangThaiTK = array_key_exists('trangThaiTK', $payload)
+            ? ((int)$payload['trangThaiTK'] === 1 ? 1 : 0)
+            : null;
 
         if ($phongBan !== '') {
             $departmentStmt = $this->conn->prepare("SELECT id, tenPhongBan FROM phongban WHERE TRIM(tenPhongBan) COLLATE utf8mb4_unicode_ci = TRIM(?) COLLATE utf8mb4_unicode_ci LIMIT 1");
@@ -1247,12 +1250,29 @@ class ChamCongModel
         if ($maND > 0) {
             $this->conn->begin_transaction();
             try {
-                $sql = "UPDATE nguoidung SET hoTen = ?, email = ?, soDienThoai = ?, chucVu = ?, phongBan = ?, maPhongBan = ?, trangThai = ? WHERE maND = ?";
+                $sql = "UPDATE nguoidung SET hoTen = ?, email = ?, soDienThoai = ?, chucVu = ?, phongBan = ?, maPhongBan = ?, trangThai = COALESCE(?, trangThai) WHERE maND = ?";
                 $stmt = $this->conn->prepare($sql);
-                $stmt->bind_param("sssssiii", $hoTen, $email, $soDienThoai, $chucVu, $phongBan, $maPhongBan, $trangThai, $maND);
+                $stmt->bind_param("sssssiii", $hoTen, $email, $soDienThoai, $chucVu, $phongBan, $maPhongBan, $trangThaiND, $maND);
                 if (!$stmt->execute()) {
                     $this->conn->rollback();
                     return false;
+                }
+
+                if ($trangThaiTK !== null) {
+                    $accountStmt = $this->conn->prepare("UPDATE taikhoan tk
+                        INNER JOIN nguoidung nd ON nd.maTK = tk.maTK
+                        SET tk.trangThai = ?, tk.soLanDangNhapSai = IF(? = 1, 0, tk.soLanDangNhapSai)
+                        WHERE nd.maND = ?");
+                    if (!$accountStmt) {
+                        $this->conn->rollback();
+                        return false;
+                    }
+                    $accountStmt->bind_param('iii', $trangThaiTK, $trangThaiTK, $maND);
+                    if (!$accountStmt->execute()) {
+                        $this->conn->rollback();
+                        return false;
+                    }
+                    $accountStmt->close();
                 }
 
                 // Delete from all child tables
@@ -1287,16 +1307,18 @@ class ChamCongModel
             $username .= rand(10, 99);
 
             $defaultPassword = md5('123456');
-            $insertAccount = $this->conn->prepare("INSERT INTO taikhoan (tenDangNhap, matKhau, trangThai) VALUES (?, ?, 1)");
-            $insertAccount->bind_param("ss", $username, $defaultPassword);
+            $accountStatus = $trangThaiTK ?? 1;
+            $insertAccount = $this->conn->prepare("INSERT INTO taikhoan (tenDangNhap, matKhau, trangThai) VALUES (?, ?, ?)");
+            $insertAccount->bind_param("ssi", $username, $defaultPassword, $accountStatus);
             if (!$insertAccount->execute()) {
                 $this->conn->rollback();
                 return false;
             }
 
             $maTK = (int)$this->conn->insert_id;
+            $employeeStatus = $trangThaiND ?? 1;
             $insertEmployee = $this->conn->prepare("INSERT INTO nguoidung (maTK, hoTen, email, soDienThoai, chucVu, phongBan, maPhongBan, trangThai) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $insertEmployee->bind_param("isssssii", $maTK, $hoTen, $email, $soDienThoai, $chucVu, $phongBan, $maPhongBan, $trangThai);
+            $insertEmployee->bind_param("isssssii", $maTK, $hoTen, $email, $soDienThoai, $chucVu, $phongBan, $maPhongBan, $employeeStatus);
             if (!$insertEmployee->execute()) {
                 $this->conn->rollback();
                 return false;
