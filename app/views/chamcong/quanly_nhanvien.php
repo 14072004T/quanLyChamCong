@@ -108,6 +108,79 @@ if (!empty($_GET['edit']) && !empty($employees)) {
         </div>
 
         <div class="panel">
+            <div class="panel-header" style="margin-bottom:12px;">
+                <h3 style="margin:0;">Danh sách nhân viên</h3>
+                <form method="GET" action="index.php" style="display:flex;gap:8px;">
+                    <input type="hidden" name="page" value="quan-ly-nhanvien">
+                    <input type="text" name="q" value="<?= htmlspecialchars($keyword ?? '') ?>" placeholder="Tìm theo tên, email..." style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.85em;min-width:200px;">
+                    <button class="btn btn-primary btn-sm" type="submit">Tìm</button>
+                </form>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>MÃ NV</th>
+                        <th>HỌ TÊN</th>
+                        <th>TÀI KHOẢN</th>
+                        <th>EMAIL</th>
+                        <th>PHÒNG BAN</th>
+                        <th>TRẠNG THÁI</th>
+                        <th>HÀNH ĐỘNG</th>
+                    </tr>
+                </thead>
+               <tbody>
+<?php if (!empty($employees)): ?>
+    <?php foreach ($employees as $emp): ?>
+
+        <tr>
+            <td><?= (int)$emp['maND'] ?></td>
+            <td><?= htmlspecialchars($emp['hoTen']) ?></td>
+            <td>
+                <code style="background:#e0f2fe;color:#0369a1;padding:3px 8px;border-radius:4px;font-weight:600;font-size:0.9em;">
+                    <?= htmlspecialchars($emp['tenDangNhap'] ?? ('user' . $emp['maND'])) ?>
+                </code>
+            </td>
+            <td>
+                <a href="mailto:<?= htmlspecialchars($emp['email'] ?? '') ?>" style="color:#3b82f6;">
+                    <?= htmlspecialchars($emp['email'] ?? '') ?>
+                </a>
+            </td>
+            <td><?= htmlspecialchars($emp['phongBan'] ?? '') ?></td>
+            <td>
+                <span class="trangThai-badge <?= (int)$emp['trangThai'] === 1 ? 'trangThai-approved' : 'trangThai-rejected' ?>">
+                    <?= (int)$emp['trangThai'] === 1 ? '• Hoạt động' : '• Ngừng' ?>
+                </span>
+            </td>
+            <td>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <a class="btn btn-sm btn-primary"
+                       href="index.php?page=quan-ly-nhanvien&edit=<?= (int)$emp['maND'] ?>">
+                        Sửa
+                    </a>
+                    <form method="POST" action="index.php?page=quan-ly-nhanvien" style="display:inline;margin:0;" onsubmit="return confirm('Bạn có chắc chắn muốn đặt lại mật khẩu cho nhân viên <?= htmlspecialchars(addslashes($emp['hoTen'])) ?> về mặc định (123456)?');">
+                        <input type="hidden" name="action" value="reset_password">
+                        <input type="hidden" name="maND" value="<?= (int)$emp['maND'] ?>">
+                        <button type="submit" class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;display:inline-flex;align-items:center;gap:4px;">
+                            <i class="fas fa-key"></i> Reset pass
+                        </button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+
+    <?php endforeach; ?>
+<?php else: ?>
+    <tr>
+        <td colspan="7" class="empty-state">
+            Không có nhân viên phù hợp.
+        </td>
+    </tr>
+<?php endif; ?>
+</tbody>
+            </table>
+        </div>
+
+        <div class="panel">
             <div class="dept-layout">
                 <!-- Danh sách phòng ban -->
                 <div>
@@ -181,79 +254,6 @@ if (!empty($_GET['edit']) && !empty($employees)) {
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="panel">
-            <div class="panel-header" style="margin-bottom:12px;">
-                <h3 style="margin:0;">Danh sách nhân viên</h3>
-                <form method="GET" action="index.php" style="display:flex;gap:8px;">
-                    <input type="hidden" name="page" value="quan-ly-nhanvien">
-                    <input type="text" name="q" value="<?= htmlspecialchars($keyword ?? '') ?>" placeholder="Tìm theo tên, email..." style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.85em;min-width:200px;">
-                    <button class="btn btn-primary btn-sm" type="submit">Tìm</button>
-                </form>
-            </div>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>MÃ NV</th>
-                        <th>HỌ TÊN</th>
-                        <th>TÀI KHOẢN</th>
-                        <th>EMAIL</th>
-                        <th>PHÒNG BAN</th>
-                        <th>TRẠNG THÁI</th>
-                        <th>HÀNH ĐỘNG</th>
-                    </tr>
-                </thead>
-               <tbody>
-<?php if (!empty($employees)): ?>
-    <?php foreach ($employees as $emp): ?>
-
-        <tr>
-            <td><?= (int)$emp['maND'] ?></td>
-            <td><?= htmlspecialchars($emp['hoTen']) ?></td>
-            <td>
-                <code style="background:#e0f2fe;color:#0369a1;padding:3px 8px;border-radius:4px;font-weight:600;font-size:0.9em;">
-                    <?= htmlspecialchars($emp['tenDangNhap'] ?? ('user' . $emp['maND'])) ?>
-                </code>
-            </td>
-            <td>
-                <a href="mailto:<?= htmlspecialchars($emp['email'] ?? '') ?>" style="color:#3b82f6;">
-                    <?= htmlspecialchars($emp['email'] ?? '') ?>
-                </a>
-            </td>
-            <td><?= htmlspecialchars($emp['phongBan'] ?? '') ?></td>
-            <td>
-                <span class="trangThai-badge <?= (int)$emp['trangThai'] === 1 ? 'trangThai-approved' : 'trangThai-rejected' ?>">
-                    <?= (int)$emp['trangThai'] === 1 ? '• Hoạt động' : '• Ngừng' ?>
-                </span>
-            </td>
-            <td>
-                <div style="display:flex;gap:6px;align-items:center;">
-                    <a class="btn btn-sm btn-primary"
-                       href="index.php?page=quan-ly-nhanvien&edit=<?= (int)$emp['maND'] ?>">
-                        Sửa
-                    </a>
-                    <form method="POST" action="index.php?page=quan-ly-nhanvien" style="display:inline;margin:0;" onsubmit="return confirm('Bạn có chắc chắn muốn đặt lại mật khẩu cho nhân viên <?= htmlspecialchars(addslashes($emp['hoTen'])) ?> về mặc định (123456)?');">
-                        <input type="hidden" name="action" value="reset_password">
-                        <input type="hidden" name="maND" value="<?= (int)$emp['maND'] ?>">
-                        <button type="submit" class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;display:inline-flex;align-items:center;gap:4px;">
-                            <i class="fas fa-key"></i> Reset pass
-                        </button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-
-    <?php endforeach; ?>
-<?php else: ?>
-    <tr>
-        <td colspan="7" class="empty-state">
-            Không có nhân viên phù hợp.
-        </td>
-    </tr>
-<?php endif; ?>
-</tbody>
-            </table>
         </div>
     </div>
 </div>
