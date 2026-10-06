@@ -409,6 +409,17 @@ foreach (($salaryRows ?? []) as $summaryRow) {
     padding-right: 4px;
     text-align: center;
 }
+/* Căn trái tên nhân viên trong tab Tính toán Công & OT */
+#attendance-detail-grid th:nth-child(2),
+#attendance-detail-grid td:nth-child(2) {
+    text-align: left;
+    padding-left: 10px;
+}
+/* Căn trái cột Họ và Tên trong tab Bảng Chấm Công */
+#payroll-summary-table th:nth-child(3),
+#payroll-summary-table td:nth-child(3) {
+    text-align: left;
+}
 </style>
 <div class="main-container">
     <?php include 'app/views/layouts/sidebar.php'; ?>
