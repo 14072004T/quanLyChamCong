@@ -1162,6 +1162,90 @@ class ChamCongModel
         return $metrics;
     }
 
+    private function getHrDashboardAttendanceMetricsForDate($date)
+    {
+        $metrics = [
+            'date' => $date,
+            'scheduled' => 0,
+            'present' => 0,
+            'on_time' => 0,
+            'late' => 0,
+            'early' => 0,
+            'absent' => 0,
+            'leave' => 0,
+            'pending' => 0,
+        ];
+        $scanStart = $date . ' 00:00:00';
+        $scanEnd = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
+        $sql = "SELECT nd.maND, s.gioBatDau, s.gioKetThuc,
+                       scans.scan_count, scans.first_scan, scans.last_scan
+                FROM nguoidung nd
+                INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
+                INNER JOIN canhanvien cv ON cv.maND = nd.maND
+                  AND cv.hieuLucTu <= ?
+                  AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
+                INNER JOIN calamviec s ON s.id = cv.maCa
+                  AND (s.cotinhcong = 1 OR s.cotinhcong = 'yes')
+                LEFT JOIN (
+                    SELECT maND, COUNT(*) AS scan_count,
+                           MIN(thoiGianQuet) AS first_scan,
+                           MAX(thoiGianQuet) AS last_scan
+                    FROM tablet_face_scans
+                    WHERE thoiGianQuet >= ? AND thoiGianQuet < ?
+                    GROUP BY maND
+                ) scans ON scans.maND = nd.maND
+                ORDER BY nd.maND, cv.hieuLucTu DESC, cv.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            error_log('HR dashboard attendance metrics prepare failed: ' . $this->conn->error);
+            return $metrics;
+        }
+
+        $stmt->bind_param('ssss', $date, $date, $scanStart, $scanEnd);
+        if (!$stmt->execute()) {
+            error_log('HR dashboard attendance metrics execute failed: ' . $stmt->error);
+            $stmt->close();
+            return $metrics;
+        }
+
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        $seenEmployees = [];
+        foreach ($rows as $row) {
+            $employeeId = (int)$row['maND'];
+            if (isset($seenEmployees[$employeeId])) {
+                continue;
+            }
+            $seenEmployees[$employeeId] = true;
+            $metrics['scheduled']++;
+
+            if (empty($row['first_scan'])) {
+                $metrics['absent']++;
+                continue;
+            }
+
+            $metrics['present']++;
+            $scanCount = (int)($row['scan_count'] ?? 0);
+            $checkOut = $scanCount > 1 ? ($row['last_scan'] ?? null) : null;
+            $status = $this->calculateShiftStatus(
+                $row['first_scan'],
+                $checkOut,
+                $row['gioBatDau'],
+                $row['gioKetThuc']
+            );
+            if (in_array('late', $status['statuses'], true)) {
+                $metrics['late']++;
+            } else {
+                $metrics['on_time']++;
+            }
+            if (in_array('early_leave', $status['statuses'], true)) {
+                $metrics['early']++;
+            }
+        }
+
+        return $metrics;
+    }
+
     public function getCountableTabletAttendanceReport($fromDate, $toDate, $phongBan = '')
     {
         $fromTimestamp = strtotime($fromDate);
@@ -1306,11 +1390,9 @@ class ChamCongModel
             return ['date' => $date, 'scheduled' => 0, 'present' => 0, 'on_time' => 0, 'late' => 0, 'early' => 0, 'absent' => 0, 'leave' => 0, 'pending' => 0];
         };
         $daily = [];
-        $unusedEmployeeRows = null;
         for ($cursor = strtotime($fromDate); $cursor <= strtotime($today); $cursor = strtotime('+1 day', $cursor)) {
             $date = date('Y-m-d', $cursor);
-            $daily[$date] = $this->getCountableAttendanceMetricsForDate($date, '', $unusedEmployeeRows, true);
-            $daily[$date]['absent'] = max(0, $daily[$date]['scheduled'] - $daily[$date]['present']);
+            $daily[$date] = $this->getHrDashboardAttendanceMetricsForDate($date);
         }
 
         $periodMetrics = $emptyDay($fromDate);
