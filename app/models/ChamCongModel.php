@@ -1169,7 +1169,8 @@ class ChamCongModel
                 INNER JOIN canhanvien cv ON cv.maND = nd.maND
                   AND cv.hieuLucTu <= ?
                   AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
-                INNER JOIN calamviec s ON s.id = cv.maCa AND s.cotinhcong = 1
+                INNER JOIN calamviec s ON s.id = cv.maCa
+                  AND (s.cotinhcong = 1 OR s.cotinhcong = 'yes')
                 LEFT JOIN (
                     SELECT maND
                     FROM tablet_face_scans
