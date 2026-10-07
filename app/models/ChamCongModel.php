@@ -1162,7 +1162,7 @@ class ChamCongModel
         return $metrics;
     }
 
-    private function getHrDashboardAttendanceMetricsForDate($date)
+    private function getHrDashboardAttendanceMetricsForDate($date, $defaultShiftId)
     {
         $metrics = [
             'date' => $date,
@@ -1181,10 +1181,15 @@ class ChamCongModel
                        scans.scan_count, scans.first_scan, scans.last_scan
                 FROM nguoidung nd
                 INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
-                INNER JOIN canhanvien cv ON cv.maND = nd.maND
+                LEFT JOIN canhanvien cv ON cv.maND = nd.maND
                   AND cv.hieuLucTu <= ?
                   AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
-                INNER JOIN calamviec s ON s.id = cv.maCa
+                  AND EXISTS (
+                      SELECT 1 FROM calamviec assigned_shift
+                      WHERE assigned_shift.id = cv.maCa AND assigned_shift.hoatDong = 1
+                  )
+                INNER JOIN calamviec s ON s.id = COALESCE(cv.maCa, NULLIF(?, 0))
+                  AND s.hoatDong = 1
                   AND (s.cotinhcong = 1 OR s.cotinhcong = 'yes')
                 LEFT JOIN (
                     SELECT scan_events.maND, COUNT(*) AS scan_count,
@@ -1215,17 +1220,7 @@ class ChamCongModel
             return $metrics;
         }
 
-        $stmt->bind_param(
-            'ssssssss',
-            $date,
-            $date,
-            $scanStart,
-            $scanEnd,
-            $scanStart,
-            $scanEnd,
-            $scanStart,
-            $scanEnd
-        );
+        $stmt->bind_param('ssissssss', $date, $date, $defaultShiftId, $scanStart, $scanEnd, $scanStart, $scanEnd, $scanStart, $scanEnd);
         if (!$stmt->execute()) {
             error_log('HR dashboard attendance metrics execute failed: ' . $stmt->error);
             $stmt->close();
@@ -1413,10 +1408,15 @@ class ChamCongModel
         $emptyDay = function ($date) {
             return ['date' => $date, 'scheduled' => 0, 'present' => 0, 'on_time' => 0, 'late' => 0, 'early' => 0, 'absent' => 0, 'leave' => 0, 'pending' => 0];
         };
+        $weekdayDefault = $this->getShiftByCode('HC') ?: $this->getDefaultShift();
+        $weekendDefault = $this->getShiftByCode('OFF');
+        $weekdayDefaultId = (int)($weekdayDefault['maCa'] ?? 0);
+        $weekendDefaultId = (int)($weekendDefault['maCa'] ?? 0);
         $daily = [];
         for ($cursor = strtotime($fromDate); $cursor <= strtotime($today); $cursor = strtotime('+1 day', $cursor)) {
             $date = date('Y-m-d', $cursor);
-            $daily[$date] = $this->getHrDashboardAttendanceMetricsForDate($date);
+            $defaultShiftId = in_array((int)date('w', $cursor), [0, 6], true) ? $weekendDefaultId : $weekdayDefaultId;
+            $daily[$date] = $this->getHrDashboardAttendanceMetricsForDate($date, $defaultShiftId);
         }
 
         $periodMetrics = $emptyDay($fromDate);
@@ -1951,6 +1951,31 @@ class ChamCongModel
         $res = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         return $res;
+    }
+
+    public function getShiftAssignmentsForMonth($monthStart, $monthEnd)
+    {
+        $sql = "SELECT cv.maND, cv.maCa, cv.hieuLucTu, cv.hieuLucDen,
+                       s.kyHieu, s.tenCa, s.mauSac, s.hoatDong
+                FROM canhanvien cv
+                LEFT JOIN calamviec s ON s.id = cv.maCa
+                WHERE cv.hieuLucTu <= ?
+                  AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
+                ORDER BY cv.maND, cv.hieuLucTu DESC, cv.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            error_log('Monthly shift assignments query prepare failed: ' . $this->conn->error);
+            return false;
+        }
+        $stmt->bind_param('ss', $monthEnd, $monthStart);
+        if (!$stmt->execute()) {
+            error_log('Monthly shift assignments query execute failed: ' . $stmt->error);
+            $stmt->close();
+            return false;
+        }
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
     }
 
     public function resolveShiftFromAssignments($assignments, $date, $defaultShift)

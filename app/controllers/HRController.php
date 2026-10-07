@@ -131,7 +131,19 @@ class HRController
     {
         AuthMiddleware::requirePermission('hr-api-shift-assignments');
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-            $this->respond(['success' => true, 'data' => []]);
+            $month = $_GET['month'] ?? '';
+            if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
+                $this->respond(['success' => false, 'message' => 'Tháng không hợp lệ'], 422);
+                return;
+            }
+            $monthStart = $month . '-01';
+            $monthEnd = date('Y-m-t', strtotime($monthStart));
+            $assignments = $this->model->getShiftAssignmentsForMonth($monthStart, $monthEnd);
+            if ($assignments === false) {
+                $this->respond(['success' => false, 'message' => 'Không thể tải dữ liệu phân ca'], 500);
+                return;
+            }
+            $this->respond(['success' => true, 'data' => $assignments]);
             return;
         }
         $this->jsonOnly(['POST']);

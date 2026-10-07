@@ -40,7 +40,7 @@ function shiftDisplayText($value) {
 
         <div class="panel">
             <h2 style="border:none;padding:0;margin:0 0 6px;">QUẢN LÝ CA LÀM VIỆC</h2>
-            <p style="color:#64748b;margin:0;">Ca làm việc được gán tự động theo tháng (Hành chính). Nhân viên đăng ký OT riêng, hệ thống tự tính thêm giờ.</p>
+            <p style="color:#64748b;margin:0;">Phân ca theo từng nhân viên và từng ngày; nhân viên đăng ký OT riêng, hệ thống tự tính thêm giờ.</p>
             <a href="index.php?page=tablet-cham-cong" class="btn btn-primary" style="margin-top:14px;display:inline-flex;align-items:center;gap:8px;text-decoration:none;"><i class="fas fa-tablet-screen-button"></i> Mở tablet chấm công</a>
         </div>
 
@@ -63,7 +63,7 @@ function shiftDisplayText($value) {
             </div>
             <div class="alert alert-info" style="margin-bottom:14px;">
                 <i class="fas fa-info-circle"></i>
-                <div>Tất cả nhân viên được gán <strong>ca Hành chính (HC: 08:00 - 17:00)</strong> tự động. Ngày T7, CN mặc định <strong>OFF</strong> nhưng có thể đổi sang ca làm việc khác trong lịch phân ca. Ngày thường cũng có thể chọn ca <strong>OFF</strong> khi cần cho nhân viên nghỉ. Nhân viên đăng ký OT sẽ hiển thị thêm badge <span class="shift-cell shift-ot" style="padding:2px 8px;font-size:0.75em;">OT</span></div>
+                <div>Tất cả nhân viên sẽ được gắn ca và hiển thị màu theo danh mục ca đang có, nếu chưa gắn ca thì chỗ đó sẽ bị trống. Vui lòng gắn lại ca phù hợp cho nhân viên đó</div>
             </div>
             <div class="attendance-grid-wrapper">
                 <table class="attendance-grid" id="monthly-shift-grid">
@@ -281,21 +281,52 @@ document.addEventListener('DOMContentLoaded', function () {
             + '<i class="fas fa-check-double"></i> Áp dụng cho tất cả NV</button></td>';
 
         for (var d = 1; d <= days; d++) {
-            var dow = getDayOfWeek(month, d);
-            var isWeekend = (dow === 0 || dow === 6);
             var currentDate = month + '-' + String(d).padStart(2, '0');
-            var defaultCode = isWeekend ? 'OFF' : 'HC';
-            var defaultShift = shifts.find(function(shift) { return shift.kyHieu === defaultCode; }) || shifts[0];
-
-            var options = shifts.map(function(shift) {
-                var selected = defaultShift && parseInt(shift.id, 10) === parseInt(defaultShift.id, 10) ? ' selected' : '';
-                return '<option value="' + shift.id + '" data-color="' + escapeHtml(shift.mauSac || '#3b82f6') + '"' + selected + '>' + escapeHtml(shift.kyHieu || shift.tenCa) + '</option>';
+            var options = '<option value="">Chọn ca</option>' + shifts.map(function(shift) {
+                return '<option value="' + shift.id + '" data-color="' + escapeHtml(shift.mauSac || '#3b82f6') + '">' + escapeHtml(shift.kyHieu || shift.tenCa) + '</option>';
             }).join('');
 
-            cells += '<td><select class="shift-cell shift-picker common-shift-picker" data-date="' + currentDate + '" title="Ca chung ngày ' + d + '" style="background:' + escapeHtml((defaultShift && defaultShift.mauSac) || '#3b82f6') + ';color:#fff;">' + options + '</select></td>';
+            cells += '<td><select class="shift-cell shift-picker common-shift-picker" data-date="' + currentDate + '" title="Ca chung ngày ' + d + '" style="background:#f1f5f9;color:#64748b;" onchange="updateMonthlyShiftPickerColor(this)">' + options + '</select></td>';
         }
 
         return '<tr class="common-shift-row" style="background:#eff6ff;">' + cells + '</tr>';
+    }
+
+    function getAssignmentForDate(assignments, date) {
+        for (var i = 0; i < assignments.length; i++) {
+            var assignment = assignments[i];
+            var effectiveFrom = String(assignment.hieuLucTu || '').substring(0, 10);
+            var effectiveTo = assignment.hieuLucDen ? String(assignment.hieuLucDen).substring(0, 10) : '';
+            if (effectiveFrom <= date && (!effectiveTo || effectiveTo >= date)) {
+                return assignment;
+            }
+        }
+        return null;
+    }
+
+    function buildEmployeeShiftPicker(employeeId, date, assignment, shifts) {
+        var assignedShiftId = assignment ? String(assignment.maCa) : '';
+        var assignedShift = shifts.find(function(shift) {
+            return String(shift.id) === assignedShiftId;
+        });
+        var color = assignment ? (assignment.mauSac || (assignedShift && assignedShift.mauSac) || '#64748b') : '#f1f5f9';
+        var label = assignment
+            ? (assignment.kyHieu || assignment.tenCa || (assignedShift && (assignedShift.kyHieu || assignedShift.tenCa)) || ('Ca #' + assignedShiftId))
+            : 'Chọn ca';
+        var options = '<option value=""' + (assignment ? '' : ' selected') + ' data-color="#f1f5f9">Chọn ca</option>';
+        var currentShiftIncluded = false;
+
+        options += shifts.map(function(shift) {
+            var selected = String(shift.id) === assignedShiftId;
+            if (selected) currentShiftIncluded = true;
+            return '<option value="' + shift.id + '" data-color="' + escapeHtml(shift.mauSac || '#3b82f6') + '"' + (selected ? ' selected' : '') + '>' + escapeHtml(shift.kyHieu || shift.tenCa) + '</option>';
+        }).join('');
+
+        if (assignment && !currentShiftIncluded) {
+            options += '<option value="' + escapeHtml(assignedShiftId) + '" data-color="' + escapeHtml(color) + '" selected>' + escapeHtml(label) + '</option>';
+        }
+
+        return '<select class="shift-cell shift-picker" data-ma-nd="' + employeeId + '" data-date="' + date + '" title="' + (assignment ? 'Ca đã gán: ' + escapeHtml(label) : 'Chưa gắn ca') + '" style="background:' + escapeHtml(color) + ';color:' + (assignment ? '#fff' : '#64748b') + ';border-color:' + escapeHtml(color) + '" onchange="changeMonthlyShift(this)">' + options + '</select>';
     }
 
     // Danh sách nhân viên đang hiển thị trong lưới — dùng lại khi áp dụng dòng chung.
@@ -309,13 +340,22 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         var assignments = [];
+        var missingShiftDate = false;
         pickers.forEach(function(select) {
+            if (!select.value) {
+                missingShiftDate = true;
+                return;
+            }
             var maCa = parseInt(select.value, 10);
             var hieuLucTu = select.dataset.date;
             currentGridEmployees.forEach(function(emp) {
                 assignments.push({ maND: emp.maND, maCa: maCa, hieuLucTu: hieuLucTu });
             });
         });
+        if (missingShiftDate) {
+            alert('Vui lòng chọn ca cho tất cả ngày trên dòng chung trước khi áp dụng.');
+            return;
+        }
 
         if (!confirm('Áp dụng ca theo dòng chung cho TẤT CẢ ' + currentGridEmployees.length + ' nhân viên đang hoạt động trong tháng này?\n\nHành động này sẽ ghi đè ca đã gán riêng cho từng nhân viên vào các ngày tương ứng.')) {
             return;
@@ -360,17 +400,27 @@ document.addEventListener('DOMContentLoaded', function () {
         Promise.all([
             fetch('index.php?page=hr-api-employees&limit=0', { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); }),
             fetch('index.php?page=hr-api-payroll&month=' + encodeURIComponent(month), { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); }),
-            fetch('index.php?page=hr-api-shifts', { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); })
+            fetch('index.php?page=hr-api-shifts', { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); }),
+            fetch('index.php?page=hr-api-shift-assignments&month=' + encodeURIComponent(month), { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); })
         ]).then(function(results) {
+            if (!results[3].success) {
+                throw new Error(results[3].message || 'Không thể tải dữ liệu phân ca.');
+            }
             var employees = (results[0].data || []).filter(function(e) { return e.trangThai == 1; });
             currentGridEmployees = employees;
             var payrollData = results[1].data || [];
             var otSchedule = results[1].otSchedule || {};
             var shifts = (results[2].data || []).filter(function(s) { return Number(s.hoatDong) === 1; });
+            var assignmentRows = results[3].data || [];
 
             // Map payroll by maND
             var payrollMap = {};
             payrollData.forEach(function(p) { payrollMap[p.maND] = p; });
+            var assignmentMap = {};
+            assignmentRows.forEach(function(assignment) {
+                if (!assignmentMap[assignment.maND]) assignmentMap[assignment.maND] = [];
+                assignmentMap[assignment.maND].push(assignment);
+            });
 
             if (!employees.length) {
                 gridBody.innerHTML = '<tr><td colspan="' + (days + 1) + '" class="empty-state">Không có nhân viên.</td></tr>';
@@ -380,14 +430,11 @@ document.addEventListener('DOMContentLoaded', function () {
             gridBody.innerHTML = buildCommonRowHtml(month, days, shifts) + employees.map(function(emp) {
                 var payroll = payrollMap[emp.maND] || {};
                 var employeeOtSchedule = otSchedule[String(emp.maND)] || otSchedule[emp.maND] || {};
-                var totalDays = 0;
                 var cells = '<td>' + escapeHtml(emp.hoTen) + '<br><small style="color:#64748b;">' + escapeHtml(emp.phongBan || '') + '</small></td>';
 
                 var empCreatedDate = emp.ngayTao ? emp.ngayTao.substring(0, 10) : '';
 
                 for (var d = 1; d <= days; d++) {
-                    var dow = getDayOfWeek(month, d);
-                    var isWeekend = (dow === 0 || dow === 6);
                     var currentDate = month + '-' + String(d).padStart(2, '0');
                     var otInfo = employeeOtSchedule[currentDate] || null;
                     var dayBreakdown = (payroll.daily_breakdown && payroll.daily_breakdown[currentDate]) ? payroll.daily_breakdown[currentDate] : null;
@@ -400,42 +447,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (empCreatedDate && currentDate < empCreatedDate) {
                         cells += '<span style="color:#e2e8f0;">-</span>';
                     } else {
+                        var employeeAssignments = assignmentMap[String(emp.maND)] || assignmentMap[emp.maND] || [];
+                        var assignedShift = getAssignmentForDate(employeeAssignments, currentDate);
+                        cells += buildEmployeeShiftPicker(emp.maND, currentDate, assignedShift, shifts);
                         if (isLeave) {
-                            var tooltip = dayBreakdown.leave_reason ? escapeHtml(dayBreakdown.day_type_label + ': ' + dayBreakdown.leave_reason) : escapeHtml(dayBreakdown.day_type_label || 'Nghỉ phép');
-                            var leaveId = dayBreakdown.leave_id || 0;
-                            cells += '<span onclick="openModal(' + leaveId + ')" class="shift-cell shift-off" style="background-color:#ef4444;color:white;border-color:#ef4444;display:inline-block;cursor:pointer;" title="' + tooltip + '">OFF</span>';
+                            var leaveTooltip = dayBreakdown.leave_reason ? escapeHtml(dayBreakdown.day_type_label + ': ' + dayBreakdown.leave_reason) : escapeHtml(dayBreakdown.day_type_label || 'Nghỉ phép');
+                            cells += '<span class="shift-cell shift-off" title="' + leaveTooltip + '">NGHỈ</span>';
                         } else if (isHoliday) {
                             cells += '<span class="shift-cell shift-off" style="background-color:#f59e0b;color:white;border-color:#f59e0b;" title="' + escapeHtml(dayBreakdown.day_type_label || 'Ngày lễ') + '">LỄ</span>';
-                        } else if (isWeekend) {
-                            totalDays++;
-                            if (shifts.length) {
-                                var weekendDefault = shifts.find(function(shift) { return shift.kyHieu === 'OFF'; }) || shifts[0];
-                                var activeShiftId = (dayBreakdown && dayBreakdown.maCa) ? parseInt(dayBreakdown.maCa, 10) : parseInt(weekendDefault.id, 10);
-                                var activeShift = shifts.find(function(shift) { return parseInt(shift.id, 10) === activeShiftId; }) || weekendDefault;
-                                
-                                var weekendOptions = shifts.map(function(shift) {
-                                    var selected = parseInt(shift.id, 10) === activeShiftId ? ' selected' : '';
-                                    return '<option value="' + shift.id + '" data-color="' + escapeHtml(shift.mauSac || '#3b82f6') + '"' + selected + '>' + escapeHtml(shift.kyHieu || shift.tenCa) + '</option>';
-                                }).join('');
-                                cells += '<select class="shift-cell shift-picker" data-ma-nd="' + emp.maND + '" data-date="' + currentDate + '" title="Đổi ca" style="background:' + escapeHtml(activeShift.mauSac || '#94a3b8') + ';color:#fff;border-color:' + escapeHtml(activeShift.mauSac || '#94a3b8') + '" onchange="changeMonthlyShift(this)">' + weekendOptions + '</select>';
-                            } else {
-                                cells += '<span class="shift-cell shift-off">OFF</span>';
-                            }
-                        } else {
-                            totalDays++;
-                            if (shifts.length) {
-                                var weekdayDefault = shifts.find(function(shift) { return shift.kyHieu === 'HC'; }) || shifts[0];
-                                var activeShiftId = (dayBreakdown && dayBreakdown.maCa) ? parseInt(dayBreakdown.maCa, 10) : parseInt(weekdayDefault.id, 10);
-                                var activeShift = shifts.find(function(shift) { return parseInt(shift.id, 10) === activeShiftId; }) || weekdayDefault;
-
-                                var shiftOptions = shifts.map(function(shift) {
-                                    var selected = parseInt(shift.id, 10) === activeShiftId ? ' selected' : '';
-                                    return '<option value="' + shift.id + '" data-color="' + escapeHtml(shift.mauSac || '#3b82f6') + '"' + selected + '>' + escapeHtml(shift.kyHieu || shift.tenCa) + '</option>';
-                                }).join('');
-                                cells += '<select class="shift-cell shift-picker" data-ma-nd="' + emp.maND + '" data-date="' + currentDate + '" title="Đổi ca" style="background:' + escapeHtml(activeShift.mauSac || '#3b82f6') + ';color:#fff;border-color:' + escapeHtml(activeShift.mauSac || '#3b82f6') + '" onchange="changeMonthlyShift(this)">' + shiftOptions + '</select>';
-                            } else {
-                                cells += '<span class="shift-cell shift-hc">-</span>';
-                            }
                         }
 
                         if (otInfo) {
@@ -451,11 +470,16 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    window.changeMonthlyShift = function(select) {
+    window.updateMonthlyShiftPickerColor = function(select) {
         var selectedOption = select.options[select.selectedIndex];
-        var color = selectedOption ? selectedOption.dataset.color : '#3b82f6';
+        var color = select.value && selectedOption && selectedOption.dataset.color ? selectedOption.dataset.color : '#f1f5f9';
         select.style.backgroundColor = color;
         select.style.borderColor = color;
+        select.style.color = select.value ? '#fff' : '#64748b';
+    };
+
+    window.changeMonthlyShift = function(select) {
+        window.updateMonthlyShiftPickerColor(select);
         var formData = new FormData();
         formData.append('maND', select.dataset.maNd);
         formData.append('maCa', select.value);
@@ -463,9 +487,17 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch('index.php?page=hr-api-shift-assignments', { method: 'POST', body: formData })
             .then(function(r) { return r.json(); })
             .then(function(result) {
-                if (!result.success) alert(result.message || 'Không thể đổi ca');
+                if (!result.success) {
+                    alert(result.message || 'Không thể đổi ca');
+                    loadMonthlyShifts();
+                    return;
+                }
+                loadMonthlyShifts();
             })
-            .catch(function() { alert('Không thể kết nối máy chủ khi đổi ca.'); });
+            .catch(function() {
+                alert('Không thể kết nối máy chủ khi đổi ca.');
+                loadMonthlyShifts();
+            });
     };
 
     monthPicker.addEventListener('change', loadMonthlyShifts);
