@@ -1187,12 +1187,26 @@ class ChamCongModel
                 INNER JOIN calamviec s ON s.id = cv.maCa
                   AND (s.cotinhcong = 1 OR s.cotinhcong = 'yes')
                 LEFT JOIN (
-                    SELECT maND, COUNT(*) AS scan_count,
-                           MIN(thoiGianQuet) AS first_scan,
-                           MAX(thoiGianQuet) AS last_scan
-                    FROM tablet_face_scans
-                    WHERE thoiGianQuet >= ? AND thoiGianQuet < ?
-                    GROUP BY maND
+                    SELECT scan_events.maND, COUNT(*) AS scan_count,
+                           MIN(scan_events.scan_time) AS first_scan,
+                           MAX(scan_events.scan_time) AS last_scan
+                    FROM (
+                        SELECT maND, thoiGianQuet AS scan_time
+                        FROM tablet_face_scans
+                        WHERE thoiGianQuet >= ? AND thoiGianQuet < ?
+                        UNION ALL
+                        SELECT l.maND, l.ngayTao AS scan_time
+                        FROM lichsuchamcong l
+                        WHERE l.tenWifi = 'TABLET'
+                          AND l.ngayTao >= ? AND l.ngayTao < ?
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM tablet_face_scans existing_scan
+                              WHERE existing_scan.maND = l.maND
+                                AND existing_scan.thoiGianQuet >= ? AND existing_scan.thoiGianQuet < ?
+                          )
+                    ) scan_events
+                    GROUP BY scan_events.maND
                 ) scans ON scans.maND = nd.maND
                 ORDER BY nd.maND, cv.hieuLucTu DESC, cv.id DESC";
         $stmt = $this->conn->prepare($sql);
@@ -1201,7 +1215,17 @@ class ChamCongModel
             return $metrics;
         }
 
-        $stmt->bind_param('ssss', $date, $date, $scanStart, $scanEnd);
+        $stmt->bind_param(
+            'ssssssss',
+            $date,
+            $date,
+            $scanStart,
+            $scanEnd,
+            $scanStart,
+            $scanEnd,
+            $scanStart,
+            $scanEnd
+        );
         if (!$stmt->execute()) {
             error_log('HR dashboard attendance metrics execute failed: ' . $stmt->error);
             $stmt->close();
