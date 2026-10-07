@@ -156,11 +156,13 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
     var todayMetrics = hrMetrics.today || {};
     var periodMetrics = hrMetrics.period || todayMetrics;
     var dailyMetrics = hrMetrics.daily || [];
+    var present = Number(todayMetrics.present || 0);
     var late = Number(todayMetrics.late || 0);
     var absent = Number(todayMetrics.absent || 0);
     var totalEmployees = Number(hrMetrics.total_employees || 0);
 
     document.getElementById('hrd-total-nv').textContent = totalEmployees;
+    document.getElementById('hrd-checked-today').textContent = present;
     document.getElementById('hrd-late-today').textContent = late;
     document.getElementById('hrd-absent-today').textContent = absent;
     document.getElementById('hrd-early-today').textContent = Number(todayMetrics.early || 0);

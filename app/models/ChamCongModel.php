@@ -991,7 +991,7 @@ class ChamCongModel
         return $data;
     }
 
-    private function getCountableAttendanceMetricsForDate($date, $phongBan = '', &$employeeRows = null)
+    private function getCountableAttendanceMetricsForDate($date, $phongBan = '', &$employeeRows = null, $requireAssignedShift = false)
     {
         $metrics = [
             'date' => $date,
@@ -1006,11 +1006,16 @@ class ChamCongModel
         ];
         $scanStart = $date . ' 00:00:00';
         $scanEnd = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
-        $defaultShift = $this->getDefaultShiftForDate($date);
+        $defaultShift = $requireAssignedShift ? null : $this->getDefaultShiftForDate($date);
         $defaultShiftId = (int)($defaultShift['maCa'] ?? 0);
         $departmentFilter = '';
-        $params = [$date, $date, $defaultShiftId, $scanStart, $scanEnd, $scanStart, $scanEnd, $date, $date, $date];
-        $types = 'ssisssssss';
+        $personFilter = $requireAssignedShift ? '' : "AND nd.trangThai = 1 AND nd.chucVu = 'Nhân viên' AND DATE(nd.ngayTao) <= ?";
+        $params = [$date, $date, $defaultShiftId, $scanStart, $scanEnd, $scanStart, $scanEnd, $date, $date];
+        $types = 'ssissssss';
+        if (!$requireAssignedShift) {
+            $params[] = $date;
+            $types .= 's';
+        }
         if ($phongBan !== '') {
             $departmentFilter = 'AND nd.phongBan = ?';
             $params[] = $phongBan;
@@ -1050,9 +1055,8 @@ class ChamCongModel
                     FROM donnghiphep
                     WHERE trangThai = 'approved' AND tuNgay <= ? AND denNgay >= ?
                 ) approved_leave ON approved_leave.maND = nd.maND
-                WHERE nd.trangThai = 1
-                  AND nd.chucVu = 'Nhân viên'
-                  AND DATE(nd.ngayTao) <= ?
+                WHERE 1 = 1
+                  $personFilter
                                     $departmentFilter
                 ORDER BY nd.maND, cv.hieuLucTu DESC, cv.id DESC";
         $stmt = $this->conn->prepare($sql);
@@ -1156,52 +1160,6 @@ class ChamCongModel
         }
 
         return $metrics;
-    }
-
-    private function getScheduledTabletScanMetricsForDate($date)
-    {
-        $scanStart = $date . ' 00:00:00';
-        $scanEnd = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
-        $sql = "SELECT COUNT(DISTINCT nd.maND) AS scheduled,
-                       COUNT(DISTINCT CASE WHEN attendance.maND IS NOT NULL THEN nd.maND END) AS present
-                FROM nguoidung nd
-                INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
-                INNER JOIN canhanvien cv ON cv.maND = nd.maND
-                  AND cv.hieuLucTu <= ?
-                  AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
-                INNER JOIN calamviec s ON s.id = cv.maCa
-                  AND (s.cotinhcong = 1 OR s.cotinhcong = 'yes')
-                LEFT JOIN (
-                    SELECT maND
-                    FROM tablet_face_scans
-                    WHERE thoiGianQuet >= ? AND thoiGianQuet < ?
-                    UNION
-                    SELECT maND
-                    FROM lichsuchamcong
-                    WHERE hanhDong = 'IN' AND ngayTao >= ? AND ngayTao < ?
-                ) attendance ON attendance.maND = nd.maND";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            error_log('HR scheduled tablet metrics prepare failed: ' . $this->conn->error);
-            return null;
-        }
-
-        $stmt->bind_param('ssssss', $date, $date, $scanStart, $scanEnd, $scanStart, $scanEnd);
-        if (!$stmt->execute()) {
-            error_log('HR scheduled tablet metrics execute failed: ' . $stmt->error);
-            $stmt->close();
-            return null;
-        }
-
-        $row = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        $scheduled = (int)($row['scheduled'] ?? 0);
-        $present = (int)($row['present'] ?? 0);
-        return [
-            'scheduled' => $scheduled,
-            'present' => $present,
-            'absent' => max(0, $scheduled - $present),
-        ];
     }
 
     public function getCountableTabletAttendanceReport($fromDate, $toDate, $phongBan = '')
@@ -1348,16 +1306,11 @@ class ChamCongModel
             return ['date' => $date, 'scheduled' => 0, 'present' => 0, 'on_time' => 0, 'late' => 0, 'early' => 0, 'absent' => 0, 'leave' => 0, 'pending' => 0];
         };
         $daily = [];
+        $unusedEmployeeRows = null;
         for ($cursor = strtotime($fromDate); $cursor <= strtotime($today); $cursor = strtotime('+1 day', $cursor)) {
             $date = date('Y-m-d', $cursor);
-            $daily[$date] = $this->getCountableAttendanceMetricsForDate($date);
-            $scheduledTabletMetrics = $this->getScheduledTabletScanMetricsForDate($date);
-            if ($scheduledTabletMetrics !== null) {
-                $daily[$date]['scheduled'] = $scheduledTabletMetrics['scheduled'];
-                $daily[$date]['present'] = $scheduledTabletMetrics['present'];
-                $daily[$date]['absent'] = $scheduledTabletMetrics['absent'];
-                $daily[$date]['pending'] = 0;
-            }
+            $daily[$date] = $this->getCountableAttendanceMetricsForDate($date, '', $unusedEmployeeRows, true);
+            $daily[$date]['absent'] = max(0, $daily[$date]['scheduled'] - $daily[$date]['present']);
         }
 
         $periodMetrics = $emptyDay($fromDate);
