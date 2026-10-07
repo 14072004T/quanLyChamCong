@@ -1006,22 +1006,29 @@ class ChamCongModel
         ];
         $scanStart = $date . ' 00:00:00';
         $scanEnd = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
+        $defaultShift = $this->getDefaultShiftForDate($date);
+        $defaultShiftId = (int)($defaultShift['maCa'] ?? 0);
         $departmentFilter = '';
-        $params = [$scanStart, $scanEnd, $scanStart, $scanEnd, $date, $date, $date, $date];
-        $types = 'ssssssss';
+        $params = [$date, $date, $defaultShiftId, $scanStart, $scanEnd, $scanStart, $scanEnd, $date, $date, $date];
+        $types = 'ssisssssss';
         if ($phongBan !== '') {
             $departmentFilter = 'AND nd.phongBan = ?';
             $params[] = $phongBan;
             $types .= 's';
         }
-        $sql = "SELECT cv.maND, nd.hoTen, nd.phongBan, s.gioBatDau, s.gioKetThuc, s.cotinhcong,
+        $sql = "SELECT nd.maND, nd.hoTen, nd.phongBan, s.gioBatDau, s.gioKetThuc, s.cotinhcong,
                        attendance.first_checkin, attendance.last_checkout,
                        scans.scan_count, scans.first_scan, scans.last_scan,
                        approved_leave.maND AS leave_maND
-                FROM canhanvien cv
-                INNER JOIN nguoidung nd ON nd.maND = cv.maND
+                FROM nguoidung nd
                 INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
-                INNER JOIN calamviec s ON s.id = cv.maCa
+                LEFT JOIN canhanvien cv ON cv.maND = nd.maND
+                  AND cv.hieuLucTu <= ?
+                  AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
+                  AND EXISTS (SELECT 1 FROM calamviec active_shift
+                              WHERE active_shift.id = cv.maCa AND active_shift.hoatDong = 1)
+                LEFT JOIN calamviec s ON s.id = COALESCE(cv.maCa, NULLIF(?, 0))
+                  AND s.hoatDong = 1
                 LEFT JOIN (
                     SELECT maND,
                            MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) AS first_checkin,
@@ -1029,7 +1036,7 @@ class ChamCongModel
                     FROM lichsuchamcong
                     WHERE ngayTao >= ? AND ngayTao < ?
                     GROUP BY maND
-                ) attendance ON attendance.maND = cv.maND
+                ) attendance ON attendance.maND = nd.maND
                 LEFT JOIN (
                     SELECT maND, COUNT(*) AS scan_count,
                            MIN(thoiGianQuet) AS first_scan,
@@ -1037,18 +1044,17 @@ class ChamCongModel
                     FROM tablet_face_scans
                     WHERE thoiGianQuet >= ? AND thoiGianQuet < ?
                     GROUP BY maND
-                ) scans ON scans.maND = cv.maND
+                ) scans ON scans.maND = nd.maND
                 LEFT JOIN (
                     SELECT DISTINCT maND
                     FROM donnghiphep
                     WHERE trangThai = 'approved' AND tuNgay <= ? AND denNgay >= ?
-                ) approved_leave ON approved_leave.maND = cv.maND
-                WHERE cv.hieuLucTu <= ?
-                  AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
-                  AND nd.trangThai = 1
+                ) approved_leave ON approved_leave.maND = nd.maND
+                WHERE nd.trangThai = 1
                   AND nd.chucVu = 'Nhân viên'
+                  AND DATE(nd.ngayTao) <= ?
                                     $departmentFilter
-                ORDER BY cv.maND, cv.hieuLucTu DESC, cv.id DESC";
+                ORDER BY nd.maND, cv.hieuLucTu DESC, cv.id DESC";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             error_log('HR attendance metrics prepare failed: ' . $this->conn->error);
@@ -1284,8 +1290,8 @@ class ChamCongModel
         $today = $today ?: date('Y-m-d');
         $employeeCountResult = $this->conn->query("SELECT COUNT(DISTINCT nd.maND) AS total_employees
             FROM nguoidung nd
-            INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
-            WHERE nd.trangThai = 1 AND nd.chucVu = 'Nhân viên'");
+            INNER JOIN taikhoan tk ON tk.maTK = nd.maTK
+            WHERE tk.trangThai = 1");
         $totalEmployees = 0;
         if ($employeeCountResult) {
             $employeeCount = $employeeCountResult->fetch_assoc();
