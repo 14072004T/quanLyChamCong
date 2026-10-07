@@ -437,9 +437,7 @@ document.addEventListener('DOMContentLoaded', function () {
             gridBody.innerHTML = buildCommonRowHtml(month, days, shifts) + employees.map(function(emp) {
                 var payroll = payrollMap[emp.maND] || {};
                 var employeeOtSchedule = otSchedule[String(emp.maND)] || otSchedule[emp.maND] || {};
-                var cells = '<td>' + escapeHtml(emp.hoTen) + '<br><small style="color:#64748b;">' + escapeHtml(emp.phongBan || '') + '</small></td>';
-
-                var empCreatedDate = emp.ngayTao ? emp.ngayTao.substring(0, 10) : '';
+                var cells = '<td><span>(' + escapeHtml(emp.maND) + ') ' + escapeHtml(emp.hoTen) + '</span><br><small style="color:#64748b;">' + escapeHtml(emp.phongBan || '') + '</small></td>';
 
                 for (var d = 1; d <= days; d++) {
                     var currentDate = month + '-' + String(d).padStart(2, '0');
@@ -449,24 +447,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     var isHoliday = dayBreakdown && dayBreakdown.day_type === 'holiday';
 
                     cells += '<td>';
-                    
-                    // Chỉ hiển thị ca làm kể từ ngày nhân viên được tạo
-                    if (empCreatedDate && currentDate < empCreatedDate) {
-                        cells += '<span style="color:#e2e8f0;">-</span>';
-                    } else {
-                        var employeeAssignments = assignmentMap[String(emp.maND)] || assignmentMap[emp.maND] || [];
-                        var assignedShift = getAssignmentForDate(employeeAssignments, currentDate);
-                        cells += buildEmployeeShiftPicker(emp.maND, currentDate, assignedShift, shifts);
-                        if (isLeave) {
-                            var leaveTooltip = dayBreakdown.leave_reason ? escapeHtml(dayBreakdown.day_type_label + ': ' + dayBreakdown.leave_reason) : escapeHtml(dayBreakdown.day_type_label || 'Nghỉ phép');
-                            cells += '<span class="shift-cell shift-off" title="' + leaveTooltip + '">NGHỈ</span>';
-                        } else if (isHoliday) {
-                            cells += '<span class="shift-cell shift-off" style="background-color:#f59e0b;color:white;border-color:#f59e0b;" title="' + escapeHtml(dayBreakdown.day_type_label || 'Ngày lễ') + '">LỄ</span>';
-                        }
 
-                        if (otInfo) {
-                            cells += '<span class="shift-cell shift-ot" title="' + escapeHtml(otInfo.lyDo || 'OT đã duyệt') + '">OT</span>';
-                        }
+                    var employeeAssignments = assignmentMap[String(emp.maND)] || assignmentMap[emp.maND] || [];
+                    var assignedShift = getAssignmentForDate(employeeAssignments, currentDate);
+                    cells += buildEmployeeShiftPicker(emp.maND, currentDate, assignedShift, shifts);
+                    if (isLeave) {
+                        var leaveTooltip = dayBreakdown.leave_reason ? escapeHtml(dayBreakdown.day_type_label + ': ' + dayBreakdown.leave_reason) : escapeHtml(dayBreakdown.day_type_label || 'Nghỉ phép');
+                        cells += '<span class="shift-cell shift-off" title="' + leaveTooltip + '">NGHỈ</span>';
+                    } else if (isHoliday) {
+                        cells += '<span class="shift-cell shift-off" style="background-color:#f59e0b;color:white;border-color:#f59e0b;" title="' + escapeHtml(dayBreakdown.day_type_label || 'Ngày lễ') + '">LỄ</span>';
+                    }
+
+                    if (otInfo) {
+                        cells += '<span class="shift-cell shift-ot" title="' + escapeHtml(otInfo.lyDo || 'OT đã duyệt') + '">OT</span>';
                     }
                     cells += '</td>';
                 }
