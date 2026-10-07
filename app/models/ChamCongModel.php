@@ -991,7 +991,7 @@ class ChamCongModel
         return $data;
     }
 
-    private function getCountableTabletMetricsForDate($date, $phongBan = '', &$employeeRows = null)
+    private function getCountableAttendanceMetricsForDate($date, $phongBan = '', &$employeeRows = null)
     {
         $metrics = [
             'date' => $date,
@@ -1002,23 +1002,34 @@ class ChamCongModel
             'early' => 0,
             'absent' => 0,
             'leave' => 0,
+            'pending' => 0,
         ];
         $scanStart = $date . ' 00:00:00';
         $scanEnd = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
         $departmentFilter = '';
-        $params = [$scanStart, $scanEnd, $date, $date];
-        $types = 'ssss';
+        $params = [$scanStart, $scanEnd, $scanStart, $scanEnd, $date, $date, $date, $date];
+        $types = 'ssssssss';
         if ($phongBan !== '') {
             $departmentFilter = 'AND nd.phongBan = ?';
             $params[] = $phongBan;
             $types .= 's';
         }
         $sql = "SELECT cv.maND, nd.hoTen, nd.phongBan, s.gioBatDau, s.gioKetThuc, s.cotinhcong,
-                       scans.scan_count, scans.first_scan, scans.last_scan
+                       attendance.first_checkin, attendance.last_checkout,
+                       scans.scan_count, scans.first_scan, scans.last_scan,
+                       approved_leave.maND AS leave_maND
                 FROM canhanvien cv
                 INNER JOIN nguoidung nd ON nd.maND = cv.maND
                 INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
                 INNER JOIN calamviec s ON s.id = cv.maCa
+                LEFT JOIN (
+                    SELECT maND,
+                           MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) AS first_checkin,
+                           MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) AS last_checkout
+                    FROM lichsuchamcong
+                    WHERE ngayTao >= ? AND ngayTao < ?
+                    GROUP BY maND
+                ) attendance ON attendance.maND = cv.maND
                 LEFT JOIN (
                     SELECT maND, COUNT(*) AS scan_count,
                            MIN(thoiGianQuet) AS first_scan,
@@ -1027,19 +1038,26 @@ class ChamCongModel
                     WHERE thoiGianQuet >= ? AND thoiGianQuet < ?
                     GROUP BY maND
                 ) scans ON scans.maND = cv.maND
+                LEFT JOIN (
+                    SELECT DISTINCT maND
+                    FROM donnghiphep
+                    WHERE trangThai = 'approved' AND tuNgay <= ? AND denNgay >= ?
+                ) approved_leave ON approved_leave.maND = cv.maND
                 WHERE cv.hieuLucTu <= ?
                   AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
+                  AND nd.trangThai = 1
+                  AND nd.chucVu = 'Nhân viên'
                                     $departmentFilter
                 ORDER BY cv.maND, cv.hieuLucTu DESC, cv.id DESC";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
-            error_log('HR tablet metrics prepare failed: ' . $this->conn->error);
+            error_log('HR attendance metrics prepare failed: ' . $this->conn->error);
             return $metrics;
         }
 
         $stmt->bind_param($types, ...$params);
         if (!$stmt->execute()) {
-            error_log('HR tablet metrics execute failed: ' . $stmt->error);
+            error_log('HR attendance metrics execute failed: ' . $stmt->error);
             $stmt->close();
             return $metrics;
         }
@@ -1047,6 +1065,8 @@ class ChamCongModel
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         $seenEmployees = [];
+        $currentDate = date('Y-m-d');
+        $currentTimestamp = time();
 
         foreach ($rows as $row) {
             $employeeId = (int)$row['maND'];
@@ -1077,23 +1097,36 @@ class ChamCongModel
                 $employeeRows[$employeeId]['scheduled_days']++;
             }
 
+            $checkIn = $row['first_checkin'] ?: ($row['first_scan'] ?? null);
+            $checkOut = $row['last_checkout'] ?: (
+                (int)($row['scan_count'] ?? 0) > 1 ? ($row['last_scan'] ?? null) : null
+            );
             $scanCount = (int)($row['scan_count'] ?? 0);
-            if ($scanCount === 0 || empty($row['first_scan'])) {
-                $metrics['absent']++;
+            $hasAttendance = $checkIn !== null || $checkOut !== null || $scanCount > 0;
+            $hasApprovedLeave = !empty($row['leave_maND']);
+            if (!$hasAttendance) {
+                if ($hasApprovedLeave) {
+                    $metrics['leave']++;
+                } else {
+                    $absenceConfirmed = $date < $currentDate;
+                    if ($date === $currentDate) {
+                        $lateThreshold = (int)$this->getSettingValue('LATE_THRESHOLD_MINUTES', 15);
+                        $shiftStart = strtotime($date . ' ' . $row['gioBatDau']);
+                        $absenceConfirmed = $shiftStart !== false && $currentTimestamp > $shiftStart + ($lateThreshold * 60);
+                    }
+                    $metrics[$absenceConfirmed ? 'absent' : 'pending']++;
+                }
                 continue;
             }
 
             $metrics['present']++;
             if ($employeeRows !== null) {
                 $employeeRows[$employeeId]['work_days']++;
-                $employeeRows[$employeeId]['checkin_count']++;
-                if ($scanCount > 1) {
-                    $employeeRows[$employeeId]['checkout_count']++;
-                }
+                $employeeRows[$employeeId]['checkin_count'] += $checkIn !== null ? 1 : 0;
+                $employeeRows[$employeeId]['checkout_count'] += $checkOut !== null ? 1 : 0;
             }
-            $checkOut = $scanCount > 1 ? ($row['last_scan'] ?? null) : null;
             $status = $this->calculateShiftStatus(
-                $row['first_scan'],
+                $checkIn,
                 $checkOut,
                 $row['gioBatDau'],
                 $row['gioKetThuc']
@@ -1188,7 +1221,7 @@ class ChamCongModel
         while ($cursor <= $toTimestamp) {
             $date = date('Y-m-d', $cursor);
             $dateEmployees = [];
-            $dayMetrics = $this->getCountableTabletMetricsForDate($date, $phongBan, $dateEmployees);
+            $dayMetrics = $this->getCountableAttendanceMetricsForDate($date, $phongBan, $dateEmployees);
             $dailyPunctuality[] = [
                 'date' => $date,
                 'late' => (int)$dayMetrics['late'],
@@ -1251,8 +1284,8 @@ class ChamCongModel
         $today = $today ?: date('Y-m-d');
         $employeeCountResult = $this->conn->query("SELECT COUNT(DISTINCT nd.maND) AS total_employees
             FROM nguoidung nd
-            INNER JOIN taikhoan tk ON tk.maTK = nd.maTK
-            WHERE tk.trangThai = 1");
+            INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
+            WHERE nd.trangThai = 1 AND nd.chucVu = 'Nhân viên'");
         $totalEmployees = 0;
         if ($employeeCountResult) {
             $employeeCount = $employeeCountResult->fetch_assoc();
@@ -1260,22 +1293,21 @@ class ChamCongModel
         }
         $fromDate = date('Y-m-01', strtotime($today));
         $emptyDay = function ($date) {
-            return ['date' => $date, 'scheduled' => 0, 'present' => 0, 'on_time' => 0, 'late' => 0, 'early' => 0, 'absent' => 0, 'leave' => 0];
+            return ['date' => $date, 'scheduled' => 0, 'present' => 0, 'on_time' => 0, 'late' => 0, 'early' => 0, 'absent' => 0, 'leave' => 0, 'pending' => 0];
         };
         $daily = [];
         for ($cursor = strtotime($fromDate); $cursor <= strtotime($today); $cursor = strtotime('+1 day', $cursor)) {
             $date = date('Y-m-d', $cursor);
-            $daily[$date] = $this->getCountableTabletMetricsForDate($date);
+            $daily[$date] = $this->getCountableAttendanceMetricsForDate($date);
         }
 
         $periodMetrics = $emptyDay($fromDate);
         foreach ($daily as $day) {
-            foreach (['scheduled', 'present', 'on_time', 'late', 'early', 'absent', 'leave'] as $key) {
+            foreach (['scheduled', 'present', 'on_time', 'late', 'early', 'absent', 'leave', 'pending'] as $key) {
                 $periodMetrics[$key] += (int)($day[$key] ?? 0);
             }
         }
         $todayMetrics = $daily[$today] ?? $emptyDay($today);
-        $todayMetrics['absent'] = max(0, (int)$todayMetrics['scheduled'] - (int)$todayMetrics['present']);
 
         return ['total_employees' => $totalEmployees, 'today' => $todayMetrics, 'period' => $periodMetrics, 'daily' => array_values($daily)];
     }
@@ -4555,6 +4587,3 @@ class ChamCongModel
         return (int)($row['cnt'] ?? 0);
     }
 }
-
-
-

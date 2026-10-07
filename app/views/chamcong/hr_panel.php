@@ -90,14 +90,14 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
             <canvas id="hrdDonutChart" width="160" height="160"></canvas>
             <div class="hrd-donut-center">
                 <div class="hrd-donut-total" id="hrd-donut-total">--</div>
-                <div style="font-size:0.72em;color:#64748b">Tổng nhân viên</div>
+                <div style="font-size:0.72em;color:#64748b">Ca đã phân</div>
             </div>
         </div>
         <div class="hrd-donut-legend">
             <div><span class="legend-dot green"></span> Đã chấm công <span class="legend-pct" id="dl-cnt">--</span></div>
             <div><span class="legend-dot red"></span> Vắng mặt <span class="legend-pct" id="vm-cnt">--</span></div>
-            <div><span class="legend-dot orange"></span> Đi trễ <span class="legend-pct" id="dt-cnt">--</span></div>
-            <div><span class="legend-dot blue"></span> Về sớm <span class="legend-pct" id="vs-cnt">--</span></div>
+            <div><span class="legend-dot" style="background:#a855f7"></span> Nghỉ phép <span class="legend-pct" id="hr-leave-cnt">--</span></div>
+            <div><span class="legend-dot blue"></span> Đang chờ chấm công <span class="legend-pct" id="hr-pending-cnt">--</span></div>
         </div>
     </div>
 
@@ -156,10 +156,8 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
     var todayMetrics = hrMetrics.today || {};
     var periodMetrics = hrMetrics.period || todayMetrics;
     var dailyMetrics = hrMetrics.daily || [];
-    var inToday = Number(todayMetrics.present || 0);
     var late = Number(todayMetrics.late || 0);
     var absent = Number(todayMetrics.absent || 0);
-    var leave = Number(todayMetrics.leave || 0);
     var totalEmployees = Number(hrMetrics.total_employees || 0);
 
     document.getElementById('hrd-total-nv').textContent = totalEmployees;
@@ -175,19 +173,19 @@ $pendingApprovals = (int)($stats['pending_approvals'] ?? 0);
 
     function updateCharts() {
         var periodPresent = Number(periodMetrics.present || 0);
-        var periodLate = Number(periodMetrics.late || 0);
         var periodAbsent = Number(periodMetrics.absent || 0);
-        var periodEarly = Number(periodMetrics.early || 0);
+        var periodLeave = Number(periodMetrics.leave || 0);
+        var periodPending = Number(periodMetrics.pending || 0);
         var totalDonut = Math.max(1, Number(periodMetrics.scheduled || 0));
-        document.getElementById('hrd-donut-total').textContent = totalEmployees;
+        document.getElementById('hrd-donut-total').textContent = Number(periodMetrics.scheduled || 0);
         document.getElementById('dl-cnt').textContent = periodPresent + ' (' + Math.round(periodPresent / totalDonut * 100) + '%)';
         document.getElementById('vm-cnt').textContent = periodAbsent + ' (' + Math.round(periodAbsent / totalDonut * 100) + '%)';
-        document.getElementById('dt-cnt').textContent = periodLate + ' (' + Math.round(periodLate / totalDonut * 100) + '%)';
-        document.getElementById('vs-cnt').textContent = periodEarly + ' (' + Math.round(periodEarly / totalDonut * 100) + '%)';
+        document.getElementById('hr-leave-cnt').textContent = periodLeave + ' (' + Math.round(periodLeave / totalDonut * 100) + '%)';
+        document.getElementById('hr-pending-cnt').textContent = periodPending + ' (' + Math.round(periodPending / totalDonut * 100) + '%)';
 
         new Chart(document.getElementById('hrdDonutChart'), {
             type: 'doughnut',
-            data: { datasets: [{ data: [periodPresent, periodAbsent, periodLate, periodEarly], backgroundColor: ['#22c55e','#ef4444','#f59e0b','#3b82f6'], borderWidth: 2, borderColor: '#fff' }] },
+            data: { datasets: [{ data: [periodPresent, periodAbsent, periodLeave, periodPending], backgroundColor: ['#22c55e','#ef4444','#a855f7','#3b82f6'], borderWidth: 2, borderColor: '#fff' }] },
             options: { cutout: '68%', plugins: { legend: { display: false } } }
         });
 
