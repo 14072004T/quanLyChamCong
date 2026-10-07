@@ -1158,40 +1158,45 @@ class ChamCongModel
         return $metrics;
     }
 
-    private function getUnscannedScheduledEmployeeCount($date)
+    private function getScheduledTabletScanMetricsForDate($date)
     {
         $scanStart = $date . ' 00:00:00';
         $scanEnd = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
-        $sql = "SELECT COUNT(DISTINCT nd.maND) AS total
+        $sql = "SELECT COUNT(DISTINCT nd.maND) AS scheduled,
+                       COUNT(DISTINCT CASE WHEN scans.maND IS NOT NULL THEN nd.maND END) AS present
                 FROM nguoidung nd
                 INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
                 INNER JOIN canhanvien cv ON cv.maND = nd.maND
                   AND cv.hieuLucTu <= ?
                   AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
                 INNER JOIN calamviec s ON s.id = cv.maCa AND s.cotinhcong = 'yes'
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM tablet_face_scans scans
-                    WHERE scans.maND = nd.maND
-                      AND scans.thoiGianQuet >= ?
-                      AND scans.thoiGianQuet < ?
-                )";
+                LEFT JOIN (
+                    SELECT DISTINCT maND
+                    FROM tablet_face_scans
+                    WHERE thoiGianQuet >= ? AND thoiGianQuet < ?
+                ) scans ON scans.maND = nd.maND";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
-            error_log('HR absent metrics prepare failed: ' . $this->conn->error);
+            error_log('HR scheduled tablet metrics prepare failed: ' . $this->conn->error);
             return null;
         }
 
         $stmt->bind_param('ssss', $date, $date, $scanStart, $scanEnd);
         if (!$stmt->execute()) {
-            error_log('HR absent metrics execute failed: ' . $stmt->error);
+            error_log('HR scheduled tablet metrics execute failed: ' . $stmt->error);
             $stmt->close();
             return null;
         }
 
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return (int)($row['total'] ?? 0);
+        $scheduled = (int)($row['scheduled'] ?? 0);
+        $present = (int)($row['present'] ?? 0);
+        return [
+            'scheduled' => $scheduled,
+            'present' => $present,
+            'absent' => max(0, $scheduled - $present),
+        ];
     }
 
     public function getCountableTabletAttendanceReport($fromDate, $toDate, $phongBan = '')
@@ -1341,9 +1346,11 @@ class ChamCongModel
         for ($cursor = strtotime($fromDate); $cursor <= strtotime($today); $cursor = strtotime('+1 day', $cursor)) {
             $date = date('Y-m-d', $cursor);
             $daily[$date] = $this->getCountableAttendanceMetricsForDate($date);
-            $unscannedCount = $this->getUnscannedScheduledEmployeeCount($date);
-            if ($unscannedCount !== null) {
-                $daily[$date]['absent'] = $unscannedCount;
+            $scheduledTabletMetrics = $this->getScheduledTabletScanMetricsForDate($date);
+            if ($scheduledTabletMetrics !== null) {
+                $daily[$date]['scheduled'] = $scheduledTabletMetrics['scheduled'];
+                $daily[$date]['present'] = $scheduledTabletMetrics['present'];
+                $daily[$date]['absent'] = $scheduledTabletMetrics['absent'];
             }
         }
 
