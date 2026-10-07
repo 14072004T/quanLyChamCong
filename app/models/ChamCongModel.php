@@ -3379,17 +3379,17 @@ class ChamCongModel
         $fromDate = trim((string)$fromDate);
         $toDate = trim((string)$toDate);
 
-        // 1. Get raw logs from lichsuchamcong
+        // 1. Use the earliest and latest tablet scans as the raw attendance window.
         $sql = "
             SELECT
-                DATE(ngayTao) as ngayChamCong,
-                MIN(CASE WHEN hanhDong = 'IN' THEN ngayTao END) as checkIn,
-                MAX(CASE WHEN hanhDong = 'OUT' THEN ngayTao END) as checkOut
-            FROM lichsuchamcong
+                DATE(thoiGianQuet) as ngayChamCong,
+                MIN(thoiGianQuet) as checkIn,
+                MAX(thoiGianQuet) as checkOut
+            FROM tablet_face_scans
             WHERE maND = ?
-              AND DATE(ngayTao) >= ?
-              AND DATE(ngayTao) <= ?
-            GROUP BY DATE(ngayTao)
+              AND thoiGianQuet >= ?
+              AND thoiGianQuet < DATE_ADD(?, INTERVAL 1 DAY)
+            GROUP BY DATE(thoiGianQuet)
             ORDER BY ngayChamCong ASC
         ";
 
