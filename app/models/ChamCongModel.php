@@ -1163,25 +1163,29 @@ class ChamCongModel
         $scanStart = $date . ' 00:00:00';
         $scanEnd = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
         $sql = "SELECT COUNT(DISTINCT nd.maND) AS scheduled,
-                       COUNT(DISTINCT CASE WHEN scans.maND IS NOT NULL THEN nd.maND END) AS present
+                       COUNT(DISTINCT CASE WHEN attendance.maND IS NOT NULL THEN nd.maND END) AS present
                 FROM nguoidung nd
                 INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
                 INNER JOIN canhanvien cv ON cv.maND = nd.maND
                   AND cv.hieuLucTu <= ?
                   AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
-                INNER JOIN calamviec s ON s.id = cv.maCa AND s.cotinhcong = 'yes'
+                INNER JOIN calamviec s ON s.id = cv.maCa AND s.cotinhcong = 1
                 LEFT JOIN (
-                    SELECT DISTINCT maND
+                    SELECT maND
                     FROM tablet_face_scans
                     WHERE thoiGianQuet >= ? AND thoiGianQuet < ?
-                ) scans ON scans.maND = nd.maND";
+                    UNION
+                    SELECT maND
+                    FROM lichsuchamcong
+                    WHERE hanhDong = 'IN' AND ngayTao >= ? AND ngayTao < ?
+                ) attendance ON attendance.maND = nd.maND";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             error_log('HR scheduled tablet metrics prepare failed: ' . $this->conn->error);
             return null;
         }
 
-        $stmt->bind_param('ssss', $date, $date, $scanStart, $scanEnd);
+        $stmt->bind_param('ssssss', $date, $date, $scanStart, $scanEnd, $scanStart, $scanEnd);
         if (!$stmt->execute()) {
             error_log('HR scheduled tablet metrics execute failed: ' . $stmt->error);
             $stmt->close();
@@ -1351,6 +1355,7 @@ class ChamCongModel
                 $daily[$date]['scheduled'] = $scheduledTabletMetrics['scheduled'];
                 $daily[$date]['present'] = $scheduledTabletMetrics['present'];
                 $daily[$date]['absent'] = $scheduledTabletMetrics['absent'];
+                $daily[$date]['pending'] = 0;
             }
         }
 
