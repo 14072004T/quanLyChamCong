@@ -278,8 +278,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!shifts.length) return '';
 
         var cells = '<td style="white-space:nowrap;">'
-            + '<button type="button" id="btn-apply-common-row" class="btn btn-primary" style="padding:6px 10px;font-size:0.8em;" onclick="applyCommonRowToAll()">'
-            + '<i class="fas fa-check-double"></i> Áp dụng cho tất cả NV</button></td>';
+            + '<button type="button" id="btn-apply-common-row" class="btn btn-primary" style="padding:6px 10px;font-size:0.8em;" onclick="applyCommonRowToAll()" disabled title="Tick chọn nhân viên ở cột Nhân viên để áp dụng ca dòng chung">'
+            + '<i class="fas fa-check-double"></i> Chọn NV áp dụng</button></td>';
 
         for (var d = 1; d <= days; d++) {
             var currentDate = month + '-' + String(d).padStart(2, '0');
@@ -339,10 +339,39 @@ document.addEventListener('DOMContentLoaded', function () {
     // Danh sách nhân viên đang hiển thị trong lưới — dùng lại khi áp dụng dòng chung.
     var currentGridEmployees = [];
 
+    function getSelectedEmployees() {
+        var selected = {};
+        document.querySelectorAll('#shift-grid-body .emp-select:checked').forEach(function(cb) {
+            selected[String(cb.value)] = true;
+        });
+        return currentGridEmployees.filter(function(emp) { return selected[String(emp.maND)]; });
+    }
+
+    function updateApplyButton() {
+        var btn = document.getElementById('btn-apply-common-row');
+        if (!btn) return;
+        var selected = getSelectedEmployees();
+        var count = selected.length;
+        var total = currentGridEmployees.length;
+        var selectAll = document.getElementById('shift-grid-select-all');
+        if (selectAll) {
+            selectAll.checked = total > 0 && count === total;
+            selectAll.indeterminate = count > 0 && count < total;
+        }
+        if (count === 0) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-check-double"></i> Chọn NV áp dụng';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-double"></i> Áp dụng cho ' + count + ' nhân viên';
+        }
+    }
+
     window.applyCommonRowToAll = function() {
         var pickers = document.querySelectorAll('.common-shift-row .common-shift-picker');
-        if (!pickers.length || !currentGridEmployees.length) {
-            alert('Không có dữ liệu nhân viên hoặc ca để áp dụng.');
+        var selectedEmployees = getSelectedEmployees();
+        if (!pickers.length || !selectedEmployees.length) {
+            alert('Vui lòng tick chọn nhân viên ở cột Nhân viên để áp dụng ca.');
             return;
         }
 
@@ -355,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             var maCa = parseInt(select.value, 10);
             var hieuLucTu = select.dataset.date;
-            currentGridEmployees.forEach(function(emp) {
+            selectedEmployees.forEach(function(emp) {
                 assignments.push({ maND: emp.maND, maCa: maCa, hieuLucTu: hieuLucTu });
             });
         });
@@ -364,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        if (!confirm('Áp dụng ca theo dòng chung cho TẤT CẢ ' + currentGridEmployees.length + ' nhân viên đang hoạt động trong tháng này?\n\nHành động này sẽ ghi đè ca đã gán riêng cho từng nhân viên vào các ngày tương ứng.')) {
+        if (!confirm('Áp dụng ca theo dòng chung cho ' + selectedEmployees.length + ' nhân viên đã chọn?\n\nHành động này sẽ ghi đè ca đã gán riêng cho từng nhân viên vào các ngày tương ứng.')) {
             return;
         }
 
@@ -385,7 +414,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(function() {
             alert('Không thể kết nối máy chủ khi áp dụng ca.');
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-double"></i> Áp dụng cho tất cả NV'; }
+            updateApplyButton();
         });
     };
 
@@ -394,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var days = getDaysInMonth(month);
 
         // Build header
-        var headHtml = '<tr><th>Nhân viên</th>';
+        var headHtml = '<tr><th><input type="checkbox" id="shift-grid-select-all" title="Chọn tất cả nhân viên" style="transform:scale(1.15);cursor:pointer;vertical-align:middle;"> Nhân viên</th>';
         for (var d = 1; d <= days; d++) {
             var dow = getDayOfWeek(month, d);
             var isWeekend = (dow === 0 || dow === 6);
@@ -437,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function () {
             gridBody.innerHTML = buildCommonRowHtml(month, days, shifts) + employees.map(function(emp) {
                 var payroll = payrollMap[emp.maND] || {};
                 var employeeOtSchedule = otSchedule[String(emp.maND)] || otSchedule[emp.maND] || {};
-                var cells = '<td><span>(' + escapeHtml(emp.maND) + ') ' + escapeHtml(emp.hoTen) + '</span><br><small style="color:#64748b;">' + escapeHtml(emp.phongBan || '') + '</small></td>';
+                var cells = '<td><input type="checkbox" class="emp-select" value="' + escapeHtml(emp.maND) + '" style="transform:scale(1.15);cursor:pointer;margin-right:6px;"> <span>(' + escapeHtml(emp.maND) + ') ' + escapeHtml(emp.hoTen) + '</span><br><small style="color:#64748b;">' + escapeHtml(emp.phongBan || '') + '</small></td>';
 
                 for (var d = 1; d <= days; d++) {
                     var currentDate = month + '-' + String(d).padStart(2, '0');
@@ -465,6 +494,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 return '<tr>' + cells + '</tr>';
             }).join('');
+            updateApplyButton();
         }).catch(function() {
             gridBody.innerHTML = '<tr><td colspan="' + (days + 1) + '" class="empty-state">Lỗi tải dữ liệu.</td></tr>';
         });
@@ -499,6 +529,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 loadMonthlyShifts();
             });
     };
+
+    gridHead.addEventListener('change', function(e) {
+        if (e.target && e.target.id === 'shift-grid-select-all') {
+            document.querySelectorAll('#shift-grid-body .emp-select').forEach(function(cb) {
+                cb.checked = e.target.checked;
+            });
+            updateApplyButton();
+        }
+    });
+
+    gridBody.addEventListener('change', function(e) {
+        if (e.target && e.target.classList && e.target.classList.contains('emp-select')) {
+            updateApplyButton();
+        }
+    });
 
     monthPicker.addEventListener('change', loadMonthlyShifts);
 
