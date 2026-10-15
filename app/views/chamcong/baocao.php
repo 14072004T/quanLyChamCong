@@ -805,15 +805,20 @@ $updatedAt = date('H:i, d/m/Y');
             <section class="mgrr-panel">
                 <div class="mgrr-panel-head">
                     <div class="mgrr-panel-title">Top nhân viên đi trễ, về sớm</div>
-                    <form method="GET" action="index.php" style="display:flex;align-items:center;gap:6px">
-                        <input type="hidden" name="page" value="<?= htmlspecialchars($reportActionPage) ?>">
-                        <input type="hidden" name="tuNgay" value="<?= htmlspecialchars($fromDate) ?>">
-                        <input type="hidden" name="denNgay" value="<?= htmlspecialchars($toDate) ?>">
-                        <input type="hidden" name="phongBan" value="<?= htmlspecialchars($phongBan) ?>">
-                        <label for="top-limit" style="font-size:.78rem;color:#64748b">Top</label>
-                        <input id="top-limit" name="top_limit" type="number" min="1" max="50" value="<?= $topLimit ?>" style="width:62px;padding:6px 8px;border:1px solid #dbe4f0;border-radius:6px">
-                        <button type="submit" class="mgrr-btn primary" style="padding:7px 10px;font-size:.78rem"><i class="fas fa-filter"></i> Lọc</button>
-                    </form>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <button type="button" onclick="openTopDetail()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid #2563eb;border-radius:6px;background:#eff6ff;color:#2563eb;font-size:.78rem;font-weight:700;cursor:pointer">
+                            <i class="fas fa-expand-alt"></i> Xem chi tiết
+                        </button>
+                        <form method="GET" action="index.php" style="display:flex;align-items:center;gap:6px">
+                            <input type="hidden" name="page" value="<?= htmlspecialchars($reportActionPage) ?>">
+                            <input type="hidden" name="tuNgay" value="<?= htmlspecialchars($fromDate) ?>">
+                            <input type="hidden" name="denNgay" value="<?= htmlspecialchars($toDate) ?>">
+                            <input type="hidden" name="phongBan" value="<?= htmlspecialchars($phongBan) ?>">
+                            <label for="top-limit" style="font-size:.78rem;color:#64748b">Top</label>
+                            <input id="top-limit" name="top_limit" type="number" min="1" max="50" value="<?= $topLimit ?>" style="width:62px;padding:6px 8px;border:1px solid #dbe4f0;border-radius:6px">
+                            <button type="submit" class="mgrr-btn primary" style="padding:7px 10px;font-size:.78rem"><i class="fas fa-filter"></i> Lọc</button>
+                        </form>
+                    </div>
                 </div>
                 <table class="mgrr-table mgrr-top-table">
                     <thead>
@@ -887,22 +892,153 @@ $updatedAt = date('H:i, d/m/Y');
 
             <section class="mgrr-panel">
                 <div class="mgrr-panel-head"><div class="mgrr-panel-title">Tổng hợp yêu cầu trong kỳ</div></div>
+                <?php
+                $rs = $requestSummary ?? ['leave'=>['approved'=>0,'rejected'=>0,'pending'=>0],'ot'=>['approved'=>0,'rejected'=>0,'pending'=>0],'correction'=>['approved'=>0,'rejected'=>0,'pending'=>0]];
+                $totalApproved = $rs['leave']['approved'] + $rs['ot']['approved'] + $rs['correction']['approved'];
+                $totalRejected = $rs['leave']['rejected'] + $rs['ot']['rejected'] + $rs['correction']['rejected'];
+                $totalPending  = $rs['leave']['pending']  + $rs['ot']['pending']  + $rs['correction']['pending'];
+                ?>
                 <table class="mgrr-table">
                     <thead><tr><th>Loại yêu cầu</th><th>Đã duyệt</th><th>Từ chối</th><th>Đang chờ</th></tr></thead>
-                    <tbody id="mgrr-request-summary">
-                        <tr><td>Nghỉ phép</td><td>0</td><td>0</td><td>0</td></tr>
-                        <tr><td>Tăng ca</td><td>0</td><td>0</td><td>0</td></tr>
-                        <tr><td>Điều chỉnh công</td><td>0</td><td>0</td><td>0</td></tr>
-                        <tr><td><strong>Tổng</strong></td><td><strong>0</strong></td><td><strong>0</strong></td><td><strong>0</strong></td></tr>
+                    <tbody>
+                        <tr><td>Nghỉ phép</td><td style="color:#16a34a;font-weight:700"><?= $rs['leave']['approved'] ?></td><td style="color:#ef4444;font-weight:700"><?= $rs['leave']['rejected'] ?></td><td style="color:#f59e0b;font-weight:700"><?= $rs['leave']['pending'] ?></td></tr>
+                        <tr><td>Tăng ca (OT)</td><td style="color:#16a34a;font-weight:700"><?= $rs['ot']['approved'] ?></td><td style="color:#ef4444;font-weight:700"><?= $rs['ot']['rejected'] ?></td><td style="color:#f59e0b;font-weight:700"><?= $rs['ot']['pending'] ?></td></tr>
+                        <tr><td>Điều chỉnh công</td><td style="color:#16a34a;font-weight:700"><?= $rs['correction']['approved'] ?></td><td style="color:#ef4444;font-weight:700"><?= $rs['correction']['rejected'] ?></td><td style="color:#f59e0b;font-weight:700"><?= $rs['correction']['pending'] ?></td></tr>
+                        <tr style="border-top:2px solid #e2e8f0"><td><strong>Tổng</strong></td><td><strong style="color:#16a34a"><?= $totalApproved ?></strong></td><td><strong style="color:#ef4444"><?= $totalRejected ?></strong></td><td><strong style="color:#f59e0b"><?= $totalPending ?></strong></td></tr>
                     </tbody>
                 </table>
             </section>
         </div>
 
-        
         <div class="mgrr-updated"><i class="far fa-clock"></i> Dữ liệu được cập nhật lúc <?= htmlspecialchars($updatedAt) ?></div>
     </div>
 </div>
+
+<!-- ===== POPUP CHI TIẾT TOP ĐI TRỄ / VỀ SỚM ===== -->
+<?php
+// Chuẩn bị JSON cho toàn bộ danh sách (sắp xếp theo đi trễ)
+$fullLateJson  = json_encode($topLateRows,  JSON_UNESCAPED_UNICODE);
+$fullEarlyJson = json_encode($topEarlyRows, JSON_UNESCAPED_UNICODE);
+$fromDateLabel = date('d/m/Y', strtotime($fromDate));
+$toDateLabel   = date('d/m/Y', strtotime($toDate));
+?>
+<div id="top-detail-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);overflow-y:auto;padding:30px 16px">
+    <div style="max-width:1100px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 25px 60px rgba(0,0,0,.2);overflow:hidden">
+        <div style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;padding:20px 24px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+                <h2 style="margin:0;font-size:1.2rem;font-weight:800"><i class="fas fa-chart-bar"></i> Chi tiết đi trễ & về sớm</h2>
+                <p style="margin:4px 0 0;font-size:.82rem;opacity:.85">Kỳ: <?= $fromDateLabel ?> — <?= $toDateLabel ?></p>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center">
+                <button onclick="exportTopDetail()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;border:none;background:#fff;color:#1e40af;font-weight:700;font-size:.82rem;cursor:pointer">
+                    <i class="fas fa-file-excel"></i> Xuất Excel
+                </button>
+                <button onclick="closeTopDetail()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem">&times;</button>
+            </div>
+        </div>
+        <div style="padding:16px 24px;border-bottom:1px solid #e2e8f0;display:flex;gap:10px">
+            <button id="tab-late" onclick="switchTab('late')" style="padding:7px 18px;border-radius:20px;border:none;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;font-size:.85rem">Đi trễ</button>
+            <button id="tab-early" onclick="switchTab('early')" style="padding:7px 18px;border-radius:20px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-weight:700;cursor:pointer;font-size:.85rem">Về sớm</button>
+        </div>
+        <div style="overflow-x:auto;max-height:65vh">
+            <table id="detail-table" style="width:100%;border-collapse:collapse;font-size:.875rem">
+                <thead style="position:sticky;top:0;z-index:1">
+                    <tr style="background:#f8fafc">
+                        <th style="padding:12px 16px;text-align:left;color:#64748b;font-size:.75rem;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e2e8f0">STT</th>
+                        <th style="padding:12px 16px;text-align:left;color:#64748b;font-size:.75rem;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Nhân viên</th>
+                        <th style="padding:12px 16px;text-align:left;color:#64748b;font-size:.75rem;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Phòng ban</th>
+                        <th id="col-count" style="padding:12px 16px;text-align:center;color:#64748b;font-size:.75rem;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Số lần</th>
+                        <th id="col-mins" style="padding:12px 16px;text-align:center;color:#64748b;font-size:.75rem;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e2e8f0">Tổng phút</th>
+                    </tr>
+                </thead>
+                <tbody id="detail-tbody"></tbody>
+            </table>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;justify-content:space-between;align-items:center">
+            <span id="detail-count" style="color:#64748b;font-size:.82rem"></span>
+            <button onclick="closeTopDetail()" style="padding:8px 20px;border-radius:7px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-weight:600;cursor:pointer">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var _topLate  = <?= $fullLateJson ?> || [];
+var _topEarly = <?= $fullEarlyJson ?> || [];
+var _currentTab = 'late';
+
+function openTopDetail() {
+    document.getElementById('top-detail-modal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    switchTab('late');
+}
+function closeTopDetail() {
+    document.getElementById('top-detail-modal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+function switchTab(tab) {
+    _currentTab = tab;
+    var data = tab === 'late' ? _topLate : _topEarly;
+    document.getElementById('tab-late').style.cssText  = tab === 'late'  ? 'padding:7px 18px;border-radius:20px;border:none;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;font-size:.85rem' : 'padding:7px 18px;border-radius:20px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-weight:700;cursor:pointer;font-size:.85rem';
+    document.getElementById('tab-early').style.cssText = tab === 'early' ? 'padding:7px 18px;border-radius:20px;border:none;background:#ef4444;color:#fff;font-weight:700;cursor:pointer;font-size:.85rem' : 'padding:7px 18px;border-radius:20px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-weight:700;cursor:pointer;font-size:.85rem';
+    document.getElementById('col-count').textContent = tab === 'late' ? 'Số lần trễ' : 'Số lần về sớm';
+    document.getElementById('col-mins').textContent  = tab === 'late' ? 'Tổng phút trễ' : 'Tổng phút sớm';
+    var tbody = document.getElementById('detail-tbody');
+    tbody.innerHTML = '';
+    if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:30px;text-align:center;color:#94a3b8">Không có dữ liệu</td></tr>';
+        document.getElementById('detail-count').textContent = 'Không có dữ liệu';
+        return;
+    }
+    var countKey = tab === 'late' ? 'late_count' : 'early_count';
+    var minsKey  = tab === 'late' ? 'late_minutes' : 'early_minutes';
+    var color    = tab === 'late' ? '#ef4444' : '#f59e0b';
+    data.forEach(function(row, i) {
+        var name = row.hoTen || 'Nhân viên';
+        var initial = name.charAt(0);
+        var dept = row.phongBan || '-';
+        var cnt  = parseInt(row[countKey] || 0);
+        var mins = parseInt(row[minsKey]  || 0);
+        var rank = i < 3 ? ['🥇','🥈','🥉'][i] : (i + 1);
+        tbody.innerHTML += '<tr style="border-bottom:1px solid #f1f5f9"' + (i % 2 === 0 ? '' : ' style="background:#f8fafc;border-bottom:1px solid #f1f5f9"') + '>'
+            + '<td style="padding:11px 16px;font-weight:700;font-size:.9rem">' + rank + '</td>'
+            + '<td style="padding:11px 16px"><div style="display:flex;align-items:center;gap:9px">'
+            + '<span style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#dbeafe,#dcfce7);color:#1d4ed8;display:grid;place-items:center;font-weight:700;font-size:.8rem">' + initial + '</span>'
+            + '<strong>' + esc(name) + '</strong></div></td>'
+            + '<td style="padding:11px 16px;color:#64748b">' + esc(dept) + '</td>'
+            + '<td style="padding:11px 16px;text-align:center;font-weight:700">' + cnt + '</td>'
+            + '<td style="padding:11px 16px;text-align:center;font-weight:800;color:' + color + '">' + mins + ' phút</td>'
+            + '</tr>';
+    });
+    document.getElementById('detail-count').textContent = 'Tổng: ' + data.length + ' nhân viên';
+}
+function esc(s) {
+    return String(s || '').replace(/[&<>"]/g, function(c) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+}
+function exportTopDetail() {
+    var data = _currentTab === 'late' ? _topLate : _topEarly;
+    var countKey = _currentTab === 'late' ? 'late_count' : 'early_count';
+    var minsKey  = _currentTab === 'late' ? 'late_minutes' : 'early_minutes';
+    var header   = _currentTab === 'late' ? ['STT','Ho ten','Phong ban','So lan tre','Tong phut tre'] : ['STT','Ho ten','Phong ban','So lan ve som','Tong phut ve som'];
+    var rows = [header];
+    data.forEach(function(row, i) {
+        rows.push([(i+1), row.hoTen || '', row.phongBan || '', parseInt(row[countKey]||0), parseInt(row[minsKey]||0)]);
+    });
+    var csv = rows.map(function(r){ return r.join(','); }).join('\n');
+    var bom = '\uFEFF';
+    var blob = new Blob([bom + csv], {type:'text/csv;charset=utf-8;'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'top_' + _currentTab + '_<?= date('Ymd', strtotime($fromDate)) ?>_<?= date('Ymd', strtotime($toDate)) ?>.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+document.getElementById('top-detail-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeTopDetail();
+});
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>

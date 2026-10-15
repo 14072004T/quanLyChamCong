@@ -131,6 +131,27 @@ class ManagerController
             }
         }
 
+        // Tổng hợp yêu cầu trong kỳ
+        $allRequests = $this->model->getManagerEmployeeRequests([
+            'date_from' => $fromDate,
+            'date_to'   => $toDate,
+            'phongBan'  => $phongBan,
+        ], 2000);
+        $requestSummary = [
+            'leave'      => ['approved' => 0, 'rejected' => 0, 'pending' => 0],
+            'ot'         => ['approved' => 0, 'rejected' => 0, 'pending' => 0],
+            'correction' => ['approved' => 0, 'rejected' => 0, 'pending' => 0],
+        ];
+        foreach ($allRequests as $req) {
+            $type   = $req['type'] ?? 'leave';
+            $status = $req['trangThai'] ?? 'pending';
+            $typeKey = $type === 'ot' ? 'ot' : ($type === 'correction' ? 'correction' : 'leave');
+            $statusKey = $status === 'approved' ? 'approved' : ($status === 'rejected' ? 'rejected' : 'pending');
+            if (isset($requestSummary[$typeKey][$statusKey])) {
+                $requestSummary[$typeKey][$statusKey]++;
+            }
+        }
+
         require __DIR__ . '/../views/chamcong/baocao.php';
     }
 
