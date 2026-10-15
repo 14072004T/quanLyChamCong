@@ -672,13 +672,13 @@ class FaceController extends Controller
                 echo json_encode(['success' => false, 'message' => 'Hôm nay ' . $employeeName . ' (Mã NV: ' . $matchedId . ') không có lịch làm việc (ca OFF).']);
                 exit;
             }
-            $ok = $chamCongModel->chamCong($matchedId, 'IN', 'LAN', 'TABLET', 'Chấm vào bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+            $ok = $chamCongModel->chamCong($matchedId, 'IN', 'faceid', 'TABLET', 'Chấm vào bằng tablet khuôn mặt', 'TABLET', $photoFilename);
             echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã ghi nhận giờ vào cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
         // Các lần quét sau trong ngày luôn cập nhật giờ ra thành lần quét gần nhất.
-        $ok = $chamCongModel->chamCong($matchedId, 'OUT', 'LAN', 'TABLET', 'Cập nhật giờ ra bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+        $ok = $chamCongModel->chamCong($matchedId, 'OUT', 'faceid', 'TABLET', 'Cập nhật giờ ra bằng tablet khuôn mặt', 'TABLET', $photoFilename);
         echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã cập nhật giờ ra cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
         exit;
     }

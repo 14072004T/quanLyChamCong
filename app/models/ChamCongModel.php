@@ -44,7 +44,7 @@ class ChamCongModel
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 maND INT NOT NULL,
                 hanhDong ENUM('IN', 'OUT') NOT NULL,
-                phuongThuc ENUM('LAN', 'QR') NOT NULL DEFAULT 'LAN',
+                phuongThuc VARCHAR(20) NOT NULL DEFAULT 'LAN',
                 tenWifi VARCHAR(120) DEFAULT NULL,
                 ghiChu VARCHAR(255) DEFAULT NULL,
                 ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -258,6 +258,17 @@ class ChamCongModel
         $this->addColumnIfMissing('face_profile', 'embedding_right', 'TEXT DEFAULT NULL AFTER embedding_left');
         $this->addColumnIfMissing('face_profile', 'embedding_arcface', 'LONGTEXT DEFAULT NULL AFTER embedding_right');
         $this->addColumnIfMissing('lichsuchamcong', 'anhMinhChung', 'VARCHAR(255) DEFAULT NULL');
+
+        // Migration: mở rộng phuongThuc từ ENUM sang VARCHAR(20) để hỗ trợ 'faceid', 'hr_manual'
+        $ptColCheck = $this->conn->query("SHOW COLUMNS FROM lichsuchamcong LIKE 'phuongThuc'");
+        if ($ptColCheck && $ptRow = $ptColCheck->fetch_assoc()) {
+            if (stripos($ptRow['Type'] ?? '', 'enum') !== false) {
+                $this->conn->query("ALTER TABLE lichsuchamcong MODIFY COLUMN phuongThuc VARCHAR(20) NOT NULL DEFAULT 'LAN'");
+            }
+        }
+        // Chuẩn hoá giá trị cũ HR_OVERRIDE → hr_manual
+        $this->conn->query("UPDATE lichsuchamcong SET phuongThuc = 'hr_manual' WHERE phuongThuc = 'HR_OVERRIDE'");
+
 
         // Clean up nguoidung_roles table if it exists (no new table added per requirement)
         $this->conn->query("DROP TABLE IF EXISTS nguoidung_roles");
@@ -4552,7 +4563,7 @@ class ChamCongModel
         $notePrefix = '[HR chấm hộ: ' . trim($lyDo) . ($mienTruDiTre ? ' - Miễn trừ phạt FaceID' : '') . ']';
 
         // Xoá bản ghi HR_OVERRIDE cũ trong ngày (nếu HR cập nhật/chấm lại cùng ngày)
-        $stmtDel = $this->conn->prepare("DELETE FROM lichsuchamcong WHERE maND = ? AND DATE(ngayTao) = ? AND phuongThuc = 'HR_OVERRIDE'");
+        $stmtDel = $this->conn->prepare("DELETE FROM lichsuchamcong WHERE maND = ? AND DATE(ngayTao) = ? AND phuongThuc = 'hr_manual'");
         if ($stmtDel) {
             $stmtDel->bind_param('is', $maNV, $ngay);
             $stmtDel->execute();
@@ -4562,7 +4573,7 @@ class ChamCongModel
         // 1. Ghi vào lichsuchamcong - Check-in
         $idVao = null;
         $stmt = $this->conn->prepare(
-            "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) VALUES (?, 'IN', 'HR_OVERRIDE', NULL, ?, ?)"
+            "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) VALUES (?, 'IN', 'hr_manual', NULL, ?, ?)"
         );
         $noteIn = $notePrefix . ' Vào ca';
         if ($stmt) {
@@ -4575,7 +4586,7 @@ class ChamCongModel
         // 2. Ghi vào lichsuchamcong - Check-out
         $idRa = null;
         $stmt2 = $this->conn->prepare(
-            "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) VALUES (?, 'OUT', 'HR_OVERRIDE', NULL, ?, ?)"
+            "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) VALUES (?, 'OUT', 'hr_manual', NULL, ?, ?)"
         );
         $noteOut = $notePrefix . ' Ra ca';
         if ($stmt2) {

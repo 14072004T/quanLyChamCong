@@ -94,6 +94,8 @@ $days = ($fromTs && $toTs) ? (int)max(1, floor(abs($toTs - $fromTs) / 86400) + 1
 .ls-stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: #4f6ef7; }
 .ls-badge-late { background: #fee2e2; color: #dc2626; }
 .ls-badge-ontime { background: #f0fdf4; color: #166534; }
+.ls-badge-faceid { background: #ede9fe; color: #6d28d9; }
+.ls-badge-hrmanual { background: #fff7ed; color: #c2410c; }
 
 @media(max-width:640px) {
     .ls-stats { grid-template-columns:repeat(2,1fr); }
@@ -287,7 +289,17 @@ $days = ($fromTs && $toTs) ? (int)max(1, floor(abs($toTs - $fromTs) / 86400) + 1
                                                 <span class="ls-badge ls-badge-out" style="padding: 2px 6px; font-size: 10px;">RA</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td style="padding: 4px 10px;"><span class="ls-badge ls-badge-phuongThuc" style="padding: 2px 6px; font-size: 10px;"><?= htmlspecialchars($row['phuongThuc'] ?? 'LAN') ?></span></td>
+                                        <td style="padding: 4px 10px;">
+                                            <?php
+                                            $pt = strtolower(trim($row['phuongThuc'] ?? ''));
+                                            if ($pt === 'faceid') {
+                                                echo '<span class="ls-badge ls-badge-faceid" style="padding:2px 6px;font-size:10px;">Nhận diện khuôn mặt</span>';
+                                            } elseif ($pt === 'hr_manual') {
+                                                echo '<span class="ls-badge ls-badge-hrmanual" style="padding:2px 6px;font-size:10px;">HR chấm công hộ</span>';
+                                            }
+                                            ?>
+                                        </td>
+
 
                                         <td style="padding: 4px 10px;">
                                             <?php 
