@@ -375,7 +375,8 @@ class ApiHRController
                     respondError('Status phải là "approved" hoặc "rejected"', 422);
                 }
                 $approvedBy = (int)($_SESSION['user']['maND'] ?? 0);
-                $ok = $this->model->updateLeaveRequestStatus((int)$id, $trangThai, $approvedBy);
+                $ghiChuNS = trim($body['ghiChuNS'] ?? $body['ghiChu'] ?? $body['lyDoTuChoi'] ?? '');
+                $ok = $this->model->updateLeaveRequestStatus((int)$id, $trangThai, $approvedBy, $ghiChuNS);
                 $label = $trangThai === 'approved' ? 'phê duyệt' : 'từ chối';
                 respond(
                     ['success' => $ok, 'message' => $ok ? "Đã $label đơn nghỉ phép" : 'Không thể xử lý'],

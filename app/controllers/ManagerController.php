@@ -537,7 +537,8 @@ class ManagerController
             exit;
         }
 
-        $ok    = $this->model->updateLeaveRequestStatus($id, $trangThai, $approvedBy);
+        $ghiChuNS    = trim($_POST['ghiChuNS'] ?? $_POST['ghiChu'] ?? '');
+        $ok    = $this->model->updateLeaveRequestStatus($id, $trangThai, $approvedBy, $ghiChuNS);
         $label = $trangThai === 'approved' ? 'phê duyệt' : 'từ chối';
         $_SESSION[$ok ? 'leave_success' : 'leave_error'] = $ok
             ? "Đã $label đơn nghỉ phép thành công"

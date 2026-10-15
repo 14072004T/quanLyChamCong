@@ -325,7 +325,8 @@ function statusBadge(st) {
         'working': '<span style="color:#22c55e">✓ Bình thường</span>',
         'late':    '<span style="color:#f59e0b">⚠ Đi trễ</span>',
         'absent':  '<span style="color:#ef4444">✗ Vắng</span>',
-        'leave':   '<span style="color:#6366f1">📋 Nghỉ phép</span>',
+        'leave_paid': '<span style="color:#2563eb;font-weight:700;">CP (Có phép)</span>',
+        'leave':   '<span style="color:#6366f1">KP (Không phép)</span>',
         'holiday': '<span style="color:#f97316">🎉 Ngày lễ</span>',
         'weekend': '<span style="color:#94a3b8">🏠 Cuối tuần</span>'
     };

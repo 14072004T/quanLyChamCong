@@ -885,7 +885,8 @@ foreach (($salaryRows ?? []) as $summaryRow) {
 .emp-daily-badge.normal  { background: #dcfce7; color: #166534; }
 .emp-daily-badge.late    { background: #fee2e2; color: #991b1b; }
 .emp-daily-badge.absent  { background: #f1f5f9; color: #64748b; }
-.emp-daily-badge.leave   { background: #fef9c3; color: #92400e; }
+.emp-daily-badge.leave       { background: #fef9c3; color: #92400e; }
+.emp-daily-badge.leave-paid  { background: #dbeafe; color: #1e40af; font-weight: 800; letter-spacing: 0.5px; }
 .emp-daily-badge.off     { background: #f1f5f9; color: #94a3b8; }
 .time-in  { color: #16a34a; font-weight: 700; }
 .time-out { color: #2563eb; font-weight: 700; }
@@ -1040,8 +1041,10 @@ foreach (($salaryRows ?? []) as $summaryRow) {
             } else if (!checkIn && !checkOut) {
                 if (dayType === 'off_shift' || dayType === 'weekend') {
                     badgeCls = 'off'; badgeTxt = dayType === 'weekend' ? 'Cuối tuần' : 'Ngày nghỉ';
+                } else if (dayType === 'leave_paid') {
+                    badgeCls = 'leave-paid'; badgeTxt = 'CP';
                 } else if (dayType === 'leave') {
-                    badgeCls = 'leave'; badgeTxt = 'Nghỉ phép';
+                    badgeCls = 'leave'; badgeTxt = 'KP';
                 } else {
                     badgeCls = 'absent'; badgeTxt = 'Không CC';
                 }

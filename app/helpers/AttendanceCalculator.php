@@ -83,7 +83,7 @@ class AttendanceCalculator
 
             // Tính tổng
             $totals['total_work_days'] += (float)$dayData['work_value'];
-            $totals['total_leave_days'] += $dayData['day_type'] === 'leave' ? 1 : 0;
+            $totals['total_leave_days'] += ($dayData['day_type'] === 'leave' || $dayData['day_type'] === 'leave_paid') ? 1 : 0;
             $totals['total_holiday_days'] += $dayData['day_type'] === 'holiday' ? 1 : 0;
             $totals['total_weekend_days'] += $dayData['day_type'] === 'weekend' ? 1 : 0;
             $totals['total_absent_days'] += $dayData['day_type'] === 'absent' ? 1 : 0;
@@ -154,26 +154,38 @@ class AttendanceCalculator
             $isHalfDay = false;
             $leaveId = null;
             $leaveReason = null;
+            $isPaid = true; // Mặc định có lương (CP)
             if (is_array($leaveType)) {
                 $isHalfDay = !empty($leaveType['laNuaNgay']);
                 $leaveId = $leaveType['leave_id'] ?? null;
                 $leaveReason = $leaveType['lyDo'] ?? null;
-                $leaveType = $leaveType['type'] ?? 'annual';
+                // isPaid: tất cả loại phép trừ 'other' là có lương (CP)
+                $isPaid = isset($leaveType['isPaid']) ? (bool)$leaveType['isPaid'] : true;
+                if (isset($leaveType['type'])) {
+                    $isPaid = ($leaveType['type'] !== 'other');
+                }
+                $leaveType = $leaveType['type'] ?? 'personal';
             }
             $leaveType = strtolower(trim((string)$leaveType));
+            // 'other' = không lương (KP), tất cả loại khác = có lương (CP)
+            $isPaid = ($leaveType !== 'other');
+            $dayType = $isPaid ? 'leave_paid' : 'leave';
+            // Nếu nghỉ có lương (CP) → tính công bằng 1 ngày làm việc
+            $workValue = $isPaid ? 1.0 : 0.0;
             return [
-                'date' => $date,
-                'day_type' => 'leave',
-                'loaiNghiPhep' => $leaveType,
-                'leave_id' => $leaveId,
-                'leave_reason' => $leaveReason,
-                'day_type_label' => self::getLeaveTypeLabel($leaveType),
-                'work_value' => 0.0,
-                'work_hours' => 0,
-                'ot_hours' => 0,
+                'date'           => $date,
+                'day_type'       => $dayType,
+                'loaiNghiPhep'   => $leaveType,
+                'isPaid'         => $isPaid,
+                'leave_id'       => $leaveId,
+                'leave_reason'   => $leaveReason,
+                'day_type_label' => $isPaid ? 'Có phép (CP)' : 'Nghỉ không lương (KP)',
+                'work_value'     => $workValue,
+                'work_hours'     => $isPaid ? 8 : 0,
+                'ot_hours'       => 0,
                 'has_attendance' => false,
-                'shift_name' => $shift['tenCa'] ?? 'HC',
-                'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
+                'shift_name'     => $shift['tenCa'] ?? 'HC',
+                'maCa'           => $shift['maCa'] ?? $shift['id'] ?? null,
             ];
         }
 

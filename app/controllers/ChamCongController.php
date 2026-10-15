@@ -859,9 +859,22 @@ class ChamCongController
         $detail = $this->model->getLeaveById($id);
         if ($detail) {
             // Translate leave type
-            $types = ['annual' => 'Nghỉ phép năm', 'sick' => 'Nghỉ ốm', 'personal' => 'Việc riêng', 'unpaid' => 'Nghỉ không lương'];
+            $types = [
+                'sick'      => 'Nghỉ ốm / Khám bệnh',
+                'personal'  => 'Nghỉ việc riêng',
+                'emergency' => 'Nghỉ khẩn cấp',
+                'wedding'   => 'Nghỉ cưới',
+                'funeral'   => 'Nghỉ tang',
+                'annual'    => 'Nghỉ phép thường niên (Annual)',
+                'other'     => 'Khác (Không lương)',
+            ];
             $detail['leave_type_text'] = $types[$detail['loaiNghiPhep']] ?? $detail['loaiNghiPhep'];
-            
+
+            // Paid/unpaid flag
+            $paidTypes = ['sick', 'personal', 'emergency', 'wedding', 'funeral', 'annual'];
+            $detail['isPaid'] = in_array($detail['loaiNghiPhep'], $paidTypes, true);
+            $detail['hinhThucLabel'] = $detail['isPaid'] ? 'Có lương (CP)' : 'Không lương (KP)';
+
             // Format dates
             $detail['from_date_fmt'] = date('d/m/Y', strtotime($detail['tuNgay']));
             $detail['to_date_fmt'] = date('d/m/Y', strtotime($detail['denNgay']));
@@ -1006,6 +1019,36 @@ class ChamCongController
 
         $maND       = (int)($_SESSION['user']['maND'] ?? 0);
         $myRequests = $this->model->getLeaveRequestsByUser($maND);
+
+        // Tính quota nghỉ phép cho năm hiện tại
+        $currentYear = (int)date('Y');
+        $totalQuota  = 12; // 12 ngày phép/năm theo quy định nhà nước
+
+        // Tính số ngày đã sử dụng (approved, không tính 'other')
+        $usedDays    = 0;
+        $pendingDays = 0;
+        $paidTypes   = ['sick', 'personal', 'emergency', 'wedding', 'funeral', 'annual'];
+        foreach ($myRequests as $req) {
+            if (substr($req['tuNgay'] ?? '', 0, 4) !== (string)$currentYear) continue;
+            if (!in_array($req['loaiNghiPhep'] ?? '', $paidTypes, true)) continue;
+            $days = max(1, (int)round((strtotime($req['denNgay']) - strtotime($req['tuNgay'])) / 86400) + 1);
+            if (($req['trangThai'] ?? '') === 'approved') {
+                $usedDays += $days;
+            } elseif (($req['trangThai'] ?? '') === 'pending') {
+                $pendingDays += $days;
+            }
+        }
+        $remainingDays = max(0, $totalQuota - $usedDays - $pendingDays);
+
+        $leaveQuota = [
+            'total'     => $totalQuota,
+            'used'      => $usedDays,
+            'pending'   => $pendingDays,
+            'remaining' => $remainingDays,
+            'year'      => $currentYear,
+            'updatedAt' => date('d/m/Y H:i'),
+        ];
+
         require 'app/views/chamcong/leave_request_form.php';
     }
 

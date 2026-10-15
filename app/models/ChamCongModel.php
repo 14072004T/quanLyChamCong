@@ -233,6 +233,8 @@ class ChamCongModel
         $this->addColumnIfMissing('donnghiphep', 'tepMinhChung', 'VARCHAR(255) DEFAULT NULL');
         $this->addColumnIfMissing('donnghiphep', 'nguoiDuyet', 'INT DEFAULT NULL');
         $this->addColumnIfMissing('donnghiphep', 'ngayDuyet', 'DATETIME DEFAULT NULL');
+        // ghiChuNS: lý do từ chối của HR/Quản lý
+        $this->addColumnIfMissing('donnghiphep', 'ghiChuNS', 'TEXT DEFAULT NULL');
 
         // Migration: suachamcong — add nullable columns for edit request feature
         $this->addColumnIfMissing('suachamcong', 'gioVaoDeXuat', 'DATETIME DEFAULT NULL');
@@ -3690,23 +3692,30 @@ class ChamCongModel
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
 
+        // Loại phép có lương (CP): tất cả trừ 'other'
+        // Loại phép không lương (KP): 'other'
+        $paidLeaveTypes = ['sick', 'personal', 'emergency', 'wedding', 'funeral', 'annual'];
+
         $data = [];
         foreach ($rows as $row) {
             $currentDate = new DateTime($row['tuNgay']);
             $endDate = new DateTime($row['denNgay']);
-            $leaveType = $row['loaiNghiPhep'] ?? 'annual';
+            $leaveType = $row['loaiNghiPhep'] ?? 'personal';
             $leaveId = $row['id'] ?? 0;
             $lyDo = $row['lyDo'] ?? '';
+            // CP = có hưởng lương → tính 1 công ngày đó
+            $isPaid = in_array($leaveType, $paidLeaveTypes, true);
 
             while ($currentDate <= $endDate) {
                 $dateStr = $currentDate->format('Y-m-d');
                 if ($dateStr >= $fromDate && $dateStr <= $toDate) {
                     $data[$dateStr] = [
-                        'type' => $leaveType,
-                        'laNuaNgay' => false,
-                        'work_value_deduction' => 1.0,
-                        'leave_id' => $leaveId,
-                        'lyDo' => $lyDo
+                        'type'              => $leaveType,
+                        'laNuaNgay'         => false,
+                        'work_value_deduction' => $isPaid ? 0.0 : 1.0,
+                        'leave_id'          => $leaveId,
+                        'lyDo'              => $lyDo,
+                        'isPaid'            => $isPaid,
                     ];
                 }
                 $currentDate->modify('+1 day');
@@ -3854,24 +3863,25 @@ class ChamCongModel
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
 
-    public function updateLeaveRequestStatus($id, $trangThai, $nguoiDuyet = null)
+    public function updateLeaveRequestStatus($id, $trangThai, $nguoiDuyet = null, $ghiChuNS = '')
     {
         $id = (int)$id;
         $trangThai = trim((string)$trangThai);
         if ($trangThai === 'approve') $trangThai = 'approved';
         if ($trangThai === 'reject')  $trangThai = 'rejected';
         $nguoiDuyet = $nguoiDuyet !== null ? (int)$nguoiDuyet : null;
+        $ghiChuNS = trim((string)$ghiChuNS);
 
         if ($id <= 0 || !in_array($trangThai, ['approved', 'rejected'], true)) {
             return false;
         }
 
-        $sql = "UPDATE donnghiphep SET trangThai = ?, nguoiDuyet = ?, ngayDuyet = NOW() WHERE id = ? AND trangThai = 'pending'";
+        $sql = "UPDATE donnghiphep SET trangThai = ?, nguoiDuyet = ?, ngayDuyet = NOW(), ghiChuNS = ? WHERE id = ? AND trangThai = 'pending'";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             return false;
         }
-        $stmt->bind_param("sii", $trangThai, $nguoiDuyet, $id);
+        $stmt->bind_param("sisi", $trangThai, $nguoiDuyet, $ghiChuNS, $id);
         $result = $stmt->execute();
         $affected = $stmt->affected_rows > 0;
         $stmt->close();
