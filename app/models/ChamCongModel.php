@@ -2088,35 +2088,62 @@ class ChamCongModel
                   q.tenCaHienTai, q.tenCaMoi, q.lyDo, q.trangThai, q.ghiChuQL,
                   q.ngayTao, q.ngayCapNhat, q.hoTen, q.chucVu, q.phongBan
               FROM (
-                  SELECT CONCAT('leave:', r.id) AS uid, r.id, 'leave' AS request_type,
-                      r.maND, r.tuNgay AS ngayYeuCau, r.loaiNghiPhep, 0 AS laNuaNgay,
+                  SELECT CONVERT(CONCAT('leave:', r.id) USING utf8mb4) COLLATE utf8mb4_unicode_ci AS uid,
+                      r.id,
+                      CONVERT('leave' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS request_type,
+                      r.maND, r.tuNgay AS ngayYeuCau,
+                      CONVERT(COALESCE(r.loaiNghiPhep,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS loaiNghiPhep,
+                      0 AS laNuaNgay,
                       NULL AS gioBatDau, NULL AS gioKetThuc, NULL AS soGio,
-                      NULL AS tenCaHienTai, NULL AS tenCaMoi, r.lyDo, r.trangThai,
+                      NULL AS tenCaHienTai, NULL AS tenCaMoi,
+                      CONVERT(COALESCE(r.lyDo,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS lyDo,
+                      CONVERT(COALESCE(r.trangThai,'pending') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS trangThai,
                       NULL AS ghiChuQL, r.ngayTao, r.ngayDuyet AS ngayCapNhat,
-                      n.hoTen, n.chucVu, n.phongBan
+                      CONVERT(COALESCE(n.hoTen,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS hoTen,
+                      CONVERT(COALESCE(n.chucVu,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS chucVu,
+                      CONVERT(COALESCE(n.phongBan,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phongBan
                   FROM donnghiphep r
                   LEFT JOIN nguoidung n ON n.maND = r.maND
                   UNION ALL
-                  SELECT CONCAT('correction:', c.id) AS uid, c.id, 'correction' AS request_type,
-                      c.maND, c.ngayChamCong AS ngayYeuCau, 'attendance' AS loaiNghiPhep,
-                      0 AS laNuaNgay, c.gioVaoDeXuat AS gioBatDau, c.gioRaDeXuat AS gioKetThuc,
-                      NULL AS soGio, NULL AS tenCaHienTai, NULL AS tenCaMoi, c.lyDo,
-                      c.trangThai, c.ghiChuNS AS ghiChuQL, c.ngayTao,
-                      c.ngayCapNhat, n.hoTen, n.chucVu, n.phongBan
+                  SELECT CONVERT(CONCAT('correction:', c.id) USING utf8mb4) COLLATE utf8mb4_unicode_ci AS uid,
+                      c.id,
+                      CONVERT('correction' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS request_type,
+                      c.maND, c.ngayChamCong AS ngayYeuCau,
+                      CONVERT('attendance' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS loaiNghiPhep,
+                      0 AS laNuaNgay,
+                      c.gioVaoDeXuat AS gioBatDau, c.gioRaDeXuat AS gioKetThuc,
+                      NULL AS soGio, NULL AS tenCaHienTai, NULL AS tenCaMoi,
+                      CONVERT(COALESCE(c.lyDo,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS lyDo,
+                      CONVERT(COALESCE(c.trangThai,'pending') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS trangThai,
+                      CONVERT(COALESCE(c.ghiChuNS,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS ghiChuQL,
+                      c.ngayTao, c.ngayCapNhat,
+                      CONVERT(COALESCE(n.hoTen,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS hoTen,
+                      CONVERT(COALESCE(n.chucVu,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS chucVu,
+                      CONVERT(COALESCE(n.phongBan,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phongBan
                   FROM suachamcong c
                   LEFT JOIN nguoidung n ON n.maND = c.maND
                   UNION ALL
-                  SELECT CONCAT('ot:', a.id) AS uid, a.id, 'ot' AS request_type,
-                      a.maND, a.hieuLucTu AS ngayYeuCau, 'ot' AS loaiNghiPhep,
-                      0 AS laNuaNgay, s.gioBatDau, s.gioKetThuc, NULL AS soGio,
-                      NULL AS tenCaHienTai, s.tenCa AS tenCaMoi, CONCAT('Ca ', s.tenCa) AS lyDo,
-                      'approved' AS trangThai, NULL AS ghiChuQL, a.ngayTao,
-                      a.ngayTao AS ngayCapNhat, n.hoTen, n.chucVu, n.phongBan
+                  SELECT CONVERT(CONCAT('ot:', a.id) USING utf8mb4) COLLATE utf8mb4_unicode_ci AS uid,
+                      a.id,
+                      CONVERT('ot' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS request_type,
+                      a.maND, a.hieuLucTu AS ngayYeuCau,
+                      CONVERT('ot' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS loaiNghiPhep,
+                      0 AS laNuaNgay,
+                      s.gioBatDau, s.gioKetThuc, NULL AS soGio,
+                      NULL AS tenCaHienTai,
+                      CONVERT(COALESCE(s.tenCa,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS tenCaMoi,
+                      CONVERT(CONCAT('Ca ', COALESCE(s.tenCa,'')) USING utf8mb4) COLLATE utf8mb4_unicode_ci AS lyDo,
+                      CONVERT('approved' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS trangThai,
+                      NULL AS ghiChuQL, a.ngayTao, a.ngayTao AS ngayCapNhat,
+                      CONVERT(COALESCE(n.hoTen,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS hoTen,
+                      CONVERT(COALESCE(n.chucVu,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS chucVu,
+                      CONVERT(COALESCE(n.phongBan,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phongBan
                   FROM canhanvien a
                   JOIN calamviec s ON s.id = a.maCa AND s.hoatDong = 1
                   LEFT JOIN nguoidung n ON n.maND = a.maND
                   WHERE s.kyHieu = 'OT'
               ) q";
+
 
         $conditions = [];
         $types = '';
