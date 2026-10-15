@@ -1,0 +1,252 @@
+@startuml ERD_QuanLyChamCong
+' ========================================================
+' PlantUML ERD Diagram - Hệ Thống Quản Lý Chấm Công
+' Co so du lieu: dl_final (Bao gom bang audit chamconghothay)
+' ========================================================
+
+skinparam monochrome false
+skinparam linetype ortho
+skinparam shadowing false
+skinparam class {
+    BackgroundColor White
+    HeaderBackgroundColor #2C3E50
+    HeaderFontColor White
+    BorderColor #2C3E50
+    FontSize 12
+}
+
+' --------------------------------------------------------
+' ENTITY DEFINITIONS
+' --------------------------------------------------------
+
+entity "taikhoan" as taikhoan {
+  * **maTK** : INT <<PK>>
+  --
+  * tenDangNhap : VARCHAR(100) <<UQ>>
+  * matKhau : VARCHAR(255)
+  * trangThai : VARCHAR(50)
+  soLanDangNhapSai : INT
+  lanDangNhapCuoi : DATETIME
+}
+
+entity "nguoidung" as nguoidung {
+  * **maND** : INT <<PK>>
+  --
+  * maTK : INT <<FK>>
+  * hoTen : VARCHAR(100)
+  * email : VARCHAR(100)
+  * soDienThoai : VARCHAR(20)
+  * chucVu : ENUM('admin','nhansu','quanly','nhanvien','kythuat')
+  phongBan : VARCHAR(100)
+  * trangThai : TINYINT(1)
+}
+
+' Bảng vai trò kế thừa 1-1 từ nguoidung
+entity "nhanvien" as nhanvien {
+  * **maND** : INT <<PK, FK>>
+}
+
+entity "nhansu" as nhansu {
+  * **maND** : INT <<PK, FK>>
+}
+
+entity "quanly" as quanly {
+  * **maND** : INT <<PK, FK>>
+}
+
+entity "kythuat" as kythuat {
+  * **maND** : INT <<PK, FK>>
+}
+
+' Danh mục Ca & Phân ca
+entity "calamviec" as calamviec {
+  * **id** : INT <<PK>>
+  --
+  * tenCa : VARCHAR(100)
+  kyHieu : VARCHAR(20)
+  mauSac : VARCHAR(20)
+  * gioBatDau : TIME
+  * gioKetThuc : TIME
+  * hoatDong : TINYINT(1)
+  ngayTao : DATETIME
+}
+
+entity "canhanvien" as canhanvien {
+  * **id** : INT <<PK>>
+  --
+  * maND : INT <<FK>>
+  * maCa : INT <<FK>>
+  * hieuLucTu : DATE
+  hieuLucDen : DATE
+  ngayTao : DATETIME
+}
+
+' BẢNG TRỌNG TÂM: BẢNG CHẤM CÔNG HỘ THAY (AUDIT TRAIL HR)
+entity "chamconghothay" as chamconghothay #FFF3CD {
+  * **id** : INT <<PK>>
+  --
+  * maNguoiDuocChamHo : INT <<FK>>
+  * maHR : INT <<FK>>
+  * ngayChamHo : DATE
+  maCa : INT <<FK>>
+  * hanhDong : ENUM('IN','OUT','FULL')
+  gioVao : DATETIME
+  gioRa : DATETIME
+  congChuan : DECIMAL(3,2)
+  mienTruDiTre : TINYINT
+  * lyDo : TEXT
+  ghiChuHR : VARCHAR(500)
+  lichSuVaoId : INT <<FK>>
+  lichSuRaId : INT <<FK>>
+  * ngayTao : DATETIME
+}
+
+' Nhận diện khuôn mặt & Quét Kiosk Tablet
+entity "face_profile" as face_profile {
+  * **id** : INT <<PK>>
+  --
+  * maND : INT <<FK, UQ>>
+  * embedding : TEXT
+  embedding_front : TEXT
+  embedding_left : TEXT
+  embedding_right : TEXT
+  ngayTao : DATETIME
+  ngayCapNhat : DATETIME
+}
+
+entity "tablet_face_scans" as tablet_face_scans {
+  * **id** : INT <<PK>>
+  --
+  * maND : INT <<FK>>
+  thoiGianQuet : DATETIME
+  anhMinhChung : VARCHAR(255)
+}
+
+' Nhật ký & Chấm công
+entity "lichsuchamcong" as lichsuchamcong {
+  * **id** : INT <<PK>>
+  --
+  * maND : INT <<FK>>
+  * hanhDong : ENUM('IN','OUT')
+  * phuongThuc : ENUM('LAN','QR','HR_OVERRIDE')
+  tenWifi : VARCHAR(120)
+  ghiChu : VARCHAR(255)
+  anhMinhChung : VARCHAR(255)
+  * ngayTao : DATETIME
+}
+
+entity "tonghopngaycong" as tonghopngaycong {
+  * **id** : INT <<PK>>
+  --
+  * maND : INT <<FK>>
+  * ngayLamViec : DATE
+  gioVaoDau : DATETIME
+  gioRaCuoi : DATETIME
+  phutLamViec : INT
+  phutTangCa : INT
+  phutDiTre : INT
+  trangThai : ENUM('normal','late','early','absent','leave')
+}
+
+' Giải trình & Sửa công
+entity "suachamcong" as suachamcong {
+  * **id** : INT <<PK>>
+  --
+  * maND : INT <<FK>>
+  * ngayChamCong : DATE
+  gioCu : DATETIME
+  gioMoi : DATETIME
+  gioVaoDeXuat : DATETIME
+  gioRaDeXuat : DATETIME
+  lyDo : TEXT
+  trangThai : ENUM('pending','approved','rejected')
+  tepMinhChung : VARCHAR(255)
+  ghiChuNS : VARCHAR(255)
+}
+
+' Nghỉ phép
+entity "donnghiphep" as donnghiphep {
+  * **id** : INT <<PK>>
+  --
+  * maND : INT <<FK-Logic>>
+  tuNgay : DATE
+  denNgay : DATE
+  lyDo : TEXT
+  trangThai : ENUM('pending','approved','rejected')
+  loaiNghiPhep : VARCHAR(50)
+  tepMinhChung : VARCHAR(255)
+  nguoiDuyet : INT <<FK-Logic>>
+  ngayDuyet : DATETIME
+  ngayTao : DATETIME
+}
+
+' Duyệt công theo tháng
+entity "duyetcongnhanvien" as duyetcongnhanvien {
+  * **id** : INT <<PK>>
+  --
+  * thangNam : CHAR(7)
+  * maND : INT <<FK-Logic>>
+  * maNguoiGuiNS : INT <<FK-Logic>>
+  trangThai : ENUM('draft','submitted','approved','rejected')
+  ngayGui : DATETIME
+  ngayDuyet : DATETIME
+  ghiChu : VARCHAR(255)
+}
+
+entity "duyetcongthang" as duyetcongthang {
+  * **id** : INT <<PK>>
+  --
+  * thangNam : CHAR(7)
+  * phongBan : VARCHAR(120)
+  * maNguoiGuiNS : INT <<FK>>
+  maNguoiDuyetQL : INT <<FK>>
+  trangThai : ENUM('draft','submitted','approved','rejected')
+  ngayGui : DATETIME
+  ngayDuyet : DATETIME
+  ghiChu : VARCHAR(255)
+}
+
+' --------------------------------------------------------
+' RELATIONSHIPS
+' --------------------------------------------------------
+
+' Tài khoản & Người dùng
+taikhoan ||--o{ nguoidung : "maTK"
+
+' Phân quyền vai trò (1-1)
+nguoidung ||--o| nhanvien : "maND"
+nguoidung ||--o| nhansu : "maND"
+nguoidung ||--o| quanly : "maND"
+nguoidung ||--o| kythuat : "maND"
+
+' Phân ca làm việc
+nguoidung ||--o{ canhanvien : "maND"
+calamviec ||--o{ canhanvien : "maCa"
+
+' BẢNG CHẤM CÔNG HỘ THAY (Focus Relationships)
+nguoidung ||--o{ chamconghothay : "maNguoiDuocChamHo (Nhân viên)"
+nguoidung ||--o{ chamconghothay : "maHR (HR thực hiện)"
+calamviec ||--o{ chamconghothay : "maCa"
+lichsuchamcong ||--o| chamconghothay : "lichSuVaoId (Check-in log)"
+lichsuchamcong ||--o| chamconghothay : "lichSuRaId (Check-out log)"
+
+' Hồ sơ khuôn mặt & Tablet Scan
+nguoidung ||--o| face_profile : "maND"
+nguoidung ||--o{ tablet_face_scans : "maND"
+
+' Nhật ký chấm công & Tổng hợp
+nguoidung ||--o{ lichsuchamcong : "maND"
+nguoidung ||--o{ tonghopngaycong : "maND"
+nguoidung ||--o{ suachamcong : "maND"
+
+' Duyệt công tháng (Phòng ban)
+nguoidung ||--o{ duyetcongthang : "maNguoiGuiNS"
+nguoidung ||--o{ duyetcongthang : "maNguoiDuyetQL"
+
+' Quan hệ Logic
+nguoidung ..o{ donnghiphep : "maND (người xin)"
+nguoidung ..o{ donnghiphep : "nguoiDuyet"
+nguoidung ..o{ duyetcongnhanvien : "maND"
+nguoidung ..o{ duyetcongnhanvien : "maNguoiGuiNS"
+
+@enduml

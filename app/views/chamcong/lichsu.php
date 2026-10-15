@@ -269,7 +269,7 @@ $days = ($fromTs && $toTs) ? (int)max(1, floor(abs($toTs - $fromTs) / 86400) + 1
                                         <th style="padding: 6px 10px;">Thời gian</th>
                                         <th style="padding: 6px 10px;">Hành động</th>
                                         <th style="padding: 6px 10px;">Phương thức</th>
-                                        <th style="padding: 6px 10px;">WiFi</th>
+
                                         <th style="padding: 6px 10px;">Ghi chú</th>
                                     </tr>
                                 </thead>
@@ -288,7 +288,7 @@ $days = ($fromTs && $toTs) ? (int)max(1, floor(abs($toTs - $fromTs) / 86400) + 1
                                             <?php endif; ?>
                                         </td>
                                         <td style="padding: 4px 10px;"><span class="ls-badge ls-badge-phuongThuc" style="padding: 2px 6px; font-size: 10px;"><?= htmlspecialchars($row['phuongThuc'] ?? 'LAN') ?></span></td>
-                                        <td style="font-size:11px; padding: 4px 10px;"><?= htmlspecialchars(!empty($row['tenWifi']) ? $row['tenWifi'] : 'Wifi Công ty') ?></td>
+
                                         <td style="padding: 4px 10px;">
                                             <?php 
                                             if (($row['hanhDong'] ?? '') === 'IN') {
