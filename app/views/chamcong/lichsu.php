@@ -20,9 +20,9 @@ if (is_array($history)) {
             $inCount++;
             // Calculate late info
             $time = date('H:i:s', strtotime($row['ngayTao']));
-            if ($time > '08:15:00') {
+            if ($time > '08:30:00') {
                 $lateCount++;
-                $diff = strtotime($time) - strtotime('08:00:00');
+                $diff = strtotime($time) - strtotime('08:30:00');
                 $totalLateMinutes += floor($diff / 60);
             }
         } elseif (($row['hanhDong'] ?? '') === 'OUT') {
@@ -305,8 +305,8 @@ $days = ($fromTs && $toTs) ? (int)max(1, floor(abs($toTs - $fromTs) / 86400) + 1
                                             <?php 
                                             if (($row['hanhDong'] ?? '') === 'IN') {
                                                 $time = date('H:i:s', strtotime($row['ngayTao']));
-                                                if ($time > '08:15:00') {
-                                                    $diff = strtotime($time) - strtotime('08:00:00');
+                                                if ($time > '08:30:00') {
+                                                    $diff = strtotime($time) - strtotime('08:30:00');
                                                     $mins = floor($diff / 60);
                                                     echo "<span class='ls-badge ls-badge-late'>Đi muộn {$mins}p</span>";
                                                 } else {
