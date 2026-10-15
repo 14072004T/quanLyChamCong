@@ -830,10 +830,10 @@ $updatedAt = date('H:i, d/m/Y');
                         <tr>
                             <th>Nhân viên</th>
                             <th>Số lần</th>
-                            <th>Số phút</th>
+                            <th>Phút TB</th>
                             <th>Nhân viên</th>
                             <th>Số lần</th>
-                            <th>Số phút</th>
+                            <th>Phút TB</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -849,7 +849,7 @@ $updatedAt = date('H:i, d/m/Y');
                                 <?php if ($lateRow): ?>
                                     <td><div class="mgrr-person"><span class="mgrr-avatar"><?= htmlspecialchars(mb_substr($lateName, 0, 1)) ?></span><strong><?= htmlspecialchars($lateName) ?></strong></div></td>
                                     <td><?= (int)($lateRow['late_count'] ?? 0) ?></td>
-                                    <td style="color:#ef4444;font-weight:800"><?= (int)($lateRow['late_minutes'] ?? 0) ?> phút</td>
+                                    <td style="color:#ef4444;font-weight:800"><?php $lc = max(1,(int)($lateRow['late_count']??1)); echo round((int)($lateRow['late_minutes']??0)/$lc); ?> phút</td>
                                 <?php elseif (!$hasLateRows && $idx === 0): ?>
                                     <td colspan="3" style="text-align:center;color:#64748b">Không có dữ liệu</td>
                                 <?php else: ?>
@@ -860,7 +860,7 @@ $updatedAt = date('H:i, d/m/Y');
                                 <?php if ($earlyRow): ?>
                                     <td><div class="mgrr-person"><span class="mgrr-avatar"><?= htmlspecialchars(mb_substr($earlyName, 0, 1)) ?></span><strong><?= htmlspecialchars($earlyName) ?></strong></div></td>
                                     <td><?= (int)($earlyRow['early_count'] ?? 0) ?></td>
-                                    <td style="color:#ef4444;font-weight:800"><?= (int)($earlyRow['early_minutes'] ?? 0) ?> phút</td>
+                                    <td style="color:#ef4444;font-weight:800"><?php $ec = max(1,(int)($earlyRow['early_count']??1)); echo round((int)($earlyRow['early_minutes']??0)/$ec); ?> phút</td>
                                 <?php elseif (!$hasEarlyRows && $idx === 0): ?>
                                     <td colspan="3" style="text-align:center;color:#64748b">Không có dữ liệu</td>
                                 <?php else: ?>
@@ -891,7 +891,7 @@ $updatedAt = date('H:i, d/m/Y');
             </section>
 
             <section class="mgrr-panel">
-                <div class="mgrr-panel-head"><div class="mgrr-panel-title">Tổng hợp yêu cầu trong kỳ</div></div>
+                <div class="mgrr-panel-head"><div class="mgrr-panel-title">Tổng hợp đơn yêu cầu</div></div>
                 <?php
                 $rs = $requestSummary ?? ['leave'=>['approved'=>0,'rejected'=>0,'pending'=>0],'ot'=>['approved'=>0,'rejected'=>0,'pending'=>0],'correction'=>['approved'=>0,'rejected'=>0,'pending'=>0]];
                 $totalApproved = $rs['leave']['approved'] + $rs['ot']['approved'] + $rs['correction']['approved'];
@@ -981,7 +981,7 @@ function switchTab(tab) {
     document.getElementById('tab-late').style.cssText  = tab === 'late'  ? 'padding:7px 18px;border-radius:20px;border:none;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;font-size:.85rem' : 'padding:7px 18px;border-radius:20px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-weight:700;cursor:pointer;font-size:.85rem';
     document.getElementById('tab-early').style.cssText = tab === 'early' ? 'padding:7px 18px;border-radius:20px;border:none;background:#ef4444;color:#fff;font-weight:700;cursor:pointer;font-size:.85rem' : 'padding:7px 18px;border-radius:20px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-weight:700;cursor:pointer;font-size:.85rem';
     document.getElementById('col-count').textContent = tab === 'late' ? 'Số lần trễ' : 'Số lần về sớm';
-    document.getElementById('col-mins').textContent  = tab === 'late' ? 'Tổng phút trễ' : 'Tổng phút sớm';
+    document.getElementById('col-mins').textContent  = tab === 'late' ? 'Phút TB trễ' : 'Phút TB sớm';
     var tbody = document.getElementById('detail-tbody');
     tbody.innerHTML = '';
     if (!data.length) {
@@ -997,7 +997,8 @@ function switchTab(tab) {
         var initial = name.charAt(0);
         var dept = row.phongBan || '-';
         var cnt  = parseInt(row[countKey] || 0);
-        var mins = parseInt(row[minsKey]  || 0);
+        var totalMins = parseInt(row[minsKey] || 0);
+        var avgMins = cnt > 0 ? Math.round(totalMins / cnt) : 0;
         var rank = i < 3 ? ['🥇','🥈','🥉'][i] : (i + 1);
         tbody.innerHTML += '<tr style="border-bottom:1px solid #f1f5f9"' + (i % 2 === 0 ? '' : ' style="background:#f8fafc;border-bottom:1px solid #f1f5f9"') + '>'
             + '<td style="padding:11px 16px;font-weight:700;font-size:.9rem">' + rank + '</td>'
@@ -1006,7 +1007,7 @@ function switchTab(tab) {
             + '<strong>' + esc(name) + '</strong></div></td>'
             + '<td style="padding:11px 16px;color:#64748b">' + esc(dept) + '</td>'
             + '<td style="padding:11px 16px;text-align:center;font-weight:700">' + cnt + '</td>'
-            + '<td style="padding:11px 16px;text-align:center;font-weight:800;color:' + color + '">' + mins + ' phút</td>'
+            + '<td style="padding:11px 16px;text-align:center;font-weight:800;color:' + color + '">' + avgMins + ' phút</td>'
             + '</tr>';
     });
     document.getElementById('detail-count').textContent = 'Tổng: ' + data.length + ' nhân viên';
@@ -1020,10 +1021,14 @@ function exportTopDetail() {
     var data = _currentTab === 'late' ? _topLate : _topEarly;
     var countKey = _currentTab === 'late' ? 'late_count' : 'early_count';
     var minsKey  = _currentTab === 'late' ? 'late_minutes' : 'early_minutes';
-    var header   = _currentTab === 'late' ? ['STT','Ho ten','Phong ban','So lan tre','Tong phut tre'] : ['STT','Ho ten','Phong ban','So lan ve som','Tong phut ve som'];
+    var header   = _currentTab === 'late' ? ['STT','Ho ten','Phong ban','So lan tre','Phut TB tre'] : ['STT','Ho ten','Phong ban','So lan ve som','Phut TB ve som'];
     var rows = [header];
     data.forEach(function(row, i) {
-        rows.push([(i+1), row.hoTen || '', row.phongBan || '', parseInt(row[countKey]||0), parseInt(row[minsKey]||0)]);
+        var cKey = _currentTab === 'late' ? 'late_count' : 'early_count';
+        var mKey = _currentTab === 'late' ? 'late_minutes' : 'early_minutes';
+        var cnt = parseInt(row[cKey]||0);
+        var avg = cnt > 0 ? Math.round(parseInt(row[mKey]||0) / cnt) : 0;
+        rows.push([(i+1), row.hoTen || '', row.phongBan || '', cnt, avg]);
     });
     var csv = rows.map(function(r){ return r.join(','); }).join('\n');
     var bom = '\uFEFF';
