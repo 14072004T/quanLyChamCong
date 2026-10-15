@@ -45,7 +45,7 @@ class ChamCongModel
                 maND INT NOT NULL,
                 hanhDong ENUM('IN', 'OUT') NOT NULL,
                 phuongThuc VARCHAR(20) NOT NULL DEFAULT 'LAN',
-                tenWifi VARCHAR(120) DEFAULT NULL,
+                thongTinThietBi VARCHAR(120) DEFAULT NULL,
                 ghiChu VARCHAR(255) DEFAULT NULL,
                 ngayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -268,6 +268,37 @@ class ChamCongModel
         }
         // Chuẩn hoá giá trị cũ HR_OVERRIDE → hr_manual
         $this->conn->query("UPDATE lichsuchamcong SET phuongThuc = 'hr_manual' WHERE phuongThuc = 'HR_OVERRIDE'");
+        // Chuẩn hoá phuongThuc cũ (LAN/QR/...) → faceid cho các bản ghi chưa có giá trị hợp lệ
+        $this->conn->query("UPDATE lichsuchamcong SET phuongThuc = 'faceid' WHERE phuongThuc NOT IN ('faceid','hr_manual')");
+
+        // Migration: xoá cột thongTinThietBi cũ nếu tồn tại (sẽ dùng tên mới)
+        $ttbOld = $this->conn->query("SHOW COLUMNS FROM lichsuchamcong LIKE 'thongTinThietBi'");
+        // Migration: đổi tên cột tenWifi → thongTinThietBi
+        $twCol = $this->conn->query("SHOW COLUMNS FROM lichsuchamcong LIKE 'tenWifi'");
+        if ($twCol && $twCol->num_rows > 0) {
+            if ($ttbOld && $ttbOld->num_rows > 0) {
+                // Cả 2 cột cùng tồn tại: copy dữ liệu rồi xoá tenWifi
+                $this->conn->query("UPDATE lichsuchamcong SET thongTinThietBi = COALESCE(thongTinThietBi, tenWifi) WHERE tenWifi IS NOT NULL AND tenWifi <> ''");
+                $this->conn->query("ALTER TABLE lichsuchamcong DROP COLUMN tenWifi");
+            } else {
+                // Chỉ có tenWifi: đổi tên
+                $this->conn->query("ALTER TABLE lichsuchamcong CHANGE COLUMN tenWifi thongTinThietBi VARCHAR(120) DEFAULT NULL");
+            }
+        }
+        // Cập nhật ghiChu null cho bản ghi cũ dựa vào giờ check-in/out chuẩn HC (08:00-17:00)
+        $this->conn->query("
+            UPDATE lichsuchamcong
+            SET ghiChu = CASE
+                WHEN hanhDong = 'IN' AND TIME(ngayTao) > '08:15:00'
+                    THEN CONCAT('Đi muộn ', FLOOR((TIME_TO_SEC(TIME(ngayTao)) - TIME_TO_SEC('08:00:00')) / 60), ' phút')
+                WHEN hanhDong = 'IN'
+                    THEN 'Đúng giờ'
+                WHEN hanhDong = 'OUT' AND TIME(ngayTao) < '17:00:00'
+                    THEN CONCAT('Về sớm ', FLOOR((TIME_TO_SEC('17:00:00') - TIME_TO_SEC(TIME(ngayTao))) / 60), ' phút')
+                ELSE 'Đã lưu'
+            END
+            WHERE (ghiChu IS NULL OR ghiChu = '') AND phuongThuc = 'faceid'
+        ");
 
 
         // Clean up nguoidung_roles table if it exists (no new table added per requirement)
@@ -374,7 +405,7 @@ class ChamCongModel
         }
     }
 
-    public function chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $clientIP = null, $anhMinhChung = null)
+    public function chamCong($maND, $hanhDong, $phuongThuc, $thongTinThietBi, $ghiChu, $clientIP = null, $anhMinhChung = null)
     {
         // Get client IP if not provided (server-side only, cannot be spoofed)
         if ($clientIP === null) {
@@ -382,16 +413,16 @@ class ChamCongModel
         }
 
         $ngayTao = date('Y-m-d H:i:s');
-        $sql = "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, anhMinhChung, ngayTao) 
+        $sql = "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, thongTinThietBi, ghiChu, anhMinhChung, ngayTao)
             VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("issssss", $maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu, $anhMinhChung, $ngayTao);
+        $stmt->bind_param("issssss", $maND, $hanhDong, $phuongThuc, $thongTinThietBi, $ghiChu, $anhMinhChung, $ngayTao);
         return $stmt->execute();
     }
 
     public function getLichSuTheoNhanVien($maND, $limit = 30)
     {
-        $sql = "SELECT id, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao
+        $sql = "SELECT id, hanhDong, phuongThuc, thongTinThietBi, ghiChu, ngayTao
                 FROM lichsuchamcong
                 WHERE maND = ?
                 ORDER BY ngayTao DESC
@@ -1213,7 +1244,7 @@ class ChamCongModel
                         UNION ALL
                         SELECT l.maND, l.ngayTao AS scan_time
                         FROM lichsuchamcong l
-                        WHERE l.tenWifi = 'TABLET'
+                        WHERE l.phuongThuc = 'faceid'
                           AND l.ngayTao >= ? AND l.ngayTao < ?
                           AND NOT EXISTS (
                               SELECT 1
@@ -3060,7 +3091,7 @@ class ChamCongModel
      */
     public function getTodayLogs($maND)
     {
-        $sql = "SELECT id, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao
+        $sql = "SELECT id, hanhDong, phuongThuc, thongTinThietBi, ghiChu, ngayTao
                 FROM lichsuchamcong
                 WHERE maND = ? AND DATE(ngayTao) = CURDATE()
                 ORDER BY ngayTao ASC";
@@ -3105,7 +3136,7 @@ class ChamCongModel
             $to = date('Y-m-d');
         }
 
-        $sql = "SELECT id, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao
+        $sql = "SELECT id, hanhDong, phuongThuc, thongTinThietBi, ghiChu, ngayTao
                 FROM lichsuchamcong
                 WHERE maND = ? 
                 AND DATE(ngayTao) >= ? 
@@ -4570,14 +4601,40 @@ class ChamCongModel
             $stmtDel->close();
         }
 
+        // Xác định thiết bị HR đang dùng từ User-Agent
+        $ua = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $hrDevice = (strpos($ua, 'android') !== false || strpos($ua, 'ipad') !== false || strpos($ua, 'tablet') !== false)
+            ? 'Tablet' : 'Laptop/PC';
+
+        // Tính ghiChu dựa vào ca làm việc
+        $shiftStart = $shift['gioBatDau'] ?? '08:00:00';
+        $shiftEnd   = $shift['gioKetThuc'] ?? '17:00:00';
+        $graceSecs  = 15 * 60; // 15 phút grace
+        $vaoSecs    = strtotime($gioVao);
+        $shiftStartSecs = strtotime(date('Y-m-d') . ' ' . $shiftStart);
+        $raSecs     = strtotime($gioRa);
+        $shiftEndSecs   = strtotime(date('Y-m-d') . ' ' . $shiftEnd);
+
+        if ($vaoSecs > $shiftStartSecs + $graceSecs) {
+            $lateMins = (int)(($vaoSecs - $shiftStartSecs) / 60);
+            $noteIn = 'Đi muộn ' . $lateMins . ' phút';
+        } else {
+            $noteIn = 'Đúng giờ';
+        }
+        if ($raSecs < $shiftEndSecs) {
+            $earlyMins = (int)(($shiftEndSecs - $raSecs) / 60);
+            $noteOut = 'Về sớm ' . $earlyMins . ' phút';
+        } else {
+            $noteOut = 'Đã lưu';
+        }
+
         // 1. Ghi vào lichsuchamcong - Check-in
         $idVao = null;
         $stmt = $this->conn->prepare(
-            "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) VALUES (?, 'IN', 'hr_manual', NULL, ?, ?)"
+            "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, thongTinThietBi, ghiChu, ngayTao) VALUES (?, 'IN', 'hr_manual', ?, ?, ?)"
         );
-        $noteIn = $notePrefix . ' Vào ca';
         if ($stmt) {
-            $stmt->bind_param('iss', $maNV, $noteIn, $gioVao);
+            $stmt->bind_param('isss', $maNV, $hrDevice, $noteIn, $gioVao);
             $stmt->execute();
             $idVao = (int)$this->conn->insert_id;
             $stmt->close();
@@ -4586,11 +4643,10 @@ class ChamCongModel
         // 2. Ghi vào lichsuchamcong - Check-out
         $idRa = null;
         $stmt2 = $this->conn->prepare(
-            "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, tenWifi, ghiChu, ngayTao) VALUES (?, 'OUT', 'hr_manual', NULL, ?, ?)"
+            "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, thongTinThietBi, ghiChu, ngayTao) VALUES (?, 'OUT', 'hr_manual', ?, ?, ?)"
         );
-        $noteOut = $notePrefix . ' Ra ca';
         if ($stmt2) {
-            $stmt2->bind_param('iss', $maNV, $noteOut, $gioRa);
+            $stmt2->bind_param('isss', $maNV, $hrDevice, $noteOut, $gioRa);
             $stmt2->execute();
             $idRa = (int)$this->conn->insert_id;
             $stmt2->close();

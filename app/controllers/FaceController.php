@@ -672,13 +672,29 @@ class FaceController extends Controller
                 echo json_encode(['success' => false, 'message' => 'Hôm nay ' . $employeeName . ' (Mã NV: ' . $matchedId . ') không có lịch làm việc (ca OFF).']);
                 exit;
             }
-            $ok = $chamCongModel->chamCong($matchedId, 'IN', 'faceid', 'TABLET', 'Chấm vào bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+            // Tính ghiChu check-in so với giờ bắt đầu ca
+            $shiftStart = $shift['gioBatDau'] ?? '08:00:00';
+            $nowTime = date('H:i:s');
+            $shiftStartSecs = strtotime(date('Y-m-d') . ' ' . $shiftStart);
+            $nowSecs = strtotime(date('Y-m-d H:i:s'));
+            $ghiChuIn = ($nowSecs > $shiftStartSecs + 15 * 60)
+                ? 'Đi muộn ' . (int)(($nowSecs - $shiftStartSecs) / 60) . ' phút'
+                : 'Đúng giờ';
+            $ok = $chamCongModel->chamCong($matchedId, 'IN', 'faceid', 'Tablet', $ghiChuIn, 'TABLET', $photoFilename);
             echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã ghi nhận giờ vào cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
         // Các lần quét sau trong ngày luôn cập nhật giờ ra thành lần quét gần nhất.
-        $ok = $chamCongModel->chamCong($matchedId, 'OUT', 'faceid', 'TABLET', 'Cập nhật giờ ra bằng tablet khuôn mặt', 'TABLET', $photoFilename);
+        // Tính ghiChu check-out so với giờ kết thúc ca
+        $shiftOut = $chamCongModel->getShiftForUser($matchedId);
+        $shiftEnd = $shiftOut['gioKetThuc'] ?? '17:00:00';
+        $shiftEndSecs = strtotime(date('Y-m-d') . ' ' . $shiftEnd);
+        $outSecs = strtotime(date('Y-m-d H:i:s'));
+        $ghiChuOut = ($outSecs < $shiftEndSecs)
+            ? 'Về sớm ' . (int)(($shiftEndSecs - $outSecs) / 60) . ' phút'
+            : 'Đã lưu';
+        $ok = $chamCongModel->chamCong($matchedId, 'OUT', 'faceid', 'Tablet', $ghiChuOut, 'TABLET', $photoFilename);
         echo json_encode(['success' => $ok, 'message' => $ok ? 'Đã cập nhật giờ ra cho ' . $employeeName . ' (Mã NV: ' . $matchedId . ').' : 'Không thể lưu chấm công.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -701,8 +717,7 @@ class FaceController extends Controller
 
         $maND = $_SESSION['user']['maND'] ?? null;
         $hanhDong = trim($_POST['hanhDong'] ?? 'IN');
-        $tenWifi = trim($_POST['tenWifi'] ?? 'INTERNAL_NETWORK');
-        $phuongThuc = trim($_POST['phuongThuc'] ?? 'LAN');
+        $phuongThuc = 'faceid';
         $embedding = $_POST['embedding'] ?? '';
         $photo = $_POST['photo'] ?? '';
         $livenessTokenRaw = $_POST['livenessToken'] ?? '';
@@ -833,12 +848,6 @@ class FaceController extends Controller
             $clientIp = '192.168.1.129'; // IP nội bộ giả lập khi test localhost
         }
 
-        // Bỏ kiểm tra mạng nội bộ / WiFi để chấm công chỉ phụ thuộc vào xác thực khuôn mặt.
-        if ($phuongThuc === 'LAN') {
-            $tenWifi = 'OFFLINE_FALLBACK';
-        } else {
-            $tenWifi = 'QR_FALLBACK';
-        }
 
         // Kiểm tra số lần chấm công hôm nay
         $todayAttendance = $this->getChamCongModel()->getAttendanceByUser($maND, 1);
@@ -923,8 +932,29 @@ class FaceController extends Controller
         }
 
         // 5. Ghi nhận chấm công vào CSDL
-        $ghiChu = ($hanhDong === 'IN') ? 'Chấm vào bằng khuôn mặt (Liveness verified)' : 'Chấm ra bằng khuôn mặt (Liveness verified)';
-        $ok = $this->getChamCongModel()->chamCong($maND, $hanhDong, $phuongThuc, $tenWifi, $ghiChu, $clientIp, $photoFilename);
+        // Xác định thiết bị từ User-Agent của người dùng
+        $uaStr = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $deviceInfo = (strpos($uaStr, 'android') !== false || strpos($uaStr, 'ipad') !== false || strpos($uaStr, 'tablet') !== false)
+            ? 'Tablet' : 'Laptop/PC';
+
+        // Tính ghiChu theo ca làm việc
+        $shiftNow = $this->getChamCongModel()->getShiftForUser($maND);
+        if ($hanhDong === 'IN') {
+            $shiftStartStr = $shiftNow['gioBatDau'] ?? '08:00:00';
+            $shiftStartTs = strtotime(date('Y-m-d') . ' ' . $shiftStartStr);
+            $nowTs = time();
+            $ghiChu = ($nowTs > $shiftStartTs + 15 * 60)
+                ? 'Đi muộn ' . (int)(($nowTs - $shiftStartTs) / 60) . ' phút'
+                : 'Đúng giờ';
+        } else {
+            $shiftEndStr = $shiftNow['gioKetThuc'] ?? '17:00:00';
+            $shiftEndTs = strtotime(date('Y-m-d') . ' ' . $shiftEndStr);
+            $nowTs = time();
+            $ghiChu = ($nowTs < $shiftEndTs)
+                ? 'Về sớm ' . (int)(($shiftEndTs - $nowTs) / 60) . ' phút'
+                : 'Đã lưu';
+        }
+        $ok = $this->getChamCongModel()->chamCong($maND, $hanhDong, $phuongThuc, $deviceInfo, $ghiChu, $clientIp, $photoFilename);
 
         if ($ok) {
             echo json_encode([

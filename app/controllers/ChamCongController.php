@@ -467,9 +467,29 @@ class ChamCongController
         }
         
         // Lưu chấm công
-        $ghiChu = trim($_POST['ghiChu'] ?? '');
-        
-        $ok = $this->model->chamCong($maND, $hanhDong, $phuongThuc, $wifiName, $ghiChu);
+        $shift = $this->model->getShiftForUser($maND);
+        $thongTinThietBi = 'Laptop/PC';
+        $ua = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+        if (strpos($ua, 'android') !== false || strpos($ua, 'ipad') !== false || strpos($ua, 'tablet') !== false) {
+            $thongTinThietBi = 'Tablet';
+        }
+        if ($hanhDong === 'IN') {
+            $shiftStart = $shift['gioBatDau'] ?? '08:00:00';
+            $shiftStartTs = strtotime(date('Y-m-d') . ' ' . $shiftStart);
+            $nowTs = time();
+            $ghiChu = ($nowTs > $shiftStartTs + 15 * 60)
+                ? 'Đi muộn ' . (int)(($nowTs - $shiftStartTs) / 60) . ' phút'
+                : 'Đúng giờ';
+        } else {
+            $shiftEnd = $shift['gioKetThuc'] ?? '17:00:00';
+            $shiftEndTs = strtotime(date('Y-m-d') . ' ' . $shiftEnd);
+            $nowTs = time();
+            $ghiChu = ($nowTs < $shiftEndTs)
+                ? 'Về sớm ' . (int)(($shiftEndTs - $nowTs) / 60) . ' phút'
+                : 'Đã lưu';
+        }
+
+        $ok = $this->model->chamCong($maND, $hanhDong, $phuongThuc, $thongTinThietBi, $ghiChu);
         
         if ($ok) {
             $actionText = ($hanhDong === 'IN') ? 'vào' : 'ra';
@@ -631,8 +651,21 @@ class ChamCongController
             }
         }
 
+        // Xác định thiết bị
+        $ua = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $thongTinThietBi = (strpos($ua, 'android') !== false || strpos($ua, 'ipad') !== false || strpos($ua, 'tablet') !== false)
+            ? 'Tablet' : 'Laptop/PC';
+
+        // Tính ghiChu check-in theo ca
+        $shiftStartStr = $shift['gioBatDau'] ?? '08:00:00';
+        $shiftStartTs = strtotime(date('Y-m-d') . ' ' . $shiftStartStr);
+        $nowTs = time();
+        $ghiChuIn = ($nowTs > $shiftStartTs + 15 * 60)
+            ? 'Đi muộn ' . (int)(($nowTs - $shiftStartTs) / 60) . ' phút'
+            : 'Đúng giờ';
+
         // Save
-        $ok = $this->model->chamCong($maND, 'IN', 'LAN', $wifiName, 'Check-in via API', $serverIP);
+        $ok = $this->model->chamCong($maND, 'IN', 'faceid', $thongTinThietBi, $ghiChuIn, $serverIP);
         
         echo json_encode([
             'success' => $ok,
@@ -702,7 +735,21 @@ class ChamCongController
             exit;
         }
 
-        $ok = $this->model->chamCong($maND, 'OUT', 'LAN', $wifiName, 'Check-out via API', $serverIP);
+        // Xác định thiết bị
+        $ua2 = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $thongTinThietBi2 = (strpos($ua2, 'android') !== false || strpos($ua2, 'ipad') !== false || strpos($ua2, 'tablet') !== false)
+            ? 'Tablet' : 'Laptop/PC';
+
+        // Tính ghiChu check-out theo ca
+        $shiftOut = $this->model->getShiftForUser($maND);
+        $shiftEndStr = $shiftOut['gioKetThuc'] ?? '17:00:00';
+        $shiftEndTs = strtotime(date('Y-m-d') . ' ' . $shiftEndStr);
+        $nowTs2 = time();
+        $ghiChuOut = ($nowTs2 < $shiftEndTs)
+            ? 'Về sớm ' . (int)(($shiftEndTs - $nowTs2) / 60) . ' phút'
+            : 'Đã lưu';
+
+        $ok = $this->model->chamCong($maND, 'OUT', 'faceid', $thongTinThietBi2, $ghiChuOut, $serverIP);
         
         echo json_encode([
             'success' => $ok,
@@ -775,13 +822,11 @@ class ChamCongController
         foreach ($history as $h) {
             $date = date('Y-m-d', strtotime($h['ngayTao']));
             if (!isset($grouped[$date])) {
-                // Ensure fallback for tenWifi
-                $wifiDisplay = !empty($h['tenWifi']) ? $h['tenWifi'] : 'Wifi Công ty';
                 $grouped[$date] = [
-                    'date' => $date, 
-                    'checkIn' => null, 
-                    'checkOut' => null, 
-                    'tenWifi' => $wifiDisplay
+                    'date' => $date,
+                    'checkIn' => null,
+                    'checkOut' => null,
+                    'thongTinThietBi' => $h['thongTinThietBi'] ?? ''
                 ];
             }
             if ($h['hanhDong'] === 'IN') $grouped[$date]['checkIn'] = date('H:i:s', strtotime($h['ngayTao']));
