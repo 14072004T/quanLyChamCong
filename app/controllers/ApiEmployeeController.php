@@ -391,6 +391,31 @@ class ApiEmployeeController
                     respondError('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc', 422);
                 }
 
+                // Kiểm tra ngày cuối tuần (Thứ 7 / Chủ nhật)
+                $checkDate = new DateTime($tuNgay);
+                $endDate = new DateTime($denNgay);
+                $hasWeekend = false;
+                while ($checkDate <= $endDate) {
+                    $dow = (int)$checkDate->format('w');
+                    if ($dow === 0 || $dow === 6) {
+                        $hasWeekend = true;
+                        break;
+                    }
+                    $checkDate->modify('+1 day');
+                }
+                if ($hasWeekend) {
+                    respondError('Không thể đăng ký nghỉ phép vào ngày thứ 7 hoặc chủ nhật không có lịch làm việc.', 422);
+                }
+
+                // Kiểm tra trùng lặp với đơn nghỉ phép đã có (đã duyệt hoặc đang chờ duyệt)
+                $conflict = $this->model->getOverlappingLeaveRequest($maND, $tuNgay, $denNgay);
+                if ($conflict) {
+                    $stText = ($conflict['trangThai'] === 'approved') ? 'đã được duyệt' : 'đang chờ duyệt';
+                    $cTu = date('d/m/Y', strtotime($conflict['tuNgay']));
+                    $cDen = date('d/m/Y', strtotime($conflict['denNgay']));
+                    respondError("Bạn đã có đơn nghỉ phép {$stText} từ ngày {$cTu} đến ngày {$cDen} trùng với khoảng thời gian này.", 409);
+                }
+
                 // Handle evidence file
                 $tepMinhChung = null;
                 if (isset($_FILES['tepMinhChung']) && $_FILES['tepMinhChung']['error'] === UPLOAD_ERR_OK) {

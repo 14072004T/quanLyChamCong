@@ -3798,6 +3798,41 @@ class ChamCongModel
     // ÄÆ N NGHá»ˆ PHÃ‰P (Leave Request)
     // ============================
 
+    public function getOverlappingLeaveRequest($maND, $tuNgay, $denNgay, $excludeId = null)
+    {
+        $maND = (int)$maND;
+        $tuNgay = trim($tuNgay);
+        $denNgay = trim($denNgay);
+
+        if ($maND <= 0 || empty($tuNgay) || empty($denNgay)) {
+            return null;
+        }
+
+        $sql = "SELECT * FROM donnghiphep 
+                WHERE maND = ? 
+                  AND trangThai IN ('pending', 'approved')
+                  AND tuNgay <= ? 
+                  AND denNgay >= ?";
+        
+        if ($excludeId !== null && (int)$excludeId > 0) {
+            $sql .= " AND id != ?";
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) return null;
+            $exId = (int)$excludeId;
+            $stmt->bind_param("issi", $maND, $denNgay, $tuNgay, $exId);
+        } else {
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) return null;
+            $stmt->bind_param("iss", $maND, $denNgay, $tuNgay);
+        }
+
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        return $row;
+    }
+
     public function insertLeaveRequest($maND, $loaiNghiPhep, $tuNgay, $denNgay, $lyDo, $tepMinhChung = null)
     {
         $maND = (int)$maND;
@@ -3814,6 +3849,11 @@ class ChamCongModel
             $loaiNghiPhep = 'personal';
         }
         if ($tuNgay > $denNgay) {
+            return false;
+        }
+
+        // Chặn nếu trùng ngày với đơn nghỉ phép đã có (đã duyệt hoặc đang chờ duyệt)
+        if ($this->getOverlappingLeaveRequest($maND, $tuNgay, $denNgay)) {
             return false;
         }
 

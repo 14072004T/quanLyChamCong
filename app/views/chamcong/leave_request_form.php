@@ -974,6 +974,9 @@ function calcLeaveDays2($from, $to) {
                 <!-- Weekend Warning -->
                 <div class="lrf-weekend-warning" id="weekendWarning"></div>
 
+                <!-- Overlap Warning -->
+                <div class="lrf-weekend-warning" id="overlapWarning"></div>
+
                 <!-- Row 2: Lý do -->
                 <div class="lrf-form-row-2">
                     <div class="lrf-field">
@@ -1151,8 +1154,23 @@ document.addEventListener('DOMContentLoaded', function () {
     var paidTypes  = ['sick', 'personal', 'emergency', 'wedding', 'funeral', 'annual'];
 
     var weekendWarn = document.getElementById('weekendWarning');
+    var overlapWarn = document.getElementById('overlapWarning');
     var dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
     var hasWeekendError = false;
+    var hasOverlapError = false;
+
+    // Danh sách các đơn nghỉ phép đang có của nhân viên (chờ duyệt hoặc đã duyệt)
+    var activeLeaveRequests = <?= json_encode(array_values(array_map(function($r) {
+        return [
+            'id'           => (int)($r['id'] ?? 0),
+            'tuNgay'       => $r['tuNgay'] ?? '',
+            'denNgay'      => $r['denNgay'] ?? '',
+            'trangThai'    => $r['trangThai'] ?? '',
+            'loaiNghiPhep' => $r['loaiNghiPhep'] ?? '',
+        ];
+    }, array_filter($myRequests ?? [], function($r) {
+        return in_array($r['trangThai'] ?? '', ['approved', 'pending'], true);
+    })))) ?>;
 
     function calcDays(from, to) {
         if (!from || !to) return 0;
@@ -1231,6 +1249,52 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function checkOverlapWarning() {
+        if (!overlapWarn) return;
+        var from = tuEl && tuEl.value;
+        var to = denEl && denEl.value;
+        if (!from || !to) {
+            overlapWarn.style.display = 'none';
+            hasOverlapError = false;
+            return;
+        }
+
+        var conflict = null;
+        for (var i = 0; i < activeLeaveRequests.length; i++) {
+            var req = activeLeaveRequests[i];
+            if (!req.tuNgay || !req.denNgay) continue;
+            // Overlap: from <= req.denNgay && to >= req.tuNgay
+            if (from <= req.denNgay && to >= req.tuNgay) {
+                conflict = req;
+                break;
+            }
+        }
+
+        if (conflict) {
+            hasOverlapError = true;
+            var isApproved = conflict.trangThai === 'approved';
+            var stText = isApproved ? 'Đã được duyệt' : 'Đang chờ duyệt';
+            var badgeStyle = isApproved 
+                ? 'background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;' 
+                : 'background:#fef3c7;color:#b45309;border:1px solid #fde68a;';
+            
+            var cTuParts = conflict.tuNgay.split('-');
+            var cDenParts = conflict.denNgay.split('-');
+            var cTu = cTuParts.length === 3 ? (cTuParts[2] + '/' + cTuParts[1] + '/' + cTuParts[0]) : conflict.tuNgay;
+            var cDen = cDenParts.length === 3 ? (cDenParts[2] + '/' + cDenParts[1] + '/' + cDenParts[0]) : conflict.denNgay;
+
+            overlapWarn.innerHTML = '<div class="lrf-ww-title"><i class="fa-solid fa-calendar-xmark"></i> Trùng lặp ngày nghỉ phép đã đăng ký</div>' +
+                '<div>Bạn đã có đơn nghỉ phép <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;' + badgeStyle + '">' + stText + '</span> ' +
+                'từ ngày <strong>' + cTu + '</strong> đến ngày <strong>' + cDen + '</strong>.</div>' +
+                '<div class="lrf-ww-dates"><i class="fa-solid fa-circle-exclamation"></i> Khoảng thời gian bạn chọn đang bị trùng lặp với đơn nghỉ phép này. Không thể đăng ký trùng lặp.</div>' +
+                '<div class="lrf-ww-hint"><i class="fa-solid fa-lightbulb"></i> Vui lòng chọn khoảng thời gian khác hoặc kiểm tra lại lịch sử đơn xin phép bên dưới.</div>';
+            overlapWarn.style.display = 'block';
+        } else {
+            hasOverlapError = false;
+            overlapWarn.style.display = 'none';
+        }
+    }
+
     function refreshDuration() {
         if (!durNum) return;
         var from = tuEl && tuEl.value;
@@ -1238,6 +1302,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var d = calcDays(from, to);
         durNum.textContent = d > 0 ? d : '—';
         checkWeekendWarning();
+        checkOverlapWarning();
     }
 
     function updateNote() {
@@ -1260,7 +1325,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (tuEl) {
-        tuEl.addEventListener('change', function () {
+        var onTuChange = function () {
             if (denEl) {
                 denEl.min = this.value;
                 if (denEl.value && denEl.value < this.value) {
@@ -1268,9 +1333,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
             refreshDuration();
-        });
+        };
+        tuEl.addEventListener('change', onTuChange);
+        tuEl.addEventListener('input', onTuChange);
     }
-    if (denEl) denEl.addEventListener('change', refreshDuration);
+    if (denEl) {
+        denEl.addEventListener('change', refreshDuration);
+        denEl.addEventListener('input', refreshDuration);
+    }
     if (loaiSel) loaiSel.addEventListener('change', updateNote);
 
     if (fileInput) {
@@ -1316,6 +1386,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     weekendWarn.style.animation = 'none';
                     weekendWarn.offsetHeight; // trigger reflow
                     weekendWarn.style.animation = 'lrfShake .4s ease-in-out';
+                }
+            } else if (hasOverlapError) {
+                ok = false;
+                if (overlapWarn) {
+                    overlapWarn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    overlapWarn.style.animation = 'none';
+                    overlapWarn.offsetHeight; // trigger reflow
+                    overlapWarn.style.animation = 'lrfShake .4s ease-in-out';
                 }
             }
 

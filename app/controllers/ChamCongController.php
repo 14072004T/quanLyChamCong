@@ -1108,6 +1108,17 @@ class ChamCongController
             exit;
         }
 
+        // Validate: không cho phép đăng ký trùng ngày với đơn nghỉ phép đã có (đã duyệt hoặc đang chờ duyệt)
+        $conflictLeave = $this->model->getOverlappingLeaveRequest($maND, $tuNgay, $denNgay);
+        if ($conflictLeave) {
+            $stText = ($conflictLeave['trangThai'] === 'approved') ? 'đã được duyệt' : 'đang chờ duyệt';
+            $cTu = date('d/m/Y', strtotime($conflictLeave['tuNgay']));
+            $cDen = date('d/m/Y', strtotime($conflictLeave['denNgay']));
+            $_SESSION['leave_error'] = "Bạn đã có đơn nghỉ phép {$stText} từ ngày {$cTu} đến ngày {$cDen} trùng với khoảng thời gian này. Vui lòng kiểm tra lại danh sách đơn nghỉ phép của bạn!";
+            header('Location: index.php?page=create-leave-request');
+            exit;
+        }
+
         // Handle file upload
         $tepMinhChung = null;
         if (isset($_FILES['tepMinhChung']) && $_FILES['tepMinhChung']['error'] === UPLOAD_ERR_OK) {
