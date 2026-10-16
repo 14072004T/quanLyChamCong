@@ -1061,9 +1061,13 @@ class ChamCongModel
             $types .= 's';
         }
         if ($phongBan !== '') {
-            $departmentFilter = 'AND nd.phongBan = ?';
+            // Lọc theo phòng ban cụ thể (nhưng không bao giờ lấy Ban Điều hành)
+            $departmentFilter = "AND nd.phongBan = ? AND nd.phongBan != 'Ban Điều hành'";
             $params[] = $phongBan;
             $types .= 's';
+        } else {
+            // Không lọc theo phòng ban → loại trừ Ban Điều hành
+            $departmentFilter = "AND nd.phongBan != 'Ban Điều hành'";
         }
         $sql = "SELECT nd.maND, nd.hoTen, nd.phongBan, s.gioBatDau, s.gioKetThuc, s.cotinhcong,
                        attendance.first_checkin, attendance.last_checkout,
@@ -1338,9 +1342,13 @@ class ChamCongModel
         $employeeParams = [];
         $employeeTypes = '';
         if ($phongBan !== '') {
-            $employeeSql .= " WHERE nd.phongBan = ?";
+            // Lọc theo phòng ban cụ thể (nhưng không bao giờ lấy Ban Điều hành)
+            $employeeSql .= " WHERE nd.phongBan = ? AND nd.phongBan != 'Ban Điều hành'";
             $employeeParams[] = $phongBan;
             $employeeTypes = 's';
+        } else {
+            // Không lọc phòng ban cụ thể → loại trừ Ban Điều hành
+            $employeeSql .= " WHERE nd.phongBan != 'Ban Điều hành'";
         }
         $employeeSql .= " ORDER BY nd.hoTen";
         $employeeRows = [];
@@ -2628,13 +2636,18 @@ class ChamCongModel
             return $r['phongBan'];
         }, $rows);
         $valid = $this->getValidDepartments();
-        return array_values(array_unique(array_merge($valid, $dbDepts)));
+        $all = array_values(array_unique(array_merge($valid, $dbDepts)));
+        // Loại trừ Ban Điều hành khỏi dropdown báo cáo
+        return array_values(array_filter($all, function ($dept) {
+            return $dept !== 'Ban Điều hành';
+        }));
     }
 
     public function getValidDepartments()
     {
+        // Không bao gồm 'Ban Điều hành' — phòng này không hiển thị trong bộ lọc
+        // và không được tính vào báo cáo tổng hợp của Manager
         return [
-            'Ban Điều hành',
             'Phòng Nhân sự',
             'Phòng Kế toán',
             'Phòng Kinh doanh & Marketing',
@@ -2647,8 +2660,8 @@ class ChamCongModel
 
     public function getAllValidDepartmentsWithAliases()
     {
+        // Không bao gồm 'Ban Điều hành' — phòng này không được tính trong báo cáo tổng hợp
         return [
-            'Ban Điều hành',
             'Phòng Nhân sự',
             'Phòng Kế toán',
             'Phòng Kinh doanh & Marketing',
