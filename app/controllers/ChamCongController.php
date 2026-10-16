@@ -1082,6 +1082,32 @@ class ChamCongController
             exit;
         }
 
+        // Validate: không cho phép nghỉ phép vào Thứ 7 / Chủ nhật (ngày không có lịch làm việc)
+        $weekendDates = [];
+        $checkDate = new DateTime($tuNgay);
+        $endDate = new DateTime($denNgay);
+        $totalDays = 0;
+        while ($checkDate <= $endDate) {
+            $totalDays++;
+            $dayOfWeek = (int)$checkDate->format('w'); // 0 = CN, 6 = T7
+            if ($dayOfWeek === 0 || $dayOfWeek === 6) {
+                $dayName = $dayOfWeek === 0 ? 'Chủ nhật' : 'Thứ 7';
+                $weekendDates[] = $dayName . ' (' . $checkDate->format('d/m/Y') . ')';
+            }
+            $checkDate->modify('+1 day');
+        }
+
+        if (!empty($weekendDates)) {
+            $weekendList = implode(', ', $weekendDates);
+            if (count($weekendDates) >= $totalDays) {
+                $_SESSION['leave_error'] = 'Không thể đăng ký nghỉ phép — tất cả các ngày bạn chọn đều rơi vào ngày nghỉ cuối tuần (Thứ 7 / Chủ nhật) không có lịch làm việc: ' . $weekendList . '. Vui lòng chọn các ngày làm việc (Thứ 2 — Thứ 6).';
+            } else {
+                $_SESSION['leave_error'] = 'Khoảng thời gian nghỉ phép có chứa ngày cuối tuần không có lịch làm việc: ' . $weekendList . '. Vui lòng điều chỉnh lại sao cho chỉ bao gồm các ngày làm việc (Thứ 2 — Thứ 6).';
+            }
+            header('Location: index.php?page=create-leave-request');
+            exit;
+        }
+
         // Handle file upload
         $tepMinhChung = null;
         if (isset($_FILES['tepMinhChung']) && $_FILES['tepMinhChung']['error'] === UPLOAD_ERR_OK) {

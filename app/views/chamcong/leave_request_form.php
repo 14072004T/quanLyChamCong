@@ -490,6 +490,55 @@ function calcLeaveDays2($from, $to) {
     display: none;
 }
 
+/* Weekend Warning */
+.lrf-weekend-warning {
+    display: none;
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #991b1b;
+    animation: lrfShake .4s ease-in-out;
+}
+.lrf-weekend-warning i {
+    color: #ef4444;
+    margin-right: 6px;
+}
+.lrf-weekend-warning .lrf-ww-title {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.lrf-weekend-warning .lrf-ww-dates {
+    background: #fff5f5;
+    border: 1px solid #fed7d7;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #c53030;
+    font-weight: 500;
+}
+.lrf-weekend-warning .lrf-ww-hint {
+    margin-top: 8px;
+    font-size: 11.5px;
+    color: #b91c1c;
+    font-style: italic;
+}
+@keyframes lrfShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+
 .lrf-type-note {
     display: none;
     margin-top: 12px;
@@ -922,6 +971,9 @@ function calcLeaveDays2($from, $to) {
                     </div>
                 </div>
 
+                <!-- Weekend Warning -->
+                <div class="lrf-weekend-warning" id="weekendWarning"></div>
+
                 <!-- Row 2: Lý do -->
                 <div class="lrf-form-row-2">
                     <div class="lrf-field">
@@ -1098,16 +1150,94 @@ document.addEventListener('DOMContentLoaded', function () {
     var noteBox    = document.getElementById('leaveTypeNote');
     var paidTypes  = ['sick', 'personal', 'emergency', 'wedding', 'funeral', 'annual'];
 
+    var weekendWarn = document.getElementById('weekendWarning');
+    var dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+    var hasWeekendError = false;
+
     function calcDays(from, to) {
         if (!from || !to) return 0;
         var diff = Math.round((new Date(to) - new Date(from)) / 86400000) + 1;
         return diff > 0 ? diff : 0;
     }
 
+    function getWeekendDays(from, to) {
+        var weekends = [];
+        if (!from || !to) return weekends;
+        var start = new Date(from);
+        var end = new Date(to);
+        var cur = new Date(start);
+        while (cur <= end) {
+            var dow = cur.getDay(); // 0=Sun, 6=Sat
+            if (dow === 0 || dow === 6) {
+                var dd = String(cur.getDate()).padStart(2, '0');
+                var mm = String(cur.getMonth() + 1).padStart(2, '0');
+                var yyyy = cur.getFullYear();
+                weekends.push({
+                    date: dd + '/' + mm + '/' + yyyy,
+                    dayName: dayNames[dow]
+                });
+            }
+            cur.setDate(cur.getDate() + 1);
+        }
+        return weekends;
+    }
+
+    function countWorkingDays(from, to) {
+        if (!from || !to) return 0;
+        var start = new Date(from);
+        var end = new Date(to);
+        var count = 0;
+        var cur = new Date(start);
+        while (cur <= end) {
+            var dow = cur.getDay();
+            if (dow !== 0 && dow !== 6) count++;
+            cur.setDate(cur.getDate() + 1);
+        }
+        return count;
+    }
+
+    function checkWeekendWarning() {
+        if (!weekendWarn) return;
+        var from = tuEl && tuEl.value;
+        var to = denEl && denEl.value;
+        if (!from || !to) {
+            weekendWarn.style.display = 'none';
+            hasWeekendError = false;
+            return;
+        }
+        var weekends = getWeekendDays(from, to);
+        var totalDays = calcDays(from, to);
+        if (weekends.length > 0 && weekends.length >= totalDays) {
+            // ALL selected days are weekends - block entirely
+            hasWeekendError = true;
+            var dateList = weekends.map(function(w) { return w.dayName + ' (' + w.date + ')'; }).join(', ');
+            weekendWarn.innerHTML = '<div class="lrf-ww-title"><i class="fa-solid fa-triangle-exclamation"></i> Không thể đăng ký nghỉ phép</div>' +
+                '<div>Tất cả các ngày bạn chọn đều rơi vào <strong>ngày nghỉ cuối tuần</strong> (Thứ 7 / Chủ nhật) — không có lịch làm việc.</div>' +
+                '<div class="lrf-ww-dates"><i class="fa-regular fa-calendar-xmark"></i> ' + dateList + '</div>' +
+                '<div class="lrf-ww-hint"><i class="fa-solid fa-lightbulb"></i> Vui lòng chọn các ngày làm việc trong tuần (Thứ 2 — Thứ 6) để đăng ký nghỉ phép.</div>';
+            weekendWarn.style.display = 'block';
+        } else if (weekends.length > 0) {
+            // Some days are weekends - warn but still allow (weekend days won't be counted)
+            hasWeekendError = true;
+            var dateList = weekends.map(function(w) { return w.dayName + ' (' + w.date + ')'; }).join(', ');
+            weekendWarn.innerHTML = '<div class="lrf-ww-title"><i class="fa-solid fa-triangle-exclamation"></i> Khoảng thời gian chứa ngày cuối tuần</div>' +
+                '<div>Khoảng nghỉ phép bạn chọn có chứa <strong>ngày nghỉ cuối tuần</strong> (Thứ 7 / Chủ nhật) — những ngày này không có lịch làm việc nên không thể đăng ký nghỉ phép.</div>' +
+                '<div class="lrf-ww-dates"><i class="fa-regular fa-calendar-xmark"></i> Ngày cuối tuần: ' + dateList + '</div>' +
+                '<div class="lrf-ww-hint"><i class="fa-solid fa-lightbulb"></i> Vui lòng điều chỉnh lại khoảng thời gian sao cho chỉ bao gồm các ngày làm việc (Thứ 2 — Thứ 6).</div>';
+            weekendWarn.style.display = 'block';
+        } else {
+            hasWeekendError = false;
+            weekendWarn.style.display = 'none';
+        }
+    }
+
     function refreshDuration() {
         if (!durNum) return;
-        var d = calcDays(tuEl && tuEl.value, denEl && denEl.value);
+        var from = tuEl && tuEl.value;
+        var to = denEl && denEl.value;
+        var d = calcDays(from, to);
         durNum.textContent = d > 0 ? d : '—';
+        checkWeekendWarning();
     }
 
     function updateNote() {
@@ -1177,6 +1307,17 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!denEl || !denEl.value || (tuEl && tuEl.value && denEl.value < tuEl.value)) { se('err-den'); ok = false; } else he('err-den');
             var lyDo = document.getElementById('lyDo');
             if (!lyDo || !lyDo.value.trim()) { se('err-lydo'); ok = false; } else he('err-lydo');
+
+            // Check weekend validation
+            if (hasWeekendError) {
+                ok = false;
+                if (weekendWarn) {
+                    weekendWarn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    weekendWarn.style.animation = 'none';
+                    weekendWarn.offsetHeight; // trigger reflow
+                    weekendWarn.style.animation = 'lrfShake .4s ease-in-out';
+                }
+            }
 
             if (!ok) {
                 e.preventDefault();
