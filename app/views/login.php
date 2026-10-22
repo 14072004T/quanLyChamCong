@@ -521,6 +521,18 @@
             color: #cbd5e1;
         }
 
+        /* OVERRIDE AUTOFILL TRÌNH DUYỆT */
+        .input-control-field:-webkit-autofill,
+        .input-control-field:-webkit-autofill:hover,
+        .input-control-field:-webkit-autofill:focus,
+        .mb-input-field:-webkit-autofill,
+        .mb-input-field:-webkit-autofill:hover,
+        .mb-input-field:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0 1000px #1c263c inset !important;
+            -webkit-text-fill-color: #ffffff !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
         /* CHECKBOX & FORGOT */
         .form-options-row {
             display: flex;
@@ -795,13 +807,17 @@
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" action="index.php?page=login-process">
+                <form method="POST" action="index.php?page=login-process" autocomplete="off">
+                    <!-- Tránh autofill mặc định từ trình duyệt -->
+                    <input type="text" style="position:fixed;top:-9999px;opacity:0;" tabindex="-1" autocomplete="off">
+                    <input type="password" style="position:fixed;top:-9999px;opacity:0;" tabindex="-1" autocomplete="off">
+
                     <div class="mb-form-group">
                         <label for="username">Tên đăng nhập</label>
                         <div class="mb-input-wrapper">
                             <i class="far fa-user input-icon"></i>
                             <input type="text" id="username" name="username" class="mb-input-field"
-                                placeholder="Email hoặc tên tài khoản" autocomplete="username" autofocus required>
+                                placeholder="Email hoặc tên tài khoản" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');" required>
                         </div>
                     </div>
 
@@ -810,7 +826,7 @@
                         <div class="mb-input-wrapper">
                             <i class="fas fa-lock input-icon"></i>
                             <input type="password" id="matKhau" name="matKhau" class="mb-input-field"
-                                placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+                                placeholder="Nhập mật khẩu" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" required>
                             <i class="far fa-eye toggle-password" onclick="togglePasswordVisibility('matKhau', this)"></i>
                         </div>
                     </div>
@@ -1066,12 +1082,16 @@
                         </div>
                     <?php endif; ?>
 
-                    <form method="POST" action="index.php?page=login-process">
+                    <form method="POST" action="index.php?page=login-process" autocomplete="off">
+                        <!-- Tránh autofill mặc định từ trình duyệt -->
+                        <input type="text" style="position:fixed;top:-9999px;opacity:0;" tabindex="-1" autocomplete="off">
+                        <input type="password" style="position:fixed;top:-9999px;opacity:0;" tabindex="-1" autocomplete="off">
+
                         <div class="form-group-item">
                             <label for="username">TÊN ĐĂNG NHẬP / EMAIL</label>
                             <div class="input-relative-wrapper">
                                 <i class="far fa-user left-icon"></i>
-                                <input type="text" id="username" name="username" class="input-control-field" placeholder="Nhập tên đăng nhập hoặc email" autocomplete="username" autofocus required>
+                                <input type="text" id="username" name="username" class="input-control-field" placeholder="Nhập tên đăng nhập hoặc email" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');" required>
                             </div>
                         </div>
 
@@ -1079,7 +1099,7 @@
                             <label for="matKhau">MẬT KHẨU</label>
                             <div class="input-relative-wrapper">
                                 <i class="fas fa-lock left-icon"></i>
-                                <input type="password" id="matKhau" name="matKhau" class="input-control-field has-right-icon" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+                                <input type="password" id="matKhau" name="matKhau" class="input-control-field has-right-icon" placeholder="Nhập mật khẩu" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" required>
                                 <i class="far fa-eye eye-toggle-btn" onclick="togglePasswordVisibility('matKhau', this)"></i>
                             </div>
                         </div>
@@ -1131,6 +1151,23 @@
                 iconEl.classList.add('fa-eye');
             }
         }
+
+        // Tự động xóa dữ liệu trình duyệt tự điền (autofill)
+        function clearAutofillFields() {
+            document.querySelectorAll('input[name="username"], input[name="matKhau"]').forEach(function(el) {
+                el.value = '';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', clearAutofillFields);
+        window.addEventListener('load', function() {
+            clearAutofillFields();
+            setTimeout(clearAutofillFields, 50);
+            setTimeout(clearAutofillFields, 150);
+            setTimeout(clearAutofillFields, 300);
+            setTimeout(clearAutofillFields, 600);
+            setTimeout(clearAutofillFields, 1000);
+        });
     </script>
 </body>
 </html>
