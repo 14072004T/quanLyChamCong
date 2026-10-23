@@ -79,6 +79,7 @@ class ManagerController
         $attendanceMetrics = $tabletAttendanceReport['attendance_metrics'];
         $otMetrics = $this->model->getAttendanceMetrics($fromDate, $toDate, $phongBan);
         $attendanceMetrics['total_ot_hours'] = (float)($otMetrics['total_ot_hours'] ?? 0);
+        $attendanceMetrics['weekly_ot'] = $otMetrics['weekly_ot'] ?? [];
         $employeePunctuality = $tabletAttendanceReport['employee_punctuality'];
         $totalEmployees = $tabletAttendanceReport['total_employees'];
         $departments = $this->model->getValidDepartments();
