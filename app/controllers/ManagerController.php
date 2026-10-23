@@ -213,13 +213,7 @@ class ManagerController
 
             case 'tangca':
                 $reportTitle = 'Báo Cáo Tăng Ca (OT)';
-                $managerId = (int)($_SESSION['user']['maND'] ?? 0);
-                $data = $this->model->getAllOTByManager($managerId, '', '', substr($fromDate, 0, 7));
-                // Thêm hoTen field mapping (getAllOTByManager trả về employee_name)
-                foreach ($data as &$d) {
-                    if (empty($d['hoTen'])) $d['hoTen'] = $d['employee_name'] ?? '';
-                }
-                unset($d);
+                $data = $this->model->getOTRequestsForReport($fromDate, $toDate, $phongBan);
                 break;
         }
 

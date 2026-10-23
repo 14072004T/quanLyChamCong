@@ -2146,7 +2146,8 @@ class ChamCongModel
          $sql = "SELECT q.uid, q.id, q.request_type, q.maND, q.ngayYeuCau,
                   q.loaiNghiPhep, q.laNuaNgay, q.gioBatDau, q.gioKetThuc, q.soGio,
                   q.tenCaHienTai, q.tenCaMoi, q.lyDo, q.trangThai, q.ghiChuQL,
-                  q.ngayTao, q.ngayCapNhat, q.hoTen, q.chucVu, q.phongBan
+                   q.ngayTao, q.ngayCapNhat, q.hoTen, q.chucVu, q.phongBan, q.nguoiDuyet,
+                   q.nguoiDuyetTen
               FROM (
                   SELECT CONVERT(CONCAT('leave:', r.id) USING utf8mb4) COLLATE utf8mb4_unicode_ci AS uid,
                       r.id,
@@ -2161,9 +2162,12 @@ class ChamCongModel
                       NULL AS ghiChuQL, r.ngayTao, r.ngayDuyet AS ngayCapNhat,
                       CONVERT(COALESCE(n.hoTen,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS hoTen,
                       CONVERT(COALESCE(n.chucVu,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS chucVu,
-                      CONVERT(COALESCE(n.phongBan,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phongBan
+                      CONVERT(COALESCE(n.phongBan,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phongBan,
+                      r.nguoiDuyet,
+                      CONVERT(COALESCE(approver.hoTen,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS nguoiDuyetTen
                   FROM donnghiphep r
                   LEFT JOIN nguoidung n ON n.maND = r.maND
+                  LEFT JOIN nguoidung approver ON approver.maND = r.nguoiDuyet
                   UNION ALL
                   SELECT CONVERT(CONCAT('correction:', c.id) USING utf8mb4) COLLATE utf8mb4_unicode_ci AS uid,
                       c.id,
@@ -2179,11 +2183,34 @@ class ChamCongModel
                       c.ngayTao, c.ngayCapNhat,
                       CONVERT(COALESCE(n.hoTen,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS hoTen,
                       CONVERT(COALESCE(n.chucVu,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS chucVu,
-                      CONVERT(COALESCE(n.phongBan,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phongBan
+                      CONVERT(COALESCE(n.phongBan,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phongBan,
+                      NULL AS nguoiDuyet,
+                      CONVERT('' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS nguoiDuyetTen
                   FROM suachamcong c
                   LEFT JOIN nguoidung n ON n.maND = c.maND
                   UNION ALL
-                  SELECT CONVERT(CONCAT('ot:', a.id) USING utf8mb4) COLLATE utf8mb4_unicode_ci AS uid,
+                  SELECT CONVERT(CONCAT('ot-request:', o.id) USING utf8mb4) COLLATE utf8mb4_unicode_ci AS uid,
+                      o.id,
+                      CONVERT('ot' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS request_type,
+                      o.maND, o.ngayOT AS ngayYeuCau,
+                      CONVERT('ot' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS loaiNghiPhep,
+                      0 AS laNuaNgay,
+                      NULL AS gioBatDau, NULL AS gioKetThuc, o.soGioOT AS soGio,
+                      NULL AS tenCaHienTai, NULL AS tenCaMoi,
+                      CONVERT(COALESCE(o.ghiChu,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS lyDo,
+                      CONVERT(COALESCE(o.trangThai,'pending') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS trangThai,
+                      CONVERT('' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS ghiChuQL,
+                      o.ngayTao, o.ngayDuyet AS ngayCapNhat,
+                      CONVERT(COALESCE(n.hoTen,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS hoTen,
+                      CONVERT(COALESCE(n.chucVu,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS chucVu,
+                      CONVERT(COALESCE(n.phongBan,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phongBan,
+                      o.nguoiDuyet,
+                      CONVERT(COALESCE(approver.hoTen,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS nguoiDuyetTen
+                  FROM don_ot o
+                  LEFT JOIN nguoidung n ON n.maND = o.maND
+                  LEFT JOIN nguoidung approver ON approver.maND = o.nguoiDuyet
+                  UNION ALL
+                  SELECT CONVERT(CONCAT('ot-shift:', a.id) USING utf8mb4) COLLATE utf8mb4_unicode_ci AS uid,
                       a.id,
                       CONVERT('ot' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS request_type,
                       a.maND, a.hieuLucTu AS ngayYeuCau,
@@ -2197,7 +2224,9 @@ class ChamCongModel
                       NULL AS ghiChuQL, a.ngayTao, a.ngayTao AS ngayCapNhat,
                       CONVERT(COALESCE(n.hoTen,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS hoTen,
                       CONVERT(COALESCE(n.chucVu,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS chucVu,
-                      CONVERT(COALESCE(n.phongBan,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phongBan
+                      CONVERT(COALESCE(n.phongBan,'') USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phongBan,
+                      NULL AS nguoiDuyet,
+                      CONVERT('' USING utf8mb4) COLLATE utf8mb4_unicode_ci AS nguoiDuyetTen
                   FROM canhanvien a
                   JOIN calamviec s ON s.id = a.maCa AND s.hoatDong = 1
                   LEFT JOIN nguoidung n ON n.maND = a.maND
@@ -2260,6 +2289,39 @@ class ChamCongModel
             $stmt->bind_param($types, ...$params);
         }
         $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $rows;
+    }
+
+    public function getOTRequestsForReport($fromDate, $toDate, $phongBan = '')
+    {
+        $sql = "SELECT o.*, n.hoTen, n.phongBan, approver.hoTen AS tenNguoiDuyet
+                FROM don_ot o
+                LEFT JOIN nguoidung n ON n.maND = o.maND
+                LEFT JOIN nguoidung approver ON approver.maND = o.nguoiDuyet
+                WHERE o.ngayOT BETWEEN ? AND ?";
+        $params = [$fromDate, $toDate];
+        $types = 'ss';
+
+        if ($phongBan !== '') {
+            $sql .= " AND n.phongBan = ?";
+            $params[] = $phongBan;
+            $types .= 's';
+        }
+        $sql .= " ORDER BY o.ngayOT, o.id";
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            error_log('Không thể chuẩn bị truy vấn báo cáo OT: ' . $this->conn->error);
+            return [];
+        }
+        $stmt->bind_param($types, ...$params);
+        if (!$stmt->execute()) {
+            error_log('Không thể lấy dữ liệu báo cáo OT: ' . $stmt->error);
+            $stmt->close();
+            return [];
+        }
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         return $rows;
