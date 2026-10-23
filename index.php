@@ -170,6 +170,7 @@ $allowedPages = [
     // Manager
     'bao-cao-tong-hop',
     'thong-ke-bieu-do',
+    'xuat-bao-cao-tong-hop',
     // Tech
     'tech-accounts',
     'tech-accounts-api',
@@ -480,6 +481,11 @@ switch ($page) {
     case 'thong-ke-bieu-do':
         require_once 'app/controllers/ManagerController.php';
         (new ManagerController())->statistics();
+        break;
+
+    case 'xuat-bao-cao-tong-hop':
+        require_once 'app/controllers/ManagerController.php';
+        (new ManagerController())->exportReport();
         break;
 
     case 'xuly-yeucau':

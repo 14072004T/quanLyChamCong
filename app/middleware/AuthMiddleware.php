@@ -76,6 +76,7 @@ class AuthMiddleware
             'quan-ly-cham-cong',
             'bao-cao-tong-hop',
             'thong-ke-bieu-do',
+            'xuat-bao-cao-tong-hop',
             'xuly-yeucau',
             'hr-api-corrections',
             'hr-api-correction-hanhDong',
