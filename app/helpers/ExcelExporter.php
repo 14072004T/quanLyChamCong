@@ -411,10 +411,15 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
         $h .= '<th rowspan="2" style="' . $thBase . 'width:90px">Phòng ban</th>';
         foreach ($dates as $date) {
             $dow = (int)date('w', strtotime($date));
-            $dayLabel = $dayVI[$dow] . '<br>' . date('d/m', strtotime($date));
+            // Dùng format 'dd.mm' (dấu chấm) thay 'dd/mm' để Excel không tự parse
+            // thành MM/DD của Mỹ (ví dụ: '01/09' bị parse thành Jan 9)
+            $day = substr($date, 8, 2);  // '01'
+            $mon = substr($date, 5, 2);  // '09'
+            $dayLabel = $dayVI[$dow] . '<br>' . $day . '.' . $mon;
             $isWknd = ($dow === 0 || $dow === 6);
             $thStyle = $isWknd ? $thWeekend : $thBase;
-            $h .= '<th colspan="3" style="' . $thStyle . 'min-width:72px">' . $dayLabel . '</th>';
+            // mso-number-format:"\@" buộc Excel xử lý cell này là text, không auto-convert
+            $h .= '<th colspan="3" style="' . $thStyle . 'min-width:72px;mso-number-format:"\@"">' . $dayLabel . '</th>';
         }
         $h .= '<th rowspan="2" style="' . $thBase . 'background-color:#065f46;width:40px">Tổng<br>ngày</th>';
         $h .= '</tr>';
