@@ -462,8 +462,9 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
                 foreach ($dates as $date) {
                     $dow   = (int)date('w', strtotime($date));
                     $isWknd = ($dow === 0 || $dow === 6);
+                    $isHoliday = HolidayCalculator::isHoliday($date);
 
-                    if ($isWknd) {
+                    if ($isWknd && !$isHoliday) {
                         // Cuối tuần — ô xám
                         $label = $dayVI[$dow];
                         $h .= '<td style="' . $tdWeekend . '">' . $label . '</td>';
@@ -472,8 +473,17 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
                         continue;
                     }
 
+                    if ($isHoliday && !isset($attMap[$maND][$date])) {
+                        $h .= '<td style="' . $tdLeave . '">L</td>';
+                        $h .= '<td style="' . $tdLeave . '"></td>';
+                        $h .= '<td style="' . $tdLeave . '">L</td>';
+                        $empWorkDays += 1;
+                        $deptWorkDays += 1;
+                        continue;
+                    }
+
                     // Nghỉ phép
-                    if (isset($leaveMap[$maND][$date])) {
+                    if (!$isHoliday && isset($leaveMap[$maND][$date])) {
                         $leaveCode = $leaveMap[$maND][$date];
                         $h .= '<td style="' . $tdLeave . '">' . $leaveCode . '</td>';
                         $h .= '<td style="' . $tdLeave . '"></td>';
@@ -512,8 +522,9 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
                         $h .= '<td style="' . $tdNum . '">' . $vao . '</td>';
                         $h .= '<td style="' . $tdNum . '">' . $ra  . '</td>';
                         $h .= '<td style="' . $ttStyle . '">' . $tt . '</td>';
-                        $empWorkDays += $dayCount;
-                        $deptWorkDays += $dayCount;
+                        $creditedDay = $isHoliday ? max(1.0, $dayCount) : $dayCount;
+                        $empWorkDays += $creditedDay;
+                        $deptWorkDays += $creditedDay;
                         continue;
                     }
 
@@ -965,6 +976,4 @@ if (document.body.dataset.autoPrint === "1") {
         return $h;
     }
 }
-
-
 

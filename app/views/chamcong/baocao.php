@@ -1061,7 +1061,7 @@ $updatedAt = date('H:i, d/m/Y');
                             </div>
                             <span class="check-indicator" style="margin-left:auto"><i class="fas fa-check"></i></span>
                         </label>
-                        <label class="format-card" onclick="selectFormat(this, 'pdf')">
+                        <label class="format-card" id="pdfFormatCard" onclick="selectFormat(this, 'pdf')">
                             <input type="radio" name="exportFormat" value="pdf">
                             <div class="format-icon" style="background:#fee2e2;color:#dc2626"><i class="fas fa-file-pdf"></i></div>
                             <div>
@@ -1517,6 +1517,12 @@ function selectReportType(el, type) {
     _selectedReportType = type;
     document.querySelectorAll('.report-type-card').forEach(function(c) { c.classList.remove('selected'); });
     el.classList.add('selected');
+
+    var pdfCard = document.getElementById('pdfFormatCard');
+    pdfCard.style.display = type === 'chitiet' ? 'none' : '';
+    if (type === 'chitiet' && _selectedFormat === 'pdf') {
+        selectFormat(document.querySelector('.format-card input[value="excel"]').closest('.format-card'), 'excel');
+    }
 }
 function selectFormat(el, fmt) {
     _selectedFormat = fmt;
