@@ -2457,23 +2457,11 @@ class ChamCongModel
         }
 
         $employeeIds = array_map('intval', array_keys($attendanceByEmployee));
-        if (empty($employeeIds)) {
-            return [
-                'scheduled_days' => 0,
-                'work_days' => 0,
-                'absent_days' => 0,
-                'present_days' => 0,
-                'attendance_rate' => 0,
-                'absent_rate' => 0,
-                'total_ot_hours' => 0,
-            ];
-        }
 
         $scheduledDays = 0;
         $workDays = 0;
         $absentDays = 0;
         $presentDays = 0;
-        $totalOtMinutes = 0;
         $weeklyOt = [];
 
         $cursor = strtotime($fromDate);
@@ -2485,7 +2473,7 @@ class ChamCongModel
             $date = date('Y-m-d', $cursor);
             $weekKey = date('o-W', $cursor);
             if (!isset($weeklyOt[$weekKey])) {
-                $weeklyOt[$weekKey] = ['start' => $date, 'end' => $date, 'ot_minutes' => 0];
+                $weeklyOt[$weekKey] = ['start' => $date, 'end' => $date, 'hours' => 0.0];
             }
             $weeklyOt[$weekKey]['end'] = $date;
             foreach ($employeeIds as $maND) {
@@ -2505,9 +2493,6 @@ class ChamCongModel
                 $status = $this->calculateShiftStatus($checkIn, $checkOut, $shift['gioBatDau'] ?? null, $shift['gioKetThuc'] ?? null);
                 if (!in_array('no_shift', $status['statuses'], true) && $checkIn !== null && $checkOut !== null) {
                     $workDays += 1;
-                    $otMinutes = (int)($status['phutTangCa'] ?? 0);
-                    $totalOtMinutes += $otMinutes;
-                    $weeklyOt[$weekKey]['ot_minutes'] += $otMinutes;
                 }
             }
             $cursor = strtotime('+1 day', $cursor);
@@ -2532,28 +2517,27 @@ class ChamCongModel
                     AND ot.trangThai = 'approved'
                     AND nd.trangThai = 1
                     AND LOWER(nd.phongBan) NOT LIKE '%điều hành%'
+                    AND LOWER(nd.phongBan) NOT LIKE '%dieu hanh%'
                     $deptFilter
                   GROUP BY ot.ngayOT
                   ORDER BY ot.ngayOT";
         $stmtOt = $this->conn->prepare($sqlOt);
-        $realWeeklyOt = [];
         $realTotalOtH = 0.0;
-        if ($stmtOt) {
+        if (!$stmtOt) {
+            error_log('Không thể chuẩn bị truy vấn tổng hợp đơn OT: ' . $this->conn->error);
+        } else {
             $stmtOt->bind_param($otTypes, ...$otParams);
-            if ($stmtOt->execute()) {
+            if (!$stmtOt->execute()) {
+                error_log('Không thể lấy dữ liệu đơn OT: ' . $stmtOt->error);
+            } else {
                 $otRows = $stmtOt->get_result()->fetch_all(MYSQLI_ASSOC);
                 foreach ($otRows as $otRow) {
                     $wKey = date('o-W', strtotime($otRow['ngayOT']));
-                    if (!isset($realWeeklyOt[$wKey])) {
-                        $realWeeklyOt[$wKey] = [
-                            'start' => $otRow['ngayOT'],
-                            'end'   => $otRow['ngayOT'],
-                            'hours' => 0.0,
-                        ];
+                    if (isset($weeklyOt[$wKey])) {
+                        $hours = (float)$otRow['totalHours'];
+                        $weeklyOt[$wKey]['hours'] += $hours;
+                        $realTotalOtH += $hours;
                     }
-                    $realWeeklyOt[$wKey]['end']   = $otRow['ngayOT'];
-                    $realWeeklyOt[$wKey]['hours'] += (float)$otRow['totalHours'];
-                    $realTotalOtH += (float)$otRow['totalHours'];
                 }
             }
             $stmtOt->close();
@@ -2563,17 +2547,7 @@ class ChamCongModel
                 'label' => date('d/m', strtotime($w['start'])) . ' - ' . date('d/m', strtotime($w['end'])),
                 'hours' => round($w['hours'], 1),
             ];
-        }, $realWeeklyOt));
-        if (empty($weeklyOtChart)) {
-            // Fallback: chia đều từ tính toán ca nếu không có don_ot
-            $weeklyOtChart = array_values(array_map(function ($week) {
-                return [
-                    'label' => date('d/m', strtotime($week['start'])) . ' - ' . date('d/m', strtotime($week['end'])),
-                    'hours' => round($week['ot_minutes'] / 60, 1),
-                ];
-            }, $weeklyOt));
-            $realTotalOtH = round($totalOtMinutes / 60, 1);
-        }
+        }, $weeklyOt));
 
         return [
             'scheduled_days'  => $scheduledDays,

@@ -1128,7 +1128,7 @@ $updatedAt = date('H:i, d/m/Y');
 
             <section class="mgrr-panel">
                 <div class="mgrr-panel-head">
-                    <div class="mgrr-panel-title">Tổng giờ OT theo tuần</div>
+                    <div class="mgrr-panel-title">Tổng giờ OT đã duyệt theo tuần</div>
                     <select class="mgrr-mini-select"><option>Theo tuần</option></select>
                 </div>
                 <div class="mgrr-chart"><canvas id="mgrrBarChart"></canvas></div>
@@ -1441,6 +1441,7 @@ document.addEventListener('DOMContentLoaded', function () {
         data: {
             labels: weekLabels,
             datasets: [{
+                label: 'Giờ OT đã duyệt',
                 data: weekOt,
                 backgroundColor: '#2f7cf6',
                 borderRadius: 5,

@@ -38,6 +38,77 @@ mt_srand(20260924);
 $doRun = isset($_GET['act']) && $_GET['act']==='run';
 $log   = [];
 
+function ensureRequestStatuses($conn, $table, $dateColumn, $from, $to, $managerId, $doRun, &$log, $label)
+{
+    if (!$doRun) {
+        return;
+    }
+
+    $counts = ['pending' => 0, 'approved' => 0, 'rejected' => 0];
+    $result = $conn->query("SELECT trangThai, COUNT(*) AS total FROM `$table` WHERE `$dateColumn` BETWEEN '$from' AND '$to' GROUP BY trangThai");
+    if (!$result) {
+        $log[] = "⚠️ Không thể kiểm tra trạng thái $label: " . $conn->error;
+        return;
+    }
+    while ($row = $result->fetch_assoc()) {
+        if (isset($counts[$row['trangThai']])) {
+            $counts[$row['trangThai']] = (int)$row['total'];
+        }
+    }
+
+    foreach (['approved', 'pending', 'rejected'] as $requiredStatus) {
+        if ($counts[$requiredStatus] > 0) {
+            continue;
+        }
+
+        $donorStatus = null;
+        foreach (['approved', 'pending', 'rejected'] as $candidateStatus) {
+            if ($counts[$candidateStatus] > 1 && ($donorStatus === null || $counts[$candidateStatus] > $counts[$donorStatus])) {
+                $donorStatus = $candidateStatus;
+            }
+        }
+        if ($donorStatus === null) {
+            $log[] = "⚠️ Không đủ đơn để bổ sung trạng thái $requiredStatus cho $label";
+            continue;
+        }
+
+        $select = $conn->prepare("SELECT id FROM `$table` WHERE `$dateColumn` BETWEEN ? AND ? AND trangThai = ? ORDER BY id LIMIT 1");
+        if (!$select) {
+            $log[] = "⚠️ Không thể chọn đơn $label để bổ sung trạng thái: " . $conn->error;
+            continue;
+        }
+        $select->bind_param('sss', $from, $to, $donorStatus);
+        if (!$select->execute()) {
+            $log[] = "⚠️ Không thể chọn đơn $label để bổ sung trạng thái: " . $select->error;
+            $select->close();
+            continue;
+        }
+        $idRow = $select->get_result()->fetch_assoc();
+        $select->close();
+        if (!$idRow) {
+            continue;
+        }
+
+        $approverId = $requiredStatus === 'pending' && $table !== 'don_ot' ? null : $managerId;
+        $decisionDate = $requiredStatus === 'pending' ? null : date('Y-m-d H:i:s');
+        $update = $conn->prepare("UPDATE `$table` SET trangThai = ?, nguoiDuyet = ?, ngayDuyet = ? WHERE id = ?");
+        if (!$update) {
+            $log[] = "⚠️ Không thể cập nhật trạng thái $label: " . $conn->error;
+            continue;
+        }
+        $id = (int)$idRow['id'];
+        $update->bind_param('sisi', $requiredStatus, $approverId, $decisionDate, $id);
+        if ($update->execute()) {
+            $counts[$donorStatus]--;
+            $counts[$requiredStatus]++;
+            $log[] = "🔄 Đã bổ sung trạng thái $requiredStatus cho $label";
+        } else {
+            $log[] = "⚠️ Không thể cập nhật trạng thái $label: " . $update->error;
+        }
+        $update->close();
+    }
+}
+
 // ════════════════════════════════════════
 // ── PHẦN 1: Điều chỉnh đơn OT ──
 // ════════════════════════════════════════
@@ -49,6 +120,25 @@ $log[] = "📦 OT hiện có: $curOT";
 $targetOT = mt_rand($TARGET_OT_MIN, $TARGET_OT_MAX);
 $addOT = max(0, $targetOT - $curOT);
 $log[] = "🎯 OT mục tiêu: $targetOT (cần thêm: $addOT)";
+
+if ($curOT > $targetOT) {
+    $excess = $curOT - $targetOT;
+    $log[] = "🗑️ OT cần giảm: $excess";
+    $deleteResult = $conn->query("SELECT id FROM don_ot WHERE ngayOT BETWEEN '$FROM' AND '$TO' ORDER BY trangThai='pending' DESC, trangThai='rejected' DESC LIMIT $excess");
+    if ($deleteResult) {
+        while ($row = $deleteResult->fetch_assoc()) {
+            if ($doRun && !$conn->query("DELETE FROM don_ot WHERE id=" . (int)$row['id'])) {
+                $log[] = "⚠️ Không thể xóa đơn OT #" . (int)$row['id'] . ': ' . $conn->error;
+            }
+        }
+        if ($doRun) {
+            $curOT = (int)$conn->query("SELECT COUNT(*) AS total FROM don_ot WHERE ngayOT BETWEEN '$FROM' AND '$TO'")->fetch_assoc()['total'];
+            $addOT = max(0, $targetOT - $curOT);
+        }
+    } else {
+        $log[] = '⚠️ Không thể chọn đơn OT cần xóa: ' . $conn->error;
+    }
+}
 
 // Load OT đã có
 $existOT = [];
@@ -72,19 +162,19 @@ if($addOT > 0){
     foreach(array_slice($candidates,0,$addOT) as [$maND,$dt]){
         $soGio = round(mt_rand(15,35)/10,1);
         $trangThai = $otStatuses[mt_rand(0,count($otStatuses)-1)];
-        $nguoiDuyet = ($trangThai!=='pending')?$mgrId:null;
+        $nguoiDuyet = $mgrId;
         $ngayTao = $dt.' 07:00:00';
         $ghiChu  = 'Tăng ca dự án tháng 9/2026';
         if($doRun){
-            if($nguoiDuyet){
-                $stmt=$conn->prepare("INSERT INTO don_ot (maND,ngayOT,soGioOT,ghiChu,nguoiDuyet,trangThai,ngayTao) VALUES(?,?,?,?,?,?,?)");
-                $stmt->bind_param('iddsiss',$maND,$dt,$soGio,$ghiChu,$nguoiDuyet,$trangThai,$ngayTao);
+            $stmt=$conn->prepare("INSERT INTO don_ot (maND,ngayOT,soGioOT,ghiChu,nguoiDuyet,trangThai,ngayTao) VALUES(?,?,?,?,?,?,?)");
+            if ($stmt) {
+                $stmt->bind_param('isdsiss',$maND,$dt,$soGio,$ghiChu,$nguoiDuyet,$trangThai,$ngayTao);
+                if($stmt->execute()) $otAdded++;
+                else $log[] = '⚠️ Không thể thêm đơn OT: ' . $stmt->error;
+                $stmt->close();
             } else {
-                $stmt=$conn->prepare("INSERT INTO don_ot (maND,ngayOT,soGioOT,ghiChu,trangThai,ngayTao) VALUES(?,?,?,?,?,?)");
-                $stmt->bind_param('iddsss',$maND,$dt,$soGio,$ghiChu,$trangThai,$ngayTao);
+                $log[] = '⚠️ Không thể chuẩn bị thêm đơn OT: ' . $conn->error;
             }
-            if($stmt&&$stmt->execute()) $otAdded++;
-            if($stmt) $stmt->close();
         } else {
             $otAdded++;
         }
@@ -108,12 +198,15 @@ $addLV = 0;
 if($curLV > $TARGET_LV_MAX){
     // Xóa bớt (ưu tiên xóa pending trước, rồi rejected)
     $excess = $curLV - $targetLV;
-    $delRes = $conn->query("SELECT madonxin FROM donnghiphep WHERE tuNgay BETWEEN '$FROM' AND '$TO' ORDER BY trangThai='pending' DESC, trangThai='rejected' DESC LIMIT $excess");
+    $delRes = $conn->query("SELECT id FROM donnghiphep WHERE tuNgay BETWEEN '$FROM' AND '$TO' ORDER BY trangThai='pending' DESC, trangThai='rejected' DESC LIMIT $excess");
     if($delRes){
         while($r=$delRes->fetch_assoc()){
             if($doRun){
-                $conn->query("DELETE FROM donnghiphep WHERE madonxin=".(int)$r['madonxin']);
-                $delLV++;
+                if ($conn->query("DELETE FROM donnghiphep WHERE id=".(int)$r['id'])) {
+                    $delLV++;
+                } else {
+                    $log[] = '⚠️ Không thể xóa đơn nghỉ phép #' . (int)$r['id'] . ': ' . $conn->error;
+                }
             } else {
                 $delLV++;
             }
@@ -154,7 +247,7 @@ if($curLV > $TARGET_LV_MAX){
         if($doRun){
             if($nguoiDuyet){
                 $stmt=$conn->prepare("INSERT INTO donnghiphep (maND,loaiNghiPhep,tuNgay,denNgay,lyDo,trangThai,nguoiDuyet,ngayDuyet,ngayTao) VALUES(?,?,?,?,'Nghỉ phép cá nhân',?,?,'2026-08-26',?)");
-                $stmt->bind_param('issssss',$maND,$loai,$tuNgay,$denNgay,$trangThai,$nguoiDuyet,$ngayTao);
+                $stmt->bind_param('issssis',$maND,$loai,$tuNgay,$denNgay,$trangThai,$nguoiDuyet,$ngayTao);
             } else {
                 $stmt=$conn->prepare("INSERT INTO donnghiphep (maND,loaiNghiPhep,tuNgay,denNgay,lyDo,trangThai,ngayTao) VALUES(?,?,?,?,'Nghỉ phép cá nhân',?,?)");
                 $stmt->bind_param('isssss',$maND,$loai,$tuNgay,$denNgay,$trangThai,$ngayTao);
@@ -162,56 +255,26 @@ if($curLV > $TARGET_LV_MAX){
             if($stmt&&$stmt->execute()){
                 $addLV++;
                 $existLV[$maND][$tuNgay]=true;
-            }
+            } elseif($stmt) $log[] = '⚠️ Không thể thêm đơn nghỉ phép: ' . $stmt->error;
             if($stmt) $stmt->close();
         } else { $addLV++; }
     }
     $log[] = "✅ Nghỉ phép đã thêm: $addLV";
 } else {
-    // Trong range, chỉ đảm bảo có đủ trạng thái
-    $statusCheck=$conn->query("SELECT trangThai,COUNT(*) cnt FROM donnghiphep WHERE tuNgay BETWEEN '$FROM' AND '$TO' GROUP BY trangThai")->fetch_all(MYSQLI_ASSOC);
-    $hasPending=false; $hasRejected=false;
-    foreach($statusCheck as $sc){
-        if($sc['trangThai']==='pending') $hasPending=true;
-        if($sc['trangThai']==='rejected') $hasRejected=true;
-    }
-    // Cập nhật 1 đơn sang pending nếu chưa có
-    if(!$hasPending&&$doRun){
-        $conn->query("UPDATE donnghiphep SET trangThai='pending', nguoiDuyet=NULL WHERE tuNgay BETWEEN '$FROM' AND '$TO' AND trangThai='approved' ORDER BY RAND() LIMIT 1");
-        $log[]="🔄 Chuyển 1 đơn sang pending";
-    }
-    // Cập nhật 1 đơn sang rejected nếu chưa có
-    if(!$hasRejected&&$doRun){
-        $conn->query("UPDATE donnghiphep SET trangThai='rejected', nguoiDuyet=$mgrId WHERE tuNgay BETWEEN '$FROM' AND '$TO' AND trangThai='approved' ORDER BY RAND() LIMIT 1");
-        $log[]="🔄 Chuyển 1 đơn sang rejected";
-    }
-    if(!$hasPending||!$hasRejected) $log[]="🔄 Đã đảm bảo đủ trạng thái nghỉ phép";
-    else $log[]="✅ Nghỉ phép đã đủ range và đủ trạng thái";
+    $log[] = '✅ Số đơn nghỉ phép hiện tại nằm trong khoảng yêu cầu';
 }
 
-// ─── Đảm bảo OT có đủ trạng thái ───
-if($doRun){
-    $otStatusCheck=$conn->query("SELECT trangThai,COUNT(*) cnt FROM don_ot WHERE ngayOT BETWEEN '$FROM' AND '$TO' GROUP BY trangThai")->fetch_all(MYSQLI_ASSOC);
-    $otHasPending=false; $otHasRejected=false;
-    foreach($otStatusCheck as $s){
-        if($s['trangThai']==='pending') $otHasPending=true;
-        if($s['trangThai']==='rejected') $otHasRejected=true;
-    }
-    if(!$otHasPending) {
-        $conn->query("UPDATE don_ot SET trangThai='pending',nguoiDuyet=NULL WHERE ngayOT BETWEEN '$FROM' AND '$TO' AND trangThai='approved' ORDER BY RAND() LIMIT 2");
-        $log[]="🔄 Chuyển 2 đơn OT sang pending";
-    }
-    if(!$otHasRejected) {
-        $conn->query("UPDATE don_ot SET trangThai='rejected',nguoiDuyet=$mgrId WHERE ngayOT BETWEEN '$FROM' AND '$TO' AND trangThai='approved' ORDER BY RAND() LIMIT 1");
-        $log[]="🔄 Chuyển 1 đơn OT sang rejected";
-    }
-}
+ensureRequestStatuses($conn, 'don_ot', 'ngayOT', $FROM, $TO, $mgrId, $doRun, $log, 'OT');
+ensureRequestStatuses($conn, 'donnghiphep', 'tuNgay', $FROM, $TO, $mgrId, $doRun, $log, 'nghỉ phép');
 
 // ─── Thống kê sau ───
 $afterOT  = (int)$conn->query("SELECT COUNT(*) c FROM don_ot WHERE ngayOT BETWEEN '$FROM' AND '$TO'")->fetch_assoc()['c'];
 $afterLV  = (int)$conn->query("SELECT COUNT(*) c FROM donnghiphep WHERE tuNgay BETWEEN '$FROM' AND '$TO'")->fetch_assoc()['c'];
 $otByStatus = $conn->query("SELECT trangThai,COUNT(*) cnt FROM don_ot WHERE ngayOT BETWEEN '$FROM' AND '$TO' GROUP BY trangThai")->fetch_all(MYSQLI_ASSOC);
 $lvByStatus = $conn->query("SELECT trangThai,COUNT(*) cnt FROM donnghiphep WHERE tuNgay BETWEEN '$FROM' AND '$TO' GROUP BY trangThai")->fetch_all(MYSQLI_ASSOC);
+$hasErrors = count(array_filter($log, function ($entry) {
+    return strpos($entry, '⚠️') === 0;
+})) > 0;
 ?>
 <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
 <title>Seed Adjust</title>
@@ -249,8 +312,10 @@ h1{font-size:1.5rem;font-weight:800;color:#1e40af;margin-bottom:6px}
     <h1>🔧 Điều chỉnh OT & Nghỉ phép – T9/2026</h1>
     <p class="sub">OT: <?=$TARGET_OT_MIN?>–<?=$TARGET_OT_MAX?> đơn &nbsp;|&nbsp; Nghỉ phép: <?=$TARGET_LV_MIN?>–<?=$TARGET_LV_MAX?> đơn &nbsp;|&nbsp; Đủ trạng thái pending/approved/rejected</p>
 
-    <?php if($doRun): ?>
+    <?php if($doRun && !$hasErrors): ?>
     <div class="alert-ok">✅ Đã chạy thành công!</div>
+    <?php elseif($doRun): ?>
+    <div class="alert-info">⚠️ Có thao tác chưa hoàn tất; xem chi tiết lỗi bên dưới.</div>
     <?php else: ?>
     <div class="alert-info">ℹ️ Preview mode – Bấm <strong>"Chạy"</strong> để thực thi</div>
     <?php endif; ?>
