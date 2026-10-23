@@ -1037,6 +1037,8 @@ class ChamCongModel
 
     private function getCountableAttendanceMetricsForDate($date, $phongBan = '', &$employeeRows = null, $requireAssignedShift = false)
     {
+        require_once __DIR__ . '/../helpers/HolidayCalculator.php';
+
         $metrics = [
             'date' => $date,
             'scheduled' => 0,
@@ -1048,6 +1050,10 @@ class ChamCongModel
             'leave' => 0,
             'pending' => 0,
         ];
+        if (HolidayCalculator::isHoliday($date)) {
+            return $metrics;
+        }
+
         $scanStart = $date . ' 00:00:00';
         $scanEnd = date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
         $defaultShift = $requireAssignedShift ? null : $this->getDefaultShiftForDate($date);
@@ -5030,8 +5036,7 @@ class ChamCongModel
 
         if (empty($employees)) return [];
 
-        // Ghi nhận ngày được phân ca nghỉ để báo cáo chi tiết không đánh dấu vắng.
-        $scheduleSql = "SELECT cv.maND, cv.hieuLucTu, cv.hieuLucDen, cv.id AS assignmentId,
+        $scheduleSql = "SELECT cv.maND, cv.hieuLucTu, cv.hieuLucDen,
                                s.kyHieu, s.tenCa, s.cotinhcong, s.gioBatDau, s.gioKetThuc
                         FROM canhanvien cv
                         INNER JOIN calamviec s ON s.id = cv.maCa AND s.hoatDong = 1
@@ -5177,32 +5182,33 @@ class ChamCongModel
             $cnt++;
         }
 
-        $scheduledHolidayMap = [];
+        $scheduledOffMap = [];
         foreach ($employees as $employee) {
             $employeeId = (int)$employee['maND'];
             foreach ($dates as $date) {
-                $assignedShift = null;
-                foreach ($assignedShifts[$employeeId] ?? [] as $candidateShift) {
+                foreach ($assignedShifts[$employeeId] ?? [] as $assignedShift) {
                     if (
-                        $date >= $candidateShift['hieuLucTu']
-                        && ($candidateShift['hieuLucDen'] === null || $date <= $candidateShift['hieuLucDen'])
+                        $date < $assignedShift['hieuLucTu']
+                        || ($assignedShift['hieuLucDen'] !== null && $date > $assignedShift['hieuLucDen'])
                     ) {
-                        $assignedShift = $candidateShift;
-                        break;
+                        continue;
                     }
-                }
-                if (!$assignedShift) {
-                    continue;
-                }
 
-                $shiftName = mb_strtolower(trim((string)($assignedShift['tenCa'] ?? '')), 'UTF-8');
-                $isScheduledOff = ($assignedShift['kyHieu'] ?? '') === 'OFF'
-                    || ($assignedShift['cotinhcong'] ?? 'yes') === 'no'
-                    || strpos($shiftName, 'nghỉ') !== false
-                    || strpos($shiftName, 'nghi') !== false
-                    || $assignedShift['gioBatDau'] === $assignedShift['gioKetThuc'];
-                if ($isScheduledOff) {
-                    $scheduledHolidayMap[$employeeId][$date] = true;
+                    $shiftName = mb_strtolower(trim((string)($assignedShift['tenCa'] ?? '')), 'UTF-8');
+                    $shiftCode = strtoupper(trim((string)($assignedShift['kyHieu'] ?? '')));
+                    $shiftStart = $assignedShift['gioBatDau'] ?? null;
+                    $shiftEnd = $assignedShift['gioKetThuc'] ?? null;
+                    if (
+                        $shiftCode === 'OFF'
+                        || ($assignedShift['cotinhcong'] ?? 'yes') === 'no'
+                        || strpos($shiftName, 'nghỉ') !== false
+                        || strpos($shiftName, 'nghi') !== false
+                        || strpos($shiftName, 'off') !== false
+                        || ($shiftStart !== null && $shiftEnd !== null && $shiftStart === $shiftEnd)
+                    ) {
+                        $scheduledOffMap[$employeeId][$date] = true;
+                    }
+                    break;
                 }
             }
         }
@@ -5212,7 +5218,7 @@ class ChamCongModel
             'employees' => $employees,
             'attMap'    => $attMap,
             'leaveMap'  => $leaveMap,
-            'scheduledHolidayMap' => $scheduledHolidayMap,
+            'scheduledOffMap' => $scheduledOffMap,
         ];
     }
 }

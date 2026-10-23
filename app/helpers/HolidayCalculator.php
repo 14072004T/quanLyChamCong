@@ -8,7 +8,7 @@
  * - Giỗ Tổ Hùng Vương: 18/04/2026 (1 ngày)
  * - Ngày Chiến thắng: 30/04/2026 (1 ngày)
  * - Quốc tế Lao động: 01/05/2026 (1 ngày)
- * - Quốc khánh: 02-03/09/2026 (2 ngày)
+ * - Quốc khánh: 01-02/09/2026 (2 ngày theo lịch HR)
  * Tổng: 11 ngày lễ hưởng nguyên lương
  */
 class HolidayCalculator
@@ -27,8 +27,8 @@ class HolidayCalculator
         '2026-04-18', // Giỗ Tổ Hùng Vương
         '2026-04-30', // Ngày Chiến thắng
         '2026-05-01', // Quốc tế Lao động
+        '2026-09-01', // Nghỉ Quốc khánh theo lịch HR
         '2026-09-02', // Quốc khánh
-        '2026-09-03', // Quốc khánh (ngày 2)
     ];
 
     /**

@@ -114,6 +114,8 @@ class AttendanceCalculator
             return self::getEmptyDayData();
         }
 
+        $isHoliday = HolidayCalculator::isHoliday($date);
+
         // Kiểm tra ca OFF
         $isOffShift = false;
         if ($shift) {
@@ -135,7 +137,7 @@ class AttendanceCalculator
         $hasRealAttendance = !empty($checkInOutData['checkIn']) && !empty($checkInOutData['checkOut']);
 
         // Chỉ dựa vào ca làm việc thực tế: Nếu là ca OFF (không có lịch làm việc) thì không ghi nhận công
-        if ($isOffShift) {
+        if ($isOffShift && !$isHoliday) {
             return [
                 'date' => $date,
                 'day_type' => 'off_shift',
@@ -149,8 +151,22 @@ class AttendanceCalculator
             ];
         }
 
+        if ($isHoliday && empty($checkInOutData['checkIn']) && empty($checkInOutData['checkOut'])) {
+            return [
+                'date' => $date,
+                'day_type' => 'holiday',
+                'day_type_label' => 'Ngày lễ',
+                'work_value' => 1.0,
+                'work_hours' => 8,
+                'ot_hours' => 0,
+                'has_attendance' => false,
+                'shift_name' => $shift['tenCa'] ?? 'Ngày lễ',
+                'maCa' => $shift['maCa'] ?? $shift['id'] ?? null,
+            ];
+        }
+
         // Kiểm tra nếu có xin phép
-        if ($leaveType) {
+        if ($leaveType && !$isHoliday) {
             $isHalfDay = false;
             $leaveId = null;
             $leaveReason = null;
@@ -219,13 +235,13 @@ class AttendanceCalculator
 
                 return [
                     'date' => $date,
-                    'day_type' => 'working',
-                    'day_type_label' => 'Ngày làm việc',
+                    'day_type' => $isHoliday ? 'holiday' : 'working',
+                    'day_type_label' => $isHoliday ? 'Ngày lễ' : 'Ngày làm việc',
                     'check_in' => $checkIn,
                     'check_out' => $checkOut,
                     'phutLamViec' => $workMinutes,
                     'work_hours' => $workHours,
-                    'work_value' => $workValue,
+                    'work_value' => $isHoliday ? max(1.0, $workValue) : $workValue,
                     'ot_hours' => $otHours,
                     'has_attendance' => true,
                     'shift_name' => $shift['tenCa'] ?? 'HC',
@@ -240,13 +256,13 @@ class AttendanceCalculator
             if ($checkIn) {
                 return [
                     'date' => $date,
-                    'day_type' => 'missing_checkout',
-                    'day_type_label' => 'Chưa chấm ra',
+                    'day_type' => $isHoliday ? 'holiday' : 'missing_checkout',
+                    'day_type_label' => $isHoliday ? 'Ngày lễ' : 'Chưa chấm ra',
                     'check_in' => $checkIn,
                     'check_out' => null,
                     'phutLamViec' => 0,
                     'work_hours' => 0,
-                    'work_value' => 0.0,
+                    'work_value' => $isHoliday ? 1.0 : 0.0,
                     'ot_hours' => 0,
                     'has_attendance' => true,
                     'shift_name' => $shift['tenCa'] ?? 'HC',

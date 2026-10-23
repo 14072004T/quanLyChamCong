@@ -104,10 +104,8 @@ class ExcelExporter
         
         for ($i = 1; $i <= $daysInMonth; $i++) {
             $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $i);
-            $dayOfWeek = date('w', strtotime($dateStr));
             $isHoliday = HolidayCalculator::isHoliday($dateStr);
-            $isWeekend = ($dayOfWeek == 0 || $dayOfWeek == 6);
-            $style = ($isHoliday || $isWeekend) ? 'background-color: #FFEB9C;' : '';
+            $style = $isHoliday ? 'background-color: #FFEB9C;' : '';
             $html .= '<th class="header-cell" style="' . $style . '">' . $i . '</th>';
         }
 
@@ -376,7 +374,7 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
         $employees = $data['employees'] ?? [];
         $attMap    = $data['attMap']    ?? [];
         $leaveMap  = $data['leaveMap']  ?? [];
-        $scheduledHolidayMap = $data['scheduledHolidayMap'] ?? [];
+        $scheduledOffMap = $data['scheduledOffMap'] ?? [];
 
         if (empty($dates) || empty($employees)) {
             return '<table><tr><td style="text-align:center;padding:20px;color:#94a3b8">Không có dữ liệu trong kỳ này</td></tr></table>';
@@ -463,8 +461,7 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
                 foreach ($dates as $date) {
                     $dow   = (int)date('w', strtotime($date));
                     $isWknd = ($dow === 0 || $dow === 6);
-                    $isHoliday = HolidayCalculator::isHoliday($date)
-                        || !empty($scheduledHolidayMap[$maND][$date]);
+                    $isHoliday = HolidayCalculator::isHoliday($date);
 
                     if ($isWknd && !$isHoliday) {
                         // Cuối tuần — ô xám
@@ -481,6 +478,13 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
                         $h .= '<td style="' . $tdLeave . '">L</td>';
                         $empWorkDays += 1;
                         $deptWorkDays += 1;
+                        continue;
+                    }
+
+                    if (!$isHoliday && !isset($attMap[$maND][$date]) && !empty($scheduledOffMap[$maND][$date])) {
+                        $h .= '<td style="' . $tdWeekend . '"></td>';
+                        $h .= '<td style="' . $tdWeekend . '"></td>';
+                        $h .= '<td style="' . $tdWeekend . '">OFF</td>';
                         continue;
                     }
 
