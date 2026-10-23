@@ -192,8 +192,8 @@ class ManagerController
 
             case 'chitiet':
                 $reportTitle = 'Báo Cáo Chi Tiết Chấm Công Nhân Viên';
-                $rawReport = $this->model->getCountableTabletAttendanceReport($fromDate, $toDate, $phongBan);
-                $data = $rawReport['report_rows'] ?? [];
+                // Dùng cross-tab format: hàng = nhân viên, cột = ngày
+                $data = $this->model->getChiTietAttendanceCrossTab($fromDate, $toDate, $phongBan);
                 break;
 
             case 'vipham':

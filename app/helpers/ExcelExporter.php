@@ -274,7 +274,12 @@ table{border-collapse:collapse;width:100%;}
                 $html .= $this->_buildTongHopTable($data, $fromDate);
                 break;
             case 'chitiet':
-                $html .= $this->_buildChiTietTable($data);
+                // Nếu data là cross-tab format (từ getChiTietAttendanceCrossTab)
+                if (isset($data['dates'])) {
+                    $html .= $this->_buildChiTietCrossTab($data);
+                } else {
+                    $html .= $this->_buildChiTietTable($data);
+                }
                 break;
             case 'vipham':
                 $html .= $this->_buildViPhamTable($data);
@@ -357,6 +362,176 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
             $h .= '</tr>';
         }
         $h .= '</tbody></table>';
+        return $h;
+    }
+
+    /**
+     * Build bảng chi tiết chấm công dạng CROSS-TAB (timesheet)
+     * Hàng = nhân viên, Cột = từng ngày, nhóm theo phòng ban
+     * Format: CODE | Họ và Tên | Chức vụ | Phòng ban || [Ngày] IN | OUT | TT | ... || Tổng
+     */
+    private function _buildChiTietCrossTab(array $data): string
+    {
+        $dates     = $data['dates']     ?? [];
+        $employees = $data['employees'] ?? [];
+        $attMap    = $data['attMap']    ?? [];
+        $leaveMap  = $data['leaveMap']  ?? [];
+
+        if (empty($dates) || empty($employees)) {
+            return '<table><tr><td style="text-align:center;padding:20px;color:#94a3b8">Không có dữ liệu trong kỳ này</td></tr></table>';
+        }
+
+        $dayVI = ['CN','T2','T3','T4','T5','T6','T7'];
+
+        // Styles
+        $thBase   = 'background-color:#4472C4;color:#fff;font-weight:bold;text-align:center;border:1px solid #2952a3;padding:5px 3px;font-size:9pt;white-space:nowrap;';
+        $thWeekend= 'background-color:#6b7280;color:#fff;font-weight:bold;text-align:center;border:1px solid #4b5563;padding:5px 3px;font-size:9pt;';
+        $tdBase   = 'border:1px solid #d1d5db;padding:4px 3px;font-size:9pt;vertical-align:middle;';
+        $tdNum    = $tdBase . 'text-align:center;';
+        $tdWeekend= $tdBase . 'text-align:center;background-color:#f3f4f6;color:#9ca3af;';
+        $tdLeave  = $tdBase . 'text-align:center;background-color:#dbeafe;color:#1e40af;font-weight:700;';
+        $tdAbsent = $tdBase . 'text-align:center;background-color:#fee2e2;color:#991b1b;font-weight:700;';
+        $tdLate   = $tdBase . 'text-align:center;background-color:#fff7ed;color:#c2410c;font-weight:700;';
+        $tdOk     = $tdBase . 'text-align:center;color:#166534;';
+        $tdDept   = 'background-color:#1e3a8a;color:#fff;font-weight:bold;font-size:10pt;padding:8px 10px;border:1px solid #1e3a8a;';
+        $tdTotal  = 'background-color:#f0fdf4;color:#166534;font-weight:bold;text-align:center;border:1px solid #86efac;font-size:9pt;padding:4px;';
+
+        // Số cột cố định (trước các ngày)
+        $fixedCols = 4; // Mã NV, Họ Tên, Chức vụ, Phòng ban
+        $totalCols = $fixedCols + count($dates) * 3 + 1; // +1 cho cột Tổng
+
+        $h = '<table style="border-collapse:collapse;font-family:Arial,sans-serif;">';
+        $h .= '<thead>';
+
+        // ── Hàng header 1: Tên ngày ──
+        $h .= '<tr>';
+        $h .= '<th rowspan="2" style="' . $thBase . 'width:55px">Mã NV</th>';
+        $h .= '<th rowspan="2" style="' . $thBase . 'width:160px">Họ và Tên</th>';
+        $h .= '<th rowspan="2" style="' . $thBase . 'width:90px">Chức vụ</th>';
+        $h .= '<th rowspan="2" style="' . $thBase . 'width:90px">Phòng ban</th>';
+        foreach ($dates as $date) {
+            $dow = (int)date('w', strtotime($date));
+            $dayLabel = $dayVI[$dow] . '<br>' . date('d/m', strtotime($date));
+            $isWknd = ($dow === 0 || $dow === 6);
+            $thStyle = $isWknd ? $thWeekend : $thBase;
+            $h .= '<th colspan="3" style="' . $thStyle . 'min-width:72px">' . $dayLabel . '</th>';
+        }
+        $h .= '<th rowspan="2" style="' . $thBase . 'background-color:#065f46;width:40px">Tổng<br>ngày</th>';
+        $h .= '</tr>';
+
+        // ── Hàng header 2: Vào / Ra / TT ──
+        $h .= '<tr>';
+        foreach ($dates as $date) {
+            $dow = (int)date('w', strtotime($date));
+            $isWknd = ($dow === 0 || $dow === 6);
+            $thStyle = $isWknd ? $thWeekend : $thBase;
+            $subStyle = 'font-size:8pt;padding:3px 2px;font-weight:600;';
+            $h .= '<th style="' . $thStyle . $subStyle . '">Vào</th>';
+            $h .= '<th style="' . $thStyle . $subStyle . '">Ra</th>';
+            $h .= '<th style="' . $thStyle . $subStyle . '">TT</th>';
+        }
+        $h .= '</tr>';
+        $h .= '</thead><tbody>';
+
+        // ── Nhóm theo phòng ban ──
+        $grouped = [];
+        foreach ($employees as $emp) {
+            $dept = $emp['phongBan'] ?: 'Chưa phân phòng ban';
+            $grouped[$dept][] = $emp;
+        }
+
+        foreach ($grouped as $dept => $deptEmps) {
+            // Row phòng ban
+            $h .= '<tr><td colspan="' . $totalCols . '" style="' . $tdDept . '">📁 ' . htmlspecialchars($dept) . '</td></tr>';
+
+            $deptWorkDays = 0;
+
+            foreach ($deptEmps as $emp) {
+                $maND = (int)$emp['maND'];
+                $h .= '<tr>';
+                $h .= '<td style="' . $tdNum . 'font-weight:600">' . $maND . '</td>';
+                $h .= '<td style="' . $tdBase . 'font-weight:600">' . htmlspecialchars($emp['hoTen']) . '</td>';
+                $h .= '<td style="' . $tdBase . 'color:#475569">' . htmlspecialchars($emp['chucVu'] ?? '') . '</td>';
+                $h .= '<td style="' . $tdBase . 'color:#475569">' . htmlspecialchars($emp['phongBan'] ?? '') . '</td>';
+
+                $empWorkDays = 0;
+
+                foreach ($dates as $date) {
+                    $dow   = (int)date('w', strtotime($date));
+                    $isWknd = ($dow === 0 || $dow === 6);
+
+                    if ($isWknd) {
+                        // Cuối tuần — ô xám
+                        $label = $dayVI[$dow];
+                        $h .= '<td style="' . $tdWeekend . '">' . $label . '</td>';
+                        $h .= '<td style="' . $tdWeekend . '"></td>';
+                        $h .= '<td style="' . $tdWeekend . '">' . $label . '</td>';
+                        continue;
+                    }
+
+                    // Nghỉ phép
+                    if (isset($leaveMap[$maND][$date])) {
+                        $leaveCode = $leaveMap[$maND][$date];
+                        $h .= '<td style="' . $tdLeave . '">' . $leaveCode . '</td>';
+                        $h .= '<td style="' . $tdLeave . '"></td>';
+                        $h .= '<td style="' . $tdLeave . '">' . $leaveCode . '</td>';
+                        continue;
+                    }
+
+                    // Có chấm công
+                    if (isset($attMap[$maND][$date])) {
+                        $att = $attMap[$maND][$date];
+                        $vao = $att['gio_vao'] ? substr($att['gio_vao'], 0, 5) : '';
+                        $ra  = $att['gio_ra']  ? substr($att['gio_ra'],  0, 5) : '';
+
+                        // Tính TT: đi trễ?
+                        $isLate  = $att['gio_vao'] && strtotime($att['gio_vao']) > strtotime('08:05:00');
+                        $isEarly = $att['gio_ra']  && strtotime($att['gio_ra'])  < strtotime('16:55:00');
+                        $tt = '';
+                        if ($isLate && $isEarly) { $tt = 'T+S'; $ttStyle = $tdLate; }
+                        elseif ($isLate)  { $tt = 'T'; $ttStyle = $tdLate; }
+                        elseif ($isEarly) { $tt = 'S'; $ttStyle = $tdLate; }
+                        else              { $ttStyle = $tdOk; }
+
+                        // Giờ làm
+                        $hrs = '';
+                        if ($att['gio_vao'] && $att['gio_ra']) {
+                            $diff = strtotime($date . ' ' . $att['gio_ra']) - strtotime($date . ' ' . $att['gio_vao']);
+                            $hrs  = round($diff / 3600, 1);
+                        }
+
+                        $h .= '<td style="' . $tdNum . '">' . $vao . '</td>';
+                        $h .= '<td style="' . $tdNum . '">' . $ra  . '</td>';
+                        $h .= '<td style="' . $ttStyle . '">' . ($hrs ? $hrs . 'h' : $tt) . '</td>';
+                        $empWorkDays++;
+                        $deptWorkDays++;
+                        continue;
+                    }
+
+                    // Ngày làm việc không có chấm công → Vắng
+                    $h .= '<td style="' . $tdAbsent . '"></td>';
+                    $h .= '<td style="' . $tdAbsent . '"></td>';
+                    $h .= '<td style="' . $tdAbsent . '">V</td>';
+                }
+
+                // Cột tổng ngày
+                $h .= '<td style="' . $tdTotal . '">' . $empWorkDays . '</td>';
+                $h .= '</tr>';
+            }
+        }
+
+        $h .= '</tbody>';
+
+        // ── Chú thích màu sắc ──
+        $h .= '<tfoot><tr><td colspan="' . $totalCols . '" style="border:none;padding:10px 4px;font-size:8.5pt;color:#475569">';
+        $h .= '<strong>Chú thích:</strong>&nbsp;';
+        $h .= '<span style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:3px;margin-right:6px">NP = Nghỉ phép</span>';
+        $h .= '<span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:3px;margin-right:6px">V = Vắng mặt</span>';
+        $h .= '<span style="background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:3px;margin-right:6px">T = Đi trễ &nbsp;|&nbsp; S = Về sớm</span>';
+        $h .= '<span style="background:#f3f4f6;color:#6b7280;padding:2px 6px;border-radius:3px">T7/CN = Cuối tuần</span>';
+        $h .= '</td></tr></tfoot>';
+
+        $h .= '</table>';
         return $h;
     }
 
@@ -486,14 +661,22 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
         $tableHtml = '';
         switch ($loai) {
             case 'tonghop': $tableHtml = $this->_buildPdfTongHop($data); break;
-            case 'chitiet': $tableHtml = $this->_buildPdfChiTiet($data); break;
+            case 'chitiet':
+                // Dùng cross-tab nếu data có format mới (từ getChiTietAttendanceCrossTab)
+                $tableHtml = isset($data['dates'])
+                    ? $this->_buildChiTietCrossTab($data)   // tái sử dụng builder Excel (HTML tương thích)
+                    : $this->_buildPdfChiTiet($data);
+                break;
             case 'vipham':  $tableHtml = $this->_buildPdfViPham($data); break;
             case 'yeucau':  $tableHtml = $this->_buildPdfYeuCau($data); break;
             case 'tangca':  $tableHtml = $this->_buildPdfTangCa($data); break;
             default:        $tableHtml = $this->_buildPdfTongHop($data);
         }
 
-        $totalRows = count($data);
+        // Tính tổng số bản ghi (hỗ trợ cả format cũ lẫn cross-tab mới)
+        $totalRows = isset($data['employees'])
+            ? count($data['employees'])
+            : count($data);
 
         echo '<!DOCTYPE html><html lang="vi">
 <head>
