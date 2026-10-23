@@ -223,6 +223,26 @@ class ManagerController
                 break;
         }
 
+        // ── Loại bỏ nhân viên thuộc phòng ban Điều hành khỏi tất cả báo cáo ──
+        $isDieuHanh = static function (string $dept): bool {
+            $lower = mb_strtolower($dept, 'UTF-8');
+            return mb_strpos($lower, 'điều hành') !== false
+                || mb_strpos($lower, 'dieu hanh')  !== false;
+        };
+        if (isset($data['employees'])) {
+            // Cross-tab format (chitiet)
+            $data['employees'] = array_values(array_filter(
+                $data['employees'],
+                fn($r) => !$isDieuHanh($r['phongBan'] ?? '')
+            ));
+        } elseif (is_array($data)) {
+            // Flat array (tonghop, vipham, yeucau, tangca)
+            $data = array_values(array_filter(
+                $data,
+                fn($r) => !$isDieuHanh($r['phongBan'] ?? $r['employee_dept'] ?? '')
+            ));
+        }
+
         if ($dinhDang === 'pdf') {
             // PDF: hiển thị trang HTML để in
             require_once __DIR__ . '/../helpers/ExcelExporter.php';

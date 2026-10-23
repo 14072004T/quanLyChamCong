@@ -396,8 +396,8 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
         $tdDept   = 'background-color:#1e3a8a;color:#fff;font-weight:bold;font-size:10pt;padding:8px 10px;border:1px solid #1e3a8a;';
         $tdTotal  = 'background-color:#f0fdf4;color:#166534;font-weight:bold;text-align:center;border:1px solid #86efac;font-size:9pt;padding:4px;';
 
-        // Số cột cố định (trước các ngày)
-        $fixedCols = 4; // Mã NV, Họ Tên, Chức vụ, Phòng ban
+        // Số cột cố định (trước các ngày): Mã NV, Họ Tên, Phòng ban
+        $fixedCols = 3;
         $totalCols = $fixedCols + count($dates) * 3 + 1; // +1 cho cột Tổng
 
         $h = '<table style="border-collapse:collapse;font-family:Arial,sans-serif;">';
@@ -406,9 +406,8 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
         // ── Hàng header 1: Tên ngày ──
         $h .= '<tr>';
         $h .= '<th rowspan="2" style="' . $thBase . 'width:55px">Mã NV</th>';
-        $h .= '<th rowspan="2" style="' . $thBase . 'width:160px">Họ và Tên</th>';
-        $h .= '<th rowspan="2" style="' . $thBase . 'width:90px">Chức vụ</th>';
-        $h .= '<th rowspan="2" style="' . $thBase . 'width:90px">Phòng ban</th>';
+        $h .= '<th rowspan="2" style="' . $thBase . 'width:180px">Họ và Tên</th>';
+        $h .= '<th rowspan="2" style="' . $thBase . 'width:110px">Phòng ban</th>';
         foreach ($dates as $date) {
             $dow = (int)date('w', strtotime($date));
             // Dùng format 'dd-mm' (gạch ngang) — tránh Excel parse 'dd.mm' thành số thập phân
@@ -456,7 +455,6 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
                 $h .= '<tr>';
                 $h .= '<td style="' . $tdNum . 'font-weight:600">' . $maND . '</td>';
                 $h .= '<td style="' . $tdBase . 'font-weight:600">' . htmlspecialchars($emp['hoTen']) . '</td>';
-                $h .= '<td style="' . $tdBase . 'color:#475569">' . htmlspecialchars($emp['chucVu'] ?? '') . '</td>';
                 $h .= '<td style="' . $tdBase . 'color:#475569">' . htmlspecialchars($emp['phongBan'] ?? '') . '</td>';
 
                 $empWorkDays = 0;
