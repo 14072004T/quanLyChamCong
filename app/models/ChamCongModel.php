@@ -2516,20 +2516,74 @@ class ChamCongModel
         $attendanceRate = $scheduledDays > 0 ? round(($presentDays / $scheduledDays) * 100, 1) : 0;
         $absentRate = $scheduledDays > 0 ? round(($absentDays / $scheduledDays) * 100, 1) : 0;
 
-        return [
-            'scheduled_days' => $scheduledDays,
-            'work_days' => $workDays,
-            'absent_days' => $absentDays,
-            'present_days' => $presentDays,
-            'attendance_rate' => $attendanceRate,
-            'absent_rate' => $absentRate,
-            'total_ot_hours' => round($totalOtMinutes / 60, 1),
-            'weekly_ot' => array_values(array_map(function ($week) {
+        // ── Lấy OT thực tế từ bảng don_ot (approved) thay vì tính từ checkout ──
+        $deptFilter = '';
+        $otParams = [$fromDate, $toDate];
+        $otTypes  = 'ss';
+        if ($phongBan !== '') {
+            $deptFilter = " AND nd.phongBan = ?";
+            $otParams[] = $phongBan;
+            $otTypes   .= 's';
+        }
+        $sqlOt = "SELECT ot.ngayOT, SUM(ot.soGioOT) AS totalHours
+                  FROM don_ot ot
+                  INNER JOIN nguoidung nd ON nd.maND = ot.maND
+                  WHERE ot.ngayOT BETWEEN ? AND ?
+                    AND ot.trangThai = 'approved'
+                    AND nd.trangThai = 1
+                    AND LOWER(nd.phongBan) NOT LIKE '%điều hành%'
+                    $deptFilter
+                  GROUP BY ot.ngayOT
+                  ORDER BY ot.ngayOT";
+        $stmtOt = $this->conn->prepare($sqlOt);
+        $realWeeklyOt = [];
+        $realTotalOtH = 0.0;
+        if ($stmtOt) {
+            $stmtOt->bind_param($otTypes, ...$otParams);
+            if ($stmtOt->execute()) {
+                $otRows = $stmtOt->get_result()->fetch_all(MYSQLI_ASSOC);
+                foreach ($otRows as $otRow) {
+                    $wKey = date('o-W', strtotime($otRow['ngayOT']));
+                    if (!isset($realWeeklyOt[$wKey])) {
+                        $realWeeklyOt[$wKey] = [
+                            'start' => $otRow['ngayOT'],
+                            'end'   => $otRow['ngayOT'],
+                            'hours' => 0.0,
+                        ];
+                    }
+                    $realWeeklyOt[$wKey]['end']   = $otRow['ngayOT'];
+                    $realWeeklyOt[$wKey]['hours'] += (float)$otRow['totalHours'];
+                    $realTotalOtH += (float)$otRow['totalHours'];
+                }
+            }
+            $stmtOt->close();
+        }
+        $weeklyOtChart = array_values(array_map(function ($w) {
+            return [
+                'label' => date('d/m', strtotime($w['start'])) . ' - ' . date('d/m', strtotime($w['end'])),
+                'hours' => round($w['hours'], 1),
+            ];
+        }, $realWeeklyOt));
+        if (empty($weeklyOtChart)) {
+            // Fallback: chia đều từ tính toán ca nếu không có don_ot
+            $weeklyOtChart = array_values(array_map(function ($week) {
                 return [
                     'label' => date('d/m', strtotime($week['start'])) . ' - ' . date('d/m', strtotime($week['end'])),
                     'hours' => round($week['ot_minutes'] / 60, 1),
                 ];
-            }, $weeklyOt)),
+            }, $weeklyOt));
+            $realTotalOtH = round($totalOtMinutes / 60, 1);
+        }
+
+        return [
+            'scheduled_days'  => $scheduledDays,
+            'work_days'       => $workDays,
+            'absent_days'     => $absentDays,
+            'present_days'    => $presentDays,
+            'attendance_rate' => $attendanceRate,
+            'absent_rate'     => $absentRate,
+            'total_ot_hours'  => round($realTotalOtH, 1),
+            'weekly_ot'       => $weeklyOtChart,
         ];
     }
 
