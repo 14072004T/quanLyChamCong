@@ -411,15 +411,15 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
         $h .= '<th rowspan="2" style="' . $thBase . 'width:90px">Phòng ban</th>';
         foreach ($dates as $date) {
             $dow = (int)date('w', strtotime($date));
-            // Dùng format 'dd.mm' (dấu chấm) thay 'dd/mm' để Excel không tự parse
-            // thành MM/DD của Mỹ (ví dụ: '01/09' bị parse thành Jan 9)
+            // Dùng format 'dd-mm' (gạch ngang) — tránh Excel parse 'dd.mm' thành số thập phân
+            // và tránh parse 'dd/mm' theo locale Mỹ (MM/DD)
             $day = substr($date, 8, 2);  // '01'
             $mon = substr($date, 5, 2);  // '09'
-            $dayLabel = $dayVI[$dow] . '<br>' . $day . '.' . $mon;
+            $dayLabel = $dayVI[$dow] . '<br>' . $day . '-' . $mon;
             $isWknd = ($dow === 0 || $dow === 6);
             $thStyle = $isWknd ? $thWeekend : $thBase;
-            // mso-number-format:"\@" buộc Excel xử lý cell này là text, không auto-convert
-            $h .= '<th colspan="3" style="' . $thStyle . 'min-width:72px;mso-number-format:"\@"">' . $dayLabel . '</th>';
+            // mso-number-format:"\@" (được escape bằng &quot;) buộc Excel đọc cell là text
+            $h .= '<th colspan="3" style="' . $thStyle . 'min-width:72px;mso-number-format:&quot;\@&quot;">' . $dayLabel . '</th>';
         }
         $h .= '<th rowspan="2" style="' . $thBase . 'background-color:#065f46;width:40px">Tổng<br>ngày</th>';
         $h .= '</tr>';
@@ -489,27 +489,33 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
                         $vao = $att['gio_vao'] ? substr($att['gio_vao'], 0, 5) : '';
                         $ra  = $att['gio_ra']  ? substr($att['gio_ra'],  0, 5) : '';
 
-                        // Tính TT: đi trễ?
+                        // Tính số ngày công (1 = đủ ngày ≥6h, 0.5 = nửa ngày ≥3h, 0 = không đủ)
+                        $dayCount = 0.0;
+                        if ($att['gio_vao'] && $att['gio_ra']) {
+                            $diffSec  = strtotime($date . ' ' . $att['gio_ra']) - strtotime($date . ' ' . $att['gio_vao']);
+                            $workedH  = $diffSec / 3600;
+                            $dayCount = $workedH >= 6 ? 1.0 : ($workedH >= 3 ? 0.5 : 0.0);
+                        } elseif ($att['gio_vao'] || $att['gio_ra']) {
+                            $dayCount = 0.5; // Chỉ có 1 lượt = nửa ngày
+                        }
+
+                        // TT: chỉ hiện V/T/S hoặc 1/0.5 nếu đúng giờ
                         $isLate  = $att['gio_vao'] && strtotime($att['gio_vao']) > strtotime('08:05:00');
                         $isEarly = $att['gio_ra']  && strtotime($att['gio_ra'])  < strtotime('16:55:00');
-                        $tt = '';
                         if ($isLate && $isEarly) { $tt = 'T+S'; $ttStyle = $tdLate; }
-                        elseif ($isLate)  { $tt = 'T'; $ttStyle = $tdLate; }
-                        elseif ($isEarly) { $tt = 'S'; $ttStyle = $tdLate; }
-                        else              { $ttStyle = $tdOk; }
-
-                        // Giờ làm
-                        $hrs = '';
-                        if ($att['gio_vao'] && $att['gio_ra']) {
-                            $diff = strtotime($date . ' ' . $att['gio_ra']) - strtotime($date . ' ' . $att['gio_vao']);
-                            $hrs  = round($diff / 3600, 1);
+                        elseif ($isLate)          { $tt = 'T';   $ttStyle = $tdLate; }
+                        elseif ($isEarly)         { $tt = 'S';   $ttStyle = $tdLate; }
+                        else {
+                            // Đúng giờ: hiện số ngày công (1 hoặc 0.5)
+                            $tt = ($dayCount >= 1 ? '1' : ($dayCount > 0 ? '0.5' : ''));
+                            $ttStyle = $tdOk;
                         }
 
                         $h .= '<td style="' . $tdNum . '">' . $vao . '</td>';
                         $h .= '<td style="' . $tdNum . '">' . $ra  . '</td>';
-                        $h .= '<td style="' . $ttStyle . '">' . ($hrs ? $hrs . 'h' : $tt) . '</td>';
-                        $empWorkDays++;
-                        $deptWorkDays++;
+                        $h .= '<td style="' . $ttStyle . '">' . $tt . '</td>';
+                        $empWorkDays += $dayCount;
+                        $deptWorkDays += $dayCount;
                         continue;
                     }
 
@@ -519,8 +525,11 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
                     $h .= '<td style="' . $tdAbsent . '">V</td>';
                 }
 
-                // Cột tổng ngày
-                $h .= '<td style="' . $tdTotal . '">' . $empWorkDays . '</td>';
+                // Cột tổng ngày (cho phép thập phân: 20.5, 19, ...)
+                $totalDisplay = ($empWorkDays == (int)$empWorkDays)
+                    ? (int)$empWorkDays
+                    : $empWorkDays;
+                $h .= '<td style="' . $tdTotal . '">' . $totalDisplay . '</td>';
                 $h .= '</tr>';
             }
         }
