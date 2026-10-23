@@ -689,6 +689,7 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
         $totalRows = isset($data['employees'])
             ? count($data['employees'])
             : count($data);
+        $autoPrint = $loai === 'chitiet' ? '1' : '0';
 
         echo '<!DOCTYPE html><html lang="vi">
 <head>
@@ -696,6 +697,7 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>' . htmlspecialchars($displayTitle) . '</title>
 <style>
+' . ($loai === 'chitiet' ? '@page { size: landscape; margin: 8mm; } @media print { table { font-size: 6pt !important; } th, td { padding: 2px 1px !important; } }' : '') . '
 @import url(\'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap\');
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: "Be Vietnam Pro", "Times New Roman", serif; background: #f8fafc; color: #1e293b; font-size: 11pt; }
@@ -747,7 +749,7 @@ td.dept { color: #64748b; font-size: .85rem; }
 }
 </style>
 </head>
-<body>
+<body data-auto-print="' . $autoPrint . '">
 <div class="pdf-wrapper">
     <div class="pdf-header">
         <div class="pdf-header-left">
@@ -803,10 +805,11 @@ td.dept { color: #64748b; font-size: .85rem; }
 <button class="print-btn" onclick="window.print()">🖨️ In / Lưu PDF</button>
 
 <script>
-// Auto trigger print dialog after short delay
-setTimeout(function() {
-    // Do not auto-print, let user click
-}, 500);
+if (document.body.dataset.autoPrint === "1") {
+    window.addEventListener("load", function () {
+        window.setTimeout(function () { window.print(); }, 300);
+    });
+}
 </script>
 </body></html>';
     }
@@ -962,9 +965,6 @@ setTimeout(function() {
         return $h;
     }
 }
-
-
-
 
 
 

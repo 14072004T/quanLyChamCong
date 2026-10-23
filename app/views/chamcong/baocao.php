@@ -317,8 +317,7 @@ if (!empty($reportRows)) {
 
 <?php
 $managerName = $_SESSION['user']['hoTen'] ?? 'Quản lý';
-$managerDept = $_SESSION['user']['phongBan'] ?? '';
-$selectedDept = $phongBan !== '' ? $phongBan : ($managerDept ?: ($departments[0] ?? 'Tất cả'));
+$selectedDept = $phongBan !== '' ? $phongBan : 'Tất cả phòng ban';
 $fromTs = strtotime($fromDate) ?: strtotime(date('Y-m-01'));
 $toTs = strtotime($toDate) ?: strtotime(date('Y-m-d'));
 $dayCount = max(1, (int)floor(($toTs - $fromTs) / 86400) + 1);
@@ -326,13 +325,16 @@ $totalEmployees = isset($totalEmployees)
     ? (int)$totalEmployees
     : count(array_unique(array_map(function ($row) { return (int)($row['maND'] ?? 0); }, $reportRows)));
 $attendanceMetrics = $attendanceMetrics ?? [];
-$plannedWorkDays = max((int)($attendanceMetrics['scheduled_days'] ?? 0), 1);
+$scheduledWorkDays = (int)($attendanceMetrics['scheduled_days'] ?? 0);
 $actualWorkDays = (float)($attendanceMetrics['work_days'] ?? 0);
 $dailyPunctuality = $dailyPunctuality ?? [];
 $lateDays = array_sum(array_column($dailyPunctuality, 'late'));
 $earlyDays = array_sum(array_column($dailyPunctuality, 'early'));
-$onTimeDays = max(0, $actualWorkDays - $lateDays);
-$absentDays = max(0, round($plannedWorkDays - $actualWorkDays, 1));
+$onTimeDays = (int)($attendanceMetrics['on_time_days'] ?? array_sum(array_column($dailyPunctuality, 'on_time')));
+$absentDays = (float)($attendanceMetrics['absent_days'] ?? 0);
+$leaveDays = (int)($attendanceMetrics['leave_days'] ?? array_sum(array_column($dailyPunctuality, 'leave')));
+$pendingDays = (int)($attendanceMetrics['pending_days'] ?? array_sum(array_column($dailyPunctuality, 'pending')));
+$plannedWorkDays = max(0, $scheduledWorkDays - $leaveDays - $pendingDays);
 $onTimeRate = (float)($attendanceMetrics['attendance_rate'] ?? 0);
 $absentRate = (float)($attendanceMetrics['absent_rate'] ?? 0);
 $totalOtHours = (float)($attendanceMetrics['total_ot_hours'] ?? 0);
@@ -343,12 +345,14 @@ $earlyLineValues = array_map(function ($row) { return (int)$row['early']; }, $da
 
 $workdayDistribution = $attendanceMetrics['workday_distribution'] ?? ['present' => 0, 'absent' => 0];
 $workdayEmployeeTotal = array_sum($workdayDistribution);
-$workdayLabels = ['Đã chấm công', 'Vắng mặt'];
+$workdayLabels = ['Đã chấm công', 'Vắng mặt', 'Nghỉ phép', 'Chưa đến hạn'];
 $workdayValues = [
     (int)($workdayDistribution['present'] ?? 0),
     (int)($workdayDistribution['absent'] ?? 0),
+    (int)($workdayDistribution['leave'] ?? 0),
+    (int)($workdayDistribution['pending'] ?? 0),
 ];
-$workdayColors = ['#12b76a', '#94a3b8'];
+$workdayColors = ['#12b76a', '#ef4444', '#3b82f6', '#f59e0b'];
 $workdayPercentages = array_map(function ($value) use ($workdayEmployeeTotal) {
     return $workdayEmployeeTotal > 0 ? round(($value / $workdayEmployeeTotal) * 100, 1) : 0;
 }, $workdayValues);
@@ -1084,19 +1088,19 @@ $updatedAt = date('H:i, d/m/Y');
             </div>
             <div class="mgrr-card">
                 <span class="mgrr-icon mgrr-green"><i class="far fa-calendar-check"></i></span>
-                <div><small>Ngày công thực tế</small><strong><?= number_format($actualWorkDays, 0) ?></strong><small class="mgrr-trend up"><i class="fas fa-arrow-up"></i> 8.7% so với kỳ trước</small></div>
+                <div><small>Ngày có chấm công</small><strong><?= number_format($actualWorkDays, 0) ?></strong><small class="mgrr-trend">Trong kỳ báo cáo</small></div>
             </div>
             <div class="mgrr-card">
                 <span class="mgrr-icon mgrr-orange"><i class="fas fa-clock"></i></span>
-                <div><small>Tỷ lệ đi làm</small><strong><?= number_format($onTimeRate, 1) ?>%</strong><small class="mgrr-trend up"><i class="fas fa-arrow-up"></i> 4.3% so với kỳ trước</small></div>
+                <div><small>Tỷ lệ đi làm</small><strong><?= number_format($onTimeRate, 1) ?>%</strong><small class="mgrr-trend">Không tính nghỉ phép/chưa đến hạn</small></div>
             </div>
             <div class="mgrr-card">
                 <span class="mgrr-icon mgrr-red"><i class="fas fa-user-times"></i></span>
-                <div><small>Tỷ lệ vắng mặt</small><strong><?= number_format($absentRate, 1) ?>%</strong><small class="mgrr-trend down"><i class="fas fa-arrow-down"></i> 0.6% so với kỳ trước</small></div>
+                <div><small>Tỷ lệ vắng mặt</small><strong><?= number_format($absentRate, 1) ?>%</strong><small class="mgrr-trend">Không tính nghỉ phép/chưa đến hạn</small></div>
             </div>
             <div class="mgrr-card">
                 <span class="mgrr-icon mgrr-purple"><i class="fas fa-stopwatch"></i></span>
-                <div><small>Tổng giờ OT</small><strong><?= number_format($totalOtHours, 1) ?></strong><small class="mgrr-trend up"><i class="fas fa-arrow-up"></i> 12.5% so với kỳ trước</small></div>
+                <div><small>Tổng giờ OT</small><strong><?= number_format($totalOtHours, 1) ?></strong><small class="mgrr-trend">Đơn OT đã duyệt trong kỳ</small></div>
             </div>
         </div>
 
@@ -1214,12 +1218,14 @@ $updatedAt = date('H:i, d/m/Y');
                     <thead><tr><th>Chỉ số</th><th>Giá trị</th><th>Tỷ lệ</th><th>So với trước</th></tr></thead>
                     <tbody>
                         <tr><td>Ngày công theo kế hoạch</td><td><strong><?= number_format($plannedWorkDays, 0) ?></strong></td><td>-</td><td>-</td></tr>
-                        <tr><td>Ngày công thực tế</td><td><strong><?= number_format($actualWorkDays, 0) ?></strong></td><td><?= number_format(($actualWorkDays / $plannedWorkDays) * 100, 1) ?>%</td><td style="color:#12b76a">↑ 8.7%</td></tr>
-                        <tr><td>Đi làm đủ giờ</td><td><strong><?= number_format($onTimeDays, 0) ?></strong></td><td><?= number_format($onTimeRate, 1) ?>%</td><td style="color:#12b76a">↑ 9.2%</td></tr>
-                        <tr><td>Đi trễ</td><td><strong><?= number_format($lateDays, 0) ?></strong></td><td><?= $actualWorkDays > 0 ? number_format(($lateDays / $actualWorkDays) * 100, 1) : '0.0' ?>%</td><td style="color:#ef4444">↓ 0.9%</td></tr>
-                        <tr><td>Về sớm</td><td><strong><?= number_format($earlyDays, 0) ?></strong></td><td><?= $actualWorkDays > 0 ? number_format(($earlyDays / $actualWorkDays) * 100, 1) : '0.0' ?>%</td><td style="color:#ef4444">↓ 0.3%</td></tr>
-                        <tr><td>Vắng mặt</td><td><strong><?= number_format($absentDays, 0) ?></strong></td><td><?= number_format($absentRate, 1) ?>%</td><td style="color:#ef4444">↓ 0.6%</td></tr>
-                        <tr><td>Tổng giờ OT</td><td><strong><?= number_format($totalOtHours, 1) ?> giờ</strong></td><td>-</td><td style="color:#12b76a">↑ 12.5%</td></tr>
+                        <tr><td>Ngày có chấm công</td><td><strong><?= number_format($actualWorkDays, 0) ?></strong></td><td><?= $plannedWorkDays > 0 ? number_format(($actualWorkDays / $plannedWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
+                        <tr><td>Đi làm đúng giờ</td><td><strong><?= number_format($onTimeDays, 0) ?></strong></td><td><?= $plannedWorkDays > 0 ? number_format(($onTimeDays / $plannedWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
+                        <tr><td>Đi trễ</td><td><strong><?= number_format($lateDays, 0) ?></strong></td><td><?= $plannedWorkDays > 0 ? number_format(($lateDays / $plannedWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
+                        <tr><td>Về sớm</td><td><strong><?= number_format($earlyDays, 0) ?></strong></td><td><?= $plannedWorkDays > 0 ? number_format(($earlyDays / $plannedWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
+                        <tr><td>Vắng mặt</td><td><strong><?= number_format($absentDays, 0) ?></strong></td><td><?= number_format($absentRate, 1) ?>%</td><td>-</td></tr>
+                        <tr><td>Nghỉ phép đã duyệt</td><td><strong><?= number_format($leaveDays, 0) ?></strong></td><td>-</td><td>-</td></tr>
+                        <tr><td>Chưa đến hạn xác nhận</td><td><strong><?= number_format($pendingDays, 0) ?></strong></td><td>-</td><td>-</td></tr>
+                        <tr><td>Tổng giờ OT đã duyệt</td><td><strong><?= number_format($totalOtHours, 1) ?> giờ</strong></td><td>-</td><td>-</td></tr>
                     </tbody>
                 </table>
             </section>

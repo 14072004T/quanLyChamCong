@@ -1382,6 +1382,9 @@ class ChamCongModel
         $scheduledDays = 0;
         $presentDays = 0;
         $absentDays = 0;
+        $onTimeDays = 0;
+        $leaveDays = 0;
+        $pendingDays = 0;
         $cursor = $fromTimestamp;
         while ($cursor <= $toTimestamp) {
             $date = date('Y-m-d', $cursor);
@@ -1391,10 +1394,18 @@ class ChamCongModel
                 'date' => $date,
                 'late' => (int)$dayMetrics['late'],
                 'early' => (int)$dayMetrics['early'],
+                'on_time' => (int)$dayMetrics['on_time'],
+                'present' => (int)$dayMetrics['present'],
+                'absent' => (int)$dayMetrics['absent'],
+                'leave' => (int)$dayMetrics['leave'],
+                'pending' => (int)$dayMetrics['pending'],
             ];
             $scheduledDays += (int)$dayMetrics['scheduled'];
             $presentDays += (int)$dayMetrics['present'];
             $absentDays += (int)$dayMetrics['absent'];
+            $onTimeDays += (int)$dayMetrics['on_time'];
+            $leaveDays += (int)$dayMetrics['leave'];
+            $pendingDays += (int)$dayMetrics['pending'];
 
             foreach ($dateEmployees as $employeeId => $dateEmployee) {
                 if (!isset($employeeRows[$employeeId])) {
@@ -1420,62 +1431,14 @@ class ChamCongModel
             $cursor = strtotime('+1 day', $cursor);
         }
 
-        // === Ghi đè late/early bằng query trực tiếp từ lichsuchamcong ===
-        // Đi trễ: IN sau 08:30  |  Về sớm: OUT trước 17:30
-        $LATE_TIME  = '08:30:00';
-        $EARLY_TIME = '17:30:00';
-
-        $punctualitySql = "
-            SELECT
-                l.maND,
-                SUM(CASE WHEN l.hanhDong = 'IN'  AND TIME(l.ngayTao) > ? THEN 1 ELSE 0 END) AS late_count,
-                SUM(CASE WHEN l.hanhDong = 'IN'  AND TIME(l.ngayTao) > ?
-                         THEN TIMESTAMPDIFF(MINUTE, CONCAT(DATE(l.ngayTao), ' ', ?), l.ngayTao)
-                         ELSE 0 END) AS late_minutes,
-                SUM(CASE WHEN l.hanhDong = 'OUT' AND TIME(l.ngayTao) < ? THEN 1 ELSE 0 END) AS early_count,
-                SUM(CASE WHEN l.hanhDong = 'OUT' AND TIME(l.ngayTao) < ?
-                         THEN TIMESTAMPDIFF(MINUTE, l.ngayTao, CONCAT(DATE(l.ngayTao), ' ', ?))
-                         ELSE 0 END) AS early_minutes
-            FROM lichsuchamcong l
-            " . ($phongBan !== '' ? "INNER JOIN nguoidung nd ON nd.maND = l.maND AND nd.phongBan = ?" : "") . "
-            WHERE DATE(l.ngayTao) BETWEEN ? AND ?
-            GROUP BY l.maND";
-
-        $pTypes = 'ssssss';
-        $pParams = [$LATE_TIME, $LATE_TIME, $LATE_TIME, $EARLY_TIME, $EARLY_TIME, $EARLY_TIME];
-        if ($phongBan !== '') {
-            $pTypes .= 's';
-            $pParams[] = $phongBan;
-        }
-        $pTypes .= 'ss';
-        $pParams[] = $fromDate;
-        $pParams[] = $toDate;
-
-        $pStmt = $this->conn->prepare($punctualitySql);
-        if ($pStmt) {
-            $pStmt->bind_param($pTypes, ...$pParams);
-            if ($pStmt->execute()) {
-                foreach ($pStmt->get_result()->fetch_all(MYSQLI_ASSOC) as $pr) {
-                    $mid = (int)$pr['maND'];
-                    if (isset($employeeRows[$mid])) {
-                        $employeeRows[$mid]['late_count']   = (int)$pr['late_count'];
-                        $employeeRows[$mid]['late_minutes'] = (int)$pr['late_minutes'];
-                        $employeeRows[$mid]['early_count']  = (int)$pr['early_count'];
-                        $employeeRows[$mid]['early_minutes']= (int)$pr['early_minutes'];
-                    }
-                }
-            }
-            $pStmt->close();
-        }
-        // === end ghi đè ===
-
         $reportRows = array_values($employeeRows);
         $employeePunctuality = array_values(array_filter($reportRows, function ($employee) {
             return ($employee['late_count'] + $employee['early_count']) > 0;
         }));
 
-        $attendanceRate = $scheduledDays > 0 ? round(($presentDays / $scheduledDays) * 100, 1) : 0;
-        $absentRate = $scheduledDays > 0 ? round(($absentDays / $scheduledDays) * 100, 1) : 0;
+        $eligibleDays = max(0, $scheduledDays - $leaveDays - $pendingDays);
+        $attendanceRate = $eligibleDays > 0 ? round(($presentDays / $eligibleDays) * 100, 1) : 0;
+        $absentRate = $eligibleDays > 0 ? round(($absentDays / $eligibleDays) * 100, 1) : 0;
 
         return [
             'total_employees' => count($reportRows),
@@ -1487,9 +1450,17 @@ class ChamCongModel
                 'work_days' => $presentDays,
                 'absent_days' => $absentDays,
                 'present_days' => $presentDays,
+                'on_time_days' => $onTimeDays,
+                'leave_days' => $leaveDays,
+                'pending_days' => $pendingDays,
                 'attendance_rate' => $attendanceRate,
                 'absent_rate' => $absentRate,
-                'workday_distribution' => ['present' => $presentDays, 'absent' => $absentDays],
+                'workday_distribution' => [
+                    'present' => $presentDays,
+                    'absent' => $absentDays,
+                    'leave' => $leaveDays,
+                    'pending' => $pendingDays,
+                ],
             ],
         ];
     }
