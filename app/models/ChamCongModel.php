@@ -4936,4 +4936,163 @@ class ChamCongModel
         $stmt->close();
         return (int)($row['cnt'] ?? 0);
     }
+
+    /**
+     * Lấy dữ liệu chấm công chi tiết dạng cross-tab (hàng = nhân viên, cột = ngày)
+     * Dùng cho báo cáo chi tiết dạng bảng ngang như timesheet.
+     *
+     * @param string $fromDate Y-m-d
+     * @param string $toDate   Y-m-d
+     * @param string $phongBan '' = tất cả
+     * @return array { dates[], employees[], attMap[maND][date], leaveMap[maND][date] }
+     */
+    public function getChiTietAttendanceCrossTab(string $fromDate, string $toDate, string $phongBan = ''): array
+    {
+        // ── 1. Nhân viên ──
+        $empSql = "SELECT nd.maND, nd.hoTen, nd.phongBan, nd.chucVu
+                   FROM nguoidung nd
+                   WHERE nd.trangThai = 1";
+        $empParams = [];
+        $empTypes  = '';
+        if ($phongBan !== '') {
+            $empSql .= " AND nd.phongBan = ?";
+            $empParams[] = $phongBan;
+            $empTypes   .= 's';
+        }
+        $empSql .= " ORDER BY nd.phongBan, nd.hoTen";
+        $stmt = $this->conn->prepare($empSql);
+        if (!$stmt) return [];
+        if ($empTypes) $stmt->bind_param($empTypes, ...$empParams);
+        $stmt->execute();
+        $employees = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        if (empty($employees)) return [];
+
+        // ── 2. Dữ liệu chấm công từ lichsuchamcong ──
+        // Giờ vào = MIN(ngayTao WHERE hanhDong='IN'), giờ ra = MAX(ngayTao WHERE hanhDong='OUT')
+        $attSql = "SELECT
+                lc.maND,
+                DATE(lc.ngayTao)                                                        AS ngay,
+                MIN(CASE WHEN lc.hanhDong='IN'  THEN TIME(lc.ngayTao) END)             AS gio_vao,
+                MAX(CASE WHEN lc.hanhDong='OUT' THEN TIME(lc.ngayTao) END)             AS gio_ra
+            FROM lichsuchamcong lc
+            WHERE DATE(lc.ngayTao) BETWEEN ? AND ?";
+        $attParams = [$fromDate, $toDate];
+        $attTypes  = 'ss';
+        if ($phongBan !== '') {
+            $attSql   .= " AND lc.maND IN (SELECT nd2.maND FROM nguoidung nd2 WHERE nd2.phongBan = ?)";
+            $attParams[] = $phongBan;
+            $attTypes  .= 's';
+        }
+        $attSql .= " GROUP BY lc.maND, DATE(lc.ngayTao) ORDER BY lc.maND, ngay";
+        $stmt = $this->conn->prepare($attSql);
+        if (!$stmt) return [];
+        $stmt->bind_param($attTypes, ...$attParams);
+        $stmt->execute();
+        $attRows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        // ── 3. Dữ liệu từ tablet_face_scans (fallback/bổ sung) ──
+        $tabSql = "SELECT
+                tfs.maND,
+                DATE(tfs.thoiGianQuet)                                              AS ngay,
+                MIN(TIME(tfs.thoiGianQuet))                                         AS tab_vao,
+                MAX(TIME(tfs.thoiGianQuet))                                         AS tab_ra
+            FROM tablet_face_scans tfs
+            WHERE DATE(tfs.thoiGianQuet) BETWEEN ? AND ?";
+        $tabParams = [$fromDate, $toDate];
+        $tabTypes  = 'ss';
+        if ($phongBan !== '') {
+            $tabSql   .= " AND tfs.maND IN (SELECT nd3.maND FROM nguoidung nd3 WHERE nd3.phongBan = ?)";
+            $tabParams[] = $phongBan;
+            $tabTypes  .= 's';
+        }
+        $tabSql .= " GROUP BY tfs.maND, DATE(tfs.thoiGianQuet)";
+        $stmt = $this->conn->prepare($tabSql);
+        if ($stmt) {
+            $stmt->bind_param($tabTypes, ...$tabParams);
+            $stmt->execute();
+            $tabRows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+        } else {
+            $tabRows = [];
+        }
+
+        // ── 4. Đơn nghỉ phép đã duyệt ──
+        $leaveSql = "SELECT maND, tuNgay, denNgay, loaiNghiPhep
+                     FROM donnghiphep
+                     WHERE trangThai = 'approved' AND tuNgay <= ? AND denNgay >= ?";
+        $stmt = $this->conn->prepare($leaveSql);
+        if ($stmt) {
+            $stmt->bind_param('ss', $toDate, $fromDate);
+            $stmt->execute();
+            $leaveRows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+        } else {
+            $leaveRows = [];
+        }
+
+        // ── 5. Xây dựng attMap: [maND][date] => [gio_vao, gio_ra] ──
+        $attMap = [];
+        foreach ($attRows as $r) {
+            $attMap[$r['maND']][$r['ngay']] = [
+                'gio_vao' => $r['gio_vao'],
+                'gio_ra'  => $r['gio_ra'],
+            ];
+        }
+        // Merge tablet scans vào attMap (ưu tiên lichsuchamcong, tablet chỉ fallback)
+        foreach ($tabRows as $r) {
+            $mid = $r['maND'];
+            $dt  = $r['ngay'];
+            if (!isset($attMap[$mid][$dt])) {
+                $attMap[$mid][$dt] = ['gio_vao' => $r['tab_vao'], 'gio_ra' => $r['tab_ra']];
+            } else {
+                // Bổ sung nếu còn thiếu
+                if (empty($attMap[$mid][$dt]['gio_vao']) && !empty($r['tab_vao']))
+                    $attMap[$mid][$dt]['gio_vao'] = $r['tab_vao'];
+                if (empty($attMap[$mid][$dt]['gio_ra']) && !empty($r['tab_ra']))
+                    $attMap[$mid][$dt]['gio_ra'] = $r['tab_ra'];
+            }
+        }
+
+        // ── 6. Xây dựng leaveMap: [maND][date] => loaiNghiPhep ──
+        $leaveMap = [];
+        $leaveTypeLabel = [
+            'personal'  => 'NP',
+            'annual'    => 'PN',
+            'sick'      => 'NO',
+            'emergency' => 'NKC',
+            'other'     => 'NP',
+        ];
+        foreach ($leaveRows as $r) {
+            $cur = new DateTime($r['tuNgay']);
+            $end = new DateTime($r['denNgay']);
+            $lbl = $leaveTypeLabel[$r['loaiNghiPhep']] ?? 'NP';
+            while ($cur <= $end) {
+                $leaveMap[$r['maND']][$cur->format('Y-m-d')] = $lbl;
+                $cur->modify('+1 day');
+            }
+        }
+
+        // ── 7. Sinh dãy ngày trong khoảng ──
+        $dates = [];
+        $cur   = new DateTime($fromDate);
+        $end   = new DateTime($toDate);
+        // Giới hạn tối đa 31 ngày để tránh bảng quá rộng
+        $maxDays = 31;
+        $cnt = 0;
+        while ($cur <= $end && $cnt < $maxDays) {
+            $dates[] = $cur->format('Y-m-d');
+            $cur->modify('+1 day');
+            $cnt++;
+        }
+
+        return [
+            'dates'     => $dates,
+            'employees' => $employees,
+            'attMap'    => $attMap,
+            'leaveMap'  => $leaveMap,
+        ];
+    }
 }
