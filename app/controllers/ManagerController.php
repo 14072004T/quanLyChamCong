@@ -156,6 +156,87 @@ class ManagerController
     }
 
     /**
+     * Xuất báo cáo tổng hợp (Excel/PDF)
+     * Hỗ trợ 5 loại: tonghop, chitiet, vipham, yeucau, tangca
+     */
+    public function exportReport()
+    {
+        AuthMiddleware::requirePermission('xuat-bao-cao-tong-hop');
+
+        $fromDate = trim($_POST['tuNgay'] ?? $_GET['tuNgay'] ?? date('Y-m-01'));
+        $toDate   = trim($_POST['denNgay'] ?? $_GET['denNgay'] ?? date('Y-m-d'));
+        $phongBan = trim($_POST['phongBan'] ?? $_GET['phongBan'] ?? '');
+        $loai     = trim($_POST['loai'] ?? $_GET['loai'] ?? 'tonghop');
+        $dinhDang = trim($_POST['dinh_dang'] ?? $_GET['dinh_dang'] ?? 'excel');
+        $export   = (int)($_POST['export'] ?? 0);
+
+        // Validate loại báo cáo
+        $validTypes = ['tonghop', 'chitiet', 'vipham', 'yeucau', 'tangca'];
+        if (!in_array($loai, $validTypes, true)) {
+            $loai = 'tonghop';
+        }
+
+        $monthKey = substr($fromDate, 0, 7);
+        $userName = $_SESSION['user']['hoTen'] ?? 'Không xác định';
+        $deptName = $phongBan ?: 'Tất cả phòng ban';
+
+        // Lấy dữ liệu theo loại báo cáo
+        $data = [];
+        $reportTitle = '';
+
+        switch ($loai) {
+            case 'tonghop':
+                $reportTitle = 'Báo Cáo Tổng Hợp Chấm Công';
+                $data = $this->model->getMonthlyAttendanceDetailNew($monthKey, $phongBan);
+                break;
+
+            case 'chitiet':
+                $reportTitle = 'Báo Cáo Chi Tiết Chấm Công Nhân Viên';
+                $rawReport = $this->model->getCountableTabletAttendanceReport($fromDate, $toDate, $phongBan);
+                $data = $rawReport['report_rows'] ?? [];
+                break;
+
+            case 'vipham':
+                $reportTitle = 'Báo Cáo Đi Trễ, Về Sớm, Vắng Mặt';
+                $tabletReport = $this->model->getCountableTabletAttendanceReport($fromDate, $toDate, $phongBan);
+                $data = $tabletReport['employee_punctuality'] ?? [];
+                break;
+
+            case 'yeucau':
+                $reportTitle = 'Báo Cáo Tổng Hợp Đơn Yêu Cầu';
+                $data = $this->model->getManagerEmployeeRequests([
+                    'date_from' => $fromDate,
+                    'date_to'   => $toDate,
+                    'phongBan'  => $phongBan,
+                ], 2000);
+                break;
+
+            case 'tangca':
+                $reportTitle = 'Báo Cáo Tăng Ca (OT)';
+                $managerId = (int)($_SESSION['user']['maND'] ?? 0);
+                $filterMonth = substr($fromDate, 0, 7);
+                $data = $this->model->getAllOTByManager($managerId, '', '', $filterMonth);
+                break;
+        }
+
+        if ($dinhDang === 'pdf') {
+            // PDF: hiển thị trang HTML để in
+            require_once __DIR__ . '/../helpers/ExcelExporter.php';
+            $exporter = new ExcelExporter();
+            $exporter->exportPdfReport($data, $loai, $reportTitle, $fromDate, $toDate, $phongBan, $userName);
+            exit;
+        }
+
+        // Excel (XLS HTML)
+        if (ob_get_level()) ob_end_clean();
+
+        require_once __DIR__ . '/../helpers/ExcelExporter.php';
+        $exporter = new ExcelExporter();
+        $exporter->exportByType($data, $loai, $reportTitle, $fromDate, $toDate, $phongBan, $userName);
+        exit;
+    }
+
+    /**
      * Display statistics
      */
     public function statistics()

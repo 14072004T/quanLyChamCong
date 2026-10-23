@@ -702,6 +702,246 @@ $updatedAt = date('H:i, d/m/Y');
     .mgrr-stats { grid-template-columns: 1fr; }
     .mgrr-donut-wrap { grid-template-columns: 1fr; justify-items: center; }
 }
+
+/* ===== EXPORT REPORT MODAL ===== */
+.export-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(6px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.export-modal-overlay.active { display: flex; }
+.export-modal {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 32px 80px rgba(15, 23, 42, 0.25);
+    width: 100%;
+    max-width: 660px;
+    overflow: hidden;
+    animation: slideUpFade 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.export-modal-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
+    padding: 24px 28px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.export-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.export-modal-header p {
+    margin: 6px 0 0;
+    font-size: .84rem;
+    opacity: .8;
+}
+.export-modal-close {
+    background: rgba(255,255,255,.15);
+    border: none;
+    color: #fff;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.15rem;
+    display: grid;
+    place-items: center;
+    transition: background .2s;
+    flex-shrink: 0;
+}
+.export-modal-close:hover { background: rgba(255,255,255,.3); }
+.export-modal-body { padding: 24px 28px; }
+.export-section-label {
+    font-size: .75rem;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.report-types-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+.report-type-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #fff;
+    position: relative;
+}
+.report-type-card:hover {
+    border-color: #93c5fd;
+    background: #eff6ff;
+    transform: translateY(-1px);
+}
+.report-type-card.selected {
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.report-type-card input[type=radio] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.report-type-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.report-type-info strong {
+    display: block;
+    font-size: .88rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 2px;
+}
+.report-type-info span {
+    font-size: .76rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+.check-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    background: #fff;
+    display: grid;
+    place-items: center;
+    transition: all .2s;
+    font-size: .7rem;
+    color: transparent;
+}
+.report-type-card.selected .check-indicator {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #fff;
+}
+.format-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+.format-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    position: relative;
+}
+.format-card:hover { border-color: #93c5fd; background: #eff6ff; }
+.format-card.selected { border-color: #2563eb; background: #eff6ff; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.format-card input[type=radio] { position: absolute; opacity: 0; pointer-events: none; }
+.format-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.format-card strong {
+    font-size: .88rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+.format-card span {
+    font-size: .75rem;
+    color: #64748b;
+    display: block;
+}
+.export-modal-footer {
+    padding: 16px 28px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid #f1f5f9;
+}
+.export-btn-cancel {
+    padding: 10px 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #64748b;
+    font-weight: 600;
+    font-size: .9rem;
+    cursor: pointer;
+    transition: all .2s;
+}
+.export-btn-cancel:hover { background: #f8fafc; border-color: #cbd5e1; }
+.export-btn-submit {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    font-weight: 700;
+    font-size: .9rem;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(37,99,235,.35);
+}
+.export-btn-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,.45); }
+.export-btn-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.mgrr-btn.export {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff;
+    border-color: #059669;
+    box-shadow: 0 2px 8px rgba(5,150,105,.3);
+}
+.mgrr-btn.export:hover { background: linear-gradient(135deg, #047857, #059669); }
+@media (max-width: 600px) {
+    .report-types-grid { grid-template-columns: 1fr; }
+    .format-grid { grid-template-columns: 1fr; }
+    .export-modal-body { padding: 16px; }
+    .export-modal-header { padding: 18px 16px; }
+    .export-modal-footer { padding: 12px 16px 18px; }
+}
 </style>
 
 <div class="main-container">
@@ -741,7 +981,101 @@ $updatedAt = date('H:i, d/m/Y');
                 </select>
             </div>
             <button class="mgrr-btn primary" type="submit"><i class="fas fa-filter"></i> Lọc</button>
+            <button type="button" class="mgrr-btn export" id="btnOpenExportModal" onclick="openExportModal()">
+                <i class="fas fa-file-export"></i> Xuất báo cáo
+            </button>
         </form>
+
+        <!-- EXPORT REPORT MODAL -->
+        <div id="exportReportModal" class="export-modal-overlay" onclick="if(event.target===this)closeExportModal()">
+            <div class="export-modal">
+                <div class="export-modal-header">
+                    <div>
+                        <h3><i class="fas fa-file-export"></i> Xuất báo cáo</h3>
+                        <p>Chọn loại báo cáo và định dạng file muốn xuất</p>
+                    </div>
+                    <button class="export-modal-close" onclick="closeExportModal()">&#x2715;</button>
+                </div>
+                <div class="export-modal-body">
+                    <div class="export-section-label"><i class="fas fa-list-ul"></i> Loại báo cáo</div>
+                    <div class="report-types-grid" id="reportTypesGrid">
+                        <label class="report-type-card selected" onclick="selectReportType(this, 'tonghop')">
+                            <input type="radio" name="reportType" value="tonghop" checked>
+                            <div class="report-type-icon" style="background:#dbeafe;color:#1d4ed8"><i class="fas fa-chart-bar"></i></div>
+                            <div class="report-type-info">
+                                <strong>Tổng hợp chấm công</strong>
+                                <span>Phòng ban, ngày công kế hoạch, thực tế, tỷ lệ đi làm, vắng, OT</span>
+                            </div>
+                            <span class="check-indicator"><i class="fas fa-check"></i></span>
+                        </label>
+                        <label class="report-type-card" onclick="selectReportType(this, 'chitiet')">
+                            <input type="radio" name="reportType" value="chitiet">
+                            <div class="report-type-icon" style="background:#dcfce7;color:#16a34a"><i class="fas fa-user-clock"></i></div>
+                            <div class="report-type-info">
+                                <strong>Chi tiết chấm công NV</strong>
+                                <span>Mã NV, ngày, ca làm, giờ vào/ra, giờ làm, OT, trạng thái</span>
+                            </div>
+                            <span class="check-indicator"><i class="fas fa-check"></i></span>
+                        </label>
+                        <label class="report-type-card" onclick="selectReportType(this, 'vipham')">
+                            <input type="radio" name="reportType" value="vipham">
+                            <div class="report-type-icon" style="background:#ffedd5;color:#c2410c"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div class="report-type-info">
+                                <strong>Đi trễ, về sớm, vắng mặt</strong>
+                                <span>Ngày vi phạm, loại vi phạm, giờ theo ca vs thực tế, phút lệch</span>
+                            </div>
+                            <span class="check-indicator"><i class="fas fa-check"></i></span>
+                        </label>
+                        <label class="report-type-card" onclick="selectReportType(this, 'yeucau')">
+                            <input type="radio" name="reportType" value="yeucau">
+                            <div class="report-type-icon" style="background:#f3e8ff;color:#7c3aed"><i class="fas fa-file-alt"></i></div>
+                            <div class="report-type-info">
+                                <strong>Tổng hợp đơn yêu cầu</strong>
+                                <span>Nhân viên, loại đơn, thời gian, nội dung, trạng thái, người duyệt</span>
+                            </div>
+                            <span class="check-indicator"><i class="fas fa-check"></i></span>
+                        </label>
+                        <label class="report-type-card" onclick="selectReportType(this, 'tangca')">
+                            <input type="radio" name="reportType" value="tangca">
+                            <div class="report-type-icon" style="background:#fee2e2;color:#dc2626"><i class="fas fa-stopwatch"></i></div>
+                            <div class="report-type-info">
+                                <strong>Báo cáo tăng ca (OT)</strong>
+                                <span>Nhân viên, ngày OT, thời gian, tổng giờ OT, trạng thái phê duyệt</span>
+                            </div>
+                            <span class="check-indicator"><i class="fas fa-check"></i></span>
+                        </label>
+                    </div>
+
+                    <div class="export-section-label"><i class="fas fa-file"></i> Định dạng file</div>
+                    <div class="format-grid">
+                        <label class="format-card selected" onclick="selectFormat(this, 'excel')">
+                            <input type="radio" name="exportFormat" value="excel" checked>
+                            <div class="format-icon" style="background:#dcfce7;color:#16a34a"><i class="fas fa-file-excel"></i></div>
+                            <div>
+                                <strong>Excel (.xlsx)</strong>
+                                <span>Dữ liệu chi tiết, dễ chỉnh sửa</span>
+                            </div>
+                            <span class="check-indicator" style="margin-left:auto"><i class="fas fa-check"></i></span>
+                        </label>
+                        <label class="format-card" onclick="selectFormat(this, 'pdf')">
+                            <input type="radio" name="exportFormat" value="pdf">
+                            <div class="format-icon" style="background:#fee2e2;color:#dc2626"><i class="fas fa-file-pdf"></i></div>
+                            <div>
+                                <strong>PDF (.pdf)</strong>
+                                <span>In ấn, lưu trữ chuyên nghiệp</span>
+                            </div>
+                            <span class="check-indicator" style="margin-left:auto"><i class="fas fa-check"></i></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="export-modal-footer">
+                    <button type="button" class="export-btn-cancel" onclick="closeExportModal()">Hủy</button>
+                    <button type="button" class="export-btn-submit" id="btnDoExport" onclick="doExportReport()">
+                        <i class="fas fa-download"></i> Xuất ngay
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <div class="mgrr-stats">
             <div class="mgrr-card">
@@ -1156,6 +1490,88 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function (res) { return res.json(); })
         .then(function (json) { renderRequestSummary(json.data || []); })
         .catch(function () { renderRequestSummary([]); });
+});
+</script>
+
+<script>
+/* ===== EXPORT REPORT MODAL JS ===== */
+var _selectedReportType = 'tonghop';
+var _selectedFormat = 'excel';
+
+function openExportModal() {
+    document.getElementById('exportReportModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+function closeExportModal() {
+    document.getElementById('exportReportModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+function selectReportType(el, type) {
+    _selectedReportType = type;
+    document.querySelectorAll('.report-type-card').forEach(function(c) { c.classList.remove('selected'); });
+    el.classList.add('selected');
+}
+function selectFormat(el, fmt) {
+    _selectedFormat = fmt;
+    document.querySelectorAll('.format-card').forEach(function(c) { c.classList.remove('selected'); });
+    el.classList.add('selected');
+}
+function doExportReport() {
+    var btn = document.getElementById('btnDoExport');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xuất...';
+
+    // Lấy giá trị filter hiện tại từ form
+    var tuNgay = '<?= htmlspecialchars($fromDate) ?>';
+    var denNgay = '<?= htmlspecialchars($toDate) ?>';
+    var phongBan = '<?= htmlspecialchars($phongBan) ?>';
+
+    if (_selectedFormat === 'pdf') {
+        // PDF: mở tab mới với trang in
+        var url = 'index.php?page=xuat-bao-cao-tong-hop'
+            + '&loai=' + encodeURIComponent(_selectedReportType)
+            + '&dinh_dang=pdf'
+            + '&tuNgay=' + encodeURIComponent(tuNgay)
+            + '&denNgay=' + encodeURIComponent(denNgay)
+            + '&phongBan=' + encodeURIComponent(phongBan);
+        window.open(url, '_blank');
+        setTimeout(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-download"></i> Xuất ngay';
+            closeExportModal();
+        }, 800);
+    } else {
+        // Excel: submit form POST
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'index.php?page=xuat-bao-cao-tong-hop';
+        var fields = {
+            loai: _selectedReportType,
+            dinh_dang: 'excel',
+            tuNgay: tuNgay,
+            denNgay: denNgay,
+            phongBan: phongBan,
+            export: '1'
+        };
+        Object.keys(fields).forEach(function(k) {
+            var inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = k;
+            inp.value = fields[k];
+            form.appendChild(inp);
+        });
+        document.body.appendChild(form);
+        form.submit();
+        setTimeout(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-download"></i> Xuất ngay';
+            closeExportModal();
+        }, 1500);
+    }
+}
+// ESC key close
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeExportModal();
 });
 </script>
 
