@@ -76,8 +76,9 @@ class ManagerController
         $tabletAttendanceReport = $this->model->getCountableTabletAttendanceReport($fromDate, $toDate, $phongBan);
         $reportRows = $tabletAttendanceReport['report_rows'];
         $dailyPunctuality = $tabletAttendanceReport['daily_punctuality'];
-        $attendanceMetrics = $this->model->getAttendanceMetrics($fromDate, $toDate, $phongBan);
-        $attendanceMetrics = array_merge($attendanceMetrics, $tabletAttendanceReport['attendance_metrics']);
+        $attendanceMetrics = $tabletAttendanceReport['attendance_metrics'];
+        $otMetrics = $this->model->getAttendanceMetrics($fromDate, $toDate, $phongBan);
+        $attendanceMetrics['total_ot_hours'] = (float)($otMetrics['total_ot_hours'] ?? 0);
         $employeePunctuality = $tabletAttendanceReport['employee_punctuality'];
         $totalEmployees = $tabletAttendanceReport['total_employees'];
         $departments = $this->model->getValidDepartments();

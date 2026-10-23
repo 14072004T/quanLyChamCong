@@ -376,6 +376,7 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
         $employees = $data['employees'] ?? [];
         $attMap    = $data['attMap']    ?? [];
         $leaveMap  = $data['leaveMap']  ?? [];
+        $scheduledHolidayMap = $data['scheduledHolidayMap'] ?? [];
 
         if (empty($dates) || empty($employees)) {
             return '<table><tr><td style="text-align:center;padding:20px;color:#94a3b8">Không có dữ liệu trong kỳ này</td></tr></table>';
@@ -462,7 +463,8 @@ Ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . '</td></tr
                 foreach ($dates as $date) {
                     $dow   = (int)date('w', strtotime($date));
                     $isWknd = ($dow === 0 || $dow === 6);
-                    $isHoliday = HolidayCalculator::isHoliday($date);
+                    $isHoliday = HolidayCalculator::isHoliday($date)
+                        || !empty($scheduledHolidayMap[$maND][$date]);
 
                     if ($isWknd && !$isHoliday) {
                         // Cuối tuần — ô xám
@@ -976,4 +978,3 @@ if (document.body.dataset.autoPrint === "1") {
         return $h;
     }
 }
-

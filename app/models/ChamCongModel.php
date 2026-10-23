@@ -1338,17 +1338,17 @@ class ChamCongModel
 
         $employeeSql = "SELECT DISTINCT nd.maND, nd.hoTen, nd.phongBan
                         FROM nguoidung nd
-                        INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1";
+                        INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
+                        WHERE nd.trangThai = 1
+                          AND nd.chucVu = 'Nhân viên'
+                          AND nd.phongBan != 'Ban Điều hành'";
         $employeeParams = [];
         $employeeTypes = '';
         if ($phongBan !== '') {
-            // Lọc theo phòng ban cụ thể (nhưng không bao giờ lấy Ban Điều hành)
-            $employeeSql .= " WHERE nd.phongBan = ? AND nd.phongBan != 'Ban Điều hành'";
+            // Lọc theo phòng ban cụ thể nhưng không đưa Ban Điều hành vào báo cáo.
+            $employeeSql .= " AND nd.phongBan = ?";
             $employeeParams[] = $phongBan;
             $employeeTypes = 's';
-        } else {
-            // Không lọc phòng ban cụ thể → loại trừ Ban Điều hành
-            $employeeSql .= " WHERE nd.phongBan != 'Ban Điều hành'";
         }
         $employeeSql .= " ORDER BY nd.hoTen";
         $employeeRows = [];
@@ -5030,6 +5030,34 @@ class ChamCongModel
 
         if (empty($employees)) return [];
 
+        // Ghi nhận ngày được phân ca nghỉ để báo cáo chi tiết không đánh dấu vắng.
+        $scheduleSql = "SELECT cv.maND, cv.hieuLucTu, cv.hieuLucDen, cv.id AS assignmentId,
+                               s.kyHieu, s.tenCa, s.cotinhcong, s.gioBatDau, s.gioKetThuc
+                        FROM canhanvien cv
+                        INNER JOIN calamviec s ON s.id = cv.maCa AND s.hoatDong = 1
+                        WHERE cv.hieuLucTu <= ?
+                          AND (cv.hieuLucDen IS NULL OR cv.hieuLucDen >= ?)
+                        ORDER BY cv.maND, cv.hieuLucTu DESC, cv.id DESC";
+        $scheduleStmt = $this->conn->prepare($scheduleSql);
+        $scheduleRows = [];
+        if (!$scheduleStmt) {
+            error_log('Không thể chuẩn bị truy vấn lịch phân ca báo cáo chi tiết: ' . $this->conn->error);
+        } else {
+            $scheduleStmt->bind_param('ss', $toDate, $fromDate);
+            if (!$scheduleStmt->execute()) {
+                error_log('Không thể tải lịch phân ca báo cáo chi tiết: ' . $scheduleStmt->error);
+            } else {
+                $scheduleRows = $scheduleStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            }
+            $scheduleStmt->close();
+        }
+
+        $assignedShifts = [];
+        foreach ($scheduleRows as $scheduleRow) {
+            $employeeId = (int)$scheduleRow['maND'];
+            $assignedShifts[$employeeId][] = $scheduleRow;
+        }
+
         // ── 2. Dữ liệu chấm công từ lichsuchamcong ──
         // Giờ vào = MIN(ngayTao WHERE hanhDong='IN'), giờ ra = MAX(ngayTao WHERE hanhDong='OUT')
         $attSql = "SELECT
@@ -5149,11 +5177,42 @@ class ChamCongModel
             $cnt++;
         }
 
+        $scheduledHolidayMap = [];
+        foreach ($employees as $employee) {
+            $employeeId = (int)$employee['maND'];
+            foreach ($dates as $date) {
+                $assignedShift = null;
+                foreach ($assignedShifts[$employeeId] ?? [] as $candidateShift) {
+                    if (
+                        $date >= $candidateShift['hieuLucTu']
+                        && ($candidateShift['hieuLucDen'] === null || $date <= $candidateShift['hieuLucDen'])
+                    ) {
+                        $assignedShift = $candidateShift;
+                        break;
+                    }
+                }
+                if (!$assignedShift) {
+                    continue;
+                }
+
+                $shiftName = mb_strtolower(trim((string)($assignedShift['tenCa'] ?? '')), 'UTF-8');
+                $isScheduledOff = ($assignedShift['kyHieu'] ?? '') === 'OFF'
+                    || ($assignedShift['cotinhcong'] ?? 'yes') === 'no'
+                    || strpos($shiftName, 'nghỉ') !== false
+                    || strpos($shiftName, 'nghi') !== false
+                    || $assignedShift['gioBatDau'] === $assignedShift['gioKetThuc'];
+                if ($isScheduledOff) {
+                    $scheduledHolidayMap[$employeeId][$date] = true;
+                }
+            }
+        }
+
         return [
             'dates'     => $dates,
             'employees' => $employees,
             'attMap'    => $attMap,
             'leaveMap'  => $leaveMap,
+            'scheduledHolidayMap' => $scheduledHolidayMap,
         ];
     }
 }

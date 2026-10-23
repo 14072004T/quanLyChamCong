@@ -334,8 +334,8 @@ $onTimeDays = (int)($attendanceMetrics['on_time_days'] ?? array_sum(array_column
 $absentDays = (float)($attendanceMetrics['absent_days'] ?? 0);
 $leaveDays = (int)($attendanceMetrics['leave_days'] ?? array_sum(array_column($dailyPunctuality, 'leave')));
 $pendingDays = (int)($attendanceMetrics['pending_days'] ?? array_sum(array_column($dailyPunctuality, 'pending')));
-$plannedWorkDays = max(0, $scheduledWorkDays - $leaveDays - $pendingDays);
-$onTimeRate = (float)($attendanceMetrics['attendance_rate'] ?? 0);
+$eligibleWorkDays = max(0, $scheduledWorkDays - $leaveDays - $pendingDays);
+$attendanceRate = $eligibleWorkDays > 0 ? round(($actualWorkDays / $eligibleWorkDays) * 100, 1) : 0;
 $absentRate = (float)($attendanceMetrics['absent_rate'] ?? 0);
 $totalOtHours = (float)($attendanceMetrics['total_ot_hours'] ?? 0);
 
@@ -1092,7 +1092,7 @@ $updatedAt = date('H:i, d/m/Y');
             </div>
             <div class="mgrr-card">
                 <span class="mgrr-icon mgrr-orange"><i class="fas fa-clock"></i></span>
-                <div><small>Tỷ lệ đi làm</small><strong><?= number_format($onTimeRate, 1) ?>%</strong><small class="mgrr-trend">Không tính nghỉ phép/chưa đến hạn</small></div>
+                <div><small>Tỷ lệ đi làm</small><strong><?= number_format($attendanceRate, 1) ?>%</strong><small class="mgrr-trend">Không tính nghỉ phép/chưa đến hạn</small></div>
             </div>
             <div class="mgrr-card">
                 <span class="mgrr-icon mgrr-red"><i class="fas fa-user-times"></i></span>
@@ -1217,11 +1217,12 @@ $updatedAt = date('H:i, d/m/Y');
                 <table class="mgrr-table">
                     <thead><tr><th>Chỉ số</th><th>Giá trị</th><th>Tỷ lệ</th><th>So với trước</th></tr></thead>
                     <tbody>
-                        <tr><td>Ngày công theo kế hoạch</td><td><strong><?= number_format($plannedWorkDays, 0) ?></strong></td><td>-</td><td>-</td></tr>
-                        <tr><td>Ngày có chấm công</td><td><strong><?= number_format($actualWorkDays, 0) ?></strong></td><td><?= $plannedWorkDays > 0 ? number_format(($actualWorkDays / $plannedWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
-                        <tr><td>Đi làm đúng giờ</td><td><strong><?= number_format($onTimeDays, 0) ?></strong></td><td><?= $plannedWorkDays > 0 ? number_format(($onTimeDays / $plannedWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
-                        <tr><td>Đi trễ</td><td><strong><?= number_format($lateDays, 0) ?></strong></td><td><?= $plannedWorkDays > 0 ? number_format(($lateDays / $plannedWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
-                        <tr><td>Về sớm</td><td><strong><?= number_format($earlyDays, 0) ?></strong></td><td><?= $plannedWorkDays > 0 ? number_format(($earlyDays / $plannedWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
+                        <tr><td>Ngày công theo kế hoạch</td><td><strong><?= number_format($scheduledWorkDays, 0) ?></strong></td><td>-</td><td>-</td></tr>
+                        <tr><td>Ngày công cần xác nhận</td><td><strong><?= number_format($eligibleWorkDays, 0) ?></strong></td><td>-</td><td>-</td></tr>
+                        <tr><td>Ngày có chấm công</td><td><strong><?= number_format($actualWorkDays, 0) ?></strong></td><td><?= number_format($attendanceRate, 1) ?>%</td><td>-</td></tr>
+                        <tr><td>Đi làm đúng giờ</td><td><strong><?= number_format($onTimeDays, 0) ?></strong></td><td><?= $eligibleWorkDays > 0 ? number_format(($onTimeDays / $eligibleWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
+                        <tr><td>Đi trễ</td><td><strong><?= number_format($lateDays, 0) ?></strong></td><td><?= $actualWorkDays > 0 ? number_format(($lateDays / $actualWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
+                        <tr><td>Về sớm</td><td><strong><?= number_format($earlyDays, 0) ?></strong></td><td><?= $actualWorkDays > 0 ? number_format(($earlyDays / $actualWorkDays) * 100, 1) : '0.0' ?>%</td><td>-</td></tr>
                         <tr><td>Vắng mặt</td><td><strong><?= number_format($absentDays, 0) ?></strong></td><td><?= number_format($absentRate, 1) ?>%</td><td>-</td></tr>
                         <tr><td>Nghỉ phép đã duyệt</td><td><strong><?= number_format($leaveDays, 0) ?></strong></td><td>-</td><td>-</td></tr>
                         <tr><td>Chưa đến hạn xác nhận</td><td><strong><?= number_format($pendingDays, 0) ?></strong></td><td>-</td><td>-</td></tr>
