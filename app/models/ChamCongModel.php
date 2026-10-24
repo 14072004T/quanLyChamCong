@@ -2451,8 +2451,6 @@ class ChamCongModel
 
     public function getAttendanceMetrics($fromDate, $toDate, $phongBan = '')
     {
-        $validDepts = ['Sản xuất', 'Kho', 'QC', 'Bảo trì'];
-        $placeholders = implode(',', array_fill(0, count($validDepts), '?'));
         $sql = "SELECT u.maND, DATE(l.ngayTao) AS ngayChamCong,
                        MIN(CASE WHEN l.hanhDong = 'IN' THEN l.ngayTao END) AS gioVao,
                        MAX(CASE WHEN l.hanhDong = 'OUT' THEN l.ngayTao END) AS gioRa
@@ -2462,14 +2460,11 @@ class ChamCongModel
                     AND DATE(l.ngayTao) <= ?
                 WHERE u.trangThai = 1
                   AND u.chucVu = 'Nhân viên'
-                  AND u.phongBan IN ($placeholders)";
+                  AND LOWER(u.phongBan) NOT LIKE '%điều hành%'
+                  AND LOWER(u.phongBan) NOT LIKE '%dieu hanh%'";
 
         $params = [$fromDate, $toDate];
         $types = 'ss';
-        foreach ($validDepts as $dept) {
-            $params[] = $dept;
-            $types .= 's';
-        }
         if ($phongBan !== '') {
             $sql .= " AND u.phongBan = ?";
             $params[] = $phongBan;
@@ -2712,17 +2707,19 @@ class ChamCongModel
 
     public function getValidDepartments()
     {
-        // Không bao gồm 'Ban Điều hành' — phòng này không hiển thị trong bộ lọc
-        // và không được tính vào báo cáo tổng hợp của Manager
-        return [
-            'Phòng Nhân sự',
-            'Phòng Kế toán',
-            'Phòng Kinh doanh & Marketing',
-            'Phòng Công nghệ thông tin (IT)',
-            'Phòng Sản xuất',
-            'Phòng Kiểm soát chất lượng (QC)',
-            'Phòng Hành chính'
-        ];
+        $sql = "SELECT DISTINCT TRIM(tenPhongBan) AS tenPhongBan
+                FROM phongban
+                WHERE tenPhongBan IS NOT NULL
+                  AND TRIM(tenPhongBan) <> ''
+                  AND LOWER(TRIM(tenPhongBan)) NOT IN ('ban điều hành', 'ban dieu hanh')
+                ORDER BY tenPhongBan";
+        $result = $this->conn->query($sql);
+        if (!$result) {
+            error_log('Không thể lấy danh sách phòng ban báo cáo: ' . $this->conn->error);
+            return [];
+        }
+
+        return array_column($result->fetch_all(MYSQLI_ASSOC), 'tenPhongBan');
     }
 
     public function getAllValidDepartmentsWithAliases()
