@@ -1059,7 +1059,13 @@ class ChamCongModel
         $defaultShift = $requireAssignedShift ? null : $this->getDefaultShiftForDate($date);
         $defaultShiftId = (int)($defaultShift['maCa'] ?? 0);
         $departmentFilter = '';
-        $personFilter = $requireAssignedShift ? '' : "AND nd.trangThai = 1 AND nd.chucVu = 'Nhân viên' AND DATE(nd.ngayTao) <= ?";
+        $personFilter = $requireAssignedShift ? '' : "AND nd.trangThai = 1 AND DATE(nd.ngayTao) <= ?";
+        $notExecutiveBoard = "AND LOWER(TRIM(COALESCE(nd.phongBan, ''))) NOT IN ('ban điều hành', 'ban dieu hanh')
+                             AND NOT EXISTS (
+                                 SELECT 1 FROM phongban report_department
+                                 WHERE report_department.id = nd.maPhongBan
+                                   AND LOWER(TRIM(report_department.tenPhongBan)) IN ('ban điều hành', 'ban dieu hanh')
+                             )";
         $params = [$date, $date, $defaultShiftId, $scanStart, $scanEnd, $scanStart, $scanEnd, $date, $date];
         $types = 'ssissssss';
         if (!$requireAssignedShift) {
@@ -1067,13 +1073,11 @@ class ChamCongModel
             $types .= 's';
         }
         if ($phongBan !== '') {
-            // Lọc theo phòng ban cụ thể (nhưng không bao giờ lấy Ban Điều hành)
-            $departmentFilter = "AND nd.phongBan = ? AND nd.phongBan != 'Ban Điều hành'";
+            $departmentFilter = "AND nd.phongBan = ? $notExecutiveBoard";
             $params[] = $phongBan;
             $types .= 's';
         } else {
-            // Không lọc theo phòng ban → loại trừ Ban Điều hành
-            $departmentFilter = "AND nd.phongBan != 'Ban Điều hành'";
+            $departmentFilter = $notExecutiveBoard;
         }
         $sql = "SELECT nd.maND, nd.hoTen, nd.phongBan, s.gioBatDau, s.gioKetThuc, s.cotinhcong,
                        attendance.first_checkin, attendance.last_checkout,
@@ -1346,8 +1350,12 @@ class ChamCongModel
                         FROM nguoidung nd
                         INNER JOIN taikhoan tk ON tk.maTK = nd.maTK AND tk.trangThai = 1
                         WHERE nd.trangThai = 1
-                          AND nd.chucVu = 'Nhân viên'
-                          AND nd.phongBan != 'Ban Điều hành'";
+                          AND LOWER(TRIM(COALESCE(nd.phongBan, ''))) NOT IN ('ban điều hành', 'ban dieu hanh')
+                          AND NOT EXISTS (
+                              SELECT 1 FROM phongban report_department
+                              WHERE report_department.id = nd.maPhongBan
+                                AND LOWER(TRIM(report_department.tenPhongBan)) IN ('ban điều hành', 'ban dieu hanh')
+                          )";
         $employeeParams = [];
         $employeeTypes = '';
         if ($phongBan !== '') {
