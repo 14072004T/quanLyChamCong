@@ -414,6 +414,11 @@ class ChamCongModel
             $clientIP = $this->getServerIP();
         }
 
+        // Ngày nghỉ không phép (KP) đã được duyệt: không có lịch làm -> không cho chấm công.
+        if ($this->hasApprovedUnpaidLeaveForDate($maND, date('Y-m-d'))) {
+            return false;
+        }
+
         $ngayTao = date('Y-m-d H:i:s');
         $sql = "INSERT INTO lichsuchamcong (maND, hanhDong, phuongThuc, thongTinThietBi, ghiChu, anhMinhChung, ngayTao)
             VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -3847,6 +3852,28 @@ class ChamCongModel
      * @param string $monthKey - YYYY-MM
      * @return array
      */
+    /**
+     * Nhân viên có đơn nghỉ KHÔNG phép (loại 'other' = KP) đã duyệt phủ lên ngày $date hay không.
+     * Nghỉ có phép (CP) vẫn giữ lịch làm bình thường nên không tính ở đây.
+     */
+    public function hasApprovedUnpaidLeaveForDate($maND, $date = null)
+    {
+        $maND = (int)$maND;
+        $date = $date ?: date('Y-m-d');
+        $stmt = $this->conn->prepare(
+            "SELECT 1 FROM donnghiphep
+             WHERE maND = ? AND trangThai = 'approved' AND loaiNghiPhep = 'other'
+               AND tuNgay <= ? AND denNgay >= ?
+             LIMIT 1"
+        );
+        if (!$stmt) return false;
+        $stmt->bind_param('iss', $maND, $date, $date);
+        $stmt->execute();
+        $has = $stmt->get_result()->num_rows > 0;
+        $stmt->close();
+        return $has;
+    }
+
     public function getHolidaysForMonth($monthKey)
     {
         require_once 'app/helpers/HolidayCalculator.php';

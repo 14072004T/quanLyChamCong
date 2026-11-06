@@ -650,8 +650,15 @@ class FaceController extends Controller
 
         // Ghi mọi lần quét vào bảng riêng — nguồn dữ liệu để tính giờ vào/ra.
         $chamCongModel = $this->getChamCongModel();
-        $chamCongModel->insertTabletScan($matchedId, $photoFilename);
         $employeeName = $this->getFaceModel()->getUserName($matchedId);
+        if ($chamCongModel->hasApprovedUnpaidLeaveForDate($matchedId, date('Y-m-d'))) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Hôm nay ' . $employeeName . ' (Mã NV: ' . $matchedId . ') nghỉ không phép đã được duyệt, không có lịch làm việc.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $chamCongModel->insertTabletScan($matchedId, $photoFilename);
         $assignedShift = $chamCongModel->getShiftForUser($matchedId, date('Y-m-d'), false);
         if ($assignedShift && strtolower((string)($assignedShift['cotinhcong'] ?? 'yes')) === 'no') {
             echo json_encode([

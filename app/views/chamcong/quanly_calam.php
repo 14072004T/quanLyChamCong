@@ -64,7 +64,7 @@ function shiftDisplayText($value) {
             </div>
             <div class="alert alert-info" style="margin-bottom:14px;">
                 <i class="fas fa-info-circle"></i>
-                <div>Tất cả nhân viên sẽ được gắn ca và hiển thị màu theo danh mục ca đang có, nếu chưa gắn ca thì chỗ đó sẽ bị trống. Vui lòng gắn lại ca phù hợp cho nhân viên đó</div>
+                <div>Tất cả nhân viên sẽ được gắn ca và hiển thị màu theo danh mục ca đang có, nhân viên chưa được gắn ca riêng (VD: nhân viên mới) sẽ tự động theo lịch mặc định: Thứ 2 - Thứ 6 làm ca HC, Thứ 7 và Chủ nhật OFF. Có thể đổi ca từng ngày nếu cần</div>
             </div>
             <div class="attendance-grid-wrapper">
                 <table class="attendance-grid" id="monthly-shift-grid">
@@ -311,6 +311,14 @@ document.addEventListener('DOMContentLoaded', function () {
         return null;
     }
 
+    function getDefaultAssignmentForDate(month, day, shifts) {
+        var dow = getDayOfWeek(month, day);
+        var defaultCode = (dow === 0 || dow === 6) ? 'OFF' : 'HC';
+        var shift = shifts.find(function(s) { return s.kyHieu === defaultCode; });
+        if (!shift) return null;
+        return { maCa: shift.id, kyHieu: shift.kyHieu, tenCa: shift.tenCa, mauSac: shift.mauSac, isDefault: true };
+    }
+
     function buildEmployeeShiftPicker(employeeId, date, assignment, shifts) {
         var assignedShiftId = assignment ? String(assignment.maCa) : '';
         var assignedShift = shifts.find(function(shift) {
@@ -333,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function () {
             options += '<option value="' + escapeHtml(assignedShiftId) + '" data-color="' + escapeHtml(color) + '" selected>' + escapeHtml(label) + '</option>';
         }
 
-        return '<select class="shift-cell shift-picker" data-ma-nd="' + employeeId + '" data-date="' + date + '" title="' + (assignment ? 'Ca đã gán: ' + escapeHtml(label) : 'Chưa gắn ca - chọn để gán') + '" style="background:' + escapeHtml(color) + ';color:' + (assignment ? '#fff' : '#64748b') + ';border-color:' + escapeHtml(assignment ? color : '#94a3b8') + '" onchange="changeMonthlyShift(this)">' + options + '</select>';
+        return '<select class="shift-cell shift-picker" data-ma-nd="' + employeeId + '" data-date="' + date + '" title="' + (assignment ? (assignment.isDefault ? 'Ca mặc định: ' : 'Ca đã gán: ') + escapeHtml(label) : 'Chưa gắn ca - chọn để gán') + '" style="background:' + escapeHtml(color) + ';color:' + (assignment ? '#fff' : '#64748b') + ';border-color:' + escapeHtml(assignment ? color : '#94a3b8') + '" onchange="changeMonthlyShift(this)">' + options + '</select>';
     }
 
     // Danh sách nhân viên đang hiển thị trong lưới — dùng lại khi áp dụng dòng chung.
@@ -479,11 +487,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     var employeeAssignments = assignmentMap[String(emp.maND)] || assignmentMap[emp.maND] || [];
                     var assignedShift = getAssignmentForDate(employeeAssignments, currentDate);
-                    cells += buildEmployeeShiftPicker(emp.maND, currentDate, assignedShift, shifts);
+                    if (!assignedShift) {
+                        // Chưa có phân ca riêng (VD: nhân viên mới) -> dùng lịch mặc định
+                        // giống backend getDefaultShiftForDate: T2-T6 = HC, T7/CN = OFF.
+                        assignedShift = getDefaultAssignmentForDate(month, d, shifts);
+                    }
                     if (isLeave) {
-                        var leaveTooltip = dayBreakdown.leave_reason ? escapeHtml(dayBreakdown.day_type_label + ': ' + dayBreakdown.leave_reason) : escapeHtml(dayBreakdown.day_type_label || 'Nghỉ phép');
+                        // Nghỉ không phép (KP) đã duyệt: ngày đó không có lịch làm, không chấm công.
+                        // (Nghỉ có phép là day_type 'leave_paid' -> vẫn hiển thị ca bình thường.)
+                        var leaveTooltip = dayBreakdown.leave_reason ? escapeHtml(dayBreakdown.day_type_label + ': ' + dayBreakdown.leave_reason) : escapeHtml(dayBreakdown.day_type_label || 'Nghỉ không phép');
                         cells += '<span class="shift-cell shift-off" title="' + leaveTooltip + '">NGHỈ</span>';
-                    } else if (isHoliday) {
+                    } else {
+                        cells += buildEmployeeShiftPicker(emp.maND, currentDate, assignedShift, shifts);
+                    }
+                    if (isHoliday) {
                         cells += '<span class="shift-cell shift-off" style="background-color:#f59e0b;color:white;border-color:#f59e0b;" title="' + escapeHtml(dayBreakdown.day_type_label || 'Ngày lễ') + '">LỄ</span>';
                     }
 
