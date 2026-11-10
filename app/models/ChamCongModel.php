@@ -41,15 +41,25 @@ class ChamCongModel
     {
         $triggerName = 'sync_tablet_scan_time_to_attendance';
         $triggerCheck = $this->conn->query(
-            "SELECT 1 FROM information_schema.TRIGGERS
+            "SELECT ACTION_STATEMENT FROM information_schema.TRIGGERS
              WHERE TRIGGER_SCHEMA = DATABASE() AND TRIGGER_NAME = '$triggerName'"
         );
         if (!$triggerCheck) {
             error_log('Tablet scan attendance trigger check failed: ' . $this->conn->error);
             return;
         }
+
         if ($triggerCheck->num_rows > 0) {
-            return;
+            $trigger = $triggerCheck->fetch_assoc();
+            $actionStatement = (string)($trigger['ACTION_STATEMENT'] ?? '');
+            if (stripos($actionStatement, 'OLD.anhMinhChung IS NULL') !== false) {
+                return;
+            }
+
+            if (!$this->conn->query("DROP TRIGGER `$triggerName`")) {
+                error_log('Outdated tablet scan attendance trigger could not be replaced: ' . $this->conn->error);
+                return;
+            }
         }
 
         $sql = "
@@ -59,9 +69,17 @@ class ChamCongModel
             UPDATE lichsuchamcong
             SET ngayTao = NEW.thoiGianQuet
             WHERE maND = OLD.maND
-              AND anhMinhChung = OLD.anhMinhChung
-              AND OLD.anhMinhChung IS NOT NULL
               AND OLD.thoiGianQuet <> NEW.thoiGianQuet
+              AND (
+                  (OLD.anhMinhChung IS NOT NULL AND anhMinhChung = OLD.anhMinhChung)
+                  OR (
+                      OLD.anhMinhChung IS NULL
+                      AND anhMinhChung IS NULL
+                      AND ngayTao = OLD.thoiGianQuet
+                      AND phuongThuc = 'faceid'
+                      AND thongTinThietBi = 'Tablet'
+                  )
+              )
         ";
         if (!$this->conn->query($sql)) {
             error_log('Tablet scan attendance trigger creation failed: ' . $this->conn->error);
