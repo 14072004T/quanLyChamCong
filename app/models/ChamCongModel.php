@@ -37,6 +37,37 @@ class ChamCongModel
         return $this->conn->query($sql);
     }
 
+    private function ensureTabletScanAttendanceSyncTrigger()
+    {
+        $triggerName = 'sync_tablet_scan_time_to_attendance';
+        $triggerCheck = $this->conn->query(
+            "SELECT 1 FROM information_schema.TRIGGERS
+             WHERE TRIGGER_SCHEMA = DATABASE() AND TRIGGER_NAME = '$triggerName'"
+        );
+        if (!$triggerCheck) {
+            error_log('Tablet scan attendance trigger check failed: ' . $this->conn->error);
+            return;
+        }
+        if ($triggerCheck->num_rows > 0) {
+            return;
+        }
+
+        $sql = "
+            CREATE TRIGGER `$triggerName`
+            AFTER UPDATE ON tablet_face_scans
+            FOR EACH ROW
+            UPDATE lichsuchamcong
+            SET ngayTao = NEW.thoiGianQuet
+            WHERE maND = OLD.maND
+              AND anhMinhChung = OLD.anhMinhChung
+              AND OLD.anhMinhChung IS NOT NULL
+              AND OLD.thoiGianQuet <> NEW.thoiGianQuet
+        ";
+        if (!$this->conn->query($sql)) {
+            error_log('Tablet scan attendance trigger creation failed: ' . $this->conn->error);
+        }
+    }
+
     private function ensureTables()
     {
         $this->conn->query("
@@ -260,6 +291,7 @@ class ChamCongModel
         $this->addColumnIfMissing('face_profile', 'embedding_right', 'TEXT DEFAULT NULL AFTER embedding_left');
         $this->addColumnIfMissing('face_profile', 'embedding_arcface', 'LONGTEXT DEFAULT NULL AFTER embedding_right');
         $this->addColumnIfMissing('lichsuchamcong', 'anhMinhChung', 'VARCHAR(255) DEFAULT NULL');
+        $this->ensureTabletScanAttendanceSyncTrigger();
 
         // Migration: mở rộng phuongThuc từ ENUM sang VARCHAR(20) để hỗ trợ 'faceid', 'hr_manual'
         $ptColCheck = $this->conn->query("SHOW COLUMNS FROM lichsuchamcong LIKE 'phuongThuc'");
