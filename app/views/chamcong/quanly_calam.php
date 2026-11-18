@@ -39,7 +39,7 @@ function shiftDisplayText($value) {
 .shift-grid-filters select { flex:0 1 220px; min-width:180px; }
 .attendance-grid-wrapper { max-height:60vh; max-width:100%; overflow:auto; position:relative; -webkit-overflow-scrolling:touch; }
 .attendance-grid { min-width:max-content; border-collapse:separate; border-spacing:0; }
-.attendance-grid thead th { position:sticky; top:0; z-index:20; height:44px; box-sizing:border-box; background:#fff; box-shadow:0 1px 0 #cbd5e1; }
+.attendance-grid thead th { position:sticky; top:0; z-index:20; height:44px; box-sizing:border-box; background:#fff; color:#1e293b; box-shadow:0 1px 0 #cbd5e1; }
 .attendance-grid thead th:first-child { left:0; z-index:30; min-width:230px; }
 .attendance-grid tbody td:first-child { position:sticky; left:0; z-index:10; background:#fff; min-width:230px; box-shadow:1px 0 0 #e2e8f0; }
 .attendance-grid tbody tr.common-shift-row td { position:sticky; top:44px; z-index:15; background:#eff6ff; box-shadow:0 1px 0 #bfdbfe; }
