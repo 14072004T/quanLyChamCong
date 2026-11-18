@@ -61,14 +61,22 @@ class LivenessDetector {
     // vùng mũi thay đổi CÙNG NHAU => tỷ lệ mắt/mũi không tăng.
     static PATCH_W = 32;
     static PATCH_H = 16;
-    static PATCH_BASELINE_MIN = 6;       // Số frame mắt mở cần có trước khi phát hiện
+    static PATCH_BASELINE_MIN = 8;       // Số frame dùng dựng mẫu mắt mở (trung vị) trước khi phát hiện
     static PATCH_BASELINE_WINDOW = 20;
     static PATCH_SPIKE_SIGMA = 5.0;      // Đột biến vùng mắt phải vượt median + 5σ
     static PATCH_SPIKE_MIN_FACTOR = 2.0; // ...và gấp >= 2 lần mức bình thường
     static PATCH_PER_EYE_FACTOR = 1.6;   // Từng mắt riêng cũng phải gấp >= 1.6 lần
     static PATCH_RATIO_FACTOR = 1.8;     // Tỷ lệ mắt/mũi phải tăng >= 1.8 lần mức bình thường
     static PATCH_MAX_CORNER_SHIFT = 0.12;// Khoé mắt lệch > 12% bề rộng mắt => landmark nhảy, bỏ qua
-    static PATCH_MAX_SPIKE_FRAMES = 8;   // Đột biến phải hết trong <= 8 frame (chớp là thoáng qua)
+    static PATCH_MAX_SPIKE_FRAMES = 6;   // Đột biến phải hết trong <= 6 frame (chớp là thoáng qua)
+    // Thay đổi kéo dài nhưng bị loại liên tiếp N frame => mẫu "mắt mở" đã lỗi thời
+    // (đổi người, đổi tư thế, đổi ánh sáng) => học lại, tránh kẹt mãi không nhận chớp mắt.
+    static STALE_REJECT_FRAMES = 4;
+    // Phát hiện ĐỔI KHUÔN MẶT trong cùng phiên quét (vd. đưa ảnh rồi người thật vào):
+    static FACE_SWAP_MISS_FRAMES = 3;        // mất mặt >= 3 frame liên tiếp
+    static FACE_SWAP_DESCRIPTOR_DIST = 0.6;  // descriptor đổi > 0.6 (ngưỡng face-api phân biệt khác người)
+    static FACE_SWAP_BOX_JUMP = 0.6;         // tâm khung mặt nhảy > 60% bề rộng
+   // Đột biến phải hết trong <= 8 frame (chớp là thoáng qua)
     static EAR_VARIANCE_MIN = 0.00002; // Nới lỏng ngưỡng variance        
 
     // Head Pose
@@ -133,16 +141,8 @@ class LivenessDetector {
         this.boxHistory = [];
         this.textureSamples = [];
         this.earHistory = [];
-        this.blinkCount = 0;
-        this.blinkState = 'open';
-        this.blinkDetected = false;
-        this._closedStreak = 0;
-        this._openEarWindow = [];   // {avg, left, right, shape} các frame mắt mở
-        this._closedInfo = null;
-        this._blinkDiag = null;
-        this._patch = { tpl: null, window: [], state: 'open', spikeFrames: 0, peak: null,
-                        diag: { maxEye: 0, maxRatio: 0, base: null, rejectedOneEye: 0,
-                                rejectedRatio: 0, rejectedShift: 0, rejectedLong: 0 } };
+        this._resetBlinkState();
+        this._missCount = 0;
         this.yawHistory = [];
         this.pitchHistory = [];
         this.faceSizeHistory = [];
@@ -223,8 +223,21 @@ class LivenessDetector {
         if (this.destroyed || this.state !== 'scanning') return;
 
         if (!detection) {
+            this._missCount = (this._missCount || 0) + 1;
             this._updateStatus('Không tìm thấy khuôn mặt. Vui lòng nhìn vào camera.', 'warning');
             return;
+        }
+
+        // ─── Phát hiện đổi khuôn mặt giữa phiên ───
+        // Bắt buộc reset toàn bộ: (1) để mẫu mắt/baseline của mặt cũ (vd. ảnh tĩnh) không làm
+        // kẹt việc nhận chớp mắt của người mới; (2) để lần chớp mắt của người A không được tính
+        // cho khuôn mặt B, và descriptor của 2 người không bị trộn khi lấy trung bình.
+        const swapReason = this._detectFaceSwap(detection);
+        this._missCount = 0;
+        if (swapReason) {
+            console.warn(`[Liveness] Phát hiện đổi khuôn mặt (${swapReason}) — bắt đầu quét lại.`);
+            this._resetBlinkState();
+            this._resetFrameData();
         }
 
         // Wait for camera exposure to stabilize
@@ -381,8 +394,9 @@ class LivenessDetector {
         const C = LivenessDetector;
         const win = this._openEarWindow;
 
-        // Chưa đủ mẫu baseline: chỉ thu thập.
+        // Chưa đủ mẫu baseline: chỉ thu thập (bỏ qua frame EAR thấp bất thường — có thể đang chớp).
         if (win.length < C.EAR_BASELINE_MIN_SAMPLES) {
+            if (win.length >= 3 && avgEAR < this._median(win.map(w => w.avg)) * C.EAR_BLINK_THRESHOLD_RATIO) return;
             win.push(sample);
             return;
         }
@@ -415,7 +429,14 @@ class LivenessDetector {
                 const rightDrop = base.right > 0 ? 1 - rightEAR / base.right : 0;
                 const shapeChange = base.shape > 0 ? Math.abs(shape / base.shape - 1) : 1;
 
-                if (leftDrop < C.EAR_PER_EYE_MIN_DROP || rightDrop < C.EAR_PER_EYE_MIN_DROP) {
+                const rejected = leftDrop < C.EAR_PER_EYE_MIN_DROP || rightDrop < C.EAR_PER_EYE_MIN_DROP
+                    || shapeChange > C.FACE_SHAPE_MAX_CHANGE;
+                this._earRejectStreak = rejected ? (this._earRejectStreak || 0) + 1 : 0;
+                if (rejected && this._earRejectStreak > C.STALE_REJECT_FRAMES) {
+                    // Baseline lỗi thời (đổi tư thế/người) => học lại thay vì kẹt mãi
+                    this._openEarWindow = [sample];
+                    this._earRejectStreak = 0;
+                } else if (leftDrop < C.EAR_PER_EYE_MIN_DROP || rightDrop < C.EAR_PER_EYE_MIN_DROP) {
                     dg.oneEye++;
                     console.log(`[Liveness] Bỏ qua: chỉ một mắt giảm (L ${(leftDrop*100).toFixed(0)}%, R ${(rightDrop*100).toFixed(0)}%)`);
                 } else if (shapeChange > C.FACE_SHAPE_MAX_CHANGE) {
@@ -428,6 +449,7 @@ class LivenessDetector {
                     console.log(`[Liveness] Eye closed (avgEAR ${avgEAR.toFixed(3)} < ${closeThreshold.toFixed(3)}, baseline ${base.avg.toFixed(3)}, σ ${sigma.toFixed(4)})`);
                 }
             } else {
+                this._earRejectStreak = 0;
                 // Chỉ đưa frame mắt mở vào baseline
                 win.push(sample);
                 if (win.length > C.EAR_BASELINE_WINDOW) win.shift();
@@ -460,6 +482,60 @@ class LivenessDetector {
         }
     }
 
+    _resetBlinkState() {
+        this.earHistory = [];
+        this.blinkCount = 0;
+        this.blinkState = 'open';
+        this.blinkDetected = false;
+        this._closedStreak = 0;
+        this._earRejectStreak = 0;
+        this._openEarWindow = [];   // {avg, left, right, shape} các frame mắt mở
+        this._closedInfo = null;
+        this._blinkDiag = null;
+        this._patch = { tpl: null, collect: [], window: [], state: 'open', spikeFrames: 0, peak: null, rejectStreak: 0,
+                        diag: { maxEye: 0, maxRatio: 0, base: null, rejectedOneEye: 0,
+                                rejectedRatio: 0, rejectedShift: 0, rejectedLong: 0 } };
+    }
+
+    _resetFrameData() {
+        this.frameCount = 0; // cho người mới đủ thời gian quét
+        this.landmarkHistory = [];
+        this.boxHistory = [];
+        this.textureSamples = [];
+        this.yawHistory = [];
+        this.pitchHistory = [];
+        this.faceSizeHistory = [];
+        this.descriptorSamples = [];
+        this.latestDescriptor = null;
+    }
+
+    /**
+     * Trả về lý do nếu khuôn mặt hiện tại khác khuôn mặt đang quét, ngược lại null.
+     */
+    _detectFaceSwap(detection) {
+        const C = LivenessDetector;
+        if (!this.boxHistory || this.boxHistory.length === 0) return null;
+        if ((this._missCount || 0) >= C.FACE_SWAP_MISS_FRAMES) return `mất mặt ${this._missCount} frame`;
+
+        const prev = this.boxHistory[this.boxHistory.length - 1];
+        const box = detection.detection.box;
+        const jump = Math.hypot((box.x + box.width / 2) - (prev.x + prev.width / 2),
+                                (box.y + box.height / 2) - (prev.y + prev.height / 2));
+        if (jump > C.FACE_SWAP_BOX_JUMP * prev.width) return `khung mặt nhảy ${(jump / prev.width * 100).toFixed(0)}%`;
+        const sizeRatio = (box.width * box.height) / Math.max(prev.width * prev.height, 1);
+        if (sizeRatio < 0.5 || sizeRatio > 2.0) return `kích thước mặt đổi x${sizeRatio.toFixed(2)}`;
+
+        const d = this._normalizeDescriptor(detection.descriptor);
+        const last = this.descriptorSamples[this.descriptorSamples.length - 1];
+        if (d && last && d.length === last.length) {
+            let s = 0;
+            for (let i = 0; i < d.length; i++) s += (d[i] - last[i]) ** 2;
+            const dist = Math.sqrt(s);
+            if (dist > C.FACE_SWAP_DESCRIPTOR_DIST) return `descriptor đổi ${dist.toFixed(2)}`;
+        }
+        return null;
+    }
+
     /**
      * Kênh 2: phát hiện chớp mắt bằng thay đổi pixel vùng mắt so với vùng sống mũi.
      */
@@ -489,8 +565,37 @@ class LivenessDetector {
             x: (positions[i].x - nose.x) / eyeW, y: (positions[i].y - nose.y) / eyeW
         }));
 
+        // ── Thu mẫu "mắt mở": TRUNG VỊ từng pixel của PATCH_BASELINE_MIN frame ──
+        // Không học mẫu từ 1 frame: nếu frame đó rơi đúng lúc đang chớp (hay gặp khi người
+        // vừa thay ảnh tĩnh và chớp ngay), mẫu "mắt mở" thực chất là mắt nhắm, baseline/σ
+        // đội lên và các lần chớp sau không vượt ngưỡng => phải chớp rất nhiều lần.
+        // Một lần chớp chỉ chiếm 2-3 frame nên không ảnh hưởng tới trung vị của 8 frame.
         if (!P.tpl) {
-            P.tpl = { left, right, ref, corners };
+            P.collect = P.collect || [];
+            P.collect.push({ left, right, ref, corners });
+            if (P.collect.length < C.PATCH_BASELINE_MIN) return;
+            const mp = (k) => this._medianPatch(P.collect.map(f => f[k]));
+            P.tpl = {
+                left: mp('left'), right: mp('right'), ref: mp('ref'),
+                corners: corners.map((_, i) => ({
+                    x: this._median(P.collect.map(f => f.corners[i].x)),
+                    y: this._median(P.collect.map(f => f.corners[i].y))
+                }))
+            };
+            // Baseline: so mỗi frame với trung vị của CÁC FRAME CÒN LẠI (leave-one-out), để độ lệch
+            // không bị thấp giả tạo (frame đã góp vào chính mẫu) => ngưỡng không bị hạ thấp.
+            const entries = P.collect.map((f, idx) => {
+                const others = P.collect.filter((_, j) => j !== idx);
+                const t = (k) => this._medianPatch(others.map(o => o[k]));
+                const l = this._patchDiff(f.left, t('left')), r = this._patchDiff(f.right, t('right'));
+                const e = (l + r) / 2;
+                return { eye: e, dL: l, dR: r, ratio: e / Math.max(this._patchDiff(f.ref, t('ref')), 0.004) };
+            });
+            // Loại các frame thu mẫu rơi đúng lúc chớp khỏi baseline
+            const sorted = entries.map(e => e.eye).sort((x, y) => x - y);
+            const q = sorted[Math.floor((sorted.length - 1) / 4)];
+            P.window = entries.filter(e => e.eye <= q * 2.5);
+            P.collect = [];
             return;
         }
 
@@ -513,12 +618,6 @@ class LivenessDetector {
         };
 
         const win = P.window;
-        if (win.length < C.PATCH_BASELINE_MIN) {
-            win.push({ eye, dL, dR, ratio });
-            updateTemplate();
-            return;
-        }
-
         const med = (k) => this._median(win.map(w => w[k]));
         const base = { eye: med('eye'), dL: med('dL'), dR: med('dR'), ratio: med('ratio') };
         base.sigma = 1.4826 * this._median(win.map(w => Math.abs(w.eye - base.eye)));
@@ -538,13 +637,27 @@ class LivenessDetector {
                 } else if (shift > C.PATCH_MAX_CORNER_SHIFT) {
                     P.diag.rejectedShift++;
                 } else {
+                    P.rejectStreak = 0;
                     P.state = 'spike';
                     P.spikeFrames = 0;
                     P.peak = { eye, ratio };
                     console.log(`[Liveness] Vùng mắt đột biến: eye=${eye.toFixed(4)} (x${(eye / base.eye).toFixed(1)}), ratio x${(ratio / base.ratio).toFixed(1)}`);
                 }
-                // Không cập nhật template bằng frame đột biến
+                // Không cập nhật template bằng frame đột biến — NHƯNG nếu bị loại liên tiếp
+                // nhiều frame thì mẫu đã lỗi thời (vd. mẫu học từ ảnh tĩnh, giờ là người thật):
+                // học lại từ đầu, nếu không sẽ kẹt mãi và người thật chớp mắt bao nhiêu cũng không nhận.
+                if (P.state === 'open') {
+                    P.rejectStreak = (P.rejectStreak || 0) + 1;
+                    if (P.rejectStreak > C.STALE_REJECT_FRAMES) {
+                        console.warn(`[Liveness] Mẫu vùng mắt lỗi thời (${P.rejectStreak} frame bị loại liên tiếp) — học lại.`);
+                        P.tpl = null;
+                        P.collect = [];
+                        P.window = [];
+                        P.rejectStreak = 0;
+                    }
+                }
             } else {
+                P.rejectStreak = 0;
                 win.push({ eye, dL, dR, ratio });
                 if (win.length > C.PATCH_BASELINE_WINDOW) win.shift();
                 updateTemplate();
@@ -562,7 +675,8 @@ class LivenessDetector {
             } else if (P.spikeFrames > C.PATCH_MAX_SPIKE_FRAMES) {
                 // Thay đổi kéo dài => đổi tư thế/ánh sáng, không phải chớp. Học lại template.
                 P.diag.rejectedLong++;
-                P.tpl = { left, right, ref, corners };
+                P.tpl = null;
+                P.collect = [];
                 P.window = [];
                 P.state = 'open';
                 P.peak = null;
@@ -603,6 +717,15 @@ class LivenessDetector {
         if (mean < 8) return null; // quá tối
         for (let i = 0; i < n; i++) g[i] /= mean;
         return g;
+    }
+
+    _medianPatch(patches) {
+        const n = patches[0].length, out = new Float32Array(n), col = new Array(patches.length);
+        for (let i = 0; i < n; i++) {
+            for (let k = 0; k < patches.length; k++) col[k] = patches[k][i];
+            out[i] = this._median(col);
+        }
+        return out;
     }
 
     _patchDiff(a, b) {
