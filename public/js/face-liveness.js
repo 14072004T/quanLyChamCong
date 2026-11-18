@@ -70,11 +70,15 @@ class LivenessDetector {
     // Dấu hiệu riêng của mắt nhắm: phần TỐI ở giữa mắt (lòng đen/con ngươi) biến mất ở CẢ HAI mắt.
     // Đo thực tế: ảnh tĩnh vẫn tạo được đột biến vùng mắt (x3.6, do lệch landmark/loá sáng) còn
     // lớn hơn người thật chớp (x2.3) — nhưng khi đó lòng đen vẫn còn, phần tối không giảm.
-    static PATCH_DARK_LEVEL = 0.6;       // Pixel < 60% độ sáng trung bình vùng mắt = "tối"
+    // Ngưỡng "tối" TỰ ĐIỀU CHỈNH theo từng mắt: lấy phân vị 15% của mẫu mắt mở (vùng giữa),
+    // nên lúc mở mỗi mắt có ~15% điểm "tối" dù ánh sáng lệch một bên. Đo thực tế: với ngưỡng
+    // cố định 0.6, mắt trái chỉ có 0-3% điểm tối (ánh sáng lệch) => không xác minh được, loại oan.
+    static PATCH_DARK_PERCENTILE = 0.15;
+    static PATCH_DARK_LEVEL_MAX = 0.8;   // Điểm "tối" phải tối hơn 80% độ sáng trung bình vùng mắt
     static PATCH_DARK_DROP_MAX = 0.85;   // Phần tối của mắt yếu hơn phải còn <= 85% lúc mở (giảm >= 15%)
     static PATCH_DARK_MIN_BASE = 0.02;   // Lúc mở phải thấy được >= 2% điểm tối, nếu không không xác minh được
     static PATCH_MAX_CORNER_SHIFT = 0.12;// Khoé mắt lệch > 12% bề rộng mắt => landmark nhảy, bỏ qua
-    static PATCH_MAX_SPIKE_FRAMES = 6;   // Đột biến phải hết trong <= 6 frame (chớp là thoáng qua)
+    static PATCH_MAX_SPIKE_FRAMES = 12;  // Đột biến phải hết trong <= 12 frame (đo thực tế: chớp thật kéo dài ~6+ frame)
     // Thay đổi kéo dài nhưng bị loại liên tiếp N frame => mẫu "mắt mở" đã lỗi thời
     // (đổi người, đổi tư thế, đổi ánh sáng) => học lại, tránh kẹt mãi không nhận chớp mắt.
     static STALE_REJECT_FRAMES = 4;
@@ -581,7 +585,7 @@ class LivenessDetector {
         // Một lần chớp chỉ chiếm 2-3 frame nên không ảnh hưởng tới trung vị của 8 frame.
         if (!P.tpl) {
             P.collect = P.collect || [];
-            P.collect.push({ left, right, ref, corners, kL: this._darkFraction(left), kR: this._darkFraction(right) });
+            P.collect.push({ left, right, ref, corners });
             if (P.collect.length < C.PATCH_BASELINE_MIN) return;
             const mp = (k) => this._medianPatch(P.collect.map(f => f[k]));
             P.tpl = {
@@ -591,6 +595,11 @@ class LivenessDetector {
                     y: this._median(P.collect.map(f => f.corners[i].y))
                 }))
             };
+            P.darkLevel = { L: this._darkLevelOf(P.tpl.left), R: this._darkLevelOf(P.tpl.right) };
+            P.collect.forEach(f => {
+                f.kL = this._darkFraction(f.left, P.darkLevel.L);
+                f.kR = this._darkFraction(f.right, P.darkLevel.R);
+            });
             // Baseline: so mỗi frame với trung vị của CÁC FRAME CÒN LẠI (leave-one-out), để độ lệch
             // không bị thấp giả tạo (frame đã góp vào chính mẫu) => ngưỡng không bị hạ thấp.
             const entries = P.collect.map((f, idx) => {
@@ -613,7 +622,7 @@ class LivenessDetector {
         const dRef = this._patchDiff(ref, P.tpl.ref);
         const eye = (dL + dR) / 2;
         const ratio = eye / Math.max(dRef, 0.004);
-        const kL = this._darkFraction(left), kR = this._darkFraction(right);
+        const kL = this._darkFraction(left, P.darkLevel.L), kR = this._darkFraction(right, P.darkLevel.R);
         const shift = Math.max(...corners.map((c, i) => Math.hypot(c.x - P.tpl.corners[i].x, c.y - P.tpl.corners[i].y)));
 
         const updateTemplate = () => {
@@ -631,8 +640,17 @@ class LivenessDetector {
         const med = (k) => this._median(win.map(w => w[k]));
         const base = { eye: med('eye'), dL: med('dL'), dR: med('dR'), ratio: med('ratio'), kL: med('kL'), kR: med('kR') };
         // Tỷ lệ phần tối còn lại của mắt "yếu hơn" (chớp thật: cả hai mắt cùng mất phần tối)
-        const darkRemain = (base.kL >= C.PATCH_DARK_MIN_BASE && base.kR >= C.PATCH_DARK_MIN_BASE)
-            ? Math.max(kL / base.kL, kR / base.kR) : 1;
+        // Chỉ dùng mắt đo được phần tối; mắt không đo được (quá sáng/tương phản thấp) thì bỏ qua,
+        // dựa vào mắt còn lại. Không mắt nào đo được => không xác minh được (=1, sẽ bị loại).
+        // Mắt "đáng tin" = lúc mở có phần tối gần mức thiết kế (>= 60% của PATCH_DARK_PERCENTILE),
+        // tức thực sự thấy lòng đen. Mắt bị ánh sáng làm mờ chỉ bắt được viền mi (không mất khi
+        // nhắm) => bỏ qua. Không mắt nào đáng tin thì dùng mắt có phần tối nhiều nhất.
+        // (Yêu cầu CẢ HAI mắt cùng thay đổi vẫn được kiểm ở bước đột biến vùng mắt.)
+        const eyesDark = [{ k: kL, b: base.kL }, { k: kR, b: base.kR }].filter(e => e.b >= C.PATCH_DARK_MIN_BASE);
+        const reliable = eyesDark.filter(e => e.b >= C.PATCH_DARK_PERCENTILE * 0.6);
+        const useEyes = reliable.length ? reliable
+            : (eyesDark.length ? [eyesDark.reduce((a, e) => (e.b > a.b ? e : a))] : []);
+        const darkRemain = useEyes.length ? Math.max(...useEyes.map(e => e.k / e.b)) : 1;
         base.sigma = 1.4826 * this._median(win.map(w => Math.abs(w.eye - base.eye)));
         P.diag.base = base;
         P.diag.maxEye = Math.max(P.diag.maxEye, eye);
@@ -753,17 +771,31 @@ class LivenessDetector {
     /**
      * Tỷ lệ điểm tối (lòng đen/con ngươi) ở 60% giữa của vùng mắt.
      */
-    _darkFraction(g) {
+    _darkFraction(g, level) {
         const C = LivenessDetector, W = C.PATCH_W, H = C.PATCH_H;
         const x0 = Math.floor(W * 0.2), x1 = Math.ceil(W * 0.8);
         let dark = 0, total = 0;
         for (let y = 0; y < H; y++) {
             for (let x = x0; x < x1; x++) {
-                if (g[y * W + x] < C.PATCH_DARK_LEVEL) dark++;
+                if (g[y * W + x] < level) dark++;
                 total++;
             }
         }
         return dark / total;
+    }
+
+    /**
+     * Ngưỡng "tối" cho 1 mắt = phân vị PATCH_DARK_PERCENTILE của vùng giữa mẫu mắt mở,
+     * giới hạn tối đa PATCH_DARK_LEVEL_MAX (nếu mắt quá ít tương phản, phần tối sẽ ít => mắt đó bị bỏ qua).
+     */
+    _darkLevelOf(tpl) {
+        const C = LivenessDetector, W = C.PATCH_W, H = C.PATCH_H;
+        const x0 = Math.floor(W * 0.2), x1 = Math.ceil(W * 0.8);
+        const vals = [];
+        for (let y = 0; y < H; y++) for (let x = x0; x < x1; x++) vals.push(tpl[y * W + x]);
+        vals.sort((a, b) => a - b);
+        const p = vals[Math.floor(vals.length * C.PATCH_DARK_PERCENTILE)];
+        return Math.min(p + 1e-6, C.PATCH_DARK_LEVEL_MAX);
     }
 
     _patchDiff(a, b) {
