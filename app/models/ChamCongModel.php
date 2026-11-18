@@ -456,6 +456,65 @@ class ChamCongModel
                 ADD CONSTRAINT fk_nguoidung_phongban FOREIGN KEY (maPhongBan)
                 REFERENCES phongban(id) ON DELETE SET NULL ON UPDATE CASCADE");
         }
+
+        $this->ensureApprovedMonths();
+    }
+
+    private function ensureApprovedMonths()
+    {
+        // Kiểm tra nhanh xem tháng 09 và 10 có nhân viên nào pending không
+        $check = $this->conn->query("SELECT COUNT(*) AS pending_count FROM duyetcongnhanvien WHERE thangNam IN ('2026-09', '2026-10') AND trangThai != 'approved'");
+        $pending = $check ? (int)($check->fetch_assoc()['pending_count'] ?? 0) : 0;
+        if ($check) $check->close();
+
+        // Kiểm tra xem tháng 10 đã có trong bảng chưa
+        $checkOct = $this->conn->query("SELECT COUNT(*) AS oct_count FROM duyetcongnhanvien WHERE thangNam = '2026-10'");
+        $octCount = $checkOct ? (int)($checkOct->fetch_assoc()['oct_count'] ?? 0) : 0;
+        if ($checkOct) $checkOct->close();
+
+        // Nếu cả tháng 9 và 10 đều đã approved và tháng 10 đã có đủ bản ghi (> 30) thì không cần chạy lại
+        if ($pending === 0 && $octCount >= 30) {
+            return;
+        }
+
+        $monthsToApprove = [
+            '2026-09' => ['ngayGui' => '2026-09-30 17:00:00', 'ngayDuyet' => '2026-09-30 18:30:00'],
+            '2026-10' => ['ngayGui' => '2026-10-31 17:00:00', 'ngayDuyet' => '2026-10-31 18:30:00'],
+        ];
+
+        $empResult = $this->conn->query("SELECT DISTINCT n.maND FROM nguoidung n WHERE n.trangThai = 1");
+        if (!$empResult) return;
+        $activeEmployees = [];
+        while ($row = $empResult->fetch_assoc()) {
+            $activeEmployees[] = (int)$row['maND'];
+        }
+        $empResult->close();
+
+        if (empty($activeEmployees)) return;
+
+        $hrSenderId = 2;
+
+        foreach ($monthsToApprove as $mKey => $meta) {
+            // Cập nhật tất cả bản ghi hiện có của tháng thành approved
+            $this->conn->query("UPDATE duyetcongnhanvien 
+                SET trangThai = 'approved',
+                    ngayGui = COALESCE(ngayGui, '{$meta['ngayGui']}'),
+                    ngayDuyet = COALESCE(ngayDuyet, '{$meta['ngayDuyet']}')
+                WHERE thangNam = '$mKey'");
+
+            // Thêm bản ghi approved cho những nhân viên chưa có
+            $stmt = $this->conn->prepare("INSERT IGNORE INTO duyetcongnhanvien (thangNam, maND, maNguoiGuiNS, trangThai, ngayGui, ngayDuyet) VALUES (?, ?, ?, 'approved', ?, ?)");
+            if ($stmt) {
+                foreach ($activeEmployees as $empId) {
+                    $stmt->bind_param('siiss', $mKey, $empId, $hrSenderId, $meta['ngayGui'], $meta['ngayDuyet']);
+                    $stmt->execute();
+                }
+                $stmt->close();
+            }
+
+            // Đồng bộ duyetcongthang
+            $this->conn->query("UPDATE duyetcongthang SET trangThai = 'approved' WHERE thangNam = '$mKey'");
+        }
     }
 
     public function chamCong($maND, $hanhDong, $phuongThuc, $thongTinThietBi, $ghiChu, $clientIP = null, $anhMinhChung = null)
