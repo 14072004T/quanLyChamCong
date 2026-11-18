@@ -276,8 +276,14 @@ class ApiHRController
 
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) respondError('Kỳ chấm công không hợp lệ', 422);
 
+            $sendStatus = $this->model->getTimesheetSendStatus($monthKey);
+            if (!$sendStatus['canSend']) {
+                respond(['success' => false, 'message' => $sendStatus['message'], 'sendStatus' => $sendStatus], $sendStatus['alreadySent'] ? 409 : 403);
+                return;
+            }
+
             $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
-            $msg = $ok ? 'Đã gửi bảng công đến từng nhân viên thành công' : 'Không thể gửi bảng công. Kiểm tra dữ liệu chấm công.';
+            $msg = $ok ? 'Đã gửi bảng công đến từng nhân viên thành công' : ($this->model->getLastTimesheetSendError() ?: 'Không thể gửi bảng công. Kiểm tra dữ liệu chấm công.');
 
             respond(
                 ['success' => $ok, 'message' => $msg, 'approvalSummary' => $this->model->getTimesheetApprovalSummary($monthKey)],

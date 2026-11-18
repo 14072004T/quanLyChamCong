@@ -611,7 +611,9 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                     </p>
                                 </div>
                                 <div class="payroll-hanhDong-buttons">
-                                    <button type="button" class="btn btn-success btn-sm" id="submit-payroll-btn"><i class="fas fa-paper-plane"></i> GỬI BẢNG CÔNG CHO NHÂN VIÊN</button>
+                                    <?php $canSendTimesheet = !empty($timesheetSendStatus['canSend']); ?>
+                                    <button type="button" class="btn btn-success btn-sm" id="submit-payroll-btn"<?= $canSendTimesheet ? '' : ' disabled style="opacity:.55;cursor:not-allowed;"' ?>><i class="fas fa-paper-plane"></i> GỬI BẢNG CÔNG CHO NHÂN VIÊN</button>
+                                    <div id="submit-payroll-hint" style="margin-top:6px;font-size:.85rem;color:<?= $canSendTimesheet ? '#15803d' : '#b45309' ?>;"><?= htmlspecialchars($timesheetSendStatus['hint'] ?? '') ?></div>
                                 </div>
                             </div>
                         </div>
@@ -1503,6 +1505,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 approvalStatus.textContent = 'Chưa gửi bảng công cho tháng này.';
             }
             renderApprovalHistory(json.approvalHistory || []);
+            applySendStatus(json.sendStatus);
         })
         .catch(function () { alert('Có lỗi khi tải dữ liệu bảng công.'); });
     }
@@ -1524,8 +1527,28 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    var submitHint = document.getElementById('submit-payroll-hint');
+    var currentSendStatus = <?= json_encode($timesheetSendStatus ?? null, JSON_UNESCAPED_UNICODE) ?>;
+
+    function applySendStatus(status) {
+        if (!status) return;
+        currentSendStatus = status;
+        var canSend = !!status.canSend;
+        submitBtn.disabled = !canSend;
+        submitBtn.style.opacity = canSend ? '' : '.55';
+        submitBtn.style.cursor = canSend ? '' : 'not-allowed';
+        if (submitHint) {
+            submitHint.textContent = status.hint || '';
+            submitHint.style.color = canSend ? '#15803d' : '#b45309';
+        }
+    }
+
     submitBtn.addEventListener('click', function () {
-        if (!window.confirm('Bạn có chắc muốn gửi bảng công đến từng nhân viên không?')) {
+        if (currentSendStatus && !currentSendStatus.canSend) {
+            alert(currentSendStatus.message || currentSendStatus.hint || 'Không thể gửi bảng công lúc này.');
+            return;
+        }
+        if (!window.confirm('Bảng công mỗi tháng chỉ được gửi 1 lần. Bạn có chắc muốn gửi bảng công đến từng nhân viên không?')) {
             return;
         }
         var form = new FormData();
@@ -1538,6 +1561,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function (r) { return r.json(); })
         .then(function (json) {
             alert(json.message || 'Hoàn tất');
+            applySendStatus(json.sendStatus);
             if (json.success) loadPayroll();
         })
         .catch(function () { alert('Lỗi gửi bảng công.'); });

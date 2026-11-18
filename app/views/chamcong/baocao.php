@@ -252,9 +252,11 @@ if (!empty($reportRows)) {
             <form method="POST" action="index.php?page=gui-bang-cong-phe-duyet" style="margin-bottom: 24px; display: flex; justify-content: flex-end; gap: 15px; align-items: center; background: #fff; padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
                 <div class="hrr-form-group" style="flex-direction: row; align-items: center; margin-bottom: 0;">
                     <label style="margin-bottom: 0;">Kỳ chấm công:</label>
-                    <input type="month" class="hrr-input" style="padding: 6px 12px; margin-left: 10px;" name="thangNam" value="<?= htmlspecialchars(substr($toDate, 0, 7)) ?>" required>
+                    <?php $canSendTimesheet = !empty($timesheetSendStatus['canSend']); ?>
+                    <input type="month" class="hrr-input" style="padding: 6px 12px; margin-left: 10px;" name="thangNam" value="<?= htmlspecialchars($timesheetSendStatus['currentMonth'] ?? date('Y-m')) ?>" min="<?= htmlspecialchars($timesheetSendStatus['currentMonth'] ?? date('Y-m')) ?>" max="<?= htmlspecialchars($timesheetSendStatus['currentMonth'] ?? date('Y-m')) ?>" required>
                 </div>
-                <button type="submit" class="hrr-btn hrr-btn-warning" onclick="return confirm('Bạn có chắc chắn muốn gửi TẤT CẢ bảng công cho các trưởng phòng phê duyệt?');">
+                <span style="font-size: .85rem; color: <?= $canSendTimesheet ? '#15803d' : '#b45309' ?>;"><?= htmlspecialchars($timesheetSendStatus['hint'] ?? '') ?></span>
+                <button type="submit" class="hrr-btn hrr-btn-warning"<?= $canSendTimesheet ? '' : ' disabled style="opacity:.55;cursor:not-allowed;"' ?> onclick="return confirm('Bạn có chắc chắn muốn gửi TẤT CẢ bảng công cho các trưởng phòng phê duyệt?');">
                     <i class="fas fa-paper-plane"></i> Gửi duyệt toàn bộ
                 </button>
             </form>
@@ -268,8 +270,8 @@ if (!empty($reportRows)) {
                         </div>
                         <form method="POST" action="index.php?page=gui-bang-cong-phe-duyet" style="margin: 0;">
                             <input type="hidden" name="phongBan" value="<?= htmlspecialchars($deptName) ?>">
-                            <input type="hidden" name="thangNam" value="<?= htmlspecialchars(substr($toDate, 0, 7)) ?>">
-                            <button type="submit" class="hrr-btn hrr-btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="return confirm('Gửi bảng công phòng <?= htmlspecialchars($deptName) ?> cho Manager duyệt?');">
+                            <input type="hidden" name="thangNam" value="<?= htmlspecialchars($timesheetSendStatus['currentMonth'] ?? date('Y-m')) ?>">
+                            <button type="submit" class="hrr-btn hrr-btn-primary" style="padding: 6px 12px; font-size: 0.85rem;<?= $canSendTimesheet ? '' : ' opacity:.55; cursor:not-allowed;' ?>"<?= $canSendTimesheet ? '' : ' disabled title="' . htmlspecialchars($timesheetSendStatus['hint'] ?? '') . '"' ?> onclick="return confirm('Gửi bảng công phòng <?= htmlspecialchars($deptName) ?> cho Manager duyệt?');">
                                 <i class="fas fa-paper-plane"></i> Gửi duyệt phòng này
                             </button>
                         </form>

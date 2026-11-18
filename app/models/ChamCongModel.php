@@ -4,6 +4,7 @@ require_once __DIR__ . '/ketNoi.php';
 class ChamCongModel
 {
     private $conn;
+    private $lastTimesheetSendError = '';
 
     public function __construct()
     {
@@ -4137,12 +4138,133 @@ class ChamCongModel
      */
     public function submitTimesheetToEmployees($monthKey, $hrSenderId)
     {
-        $monthKey = trim($monthKey);
+        $this->lastTimesheetSendError = '';
+        $monthKey = trim((string)$monthKey);
         $hrSenderId = (int)$hrSenderId;
         if (!preg_match('/^\d{4}-\d{2}$/', $monthKey) || $hrSenderId <= 0) {
+            $this->lastTimesheetSendError = 'Kỳ chấm công không hợp lệ';
             return false;
         }
 
+        // Khoá theo tháng để 2 request đồng thời không cùng vượt qua kiểm tra "chưa gửi"
+        $lockName = 'submit_timesheet_' . $monthKey;
+        $lockStmt = $this->conn->prepare("SELECT GET_LOCK(?, 10) AS got");
+        $locked = false;
+        if ($lockStmt) {
+            $lockStmt->bind_param('s', $lockName);
+            $lockStmt->execute();
+            $locked = (int)($lockStmt->get_result()->fetch_assoc()['got'] ?? 0) === 1;
+            $lockStmt->close();
+        }
+
+        try {
+            $status = $this->getTimesheetSendStatus($monthKey);
+            if (!$status['canSend']) {
+                $this->lastTimesheetSendError = $status['message'];
+                return false;
+            }
+            $ok = $this->sendTimesheetRowsToEmployees($monthKey, $hrSenderId);
+            if (!$ok) {
+                $this->lastTimesheetSendError = 'Không thể gửi bảng công. Kiểm tra dữ liệu nhân viên.';
+            }
+            return $ok;
+        } finally {
+            if ($locked) {
+                $rel = $this->conn->prepare("SELECT RELEASE_LOCK(?)");
+                if ($rel) {
+                    $rel->bind_param('s', $lockName);
+                    $rel->execute();
+                    $rel->get_result();
+                    $rel->close();
+                }
+            }
+        }
+    }
+
+    public function getLastTimesheetSendError()
+    {
+        return $this->lastTimesheetSendError;
+    }
+
+    /**
+     * Quy tắc gửi bảng công tháng cho nhân viên:
+     *  - Chỉ gửi bảng công của tháng hiện tại, vào ngày cuối cùng của chính tháng đó (giờ Asia/Ho_Chi_Minh).
+     *  - Mỗi tháng chỉ được gửi 1 lần (dựa vào bản ghi đã gửi trong duyetcongnhanvien).
+     *
+     * @param string|null $monthKey Tháng muốn gửi (Y-m); null = tháng hiện tại
+     * @param DateTimeInterface|null $now Thời điểm hiện tại (để kiểm thử); null = giờ server
+     * @return array canSend, message, hint, currentMonth, lastDay, isLastDay, alreadySent, sentAt
+     */
+    public function getTimesheetSendStatus($monthKey = null, $now = null)
+    {
+        $tz = new DateTimeZone('Asia/Ho_Chi_Minh');
+        $today = $now instanceof DateTimeInterface
+            ? (new DateTimeImmutable('@' . $now->getTimestamp()))->setTimezone($tz)
+            : new DateTimeImmutable('now', $tz);
+
+        $currentMonth = $today->format('Y-m');
+        $monthKey = trim((string)($monthKey ?? $currentMonth));
+        $lastDay = $today->modify('last day of this month');
+        $lastDayLabel = $lastDay->format('d/m/Y');
+        $isLastDay = $today->format('Y-m-d') === $lastDay->format('Y-m-d');
+
+        $status = [
+            'canSend' => false,
+            'message' => '',
+            'hint' => '',
+            'monthKey' => $monthKey,
+            'currentMonth' => $currentMonth,
+            'today' => $today->format('Y-m-d'),
+            'lastDay' => $lastDay->format('Y-m-d'),
+            'isLastDay' => $isLastDay,
+            'alreadySent' => false,
+            'sentAt' => null,
+        ];
+
+        if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $monthKey)) {
+            $status['message'] = $status['hint'] = 'Kỳ chấm công không hợp lệ';
+            return $status;
+        }
+        $monthLabel = substr($monthKey, 5, 2) . '/' . substr($monthKey, 0, 4);
+        $currentMonthLabel = $today->format('m/Y');
+
+        if ($monthKey !== $currentMonth) {
+            $status['message'] = 'Chỉ được gửi bảng công của tháng hiện tại (' . $currentMonthLabel
+                . ') vào ngày cuối tháng, không thể gửi bảng công tháng ' . $monthLabel . '.';
+            $status['hint'] = 'Chỉ gửi được bảng công tháng ' . $currentMonthLabel . ' vào ngày ' . $lastDayLabel . '.';
+            return $status;
+        }
+
+        $sentAt = null;
+        $stmt = $this->conn->prepare("SELECT MAX(ngayGui) AS sentAt FROM duyetcongnhanvien WHERE thangNam = ? AND ngayGui IS NOT NULL");
+        if ($stmt) {
+            $stmt->bind_param('s', $monthKey);
+            $stmt->execute();
+            $sentAt = $stmt->get_result()->fetch_assoc()['sentAt'] ?? null;
+            $stmt->close();
+        }
+        if (!empty($sentAt)) {
+            $sentLabel = date('H:i d/m/Y', strtotime($sentAt));
+            $status['alreadySent'] = true;
+            $status['sentAt'] = $sentAt;
+            $status['message'] = 'Bảng công tháng ' . $monthLabel . ' đã được gửi lúc ' . $sentLabel . ', không thể gửi lại.';
+            $status['hint'] = 'Đã gửi lúc ' . $sentLabel . '. Mỗi tháng chỉ được gửi 1 lần.';
+            return $status;
+        }
+
+        if (!$isLastDay) {
+            $status['message'] = 'Chỉ được gửi bảng công vào ngày cuối tháng (' . $lastDayLabel . ').';
+            $status['hint'] = 'Có thể gửi vào ngày ' . $lastDayLabel . '.';
+            return $status;
+        }
+
+        $status['canSend'] = true;
+        $status['hint'] = 'Hôm nay là ngày cuối tháng. Bảng công tháng ' . $monthLabel . ' chỉ được gửi 1 lần.';
+        return $status;
+    }
+
+    private function sendTimesheetRowsToEmployees($monthKey, $hrSenderId)
+    {
         // Lấy danh sách nhân viên đang hoạt động
         $sql = "SELECT DISTINCT n.maND
                 FROM nguoidung n

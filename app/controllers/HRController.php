@@ -213,6 +213,7 @@ class HRController
         $monthlyApproval = $this->model->getMonthlyApprovalByMonth($selectedMonth);
         $approvalHistory = $this->model->getTimesheetApprovalSummary();
         $overrideCount   = $this->model->getHrOverrideCount($selectedMonth);
+        $timesheetSendStatus = $this->model->getTimesheetSendStatus($selectedMonth);
         require __DIR__ . '/../views/chamcong/tinhcong.php';
     }
 
@@ -254,6 +255,7 @@ class HRController
             'approval' => $this->model->getMonthlyApprovalByMonth($monthKey),
             'approvalSummary' => $this->model->getTimesheetApprovalSummary($monthKey),
             'approvalHistory' => $this->model->getTimesheetApprovalSummary(),
+            'sendStatus' => $this->model->getTimesheetSendStatus($monthKey),
         ]);
     }
 
@@ -446,6 +448,7 @@ class HRController
             }
         }
 
+        $timesheetSendStatus = $this->model->getTimesheetSendStatus();
         require __DIR__ . '/../views/chamcong/baocao.php';
     }
 
@@ -460,8 +463,16 @@ class HRController
             if (!preg_match('/^\d{4}-\d{2}$/', $monthKey)) {
                 $_SESSION['error'] = 'Kỳ chấm công không hợp lệ';
             } else {
-                $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
-                $_SESSION[$ok ? 'success' : 'error'] = $ok ? 'Đã gửi bảng công đến từng nhân viên thành công' : 'Không thể gửi bảng công. Có thể chưa có dữ liệu chấm công trong tháng này.';
+                // Kiểm tra ràng buộc: chỉ gửi vào ngày cuối tháng & chỉ 1 lần/tháng
+                $sendStatus = $this->model->getTimesheetSendStatus($monthKey);
+                if (!$sendStatus['canSend']) {
+                    $_SESSION['error'] = $sendStatus['message'];
+                } else {
+                    $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
+                    $_SESSION[$ok ? 'success' : 'error'] = $ok
+                        ? 'Đã gửi bảng công đến từng nhân viên thành công'
+                        : ($this->model->getLastTimesheetSendError() ?: 'Không thể gửi bảng công. Có thể chưa có dữ liệu chấm công trong tháng này.');
+                }
             }
         }
 
@@ -483,11 +494,21 @@ class HRController
             ], 422);
         }
 
+        $sendStatus = $this->model->getTimesheetSendStatus($monthKey);
+        if (!$sendStatus['canSend']) {
+            $this->respond([
+                'success' => false,
+                'message' => $sendStatus['message'],
+                'sendStatus' => $sendStatus,
+            ], $sendStatus['alreadySent'] ? 409 : 403);
+        }
+
         $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);
         $this->respond([
             'success' => $ok,
-            'message' => $ok ? 'Đã gửi bảng công đến từng nhân viên' : 'Không thể gửi bảng công. Kiểm tra dữ liệu nhân viên.',
+            'message' => $ok ? 'Đã gửi bảng công đến từng nhân viên' : ($this->model->getLastTimesheetSendError() ?: 'Không thể gửi bảng công. Kiểm tra dữ liệu nhân viên.'),
             'approvalSummary' => $this->model->getTimesheetApprovalSummary($monthKey),
+            'sendStatus' => $this->model->getTimesheetSendStatus($monthKey),
         ], 200);
     }
 
