@@ -67,6 +67,12 @@ class LivenessDetector {
     static PATCH_SPIKE_MIN_FACTOR = 2.0; // ...và gấp >= 2 lần mức bình thường
     static PATCH_PER_EYE_FACTOR = 1.6;   // Từng mắt riêng cũng phải gấp >= 1.6 lần
     static PATCH_RATIO_FACTOR = 1.8;     // Tỷ lệ mắt/mũi phải tăng >= 1.8 lần mức bình thường
+    // Dấu hiệu riêng của mắt nhắm: phần TỐI ở giữa mắt (lòng đen/con ngươi) biến mất ở CẢ HAI mắt.
+    // Đo thực tế: ảnh tĩnh vẫn tạo được đột biến vùng mắt (x3.6, do lệch landmark/loá sáng) còn
+    // lớn hơn người thật chớp (x2.3) — nhưng khi đó lòng đen vẫn còn, phần tối không giảm.
+    static PATCH_DARK_LEVEL = 0.6;       // Pixel < 60% độ sáng trung bình vùng mắt = "tối"
+    static PATCH_DARK_DROP_MAX = 0.85;   // Phần tối của mắt yếu hơn phải còn <= 85% lúc mở (giảm >= 15%)
+    static PATCH_DARK_MIN_BASE = 0.02;   // Lúc mở phải thấy được >= 2% điểm tối, nếu không không xác minh được
     static PATCH_MAX_CORNER_SHIFT = 0.12;// Khoé mắt lệch > 12% bề rộng mắt => landmark nhảy, bỏ qua
     static PATCH_MAX_SPIKE_FRAMES = 6;   // Đột biến phải hết trong <= 6 frame (chớp là thoáng qua)
     // Thay đổi kéo dài nhưng bị loại liên tiếp N frame => mẫu "mắt mở" đã lỗi thời
@@ -325,7 +331,10 @@ class LivenessDetector {
                 rejectedOneEye: pd.rejectedOneEye || 0,
                 rejectedRatio: pd.rejectedRatio || 0,
                 rejectedShift: pd.rejectedShift || 0,
-                rejectedLong: pd.rejectedLong || 0
+                rejectedLong: pd.rejectedLong || 0,
+                rejectedDark: pd.rejectedDark || 0,
+                baseDarkL: pd.base && pd.base.kL !== undefined ? +pd.base.kL.toFixed(3) : null,
+                baseDarkR: pd.base && pd.base.kR !== undefined ? +pd.base.kR.toFixed(3) : null
             }));
             this._fail('Chưa phát hiện chớp mắt sau thời gian quét. Vui lòng nhìn thẳng vào camera và chớp mắt rõ một lần.');
         }
@@ -572,7 +581,7 @@ class LivenessDetector {
         // Một lần chớp chỉ chiếm 2-3 frame nên không ảnh hưởng tới trung vị của 8 frame.
         if (!P.tpl) {
             P.collect = P.collect || [];
-            P.collect.push({ left, right, ref, corners });
+            P.collect.push({ left, right, ref, corners, kL: this._darkFraction(left), kR: this._darkFraction(right) });
             if (P.collect.length < C.PATCH_BASELINE_MIN) return;
             const mp = (k) => this._medianPatch(P.collect.map(f => f[k]));
             P.tpl = {
@@ -589,7 +598,7 @@ class LivenessDetector {
                 const t = (k) => this._medianPatch(others.map(o => o[k]));
                 const l = this._patchDiff(f.left, t('left')), r = this._patchDiff(f.right, t('right'));
                 const e = (l + r) / 2;
-                return { eye: e, dL: l, dR: r, ratio: e / Math.max(this._patchDiff(f.ref, t('ref')), 0.004) };
+                return { eye: e, dL: l, dR: r, ratio: e / Math.max(this._patchDiff(f.ref, t('ref')), 0.004), kL: f.kL, kR: f.kR };
             });
             // Loại các frame thu mẫu rơi đúng lúc chớp khỏi baseline
             const sorted = entries.map(e => e.eye).sort((x, y) => x - y);
@@ -604,6 +613,7 @@ class LivenessDetector {
         const dRef = this._patchDiff(ref, P.tpl.ref);
         const eye = (dL + dR) / 2;
         const ratio = eye / Math.max(dRef, 0.004);
+        const kL = this._darkFraction(left), kR = this._darkFraction(right);
         const shift = Math.max(...corners.map((c, i) => Math.hypot(c.x - P.tpl.corners[i].x, c.y - P.tpl.corners[i].y)));
 
         const updateTemplate = () => {
@@ -619,7 +629,10 @@ class LivenessDetector {
 
         const win = P.window;
         const med = (k) => this._median(win.map(w => w[k]));
-        const base = { eye: med('eye'), dL: med('dL'), dR: med('dR'), ratio: med('ratio') };
+        const base = { eye: med('eye'), dL: med('dL'), dR: med('dR'), ratio: med('ratio'), kL: med('kL'), kR: med('kR') };
+        // Tỷ lệ phần tối còn lại của mắt "yếu hơn" (chớp thật: cả hai mắt cùng mất phần tối)
+        const darkRemain = (base.kL >= C.PATCH_DARK_MIN_BASE && base.kR >= C.PATCH_DARK_MIN_BASE)
+            ? Math.max(kL / base.kL, kR / base.kR) : 1;
         base.sigma = 1.4826 * this._median(win.map(w => Math.abs(w.eye - base.eye)));
         P.diag.base = base;
         P.diag.maxEye = Math.max(P.diag.maxEye, eye);
@@ -640,7 +653,7 @@ class LivenessDetector {
                     P.rejectStreak = 0;
                     P.state = 'spike';
                     P.spikeFrames = 0;
-                    P.peak = { eye, ratio };
+                    P.peak = { eye, ratio, darkRemain };
                     console.log(`[Liveness] Vùng mắt đột biến: eye=${eye.toFixed(4)} (x${(eye / base.eye).toFixed(1)}), ratio x${(ratio / base.ratio).toFixed(1)}`);
                 }
                 // Không cập nhật template bằng frame đột biến — NHƯNG nếu bị loại liên tiếp
@@ -658,17 +671,26 @@ class LivenessDetector {
                 }
             } else {
                 P.rejectStreak = 0;
-                win.push({ eye, dL, dR, ratio });
+                win.push({ eye, dL, dR, ratio, kL, kR });
                 if (win.length > C.PATCH_BASELINE_WINDOW) win.shift();
                 updateTemplate();
             }
         } else { // 'spike'
             P.spikeFrames++;
+            P.peak.darkRemain = Math.min(P.peak.darkRemain, darkRemain);
             // Mắt mở lại: vùng mắt trở về gần template mắt mở
-            if (eye < base.eye + 2 * base.sigma || eye < base.eye * 1.3) {
+            const reopened = eye < base.eye + 2 * base.sigma || eye < base.eye * 1.3;
+            if (reopened && P.peak.darkRemain > C.PATCH_DARK_DROP_MAX) {
+                // Vùng mắt có đổi nhưng lòng đen KHÔNG biến mất => không phải mắt nhắm
+                // (lệch landmark, loá sáng, ảnh bị lắc...). Không tính.
+                P.diag.rejectedDark = (P.diag.rejectedDark || 0) + 1;
+                console.log(`[Liveness] Bỏ qua đột biến: phần tối của mắt còn ${(P.peak.darkRemain * 100).toFixed(0)}% (cần <= ${(C.PATCH_DARK_DROP_MAX * 100).toFixed(0)}%), baseDark L=${base.kL.toFixed(3)} R=${base.kR.toFixed(3)}, eye x${(P.peak.eye / base.eye).toFixed(1)}, ${P.spikeFrames} frame`);
+                P.state = 'open';
+                P.peak = null;
+            } else if (reopened) {
                 this.blinkCount++;
                 this.blinkDetected = true;
-                console.log(`[Liveness] Blink confirmed (pixel)! eye x${(P.peak.eye / base.eye).toFixed(1)}, ratio x${(P.peak.ratio / base.ratio).toFixed(1)}, ${P.spikeFrames} frame. Count: ${this.blinkCount}`);
+                console.log(`[Liveness] Blink confirmed (pixel)! eye x${(P.peak.eye / base.eye).toFixed(1)}, ratio x${(P.peak.ratio / base.ratio).toFixed(1)}, phần tối còn ${(P.peak.darkRemain * 100).toFixed(0)}%, ${P.spikeFrames} frame. Count: ${this.blinkCount}`);
                 if (this.cb.onBlinkDetected) this.cb.onBlinkDetected(this.blinkCount);
                 P.state = 'open';
                 P.peak = null;
@@ -684,7 +706,7 @@ class LivenessDetector {
         }
 
         if (this.frameCount % 5 === 0) {
-            console.log(`[Liveness] Pixel f${this.frameCount}: eye=${eye.toFixed(4)} base=${base.eye.toFixed(4)} σ=${base.sigma.toFixed(4)} ratio=${ratio.toFixed(2)} (base ${base.ratio.toFixed(2)}) shift=${shift.toFixed(3)} state=${P.state}`);
+            console.log(`[Liveness] Pixel f${this.frameCount}: eye=${eye.toFixed(4)} base=${base.eye.toFixed(4)} σ=${base.sigma.toFixed(4)} ratio=${ratio.toFixed(2)} (base ${base.ratio.toFixed(2)}) shift=${shift.toFixed(3)} dark=${kL.toFixed(3)}/${kR.toFixed(3)} (base ${base.kL.toFixed(3)}/${base.kR.toFixed(3)}) state=${P.state}`);
         }
     }
 
@@ -726,6 +748,22 @@ class LivenessDetector {
             out[i] = this._median(col);
         }
         return out;
+    }
+
+    /**
+     * Tỷ lệ điểm tối (lòng đen/con ngươi) ở 60% giữa của vùng mắt.
+     */
+    _darkFraction(g) {
+        const C = LivenessDetector, W = C.PATCH_W, H = C.PATCH_H;
+        const x0 = Math.floor(W * 0.2), x1 = Math.ceil(W * 0.8);
+        let dark = 0, total = 0;
+        for (let y = 0; y < H; y++) {
+            for (let x = x0; x < x1; x++) {
+                if (g[y * W + x] < C.PATCH_DARK_LEVEL) dark++;
+                total++;
+            }
+        }
+        return dark / total;
     }
 
     _patchDiff(a, b) {
