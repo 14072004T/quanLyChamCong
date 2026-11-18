@@ -278,7 +278,7 @@ class ApiHRController
 
             $sendStatus = $this->model->getTimesheetSendStatus($monthKey);
             if (!$sendStatus['canSend']) {
-                respond(['success' => false, 'message' => $sendStatus['message'], 'sendStatus' => $sendStatus], $sendStatus['alreadySent'] ? 409 : 403);
+                respond(['success' => false, 'message' => $sendStatus['message'], 'sendStatus' => $sendStatus], 200);
                 return;
             }
 

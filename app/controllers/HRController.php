@@ -500,7 +500,7 @@ class HRController
                 'success' => false,
                 'message' => $sendStatus['message'],
                 'sendStatus' => $sendStatus,
-            ], $sendStatus['alreadySent'] ? 409 : 403);
+            ], 200);
         }
 
         $ok = $this->model->submitTimesheetToEmployees($monthKey, $hrSenderId);

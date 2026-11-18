@@ -603,7 +603,9 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                 <div class="payroll-hanhDong-copy">
                                     <h3>Hoàn tất rà soát bảng công</h3>
                                     <p id="approval-trangThai">
-                                        <?php if ($monthlyApproval): ?>
+                                        <?php if (!empty($timesheetSendStatus['alreadySent'])): ?>
+                                            <span style="color:#15803d;font-weight:600;"><i class="fas fa-check-circle"></i> Bảng công tháng <?= htmlspecialchars(substr($selectedMonth, 5, 2) . '/' . substr($selectedMonth, 0, 4)) ?> đã gửi và chốt công thành công.</span>
+                                        <?php elseif ($monthlyApproval): ?>
                                             Trạng thái: <span class="trangThai-badge trangThai-<?= strtolower($monthlyApproval['trangThai'] ?? 'draft') ?>"><?= htmlspecialchars($monthlyApproval['trangThai'] ?? 'draft') ?></span>
                                         <?php else: ?>
                                             Chưa gửi bảng công cho tháng này. Sau khi xác nhận, bảng công sẽ được gửi đến từng nhân viên để xác nhận.
@@ -612,8 +614,8 @@ foreach (($salaryRows ?? []) as $summaryRow) {
                                 </div>
                                 <div class="payroll-hanhDong-buttons">
                                     <?php $canSendTimesheet = !empty($timesheetSendStatus['canSend']); ?>
-                                    <button type="button" class="btn btn-success btn-sm" id="submit-payroll-btn"<?= $canSendTimesheet ? '' : ' disabled style="opacity:.55;cursor:not-allowed;"' ?>><i class="fas fa-paper-plane"></i> GỬI BẢNG CÔNG CHO NHÂN VIÊN</button>
-                                    <div id="submit-payroll-hint" style="margin-top:6px;font-size:.85rem;color:<?= $canSendTimesheet ? '#15803d' : '#b45309' ?>;"><?= htmlspecialchars($timesheetSendStatus['hint'] ?? '') ?></div>
+                                    <button type="button" class="btn btn-success btn-sm" id="submit-payroll-btn" style="<?= $canSendTimesheet ? '' : 'opacity:.7;cursor:pointer;' ?>"><i class="fas fa-paper-plane"></i> GỬI BẢNG CÔNG CHO NHÂN VIÊN</button>
+                                    <div id="submit-payroll-hint" style="margin-top:6px;font-size:.85rem;color:<?= (!empty($timesheetSendStatus['alreadySent']) || $canSendTimesheet) ? '#15803d' : '#b45309' ?>;"><?= htmlspecialchars($timesheetSendStatus['hint'] ?? '') ?></div>
                                 </div>
                             </div>
                         </div>
@@ -1498,11 +1500,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (otEl) otEl.textContent = Number(json.summary.total_overtime_hours || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'h';
             }
             var approval = json.approval;
-            if (approval) {
+            if (json.sendStatus && json.sendStatus.alreadySent) {
+                var monthVal = currentMonth();
+                var parts = monthVal.split('-');
+                var mText = parts.length === 2 ? (parts[1] + '/' + parts[0]) : monthVal;
+                approvalStatus.innerHTML = '<span style="color:#15803d;font-weight:600;"><i class="fas fa-check-circle"></i> Bảng công tháng ' + escapeHtml(mText) + ' đã gửi và chốt công thành công.</span>';
+            } else if (approval) {
                 var approvalMeta = getApprovalStatusMeta(approval.trangThai);
                 approvalStatus.innerHTML = 'Trạng thái: <span class="trangThai-badge ' + approvalMeta.cls + '">' + escapeHtml(approvalMeta.label) + '</span>';
             } else {
-                approvalStatus.textContent = 'Chưa gửi bảng công cho tháng này.';
+                approvalStatus.textContent = 'Chưa gửi bảng công cho tháng này. Sau khi xác nhận, bảng công sẽ được gửi đến từng nhân viên để xác nhận.';
             }
             renderApprovalHistory(json.approvalHistory || []);
             applySendStatus(json.sendStatus);
@@ -1534,12 +1541,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!status) return;
         currentSendStatus = status;
         var canSend = !!status.canSend;
-        submitBtn.disabled = !canSend;
-        submitBtn.style.opacity = canSend ? '' : '.55';
-        submitBtn.style.cursor = canSend ? '' : 'not-allowed';
+        submitBtn.style.opacity = canSend ? '' : '.7';
         if (submitHint) {
             submitHint.textContent = status.hint || '';
-            submitHint.style.color = canSend ? '#15803d' : '#b45309';
+            submitHint.style.color = (canSend || status.alreadySent) ? '#15803d' : '#b45309';
         }
     }
 
@@ -1548,11 +1553,12 @@ document.addEventListener('DOMContentLoaded', function () {
             alert(currentSendStatus.message || currentSendStatus.hint || 'Không thể gửi bảng công lúc này.');
             return;
         }
-        if (!window.confirm('Bảng công mỗi tháng chỉ được gửi 1 lần. Bạn có chắc muốn gửi bảng công đến từng nhân viên không?')) {
+        if (!window.confirm('Bảng công mỗi tháng chỉ được gửi 1 lần trong 3 ngày cuối tháng. Bạn có chắc muốn gửi bảng công đến từng nhân viên không?')) {
             return;
         }
         var form = new FormData();
         form.append('thangNam', currentMonth());
+        submitBtn.disabled = true;
         fetch('index.php?page=hr-api-payroll-submit', {
             method: 'POST',
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -1562,9 +1568,10 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function (json) {
             alert(json.message || 'Hoàn tất');
             applySendStatus(json.sendStatus);
-            if (json.success) loadPayroll();
+            loadPayroll();
         })
-        .catch(function () { alert('Lỗi gửi bảng công.'); });
+        .catch(function () { alert('Lỗi gửi bảng công.'); })
+        .finally(function () { submitBtn.disabled = false; });
     });
 
     document.addEventListener('click', function (e) {
