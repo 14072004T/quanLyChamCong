@@ -33,6 +33,22 @@ function shiftDisplayText($value) {
 .lr-badge-rejected { background: #ef4444; color: #fff; }
 .lr-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
 .attendance-grid select.shift-picker { display: block; width: 100%; min-width: 72px; min-height: 34px; padding: 5px 16px 5px 5px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; appearance: auto; }
+.shift-grid-filters { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; align-items:center; }
+.shift-grid-filters input, .shift-grid-filters select { min-height:36px; padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; background:#fff; }
+.shift-grid-filters input { flex:1 1 260px; min-width:180px; }
+.shift-grid-filters select { flex:0 1 220px; min-width:180px; }
+.attendance-grid-wrapper { max-height:60vh; max-width:100%; overflow:auto; position:relative; -webkit-overflow-scrolling:touch; }
+.attendance-grid { min-width:max-content; border-collapse:separate; border-spacing:0; }
+.attendance-grid thead th { position:sticky; top:0; z-index:20; height:44px; box-sizing:border-box; background:#fff; box-shadow:0 1px 0 #cbd5e1; }
+.attendance-grid thead th:first-child { left:0; z-index:30; min-width:230px; }
+.attendance-grid tbody td:first-child { position:sticky; left:0; z-index:10; background:#fff; min-width:230px; box-shadow:1px 0 0 #e2e8f0; }
+.attendance-grid tbody tr.common-shift-row td { position:sticky; top:44px; z-index:15; background:#eff6ff; box-shadow:0 1px 0 #bfdbfe; }
+.attendance-grid tbody tr.common-shift-row td:first-child { left:0; z-index:31; background:#eff6ff; }
+@media (max-width:600px) {
+    .attendance-grid-wrapper { max-height:60vh; }
+    .attendance-grid thead th:first-child, .attendance-grid tbody td:first-child { min-width:190px; }
+    .shift-grid-filters input, .shift-grid-filters select { flex-basis:100%; width:100%; }
+}
 </style>
 
 <div class="main-container">
@@ -65,6 +81,12 @@ function shiftDisplayText($value) {
             <div class="alert alert-info" style="margin-bottom:14px;">
                 <i class="fas fa-info-circle"></i>
                 <div>Tất cả nhân viên sẽ được gắn ca và hiển thị màu theo danh mục ca đang có, nhân viên chưa được gắn ca riêng (VD: nhân viên mới) sẽ tự động theo lịch mặc định: Thứ 2 - Thứ 6 làm ca HC, Thứ 7 và Chủ nhật OFF. Có thể đổi ca từng ngày nếu cần</div>
+            </div>
+            <div class="shift-grid-filters" aria-label="Lọc nhân viên">
+                <input type="search" id="shift-grid-employee-search" placeholder="Tìm theo mã, tên hoặc phòng ban..." autocomplete="off">
+                <select id="shift-grid-department-filter" aria-label="Lọc theo phòng ban">
+                    <option value="">Tất cả phòng ban</option>
+                </select>
             </div>
             <div class="attendance-grid-wrapper">
                 <table class="attendance-grid" id="monthly-shift-grid">
@@ -180,6 +202,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var toggleBtn = document.getElementById('toggle-add-shift');
     var formPanel = document.getElementById('add-shift-form-panel');
     var shiftFormTitle = document.getElementById('shift-form-title');
+    var employeeSearch = document.getElementById('shift-grid-employee-search');
+    var departmentFilter = document.getElementById('shift-grid-department-filter');
 
     function escapeHtml(val) {
         return String(val ?? '').replace(/[&<>"]/g, function(c) {
@@ -345,7 +369,46 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Danh sách nhân viên đang hiển thị trong lưới — dùng lại khi áp dụng dòng chung.
+    var allGridEmployees = [];
     var currentGridEmployees = [];
+
+    function getEmployeeRows() {
+        return Array.prototype.slice.call(document.querySelectorAll('#shift-grid-body .employee-shift-row'));
+    }
+
+    function getVisibleEmployeeRows() {
+        return getEmployeeRows().filter(function(row) {
+            return row.style.display !== 'none';
+        });
+    }
+
+    function refreshEmployeeFilter() {
+        var query = String(employeeSearch ? employeeSearch.value : '').trim().toLowerCase();
+        var department = departmentFilter ? departmentFilter.value : '';
+        currentGridEmployees = allGridEmployees.filter(function(emp) {
+            var searchText = [emp.maND, emp.hoTen, emp.phongBan].join(' ').toLowerCase();
+            return (!query || searchText.indexOf(query) !== -1) && (!department || String(emp.phongBan || '') === department);
+        });
+        var visibleIds = {};
+        currentGridEmployees.forEach(function(emp) { visibleIds[String(emp.maND)] = true; });
+        getEmployeeRows().forEach(function(row) {
+            row.style.display = visibleIds[row.dataset.employeeId] ? '' : 'none';
+        });
+        updateApplyButton();
+    }
+
+    function populateDepartmentFilter(employees) {
+        if (!departmentFilter) return;
+        var departments = {};
+        employees.forEach(function(emp) {
+            var department = String(emp.phongBan || '').trim();
+            if (department) departments[department] = true;
+        });
+        var options = Object.keys(departments).sort(function(a, b) { return a.localeCompare(b, 'vi'); }).map(function(department) {
+            return '<option value="' + escapeHtml(department) + '">' + escapeHtml(department) + '</option>';
+        }).join('');
+        departmentFilter.innerHTML = '<option value="">Tất cả phòng ban</option>' + options;
+    }
 
     function getSelectedEmployees() {
         var selected = {};
@@ -451,7 +514,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(results[3].message || 'Không thể tải dữ liệu phân ca.');
             }
             var employees = (results[0].data || []).filter(function(e) { return e.trangThai == 1; });
+            allGridEmployees = employees;
             currentGridEmployees = employees;
+            populateDepartmentFilter(employees);
             var payrollData = results[1].data || [];
             var otSchedule = results[1].otSchedule || {};
             var shifts = (results[2].data || []).filter(function(s) { return Number(s.hoatDong) === 1; });
@@ -509,8 +574,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     cells += '</td>';
                 }
-                return '<tr>' + cells + '</tr>';
+                var employeeSearchText = [emp.maND, emp.hoTen, emp.phongBan].join(' ');
+                return '<tr class="employee-shift-row" data-employee-id="' + escapeHtml(emp.maND) + '" data-employee-search="' + escapeHtml(employeeSearchText.toLowerCase()) + '">' + cells + '</tr>';
             }).join('');
+            refreshEmployeeFilter();
             updateApplyButton();
         }).catch(function() {
             gridBody.innerHTML = '<tr><td colspan="' + (days + 1) + '" class="empty-state">Lỗi tải dữ liệu.</td></tr>';
@@ -549,8 +616,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     gridHead.addEventListener('change', function(e) {
         if (e.target && e.target.id === 'shift-grid-select-all') {
-            document.querySelectorAll('#shift-grid-body .emp-select').forEach(function(cb) {
-                cb.checked = e.target.checked;
+            getVisibleEmployeeRows().forEach(function(row) {
+                var checkbox = row.querySelector('.emp-select');
+                if (checkbox) checkbox.checked = e.target.checked;
             });
             updateApplyButton();
         }
@@ -563,6 +631,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     monthPicker.addEventListener('change', loadMonthlyShifts);
+    if (employeeSearch) employeeSearch.addEventListener('input', refreshEmployeeFilter);
+    if (departmentFilter) departmentFilter.addEventListener('change', refreshEmployeeFilter);
 
     // Save new shift via API
     shiftForm.addEventListener('submit', function(e) {
