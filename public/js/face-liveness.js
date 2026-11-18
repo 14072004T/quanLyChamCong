@@ -41,18 +41,21 @@ class LivenessDetector {
 
     // ★ Eye Blink Detection (EAR)
     static MIN_BLINKS_REQUIRED = 1;
-    // Mắt phải giảm EAR >= 25% so với baseline (median lúc mắt mở) mới tính là nhắm,
-    // và phải mở lại >= 88% baseline mới tính là một lần chớp hoàn chỉnh.
+    // Mắt phải giảm EAR >= 20% so với baseline (median lúc mắt mở) mới tính là nhắm,
+    // và phải mở lại >= 87% baseline mới tính là một lần chớp hoàn chỉnh.
+    // (face-api 68 điểm, nhất là với inputSize nhỏ, thường không khép hết mí khi chớp:
+    //  EAR thực tế chỉ giảm ~20-35%, nên không đặt ngưỡng sâu hơn 20%.)
     // LƯU Ý: openRatio PHẢI lớn hơn blinkRatio (hysteresis), nếu không nhiễu landmark
     // trên ảnh tĩnh sẽ dao động qua lại hai ngưỡng và bị đếm thành chớp mắt.
-    static EAR_BLINK_THRESHOLD_RATIO = 0.75;
-    static EAR_OPEN_THRESHOLD_RATIO = 0.88;
-    static EAR_NOISE_SIGMA_MULT = 4.0;   // Độ sụt phải vượt 4σ nhiễu EAR đo được
+    static EAR_BLINK_THRESHOLD_RATIO = 0.80;
+    static EAR_OPEN_THRESHOLD_RATIO = 0.87;
+    static EAR_NOISE_SIGMA_MULT = 3.0;   // Độ sụt phải vượt 3σ nhiễu EAR đo được...
+    static EAR_NOISE_FLOOR_RATIO = 0.68; // ...nhưng ngưỡng nhắm không bao giờ thấp hơn 68% baseline
     static EAR_BASELINE_WINDOW = 20;     // Số frame mắt mở dùng tính baseline
     static EAR_BASELINE_MIN_SAMPLES = 5; // Cần đủ mẫu baseline mới bắt đầu phát hiện
-    static EAR_PER_EYE_MIN_DROP = 0.12;  // Chớp mắt thật: CẢ HAI mắt cùng giảm
-    static FACE_SHAPE_MAX_CHANGE = 0.08; // Tỷ lệ khuôn mặt đổi > 8% => nghiêng/lật ảnh, không phải chớp
-    static BLINK_MAX_CLOSED_FRAMES = 10; // Nhắm quá lâu => không phải chớp mắt
+    static EAR_PER_EYE_MIN_DROP = 0.08;  // Chớp mắt thật: CẢ HAI mắt cùng giảm
+    static FACE_SHAPE_MAX_CHANGE = 0.15; // Tỷ lệ khuôn mặt đổi > 15% => nghiêng/lật ảnh, không phải chớp
+    static BLINK_MAX_CLOSED_FRAMES = 15; // Nhắm quá lâu => không phải chớp mắt
     static EAR_VARIANCE_MIN = 0.00002; // Nới lỏng ngưỡng variance        
 
     // Head Pose
@@ -123,6 +126,7 @@ class LivenessDetector {
         this._closedStreak = 0;
         this._openEarWindow = [];   // {avg, left, right, shape} các frame mắt mở
         this._closedInfo = null;
+        this._blinkDiag = null;
         this.yawHistory = [];
         this.pitchHistory = [];
         this.faceSizeHistory = [];
@@ -274,6 +278,17 @@ class LivenessDetector {
             // KHÔNG có đường "dự phòng" cho qua khi hết thời gian: ảnh tĩnh luôn có nhiễu
             // landmark khiến EAR dao động ~10%, mọi phép suy luận "có sụt giảm" từ lịch sử
             // đều sẽ cho ảnh tĩnh đi qua. Hết thời gian mà chưa chớp mắt => từ chối.
+            const dg = this._blinkDiag || {};
+            console.warn('[Liveness] Không phát hiện chớp mắt — chẩn đoán:', JSON.stringify({
+                frames: this.frameCount,
+                baseline: dg.baseline && +dg.baseline.toFixed(3),
+                sigma: dg.sigma && +dg.sigma.toFixed(4),
+                closeThresholdRatio: dg.baseline && +(dg.closeThreshold / dg.baseline).toFixed(3),
+                deepestDropPct: dg.minRatio !== undefined ? +((1 - dg.minRatio) * 100).toFixed(1) : null,
+                rejectedOneEye: dg.oneEye || 0,
+                rejectedShape: dg.shape || 0,
+                rejectedLongClose: dg.longClose || 0
+            }));
             this._fail('Chưa phát hiện chớp mắt sau thời gian quét. Vui lòng nhìn thẳng vào camera và chớp mắt rõ một lần.');
         }
     }
@@ -358,10 +373,15 @@ class LivenessDetector {
         // Độ lệch chuẩn robust của nhiễu EAR (1.4826 * MAD)
         const sigma = 1.4826 * this._median(win.map(w => Math.abs(w.avg - base.avg)));
 
-        const closeThreshold = Math.min(
-            base.avg * C.EAR_BLINK_THRESHOLD_RATIO,
-            base.avg - C.EAR_NOISE_SIGMA_MULT * sigma
+        const closeThreshold = Math.max(
+            base.avg * C.EAR_NOISE_FLOOR_RATIO,
+            Math.min(base.avg * C.EAR_BLINK_THRESHOLD_RATIO, base.avg - C.EAR_NOISE_SIGMA_MULT * sigma)
         );
+
+        // Số liệu chẩn đoán (in ra console khi quét thất bại)
+        const dg = this._blinkDiag || (this._blinkDiag = { minRatio: 1, oneEye: 0, shape: 0, longClose: 0 });
+        dg.baseline = base.avg; dg.sigma = sigma; dg.closeThreshold = closeThreshold;
+        dg.minRatio = Math.min(dg.minRatio, avgEAR / base.avg);
         const openThreshold = base.avg * C.EAR_OPEN_THRESHOLD_RATIO;
 
         if (this.blinkState === 'open') {
@@ -371,8 +391,10 @@ class LivenessDetector {
                 const shapeChange = base.shape > 0 ? Math.abs(shape / base.shape - 1) : 1;
 
                 if (leftDrop < C.EAR_PER_EYE_MIN_DROP || rightDrop < C.EAR_PER_EYE_MIN_DROP) {
+                    dg.oneEye++;
                     console.log(`[Liveness] Bỏ qua: chỉ một mắt giảm (L ${(leftDrop*100).toFixed(0)}%, R ${(rightDrop*100).toFixed(0)}%)`);
                 } else if (shapeChange > C.FACE_SHAPE_MAX_CHANGE) {
+                    dg.shape++;
                     console.log(`[Liveness] Bỏ qua: tỷ lệ khuôn mặt đổi ${(shapeChange*100).toFixed(1)}% (nghiêng/lật ảnh)`);
                 } else {
                     this.blinkState = 'closed';
@@ -400,6 +422,7 @@ class LivenessDetector {
             } else if (this._closedStreak > C.BLINK_MAX_CLOSED_FRAMES) {
                 // Nhắm/giảm quá lâu không phải chớp mắt (có thể ảnh bị nghiêng dần).
                 // Reset baseline để hiệu chỉnh lại theo tình trạng hiện tại, KHÔNG tính chớp.
+                dg.longClose++;
                 console.warn(`[Liveness] Trạng thái đóng kéo dài ${this._closedStreak} frame, reset baseline.`);
                 this._openEarWindow = [sample];
                 this.blinkState = 'open';
