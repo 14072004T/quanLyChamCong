@@ -4237,7 +4237,25 @@ class ChamCongModel
         $monthLabel = substr($monthKey, 5, 2) . '/' . substr($monthKey, 0, 4);
         $currentMonthLabel = $today->format('m/Y');
 
-        // ── 1. Kiểm tra đã gửi chưa (áp dụng cho MỌI tháng, kể cả tháng trước) ──
+        // ── 1. Nếu là tháng hiện tại và CHƯA ĐẾN 3 ngày cuối tháng ──
+        if ($monthKey === $currentMonth && !$isInSendWindow) {
+            // Tự động dọn dẹp các bản ghi gửi trước hạn nếu có
+            $cleanup = $this->conn->prepare("DELETE FROM duyetcongnhanvien WHERE thangNam = ? AND DATE(ngayGui) < ?");
+            if ($cleanup) {
+                $firstSendYmd = $firstSendDate->format('Y-m-d');
+                $cleanup->bind_param('ss', $currentMonth, $firstSendYmd);
+                $cleanup->execute();
+                $cleanup->close();
+            }
+
+            $status['canSend'] = false;
+            $status['alreadySent'] = false;
+            $status['message'] = 'Chưa đến hạn gửi bảng công tháng này. Bảng công chỉ được gửi trong 3 ngày cuối tháng (từ ' . $sendWindowLabel . ').';
+            $status['hint'] = 'Chưa đến hạn gửi bảng công tháng này.';
+            return $status;
+        }
+
+        // ── 2. Kiểm tra đã gửi chưa (áp dụng cho các tháng trước hoặc tháng hiện tại khi đã đến 3 ngày cuối) ──
         $sentAt = null;
         $stmt = $this->conn->prepare("SELECT MAX(ngayGui) AS sentAt FROM duyetcongnhanvien WHERE thangNam = ? AND ngayGui IS NOT NULL");
         if ($stmt) {
@@ -4255,7 +4273,7 @@ class ChamCongModel
             return $status;
         }
 
-        // ── 2. Kiểm tra tháng: chỉ gửi tháng hiện tại ──
+        // ── 3. Kiểm tra tháng khác tháng hiện tại ──
         if ($monthKey !== $currentMonth) {
             if ($monthKey < $currentMonth) {
                 // Tháng trước chưa gửi → đã qua kỳ gửi
@@ -4269,14 +4287,7 @@ class ChamCongModel
             return $status;
         }
 
-        // ── 3. Tháng hiện tại, chưa gửi → kiểm tra cửa sổ 3 ngày cuối tháng ──
-        if (!$isInSendWindow) {
-            $status['message'] = 'Chỉ được gửi bảng công trong 3 ngày cuối tháng (từ ' . $sendWindowLabel . ').';
-            $status['hint'] = 'Có thể gửi từ ngày ' . $firstSendDate->format('d/m/Y') . ' đến ' . $lastDay->format('d/m/Y') . '.';
-            return $status;
-        }
-
-        // ── 4. OK — cho phép gửi ──
+        // ── 4. Tháng hiện tại và ĐANG TRONG 3 ngày cuối tháng, chưa gửi → Cho phép gửi ──
         $status['canSend'] = true;
         $status['hint'] = 'Đang trong kỳ gửi bảng công (3 ngày cuối tháng). Mỗi tháng chỉ được gửi 1 lần.';
         return $status;
