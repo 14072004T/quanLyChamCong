@@ -148,6 +148,7 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         detector.start();
     }
 
+    let detectFrameIdx = 0;
     async function detect() {
         if (!complete && video.readyState >= 2 && !detecting) {
             detecting = true;
@@ -155,7 +156,11 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
                 // inputSize khớp với lúc đăng ký khuôn mặt (224) — trước đây quét tablet dùng 128,
                 // descriptor kém chi tiết hơn đăng ký khiến các nhân viên bị co cụm quá gần nhau,
                 // gây nhận nhầm/khó nhận diện dù embedding gốc không hề giống nhau.
-                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptor();
+                // Chỉ tính descriptor (nặng nhất) mỗi 3 frame; các frame còn lại chỉ lấy landmark
+                // để tăng tốc độ lấy mẫu — chớp mắt chỉ kéo dài 100-300ms, lấy mẫu thưa sẽ bị lỡ.
+                detectFrameIdx = (detectFrameIdx + 1) % 3;
+                const task = faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })).withFaceLandmarks();
+                const detection = detectFrameIdx === 0 ? await task.withFaceDescriptor() : await task;
                 if (detection && detector && !complete) detector.processFrame(detection);
                 else if (detector && !complete) detector.processFrame(null);
             } catch (e) { console.error(e); }

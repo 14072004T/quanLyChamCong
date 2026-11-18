@@ -318,7 +318,7 @@ if (!isset($view) || is_null($view)) {
 <?php endif; ?>
 
             <script src="public/js/face-api.js"></script>
-            <script src="public/js/face-liveness.js"></script>
+            <script src="public/js/face-liveness.js?v=<?= (int)(@filemtime('public/js/face-liveness.js') ?: 1) ?>"></script>
             <script>
                 let currentAction = '<?= ($trangThaiHomNay === 'IN') ? 'OUT' : 'IN' ?>';
                 let faceApiLoaded = false;
@@ -573,10 +573,12 @@ if (!isset($view) || is_null($view)) {
                         const displaySize = { width: video.videoWidth || 640, height: video.videoHeight || 480 };
                         faceapi.matchDimensions(canvas, displaySize);
 
-                        const detection = await faceapi.detectSingleFace(
+                        window.__lvFrameIdx = ((window.__lvFrameIdx || 0) + 1) % 3; // descriptor mỗi 3 frame để tăng tốc độ lấy mẫu
+                        const detectTask = faceapi.detectSingleFace(
                             video, 
                             new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.4 })
-                        ).withFaceLandmarks().withFaceDescriptor();
+                        ).withFaceLandmarks();
+                        const detection = window.__lvFrameIdx === 0 ? await detectTask.withFaceDescriptor() : await detectTask;
 
                         const ctx = canvas.getContext('2d');
                         ctx.clearRect(0, 0, canvas.width, canvas.height);

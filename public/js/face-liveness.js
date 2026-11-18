@@ -41,21 +41,34 @@ class LivenessDetector {
 
     // ★ Eye Blink Detection (EAR)
     static MIN_BLINKS_REQUIRED = 1;
-    // Mắt phải giảm EAR >= 20% so với baseline (median lúc mắt mở) mới tính là nhắm,
-    // và phải mở lại >= 87% baseline mới tính là một lần chớp hoàn chỉnh.
-    // (face-api 68 điểm, nhất là với inputSize nhỏ, thường không khép hết mí khi chớp:
-    //  EAR thực tế chỉ giảm ~20-35%, nên không đặt ngưỡng sâu hơn 20%.)
-    // LƯU Ý: openRatio PHẢI lớn hơn blinkRatio (hysteresis), nếu không nhiễu landmark
-    // trên ảnh tĩnh sẽ dao động qua lại hai ngưỡng và bị đếm thành chớp mắt.
-    static EAR_BLINK_THRESHOLD_RATIO = 0.80;
-    static EAR_OPEN_THRESHOLD_RATIO = 0.87;
-    static EAR_NOISE_SIGMA_MULT = 3.0;   // Độ sụt phải vượt 3σ nhiễu EAR đo được...
-    static EAR_NOISE_FLOOR_RATIO = 0.68; // ...nhưng ngưỡng nhắm không bao giờ thấp hơn 68% baseline
-    static EAR_BASELINE_WINDOW = 20;     // Số frame mắt mở dùng tính baseline
-    static EAR_BASELINE_MIN_SAMPLES = 5; // Cần đủ mẫu baseline mới bắt đầu phát hiện
-    static EAR_PER_EYE_MIN_DROP = 0.08;  // Chớp mắt thật: CẢ HAI mắt cùng giảm
-    static FACE_SHAPE_MAX_CHANGE = 0.15; // Tỷ lệ khuôn mặt đổi > 15% => nghiêng/lật ảnh, không phải chớp
-    static BLINK_MAX_CLOSED_FRAMES = 15; // Nhắm quá lâu => không phải chớp mắt
+    // ── Kênh 1: EAR từ landmark ──
+    // Đo thực tế trên tablet: EAR của face-api gần như KHÔNG đổi khi người thật chớp mắt
+    // (σ ~0.004, không có sụt giảm), nên EAR chỉ được tính là chớp khi mắt khép RÕ RỆT
+    // (giảm >= 35%). Mức này nhiễu landmark của ảnh tĩnh không thể tạo ra.
+    // LƯU Ý: openRatio PHẢI lớn hơn blinkRatio (hysteresis).
+    static EAR_BLINK_THRESHOLD_RATIO = 0.65;
+    static EAR_OPEN_THRESHOLD_RATIO = 0.85;
+    static EAR_NOISE_SIGMA_MULT = 4.0;
+    static EAR_BASELINE_WINDOW = 20;
+    static EAR_BASELINE_MIN_SAMPLES = 5;
+    static EAR_PER_EYE_MIN_DROP = 0.15;
+    static FACE_SHAPE_MAX_CHANGE = 0.08;
+    static BLINK_MAX_CLOSED_FRAMES = 10;
+
+    // ── Kênh 2: pixel vùng mắt (kênh chính) ──
+    // Khi chớp, mí mắt che lòng đen/lòng trắng => pixel vùng mắt đổi mạnh trong thoáng chốc,
+    // trong khi vùng sống mũi ngay cạnh gần như không đổi. Ảnh tĩnh/ảnh bị lắc: vùng mắt và
+    // vùng mũi thay đổi CÙNG NHAU => tỷ lệ mắt/mũi không tăng.
+    static PATCH_W = 32;
+    static PATCH_H = 16;
+    static PATCH_BASELINE_MIN = 6;       // Số frame mắt mở cần có trước khi phát hiện
+    static PATCH_BASELINE_WINDOW = 20;
+    static PATCH_SPIKE_SIGMA = 5.0;      // Đột biến vùng mắt phải vượt median + 5σ
+    static PATCH_SPIKE_MIN_FACTOR = 2.0; // ...và gấp >= 2 lần mức bình thường
+    static PATCH_PER_EYE_FACTOR = 1.6;   // Từng mắt riêng cũng phải gấp >= 1.6 lần
+    static PATCH_RATIO_FACTOR = 1.8;     // Tỷ lệ mắt/mũi phải tăng >= 1.8 lần mức bình thường
+    static PATCH_MAX_CORNER_SHIFT = 0.12;// Khoé mắt lệch > 12% bề rộng mắt => landmark nhảy, bỏ qua
+    static PATCH_MAX_SPIKE_FRAMES = 8;   // Đột biến phải hết trong <= 8 frame (chớp là thoáng qua)
     static EAR_VARIANCE_MIN = 0.00002; // Nới lỏng ngưỡng variance        
 
     // Head Pose
@@ -127,6 +140,9 @@ class LivenessDetector {
         this._openEarWindow = [];   // {avg, left, right, shape} các frame mắt mở
         this._closedInfo = null;
         this._blinkDiag = null;
+        this._patch = { tpl: null, window: [], state: 'open', spikeFrames: 0, peak: null,
+                        diag: { maxEye: 0, maxRatio: 0, base: null, rejectedOneEye: 0,
+                                rejectedRatio: 0, rejectedShift: 0, rejectedLong: 0 } };
         this.yawHistory = [];
         this.pitchHistory = [];
         this.faceSizeHistory = [];
@@ -237,6 +253,7 @@ class LivenessDetector {
 
         // ─── ★ Eye Blink Detection (EAR) ───
         this._processEyeBlink(positions);
+        this._processEyePatches(positions);
 
         // ─── Head Pose Estimation ───
         this._processHeadPose(positions);
@@ -244,13 +261,8 @@ class LivenessDetector {
         // ─── Face Size Tracking ───
         this.faceSizeHistory.push(box.width * box.height);
 
-        // ─── Texture analysis on every 3rd frame ───
-        if (this.frameCount % 3 === 0) {
-            const textureInfo = this._analyzeTexture(detection);
-            if (textureInfo) {
-                this.textureSamples.push(textureInfo);
-            }
-        }
+        // (Đã bỏ phân tích texture mỗi 3 frame: kết quả không được dùng ở bước kết luận,
+        //  mà vẽ lại toàn bộ khung hình video làm giảm tốc độ lấy mẫu => dễ lỡ lần chớp mắt.)
 
         // ─── Progressive feedback ───
         const progress = this.blinkDetected
@@ -288,6 +300,19 @@ class LivenessDetector {
                 rejectedOneEye: dg.oneEye || 0,
                 rejectedShape: dg.shape || 0,
                 rejectedLongClose: dg.longClose || 0
+            }));
+            const pd = this._patch ? this._patch.diag : {};
+            console.warn('[Liveness] Kênh pixel vùng mắt — chẩn đoán:', JSON.stringify({
+                baseEye: pd.base && +pd.base.eye.toFixed(4),
+                sigmaEye: pd.base && +pd.base.sigma.toFixed(4),
+                baseRatio: pd.base && +pd.base.ratio.toFixed(3),
+                maxEyeChange: +(pd.maxEye || 0).toFixed(4),
+                maxEyeFactor: pd.base && +((pd.maxEye || 0) / Math.max(pd.base.eye, 1e-6)).toFixed(2),
+                maxRatioFactor: pd.base && +((pd.maxRatio || 0) / Math.max(pd.base.ratio, 1e-6)).toFixed(2),
+                rejectedOneEye: pd.rejectedOneEye || 0,
+                rejectedRatio: pd.rejectedRatio || 0,
+                rejectedShift: pd.rejectedShift || 0,
+                rejectedLong: pd.rejectedLong || 0
             }));
             this._fail('Chưa phát hiện chớp mắt sau thời gian quét. Vui lòng nhìn thẳng vào camera và chớp mắt rõ một lần.');
         }
@@ -373,9 +398,9 @@ class LivenessDetector {
         // Độ lệch chuẩn robust của nhiễu EAR (1.4826 * MAD)
         const sigma = 1.4826 * this._median(win.map(w => Math.abs(w.avg - base.avg)));
 
-        const closeThreshold = Math.max(
-            base.avg * C.EAR_NOISE_FLOOR_RATIO,
-            Math.min(base.avg * C.EAR_BLINK_THRESHOLD_RATIO, base.avg - C.EAR_NOISE_SIGMA_MULT * sigma)
+        const closeThreshold = Math.min(
+            base.avg * C.EAR_BLINK_THRESHOLD_RATIO,
+            base.avg - C.EAR_NOISE_SIGMA_MULT * sigma
         );
 
         // Số liệu chẩn đoán (in ra console khi quét thất bại)
@@ -415,7 +440,7 @@ class LivenessDetector {
                 const drop = 1 - this._closedInfo.minEAR / this._closedInfo.baseline;
                 this.blinkCount++;
                 this.blinkDetected = true;
-                console.log(`[Liveness] Blink confirmed! EAR drop: ${(drop*100).toFixed(1)}%. Count: ${this.blinkCount}`);
+                console.log(`[Liveness] Blink confirmed (EAR)! EAR drop: ${(drop*100).toFixed(1)}%. Count: ${this.blinkCount}`);
                 if (this.cb.onBlinkDetected) this.cb.onBlinkDetected(this.blinkCount);
                 this.blinkState = 'open';
                 this._closedInfo = null;
@@ -433,6 +458,157 @@ class LivenessDetector {
         if (this.frameCount % 5 === 0) {
             console.log(`[Liveness] Frame ${this.frameCount}: avgEAR=${avgEAR.toFixed(3)}, baseline=${base.avg.toFixed(3)}, σ=${sigma.toFixed(4)}, state=${this.blinkState}, blinks=${this.blinkCount}`);
         }
+    }
+
+    /**
+     * Kênh 2: phát hiện chớp mắt bằng thay đổi pixel vùng mắt so với vùng sống mũi.
+     */
+    _processEyePatches(positions) {
+        const P = this._patch;
+        if (!P) return;
+        const C = LivenessDetector;
+
+        const eyeW = (this._dist(positions[36], positions[39]) + this._dist(positions[42], positions[45])) / 2;
+        if (!(eyeW > 6)) return;
+
+        const center = (idx) => {
+            let x = 0, y = 0;
+            idx.forEach(i => { x += positions[i].x; y += positions[i].y; });
+            return { x: x / idx.length, y: y / idx.length };
+        };
+        const sw = eyeW * 1.6, sh = eyeW * 0.8;
+        const left = this._grabPatch(center([36, 37, 38, 39, 40, 41]), sw, sh);
+        const right = this._grabPatch(center([42, 43, 44, 45, 46, 47]), sw, sh);
+        // Vùng tham chiếu: sống mũi (không đổi khi chớp mắt), cùng kích thước
+        const ref = this._grabPatch(center([28, 29, 30]), sw, sh);
+        if (!left || !right || !ref) return;
+
+        // Vị trí khoé mắt so với chóp mũi, chuẩn hoá theo bề rộng mắt (khoé mắt đứng yên khi chớp)
+        const nose = positions[30];
+        const corners = [36, 39, 42, 45].map(i => ({
+            x: (positions[i].x - nose.x) / eyeW, y: (positions[i].y - nose.y) / eyeW
+        }));
+
+        if (!P.tpl) {
+            P.tpl = { left, right, ref, corners };
+            return;
+        }
+
+        const dL = this._patchDiff(left, P.tpl.left);
+        const dR = this._patchDiff(right, P.tpl.right);
+        const dRef = this._patchDiff(ref, P.tpl.ref);
+        const eye = (dL + dR) / 2;
+        const ratio = eye / Math.max(dRef, 0.004);
+        const shift = Math.max(...corners.map((c, i) => Math.hypot(c.x - P.tpl.corners[i].x, c.y - P.tpl.corners[i].y)));
+
+        const updateTemplate = () => {
+            const a = 0.3;
+            ['left', 'right', 'ref'].forEach(k => {
+                const t = P.tpl[k], c = { left, right, ref }[k];
+                for (let i = 0; i < t.length; i++) t[i] = t[i] * (1 - a) + c[i] * a;
+            });
+            P.tpl.corners = P.tpl.corners.map((c, i) => ({
+                x: c.x * (1 - a) + corners[i].x * a, y: c.y * (1 - a) + corners[i].y * a
+            }));
+        };
+
+        const win = P.window;
+        if (win.length < C.PATCH_BASELINE_MIN) {
+            win.push({ eye, dL, dR, ratio });
+            updateTemplate();
+            return;
+        }
+
+        const med = (k) => this._median(win.map(w => w[k]));
+        const base = { eye: med('eye'), dL: med('dL'), dR: med('dR'), ratio: med('ratio') };
+        base.sigma = 1.4826 * this._median(win.map(w => Math.abs(w.eye - base.eye)));
+        P.diag.base = base;
+        P.diag.maxEye = Math.max(P.diag.maxEye, eye);
+        P.diag.maxRatio = Math.max(P.diag.maxRatio, ratio);
+
+        const spikeLevel = Math.max(base.eye + C.PATCH_SPIKE_SIGMA * base.sigma, base.eye * C.PATCH_SPIKE_MIN_FACTOR);
+        const isSpike = eye > spikeLevel;
+
+        if (P.state === 'open') {
+            if (isSpike) {
+                if (dL < base.dL * C.PATCH_PER_EYE_FACTOR || dR < base.dR * C.PATCH_PER_EYE_FACTOR) {
+                    P.diag.rejectedOneEye++;
+                } else if (ratio < base.ratio * C.PATCH_RATIO_FACTOR) {
+                    P.diag.rejectedRatio++;
+                } else if (shift > C.PATCH_MAX_CORNER_SHIFT) {
+                    P.diag.rejectedShift++;
+                } else {
+                    P.state = 'spike';
+                    P.spikeFrames = 0;
+                    P.peak = { eye, ratio };
+                    console.log(`[Liveness] Vùng mắt đột biến: eye=${eye.toFixed(4)} (x${(eye / base.eye).toFixed(1)}), ratio x${(ratio / base.ratio).toFixed(1)}`);
+                }
+                // Không cập nhật template bằng frame đột biến
+            } else {
+                win.push({ eye, dL, dR, ratio });
+                if (win.length > C.PATCH_BASELINE_WINDOW) win.shift();
+                updateTemplate();
+            }
+        } else { // 'spike'
+            P.spikeFrames++;
+            // Mắt mở lại: vùng mắt trở về gần template mắt mở
+            if (eye < base.eye + 2 * base.sigma || eye < base.eye * 1.3) {
+                this.blinkCount++;
+                this.blinkDetected = true;
+                console.log(`[Liveness] Blink confirmed (pixel)! eye x${(P.peak.eye / base.eye).toFixed(1)}, ratio x${(P.peak.ratio / base.ratio).toFixed(1)}, ${P.spikeFrames} frame. Count: ${this.blinkCount}`);
+                if (this.cb.onBlinkDetected) this.cb.onBlinkDetected(this.blinkCount);
+                P.state = 'open';
+                P.peak = null;
+            } else if (P.spikeFrames > C.PATCH_MAX_SPIKE_FRAMES) {
+                // Thay đổi kéo dài => đổi tư thế/ánh sáng, không phải chớp. Học lại template.
+                P.diag.rejectedLong++;
+                P.tpl = { left, right, ref, corners };
+                P.window = [];
+                P.state = 'open';
+                P.peak = null;
+            }
+        }
+
+        if (this.frameCount % 5 === 0) {
+            console.log(`[Liveness] Pixel f${this.frameCount}: eye=${eye.toFixed(4)} base=${base.eye.toFixed(4)} σ=${base.sigma.toFixed(4)} ratio=${ratio.toFixed(2)} (base ${base.ratio.toFixed(2)}) shift=${shift.toFixed(3)} state=${P.state}`);
+        }
+    }
+
+    /**
+     * Cắt vùng (cx,cy,w,h) từ video, thu về PATCH_W x PATCH_H xám, chuẩn hoá theo độ sáng trung bình.
+     */
+    _grabPatch(c, w, h) {
+        const C = LivenessDetector;
+        const vw = this.video.videoWidth, vh = this.video.videoHeight;
+        if (!vw || !vh) return null;
+        const sx = c.x - w / 2, sy = c.y - h / 2;
+        if (sx < 0 || sy < 0 || sx + w > vw || sy + h > vh) return null;
+        if (!this._patchCanvas) {
+            this._patchCanvas = document.createElement('canvas');
+            this._patchCanvas.width = C.PATCH_W;
+            this._patchCanvas.height = C.PATCH_H;
+            this._patchCtx = this._patchCanvas.getContext('2d', { willReadFrequently: true });
+        }
+        const ctx = this._patchCtx;
+        ctx.drawImage(this.video, sx, sy, w, h, 0, 0, C.PATCH_W, C.PATCH_H);
+        const d = ctx.getImageData(0, 0, C.PATCH_W, C.PATCH_H).data;
+        const n = C.PATCH_W * C.PATCH_H;
+        const g = new Float32Array(n);
+        let sum = 0;
+        for (let i = 0; i < n; i++) {
+            g[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+            sum += g[i];
+        }
+        const mean = sum / n;
+        if (mean < 8) return null; // quá tối
+        for (let i = 0; i < n; i++) g[i] /= mean;
+        return g;
+    }
+
+    _patchDiff(a, b) {
+        let s = 0;
+        for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]);
+        return s / a.length;
     }
 
     _median(arr) {
