@@ -41,8 +41,18 @@ class LivenessDetector {
 
     // ★ Eye Blink Detection (EAR)
     static MIN_BLINKS_REQUIRED = 1;
-    static EAR_BLINK_THRESHOLD_RATIO = 0.85;
-    static EAR_OPEN_THRESHOLD_RATIO = 0.80;
+    // Mắt phải giảm EAR >= 25% so với baseline (median lúc mắt mở) mới tính là nhắm,
+    // và phải mở lại >= 88% baseline mới tính là một lần chớp hoàn chỉnh.
+    // LƯU Ý: openRatio PHẢI lớn hơn blinkRatio (hysteresis), nếu không nhiễu landmark
+    // trên ảnh tĩnh sẽ dao động qua lại hai ngưỡng và bị đếm thành chớp mắt.
+    static EAR_BLINK_THRESHOLD_RATIO = 0.75;
+    static EAR_OPEN_THRESHOLD_RATIO = 0.88;
+    static EAR_NOISE_SIGMA_MULT = 4.0;   // Độ sụt phải vượt 4σ nhiễu EAR đo được
+    static EAR_BASELINE_WINDOW = 20;     // Số frame mắt mở dùng tính baseline
+    static EAR_BASELINE_MIN_SAMPLES = 5; // Cần đủ mẫu baseline mới bắt đầu phát hiện
+    static EAR_PER_EYE_MIN_DROP = 0.12;  // Chớp mắt thật: CẢ HAI mắt cùng giảm
+    static FACE_SHAPE_MAX_CHANGE = 0.08; // Tỷ lệ khuôn mặt đổi > 8% => nghiêng/lật ảnh, không phải chớp
+    static BLINK_MAX_CLOSED_FRAMES = 10; // Nhắm quá lâu => không phải chớp mắt
     static EAR_VARIANCE_MIN = 0.00002; // Nới lỏng ngưỡng variance        
 
     // Head Pose
@@ -107,11 +117,12 @@ class LivenessDetector {
         this.boxHistory = [];
         this.textureSamples = [];
         this.earHistory = [];
-        this.maxEAR = 0.0; // Dynamic EAR baseline calibration
         this.blinkCount = 0;
         this.blinkState = 'open';
         this.blinkDetected = false;
         this._closedStreak = 0;
+        this._openEarWindow = [];   // {avg, left, right, shape} các frame mắt mở
+        this._closedInfo = null;
         this.yawHistory = [];
         this.pitchHistory = [];
         this.faceSizeHistory = [];
@@ -260,32 +271,11 @@ class LivenessDetector {
             this.state = 'analyzing';
             this._runFinalPassiveAnalysis();
         } else if (this.frameCount >= LivenessDetector.FRAME_COUNT_MAX) {
-            // Camera tablet chậm có thể lấy mẫu quá thưa (vài trăm ms/khung hình) nên
-            // đúng lúc mắt nhắm hoàn toàn không rơi vào khung hình nào cả — máy trạng thái
-            // theo dõi close→open không bao giờ thấy được. Trước khi từ chối, kiểm tra lại
-            // toàn bộ lịch sử EAR xem có dấu hiệu sụt giảm rõ rệt (đủ sâu như một lần chớp
-            // mắt thật) hay không, dù không bắt được đúng khung hình đóng mắt.
-            if (this._hasEarDipEvidence()) {
-                this.blinkDetected = true;
-                this.blinkCount = Math.max(this.blinkCount, 1);
-                this.state = 'analyzing';
-                this._runFinalPassiveAnalysis();
-            } else {
-                this._fail('Chưa phát hiện chớp mắt sau thời gian quét. Vui lòng nhìn thẳng vào camera và chớp mắt rõ một lần.');
-            }
+            // KHÔNG có đường "dự phòng" cho qua khi hết thời gian: ảnh tĩnh luôn có nhiễu
+            // landmark khiến EAR dao động ~10%, mọi phép suy luận "có sụt giảm" từ lịch sử
+            // đều sẽ cho ảnh tĩnh đi qua. Hết thời gian mà chưa chớp mắt => từ chối.
+            this._fail('Chưa phát hiện chớp mắt sau thời gian quét. Vui lòng nhìn thẳng vào camera và chớp mắt rõ một lần.');
         }
-    }
-
-    /**
-     * Kiểm tra dự phòng: lịch sử EAR có từng sụt giảm đủ sâu so với baseline không,
-     * kể cả khi máy trạng thái close→open không bắt được đúng khung hình nhắm mắt
-     * (camera lấy mẫu thưa hơn tốc độ chớp mắt thật).
-     */
-    _hasEarDipEvidence() {
-        if (this.earHistory.length < 3) return false;
-        const baseline = (this.maxEAR >= 0.08) ? this.maxEAR : 0.26;
-        const minEAR = Math.min(...this.earHistory);
-        return minEAR <= baseline * 0.90;
     }
 
     /**
@@ -330,84 +320,103 @@ class LivenessDetector {
      * Photo eyes: EAR stays constant across ALL frames
      */
     _processEyeBlink(positions) {
-        // Calculate EAR for both eyes
         const leftEAR = this._calculateEAR(positions, [36, 37, 38, 39, 40, 41]);
         const rightEAR = this._calculateEAR(positions, [42, 43, 44, 45, 46, 47]);
-
-        // Average EAR of both eyes
         const avgEAR = (leftEAR + rightEAR) / 2.0;
 
         // Ignore extreme outlier EAR values due to landmark misdetection
-        if (avgEAR > 0.55) {
-            console.warn(`[Liveness] Outlier EAR detected (${avgEAR.toFixed(3)}), skipping for baseline.`);
+        if (!isFinite(avgEAR) || avgEAR > 0.55) {
+            console.warn(`[Liveness] Outlier EAR detected (${avgEAR}), skipping.`);
             return;
         }
 
         this.earHistory.push(avgEAR);
 
-        // Nới dải thu thập baseline: camera tablet/độ phân giải thấp thường cho EAR
-        // thực tế thấp hơn webcam (có khi <0.15). Giữ dải cũ sẽ khiến maxEAR không bao giờ
-        // được cập nhật, rơi về baseline mặc định sai lệch, làm mắt "kẹt" ở trạng thái đóng mãi.
-        if (avgEAR >= 0.05 && avgEAR <= 0.55 && avgEAR > this.maxEAR) {
-            this.maxEAR = avgEAR;
+        // Tỷ lệ hình học khuôn mặt KHÔNG đổi khi chớp mắt (sống mũi / khoảng cách 2 khoé mắt
+        // ngoài). Nếu tỷ lệ này đổi cùng lúc EAR giảm => đang nghiêng/lật ảnh hoặc màn hình.
+        const interOcular = this._dist(positions[36], positions[45]);
+        const shape = interOcular > 0 ? this._dist(positions[27], positions[33]) / interOcular : 0;
+
+        const sample = { avg: avgEAR, left: leftEAR, right: rightEAR, shape };
+        const C = LivenessDetector;
+        const win = this._openEarWindow;
+
+        // Chưa đủ mẫu baseline: chỉ thu thập.
+        if (win.length < C.EAR_BASELINE_MIN_SAMPLES) {
+            win.push(sample);
+            return;
         }
 
-        // Baseline mắt mở: ưu tiên giá trị đo được, fallback 0.26
-        const baseline = (this.maxEAR >= 0.08) ? this.maxEAR : 0.26;
+        // Baseline = MEDIAN các frame mắt mở (không dùng MAX: max luôn bị nhiễu đẩy lên,
+        // khiến nhiễu bình thường trên ảnh tĩnh trông như "sụt giảm").
+        const base = {
+            avg: this._median(win.map(w => w.avg)),
+            left: this._median(win.map(w => w.left)),
+            right: this._median(win.map(w => w.right)),
+            shape: this._median(win.map(w => w.shape))
+        };
+        // Độ lệch chuẩn robust của nhiễu EAR (1.4826 * MAD)
+        const sigma = 1.4826 * this._median(win.map(w => Math.abs(w.avg - base.avg)));
 
-        // Tablet camera thường nhận EAR nông hơn webcam; mức giảm 15% vẫn phân biệt
-        // được ảnh tĩnh vì ảnh không có chuỗi đóng rồi mở lại.
-        const blinkThreshold = baseline * LivenessDetector.EAR_BLINK_THRESHOLD_RATIO;
-        const openThreshold = baseline * LivenessDetector.EAR_OPEN_THRESHOLD_RATIO;
+        const closeThreshold = Math.min(
+            base.avg * C.EAR_BLINK_THRESHOLD_RATIO,
+            base.avg - C.EAR_NOISE_SIGMA_MULT * sigma
+        );
+        const openThreshold = base.avg * C.EAR_OPEN_THRESHOLD_RATIO;
 
-        if (this.blinkState !== 'open' && this.blinkState !== 'closed') {
-            this.blinkState = 'open';
-        }
+        if (this.blinkState === 'open') {
+            if (avgEAR < closeThreshold) {
+                const leftDrop = base.left > 0 ? 1 - leftEAR / base.left : 0;
+                const rightDrop = base.right > 0 ? 1 - rightEAR / base.right : 0;
+                const shapeChange = base.shape > 0 ? Math.abs(shape / base.shape - 1) : 1;
 
-        switch (this.blinkState) {
-            case 'open':
-                this._closedStreak = 0;
-                if (avgEAR < blinkThreshold) {
+                if (leftDrop < C.EAR_PER_EYE_MIN_DROP || rightDrop < C.EAR_PER_EYE_MIN_DROP) {
+                    console.log(`[Liveness] Bỏ qua: chỉ một mắt giảm (L ${(leftDrop*100).toFixed(0)}%, R ${(rightDrop*100).toFixed(0)}%)`);
+                } else if (shapeChange > C.FACE_SHAPE_MAX_CHANGE) {
+                    console.log(`[Liveness] Bỏ qua: tỷ lệ khuôn mặt đổi ${(shapeChange*100).toFixed(1)}% (nghiêng/lật ảnh)`);
+                } else {
                     this.blinkState = 'closed';
-                    this._blinkCloseEAR = avgEAR; // Lưu EAR khi mắt nhắm
-                    console.log(`[Liveness] Eye closed (avgEAR: ${avgEAR.toFixed(3)} < threshold: ${blinkThreshold.toFixed(3)})`);
+                    this._closedStreak = 0;
+                    this._closedInfo = { minEAR: avgEAR, baseline: base.avg };
+                    console.log(`[Liveness] Eye closed (avgEAR ${avgEAR.toFixed(3)} < ${closeThreshold.toFixed(3)}, baseline ${base.avg.toFixed(3)}, σ ${sigma.toFixed(4)})`);
                 }
-                break;
+            } else {
+                // Chỉ đưa frame mắt mở vào baseline
+                win.push(sample);
+                if (win.length > C.EAR_BASELINE_WINDOW) win.shift();
+            }
+        } else { // 'closed'
+            this._closedStreak++;
+            this._closedInfo.minEAR = Math.min(this._closedInfo.minEAR, avgEAR);
 
-            case 'closed':
-                this._closedStreak = (this._closedStreak || 0) + 1;
-                if (avgEAR > openThreshold) {
-                    // Kiểm tra blink có đủ sâu không (tránh jitter nhẹ)
-                    const blinkDepth = (this._blinkCloseEAR || 0);
-                    const dropRatio = blinkDepth / baseline;
-                    if (dropRatio < LivenessDetector.EAR_BLINK_THRESHOLD_RATIO + 0.05) {
-                        // Blink đủ sâu — đây là blink thật
-                        this.blinkCount++;
-                        this.blinkDetected = true;
-                        console.log(`[Liveness] Blink confirmed! EAR drop: ${((1-dropRatio)*100).toFixed(1)}%. Count: ${this.blinkCount}`);
-                        if (this.cb.onBlinkDetected) this.cb.onBlinkDetected(this.blinkCount);
-                    } else {
-                        console.log(`[Liveness] Blink rejected — too shallow (drop only ${((1-dropRatio)*100).toFixed(1)}%)`);
-                    }
-                    this.blinkState = 'open';
-                    this._blinkCloseEAR = null;
-                    this._closedStreak = 0;
-                } else if (this._closedStreak > 12) {
-                    // Kẹt ở trạng thái "đóng" quá lâu nghĩa là baseline hiệu chỉnh sai (thường do
-                    // camera cho EAR mở mắt thật thấp hơn giả định) — tự hiệu chỉnh lại theo mức
-                    // đang đo để thoát kẹt, không tính đây là một lần chớp mắt.
-                    console.warn(`[Liveness] Kẹt ở trạng thái đóng ${this._closedStreak} frame, hiệu chỉnh lại baseline theo avgEAR=${avgEAR.toFixed(3)}.`);
-                    this.maxEAR = Math.max(avgEAR, 0.05);
-                    this.blinkState = 'open';
-                    this._blinkCloseEAR = null;
-                    this._closedStreak = 0;
-                }
-                break;
+            if (avgEAR > openThreshold) {
+                const drop = 1 - this._closedInfo.minEAR / this._closedInfo.baseline;
+                this.blinkCount++;
+                this.blinkDetected = true;
+                console.log(`[Liveness] Blink confirmed! EAR drop: ${(drop*100).toFixed(1)}%. Count: ${this.blinkCount}`);
+                if (this.cb.onBlinkDetected) this.cb.onBlinkDetected(this.blinkCount);
+                this.blinkState = 'open';
+                this._closedInfo = null;
+            } else if (this._closedStreak > C.BLINK_MAX_CLOSED_FRAMES) {
+                // Nhắm/giảm quá lâu không phải chớp mắt (có thể ảnh bị nghiêng dần).
+                // Reset baseline để hiệu chỉnh lại theo tình trạng hiện tại, KHÔNG tính chớp.
+                console.warn(`[Liveness] Trạng thái đóng kéo dài ${this._closedStreak} frame, reset baseline.`);
+                this._openEarWindow = [sample];
+                this.blinkState = 'open';
+                this._closedInfo = null;
+            }
         }
 
         if (this.frameCount % 5 === 0) {
-            console.log(`[Liveness] Frame ${this.frameCount}: avgEAR = ${avgEAR.toFixed(3)}, maxEAR = ${this.maxEAR.toFixed(3)}, baseline = ${baseline.toFixed(3)}, state = ${this.blinkState}, blinks = ${this.blinkCount}`);
+            console.log(`[Liveness] Frame ${this.frameCount}: avgEAR=${avgEAR.toFixed(3)}, baseline=${base.avg.toFixed(3)}, σ=${sigma.toFixed(4)}, state=${this.blinkState}, blinks=${this.blinkCount}`);
         }
+    }
+
+    _median(arr) {
+        if (!arr.length) return 0;
+        const a = arr.slice().sort((x, y) => x - y);
+        const m = a.length >> 1;
+        return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
     }
 
     /**
