@@ -140,7 +140,12 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         detector = new LivenessDetector(video, canvas, {
             onStatusChange: function (text) { if (!complete) message(text); },
             onProgress: function (percent, label) { if (!complete) message(percent + '% - ' + label); },
-            onComplete: function (token, descriptor) { complete = true; submit(token, descriptor); },
+            onComplete: function (token, descriptor) {
+                complete = true;
+                // Khung mặt gần nhất (toạ độ video gốc, chưa lật) để cắt ảnh nhỏ gửi ArcFace
+                const boxes = detector && detector.boxHistory ? detector.boxHistory : [];
+                submit(token, descriptor, boxes.length ? boxes[boxes.length - 1] : null);
+            },
             onFail: function (reason) { complete = true; message('Xác thực liveness thất bại: ' + reason, 'error'); setTimeout(restart, 900); }
         });
         const secret = await consumeSessionSecret();
@@ -169,13 +174,34 @@ if (!isset($_SESSION['user']) || ($_SESSION['role'] ?? '') !== 'hr') {
         requestAnimationFrame(detect);
     }
 
-    async function submit(token, descriptor) {
+    // Cắt vùng khuôn mặt (rộng gấp ~1.8 lần khung mặt, để ArcFace tự dò và căn mặt) từ ảnh đã
+    // lật ngang, thu nhỏ tối đa 400px. Gửi ảnh này cho ArcFace thay vì cả khung hình 1280x720
+    // => dung lượng tải lên giảm nhiều lần, nhận diện nhanh hơn. Ảnh minh chứng vẫn giữ bản đầy đủ.
+    function cropFace(snapshot, box) {
+        if (!box || !box.width || !box.height) return '';
+        const W = snapshot.width, H = snapshot.height;
+        const size = Math.max(box.width, box.height) * 1.8;
+        const cx = W - (box.x + box.width / 2); // snapshot đã lật ngang
+        const cy = box.y + box.height / 2;
+        const sx = Math.max(0, cx - size / 2), sy = Math.max(0, cy - size / 2);
+        const sw = Math.min(W - sx, size), sh = Math.min(H - sy, size);
+        if (sw < 40 || sh < 40) return '';
+        const scale = Math.min(1, 400 / Math.max(sw, sh));
+        const crop = document.createElement('canvas');
+        crop.width = Math.round(sw * scale); crop.height = Math.round(sh * scale);
+        crop.getContext('2d').drawImage(snapshot, sx, sy, sw, sh, 0, 0, crop.width, crop.height);
+        return crop.toDataURL('image/jpeg', .9);
+    }
+
+    async function submit(token, descriptor, faceBox) {
         message('Đang nhận diện nhân viên và ghi nhận chấm công...');
         const snapshot = document.createElement('canvas');
         snapshot.width = video.videoWidth || 640; snapshot.height = video.videoHeight || 480;
         const ctx = snapshot.getContext('2d'); ctx.translate(snapshot.width, 0); ctx.scale(-1, 1); ctx.drawImage(video, 0, 0, snapshot.width, snapshot.height);
         const data = new FormData();
         data.append('embedding', JSON.stringify(Array.from(descriptor))); data.append('photo', snapshot.toDataURL('image/jpeg', .85)); data.append('livenessToken', JSON.stringify(token));
+        const faceCrop = cropFace(snapshot, faceBox);
+        if (faceCrop) data.append('faceCrop', faceCrop);
         // KHÔNG prefetch secret mới trước khi verify xong — server xoá secret hiện tại
         // ngay khi xác thực chữ ký thành công, nếu prefetch chạy song song và xong trước
         // thì secret bị thay giữa chừng, khiến request verify so chữ ký sai ("giả mạo token").

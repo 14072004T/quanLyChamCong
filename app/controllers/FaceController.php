@@ -534,7 +534,29 @@ class FaceController extends Controller
                 break;
             }
         }
-        $arcFaceInput = $hasArcFaceProfiles ? FaceServiceClient::getArcFaceEmbedding($photo) : ['success' => false];
+        // Ưu tiên ảnh đã cắt vùng mặt (nhỏ, tải lên ArcFace nhanh); nếu ArcFace không lấy được
+        // embedding từ ảnh cắt thì thử lại với ảnh đầy đủ như trước.
+        $arcFaceInput = ['success' => false];
+        $arcFaceSource = 'none';
+        $arcFaceStart = microtime(true);
+        if ($hasArcFaceProfiles) {
+            $faceCrop = $_POST['faceCrop'] ?? '';
+            if (is_string($faceCrop) && $faceCrop !== '' && strlen($faceCrop) < 2000000) {
+                $arcFaceInput = FaceServiceClient::getArcFaceEmbedding($faceCrop);
+                $arcFaceSource = 'crop';
+            }
+            if (!$arcFaceInput['success']) {
+                $arcFaceInput = FaceServiceClient::getArcFaceEmbedding($photo);
+                $arcFaceSource = $arcFaceSource === 'crop' ? 'crop_failed_fullphoto' : 'fullphoto';
+            }
+        }
+        @file_put_contents($logDir . 'tablet_recognition.log', sprintf(
+            "[%s] Tablet ArcFace source=%s success=%s ms=%d\n",
+            date('Y-m-d H:i:s'),
+            $arcFaceSource,
+            $arcFaceInput['success'] ? 'yes' : 'no',
+            (int)round((microtime(true) - $arcFaceStart) * 1000)
+        ), FILE_APPEND | LOCK_EX);
         $arcFaceCandidates = [];
         $candidates = [];
         $incoming = $this->normalizeEmbedding($embedding);
