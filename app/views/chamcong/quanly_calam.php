@@ -32,7 +32,7 @@ function shiftDisplayText($value) {
 .lr-badge-pending  { background: #f59e0b; color: #fff; }
 .lr-badge-rejected { background: #ef4444; color: #fff; }
 .lr-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
-.attendance-grid select.shift-picker { display: block; width: 100%; min-width: 36px; max-width: 52px; min-height: 26px; padding: 2px 2px 2px 2px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; appearance: auto; }
+.attendance-grid select.shift-picker { display: block; width: 100%; min-width: 36px; max-width: 50px; min-height: 24px; padding: 2px 2px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 9px; font-weight: 700; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none; text-align: center; color: #fff; }
 .shift-grid-filters { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; align-items:center; }
 .shift-grid-filters input, .shift-grid-filters select { min-height:36px; padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; background:#fff; }
 .shift-grid-filters input { flex:1 1 260px; min-width:180px; }
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }).join('');
             var defaultColor = defaultShift ? (defaultShift.mauSac || '#3b82f6') : '#f1f5f9';
 
-            cells += '<td><select class="shift-cell shift-picker common-shift-picker" data-date="' + currentDate + '" title="Ca chung ngày ' + d + '" style="background:' + escapeHtml(defaultColor) + ';color:' + (defaultShift ? '#fff' : '#64748b') + ';border-color:' + escapeHtml(defaultColor) + '" onchange="updateMonthlyShiftPickerColor(this)">' + options + '</select></td>';
+            cells += '<td><select class="shift-cell shift-picker common-shift-picker" data-date="' + currentDate + '" title="Ca chung ngày ' + d + '" style="background:' + escapeHtml(defaultColor) + ';color:#fff;border-color:' + escapeHtml(defaultColor) + '" onchange="updateMonthlyShiftPickerColor(this)">' + options + '</select></td>';
         }
 
         return '<tr class="common-shift-row" style="background:#eff6ff;">' + cells + '</tr>';
@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function () {
             options += '<option value="' + escapeHtml(assignedShiftId) + '" data-color="' + escapeHtml(color) + '" selected>' + escapeHtml(label) + '</option>';
         }
 
-        return '<select class="shift-cell shift-picker" data-ma-nd="' + employeeId + '" data-date="' + date + '" title="' + (assignment ? (assignment.isDefault ? 'Ca mặc định: ' : 'Ca đã gán: ') + escapeHtml(label) : 'Chưa gắn ca - chọn để gán') + '" style="background:' + escapeHtml(color) + ';color:' + (assignment ? '#fff' : '#64748b') + ';border-color:' + escapeHtml(assignment ? color : '#94a3b8') + '" onchange="changeMonthlyShift(this)">' + options + '</select>';
+        return '<select class="shift-cell shift-picker" data-ma-nd="' + employeeId + '" data-date="' + date + '" title="' + (assignment ? (assignment.isDefault ? 'Ca mặc định: ' : 'Ca đã gán: ') + escapeHtml(label) : 'Chưa gắn ca - chọn để gán') + '" style="background:' + escapeHtml(color) + ';color:#fff;border-color:' + escapeHtml(assignment ? color : '#94a3b8') + '" onchange="changeMonthlyShift(this)">' + options + '</select>';
     }
 
     // Danh sách nhân viên đang hiển thị trong lưới — dùng lại khi áp dụng dòng chung.
@@ -590,10 +590,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     window.updateMonthlyShiftPickerColor = function(select) {
         var selectedOption = select.options[select.selectedIndex];
-        var color = select.value && selectedOption && selectedOption.dataset.color ? selectedOption.dataset.color : '#f1f5f9';
+        var color = select.value && selectedOption && selectedOption.dataset.color ? selectedOption.dataset.color : '#94a3b8';
         select.style.backgroundColor = color;
         select.style.borderColor = color;
-        select.style.color = select.value ? '#fff' : '#64748b';
+        select.style.color = '#fff';
     };
 
     window.changeMonthlyShift = function(select) {
