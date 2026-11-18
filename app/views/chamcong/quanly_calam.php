@@ -32,21 +32,25 @@ function shiftDisplayText($value) {
 .lr-badge-pending  { background: #f59e0b; color: #fff; }
 .lr-badge-rejected { background: #ef4444; color: #fff; }
 .lr-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
-.attendance-grid select.shift-picker { display: block; width: 100%; min-width: 72px; min-height: 34px; padding: 5px 16px 5px 5px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; appearance: auto; }
+.attendance-grid select.shift-picker { display: block; width: 100%; min-width: 36px; max-width: 52px; min-height: 26px; padding: 2px 2px 2px 2px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; appearance: auto; }
 .shift-grid-filters { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; align-items:center; }
 .shift-grid-filters input, .shift-grid-filters select { min-height:36px; padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; background:#fff; }
 .shift-grid-filters input { flex:1 1 260px; min-width:180px; }
 .shift-grid-filters select { flex:0 1 220px; min-width:180px; }
-.attendance-grid-wrapper { max-height:60vh; max-width:100%; overflow:auto; position:relative; -webkit-overflow-scrolling:touch; }
-.attendance-grid { min-width:max-content; border-collapse:separate; border-spacing:0; }
-.attendance-grid thead th { position:sticky; top:0; z-index:20; height:44px; box-sizing:border-box; background:#fff; color:#1e293b; box-shadow:0 1px 0 #cbd5e1; }
-.attendance-grid thead th:first-child { left:0; z-index:30; min-width:230px; }
-.attendance-grid tbody td:first-child { position:sticky; left:0; z-index:10; background:#fff; min-width:230px; box-shadow:1px 0 0 #e2e8f0; }
-.attendance-grid tbody tr.common-shift-row td { position:sticky; top:44px; z-index:15; background:#eff6ff; box-shadow:0 1px 0 #bfdbfe; }
-.attendance-grid tbody tr.common-shift-row td:first-child { left:0; z-index:31; background:#eff6ff; }
+.attendance-grid-wrapper { max-height:65vh; max-width:100%; overflow:auto; position:relative; -webkit-overflow-scrolling:touch; }
+.attendance-grid { min-width:max-content; border-collapse:separate; border-spacing:0; font-size:11px; }
+.attendance-grid thead th { position:sticky; top:0; z-index:20; height:36px; min-width:42px; max-width:52px; padding:2px 3px; box-sizing:border-box; background:#fff; color:#1e293b; box-shadow:0 1px 0 #cbd5e1; font-size:10px; text-align:center; white-space:nowrap; }
+.attendance-grid thead th:first-child { left:0; z-index:30; min-width:160px; max-width:200px; padding:4px 8px; font-size:11px; text-align:left; }
+.attendance-grid tbody td { padding:2px 2px; min-width:42px; max-width:52px; }
+.attendance-grid tbody td:first-child { position:sticky; left:0; z-index:10; background:#fff; min-width:160px; max-width:200px; padding:4px 8px; box-shadow:1px 0 0 #e2e8f0; font-size:11px; }
+.attendance-grid tbody td:first-child small { font-size:9px; }
+.attendance-grid tbody tr.common-shift-row td { position:sticky; top:36px; z-index:15; background:#eff6ff; box-shadow:0 1px 0 #bfdbfe; padding:2px 2px; }
+.attendance-grid tbody tr.common-shift-row td:first-child { left:0; z-index:31; background:#eff6ff; padding:4px 6px; }
+.attendance-grid tbody tr.common-shift-row td:first-child .btn { font-size:10px; padding:3px 6px; white-space:nowrap; }
+.shift-cell.shift-off, .shift-cell.shift-ot { font-size:9px; padding:1px 3px; border-radius:3px; display:inline-block; }
 @media (max-width:600px) {
     .attendance-grid-wrapper { max-height:60vh; }
-    .attendance-grid thead th:first-child, .attendance-grid tbody td:first-child { min-width:190px; }
+    .attendance-grid thead th:first-child, .attendance-grid tbody td:first-child { min-width:130px; }
     .shift-grid-filters input, .shift-grid-filters select { flex-basis:100%; width:100%; }
 }
 </style>
@@ -301,8 +305,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function buildCommonRowHtml(month, days, shifts) {
         if (!shifts.length) return '';
 
-        var cells = '<td style="white-space:nowrap;">'
-            + '<button type="button" id="btn-apply-common-row" class="btn btn-primary" style="padding:6px 10px;font-size:0.8em;" onclick="applyCommonRowToAll()" disabled title="Tick chọn nhân viên ở cột Nhân viên để áp dụng ca dòng chung">'
+        var cells = '<td style="white-space:nowrap;min-width:160px;max-width:200px;">'
+            + '<button type="button" id="btn-apply-common-row" class="btn btn-primary" style="padding:3px 6px;font-size:0.75em;white-space:nowrap;" onclick="applyCommonRowToAll()" disabled title="Tick chọn nhân viên ở cột Nhân viên để áp dụng ca dòng chung">'
             + '<i class="fas fa-check-double"></i> Chọn NV áp dụng</button></td>';
 
         for (var d = 1; d <= days; d++) {
@@ -494,11 +498,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var days = getDaysInMonth(month);
 
         // Build header
-        var headHtml = '<tr><th><input type="checkbox" id="shift-grid-select-all" title="Chọn tất cả nhân viên" style="transform:scale(1.15);cursor:pointer;vertical-align:middle;"> Nhân viên</th>';
+        var headHtml = '<tr><th style="min-width:160px;max-width:200px;"><input type="checkbox" id="shift-grid-select-all" title="Chọn tất cả nhân viên" style="transform:scale(1.15);cursor:pointer;vertical-align:middle;"> Nhân viên</th>';
         for (var d = 1; d <= days; d++) {
             var dow = getDayOfWeek(month, d);
             var isWeekend = (dow === 0 || dow === 6);
-            headHtml += '<th style="' + (isWeekend ? 'color:#f59e0b;' : '') + '">' + d + '<br><small>' + getDayLabel(dow) + '</small></th>';
+            headHtml += '<th style="min-width:42px;max-width:52px;padding:2px 1px;text-align:center;' + (isWeekend ? 'color:#f59e0b;' : '') + '">' + d + '<br><small>' + getDayLabel(dow) + '</small></th>';
         }
         headHtml += '</tr>';
         gridHead.innerHTML = headHtml;
@@ -539,7 +543,7 @@ document.addEventListener('DOMContentLoaded', function () {
             gridBody.innerHTML = buildCommonRowHtml(month, days, shifts) + employees.map(function(emp) {
                 var payroll = payrollMap[emp.maND] || {};
                 var employeeOtSchedule = otSchedule[String(emp.maND)] || otSchedule[emp.maND] || {};
-                var cells = '<td><input type="checkbox" class="emp-select" value="' + escapeHtml(emp.maND) + '" style="transform:scale(1.15);cursor:pointer;margin-right:6px;"> <span>(' + escapeHtml(emp.maND) + ') ' + escapeHtml(emp.hoTen) + '</span><br><small style="color:#64748b;">' + escapeHtml(emp.phongBan || '') + '</small></td>';
+                var cells = '<td style="min-width:160px;max-width:200px;white-space:nowrap;"><input type="checkbox" class="emp-select" value="' + escapeHtml(emp.maND) + '" style="transform:scale(1.15);cursor:pointer;margin-right:4px;"> <span style="font-size:11px;">(' + escapeHtml(emp.maND) + ') ' + escapeHtml(emp.hoTen) + '</span><br><small style="color:#64748b;font-size:9px;">' + escapeHtml(emp.phongBan || '') + '</small></td>';
 
                 for (var d = 1; d <= days; d++) {
                     var currentDate = month + '-' + String(d).padStart(2, '0');
